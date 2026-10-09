@@ -133,6 +133,17 @@ dimatikan: user baru dibuat oleh Administrator.
 - Helper zod untuk field form ada di `src/lib/form-fields.ts`; pengecekan kode referensi di
   `src/server/db/ref-code-checks.ts`.
 
+## Partner
+
+- Tabel `partners`: kode (tidak bisa diubah), peran vendor dan/atau customer, negara, jenis dan
+  nomor identitas (NPWP 16/15 digit, paspor, KTP, lainnya; kode CEISA 6/5/2/3/4).
+- NITKU hanya untuk NPWP dan otomatis bila dikosongkan: NPWP 16 digit + `000000`, atau `0` + NPWP 15
+  digit + `000000`. NITKU cabang boleh diisi asal diawali NPWP 16 digit. Konsistensinya dipaksakan
+  di database dan NITKU unik antar partner.
+- Untuk dokumen BC: `partnerAsCustomsParty()` (NPWP memakai NITKU sebagai nomor identitas).
+- Pemeriksaan lintas field di zod memakai `superRefine(..., { when: () => true })` supaya tetap
+  berjalan walaupun field lain gagal, sehingga semua kesalahan tampil sekaligus.
+
 ## Testing
 
 ```bash

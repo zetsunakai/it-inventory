@@ -39,6 +39,10 @@ type ProductFields = {
   ceisaFactor: string | null
 }
 
+// Pemeriksaan lintas field tetap dijalankan walaupun field lain gagal, supaya semua
+// kesalahan tampil sekaligus.
+const ALWAYS = { when: () => true }
+
 // Satuan CEISA dan faktornya berpasangan (dipaksakan juga di database).
 function pairCeisaUnit(input: ProductFields, ctx: z.RefinementCtx) {
   if (input.ceisaUnitCode && !input.ceisaFactor) {
@@ -86,7 +90,7 @@ export const createProduct = defineFormAction({
       uomId: z.uuid("Satuan stok wajib dipilih."),
       ...fields,
     })
-    .superRefine(pairCeisaUnit),
+    .superRefine(pairCeisaUnit, ALWAYS),
   successMessage: "Produk ditambahkan.",
   handler: async ({ input, tx }) => {
     const errors = await customsCodeErrors(tx, input)
@@ -116,7 +120,7 @@ export const updateProduct = defineFormAction({
   permission: "master:write",
   schema: z
     .object({ id: z.uuid("Produk tidak valid."), ...fields, active: checkbox })
-    .superRefine(pairCeisaUnit),
+    .superRefine(pairCeisaUnit, ALWAYS),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {
     const [saved] = await tx

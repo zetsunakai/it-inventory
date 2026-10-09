@@ -4,7 +4,12 @@ import { and, eq, sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox, requiredText } from "@/lib/form-fields"
-import { REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS, REF_CODE_TYPES } from "@/lib/ref-codes"
+import {
+  REF_CODE_PARENT_TYPES,
+  REF_CODE_TYPE_LABELS,
+  REF_CODE_TYPES,
+  type RefCodeType,
+} from "@/lib/ref-codes"
 import { AppError, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { refCodes } from "@/server/db/schema"
@@ -23,16 +28,20 @@ export const createRefCode = defineFormAction({
       name: requiredText("Nama", 200),
       parentCode: z.string().trim().optional(),
     })
-    .superRefine((input, ctx) => {
-      const parentType = REF_CODE_PARENT_TYPES[input.type]
-      if (parentType && !input.parentCode) {
-        ctx.addIssue({
-          code: "custom",
-          path: ["parentCode"],
-          message: `${REF_CODE_TYPE_LABELS[parentType]} wajib dipilih untuk ${REF_CODE_TYPE_LABELS[input.type]}.`,
-        })
-      }
-    }),
+    .superRefine(
+      (input, ctx) => {
+        // Tetap dicek walaupun field lain gagal (when), jadi jenis bisa saja belum valid.
+        const parentType = REF_CODE_PARENT_TYPES[input.type as RefCodeType]
+        if (parentType && !input.parentCode) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["parentCode"],
+            message: `${REF_CODE_TYPE_LABELS[parentType]} wajib dipilih untuk ${REF_CODE_TYPE_LABELS[input.type]}.`,
+          })
+        }
+      },
+      { when: () => true },
+    ),
   successMessage: "Referensi ditambahkan.",
   handler: async ({ input, tx }) => {
     const parentType = REF_CODE_PARENT_TYPES[input.type]

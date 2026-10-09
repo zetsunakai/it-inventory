@@ -149,7 +149,6 @@ export const NAVIGATION: NavGroup[] = [
         href: "/master/partner",
         icon: Handshake,
         permission: "master:read",
-        plannedIn: "M1-06",
       },
       {
         title: "Referensi kepabeanan",
