@@ -47,12 +47,13 @@ test("klik menu membuka modul dan menandai menu yang aktif", async ({ page }) =>
   await page.goto("/login")
   await login(page, ACCOUNTS.gudang)
 
-  await sidebar(page).getByRole("link", { name: "Produk" }).click()
+  // Modul yang masih berupa placeholder.
+  await sidebar(page).getByRole("link", { name: "Stock opname" }).click()
 
-  await expect(page).toHaveURL(/\/master\/produk$/)
-  await expect(page.getByRole("heading", { name: "Produk", level: 1 })).toBeVisible()
-  await expect(page.getByText("Dijadwalkan di M1-05.")).toBeVisible()
-  await expect(sidebar(page).getByRole("link", { name: "Produk" })).toHaveAttribute(
+  await expect(page).toHaveURL(/\/inventory\/opname$/)
+  await expect(page.getByRole("heading", { name: "Stock opname", level: 1 })).toBeVisible()
+  await expect(page.getByText("Dijadwalkan di M2-09.")).toBeVisible()
+  await expect(sidebar(page).getByRole("link", { name: "Stock opname" })).toHaveAttribute(
     "aria-current",
     "page",
   )

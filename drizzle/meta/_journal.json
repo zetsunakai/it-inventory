@@ -113,6 +113,20 @@
       "when": 1791553858293,
       "tag": "0015_uoms_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1791554593522,
+      "tag": "0016_products",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1791554594213,
+      "tag": "0017_products_rules",
+      "breakpoints": true
     }
   ]
 }

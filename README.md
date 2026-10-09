@@ -119,7 +119,19 @@ dimatikan: user baru dibuat oleh Administrator.
   dan membulatkan ke 4 desimal. Angka desimal tidak pernah dihitung sebagai float di aplikasi
   (`src/lib/decimal.ts` hanya mengurai input dan memformat tampilan).
 - Kode, kategori, dan status acuan satuan tidak bisa diubah. Satuan dasar (PCS, KG, L, M, M2, dan
-  turunannya) dibuat oleh seed. Satuan CEISA (kode resmi per produk) terpisah, menyusul di M1-05.
+  turunannya) dibuat oleh seed. Satuan CEISA (kode resmi, faktornya per produk) ada di referensi kepabeanan.
+
+## Produk
+
+- Tabel `products`. Qty selalu dalam satuan stok (`uom_id`); SKU dan satuan stok tidak bisa diubah.
+- Untuk dokumen BC produk butuh kode HS dan satuan CEISA beserta faktornya (1 satuan stok = faktor
+  satuan CEISA). Kolom `customs_ready` dihitung database dari ketiganya; dokumen BC (M3) hanya boleh
+  memilih produk dengan `customs_ready = true`.
+- Kode HS (11.555, BTKI 8 digit) dan satuan CEISA (1.513, UN/ECE Rec 20) adalah jenis referensi
+  `hs_code` dan `ceisa_unit`, dari data Odoo lama. Data HS Odoo kehilangan nol di depan pada sebagian
+  kode; script impor mengembalikannya. Sebagian besar uraian HS berbahasa Inggris dan disingkat.
+- Helper zod untuk field form ada di `src/lib/form-fields.ts`; pengecekan kode referensi di
+  `src/server/db/ref-code-checks.ts`.
 
 ## Testing
 

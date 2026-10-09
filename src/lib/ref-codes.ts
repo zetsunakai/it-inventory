@@ -18,6 +18,8 @@ export const REF_CODE_TYPES = [
   "transport_mode",
   "entity_type",
   "response",
+  "hs_code",
+  "ceisa_unit",
 ] as const
 export type RefCodeType = (typeof REF_CODE_TYPES)[number]
 
@@ -38,6 +40,8 @@ export const REF_CODE_TYPE_LABELS: Record<RefCodeType, string> = {
   transport_mode: "Cara angkut",
   entity_type: "Jenis entitas",
   response: "Respon",
+  hs_code: "Kode HS",
+  ceisa_unit: "Satuan CEISA",
 }
 
 // Jenis yang kodenya hanya unik di dalam induknya. parent_code menunjuk ke kode

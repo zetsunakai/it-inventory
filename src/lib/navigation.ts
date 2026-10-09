@@ -131,7 +131,6 @@ export const NAVIGATION: NavGroup[] = [
         href: "/master/produk",
         icon: Package,
         permission: "master:read",
-        plannedIn: "M1-05",
       },
       {
         title: "Satuan",

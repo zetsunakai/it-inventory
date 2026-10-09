@@ -1,10 +1,9 @@
 "use server"
 
-import { and, eq, isNull } from "drizzle-orm"
-
 import { companyProfileSchema } from "@/lib/company"
 import { AppError, defineFormAction } from "@/server/actions/define-action"
-import { company, refCodes } from "@/server/db/schema"
+import { refCodeIsUsable } from "@/server/db/ref-code-checks"
+import { company } from "@/server/db/schema"
 
 // Simpan profil perusahaan (PRD bagian 5.1). Hanya Administrator (izin master:write).
 // Baris pertama dibuat, berikutnya selalu memperbarui baris yang sama.
@@ -14,23 +13,10 @@ export const saveCompanyProfile = defineFormAction({
   schema: companyProfileSchema,
   successMessage: "Profil perusahaan disimpan.",
   handler: async ({ input, tx }) => {
-    const [office] = await tx
-      .select({ active: refCodes.active })
-      .from(refCodes)
-      .where(
-        and(
-          eq(refCodes.type, "customs_office"),
-          eq(refCodes.code, input.supervisingOfficeCode),
-          isNull(refCodes.parentCode),
-        ),
-      )
     const [current] = await tx.select({ officeCode: company.supervisingOfficeCode }).from(company)
-    // Kantor yang diarsipkan tidak boleh dipilih, kecuali memang sudah tersimpan sebelumnya.
-    const officeUnchanged = current?.officeCode === input.supervisingOfficeCode
-    if (!office || (!office.active && !officeUnchanged)) {
-      throw new AppError(
-        `Kantor pabean dengan kode ${input.supervisingOfficeCode} tidak ditemukan.`,
-      )
+    const officeCode = input.supervisingOfficeCode
+    if (!(await refCodeIsUsable(tx, "customs_office", officeCode, current?.officeCode))) {
+      throw new AppError(`Kantor pabean dengan kode ${officeCode} tidak ditemukan.`)
     }
 
     const values = { ...input, id: true }

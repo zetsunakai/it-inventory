@@ -65,6 +65,8 @@ const sources: Record<RefCodeType, () => Row[]> = {
   transport_mode: () => transportModes(),
   entity_type: () => odooRecords(data("entitas_type.xml")),
   response: () => odooRecords(data("respons_data.xml")),
+  hs_code: () => hsCodes(),
+  ceisa_unit: () => firstOfEachCode("ceisa_unit", odooRecords(data("product_unit.xml"))),
 }
 
 function main() {
@@ -175,6 +177,45 @@ function currencies(): Row[] {
       code: fields.name,
       name: names.of(fields.name) ?? fields.currency_unit_label ?? fields.name,
     }))
+}
+
+// Kode HS 8 digit (BTKI). Data Odoo kehilangan nol di depan pada sebagian kode (7 digit):
+// dikembalikan, kecuali yang menjadi bab 00 (tidak ada di HS, digit yang hilang tidak bisa
+// ditebak). Kode yang setelah itu ganda memakai entri aslinya yang sudah 8 digit.
+function hsCodes(): Row[] {
+  const rows = odooRecords(data("kode_tarif_hs.xml"))
+  const original = rows.filter((row) => row.code.length === 8)
+  const restored = rows
+    .filter((row) => row.code.length === 7)
+    .map((row) => ({ ...row, code: `0${row.code}` }))
+  const invalid = restored.filter((row) => row.code.startsWith("00"))
+  if (invalid.length) {
+    console.log(
+      `hs_code: ${invalid.length} kode dibuang (bab 00): ${invalid.map((row) => row.code)}`,
+    )
+  }
+  return firstOfEachCode("hs_code", [
+    ...original,
+    ...restored.filter((row) => !row.code.startsWith("00")),
+  ])
+}
+
+// Kode ganda dari sumber: entri pertama yang dipakai, sisanya dilaporkan.
+function firstOfEachCode(type: RefCodeType, rows: Row[]): Row[] {
+  const seen = new Set<string>()
+  const skipped: string[] = []
+  const result = rows.filter((row) => {
+    const code = row.code.trim()
+    if (seen.has(code)) {
+      skipped.push(`${code} (${row.name})`)
+      return false
+    }
+    seen.add(code)
+    return true
+  })
+  if (skipped.length)
+    console.log(`${type}: ${skipped.length} kode ganda dilewati: ${skipped.join(", ")}`)
+  return result
 }
 
 // Cara angkut di Odoo berupa pilihan tetap di model dokumen, bukan data XML.

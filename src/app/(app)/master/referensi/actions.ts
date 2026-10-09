@@ -3,6 +3,7 @@
 import { and, eq, sql } from "drizzle-orm"
 import { z } from "zod"
 
+import { checkbox, requiredText } from "@/lib/form-fields"
 import { REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS, REF_CODE_TYPES } from "@/lib/ref-codes"
 import { AppError, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
@@ -12,17 +13,14 @@ import { refCodes } from "@/server/db/schema"
 // Jenis dan kode tidak bisa diubah setelah dibuat, karena dipakai sebagai acuan oleh data lain.
 // Referensi tidak dihapus; yang tidak dipakai lagi diarsipkan.
 
-const text = (label: string, max: number) =>
-  z.string().trim().min(1, `${label} wajib diisi.`).max(max, `${label} maksimal ${max} karakter.`)
-
 export const createRefCode = defineFormAction({
   name: "createRefCode",
   permission: "ref:write",
   schema: z
     .object({
       type: z.enum(REF_CODE_TYPES, "Jenis referensi wajib dipilih."),
-      code: text("Kode", 50),
-      name: text("Nama", 200),
+      code: requiredText("Kode", 50),
+      name: requiredText("Nama", 200),
       parentCode: z.string().trim().optional(),
     })
     .superRefine((input, ctx) => {
@@ -65,12 +63,9 @@ export const updateRefCode = defineFormAction({
   permission: "ref:write",
   schema: z.object({
     id: z.uuid("Referensi tidak valid."),
-    name: text("Nama", 200),
+    name: requiredText("Nama", 200),
     // Checkbox hanya terkirim saat dicentang.
-    active: z
-      .literal("on")
-      .optional()
-      .transform((value) => value === "on"),
+    active: checkbox,
   }),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input, tx }) => {

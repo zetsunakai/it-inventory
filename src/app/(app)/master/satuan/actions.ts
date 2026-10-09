@@ -3,7 +3,7 @@
 import { eq, inArray } from "drizzle-orm"
 import { z } from "zod"
 
-import { parseDecimalInput } from "@/lib/decimal"
+import { checkbox, decimal, requiredText } from "@/lib/form-fields"
 import { AppError, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { uomCategories, uoms } from "@/server/db/schema"
@@ -11,27 +11,7 @@ import { uomCategories, uoms } from "@/server/db/schema"
 // Satuan dan konversi (PRD bagian 5.1): hanya Administrator (izin master:write).
 // Kode, kategori, dan status acuan sebuah satuan tidak bisa diubah (trigger uoms_guard).
 
-const text = (label: string, max: number) =>
-  z.string().trim().min(1, `${label} wajib diisi.`).max(max, `${label} maksimal ${max} karakter.`)
-
-const FACTOR_SCALE = 10
-
-const factor = z.string().transform((value, ctx) => {
-  const parsed = parseDecimalInput(value, FACTOR_SCALE)
-  if (!parsed) {
-    ctx.addIssue({
-      code: "custom",
-      message: `Faktor harus angka lebih dari 0, maksimal ${FACTOR_SCALE} desimal.`,
-    })
-    return z.NEVER
-  }
-  return parsed
-})
-
-const checkbox = z
-  .literal("on")
-  .optional()
-  .transform((value) => value === "on")
+const factor = decimal("Faktor", 10)
 
 async function takenUomCodes(tx: Transaction, codes: string[]) {
   const rows = await tx.select({ code: uoms.code }).from(uoms).where(inArray(uoms.code, codes))
@@ -43,10 +23,10 @@ export const createUomCategory = defineFormAction({
   name: "createUomCategory",
   permission: "master:write",
   schema: z.object({
-    code: text("Kode kategori", 30),
-    name: text("Nama kategori", 100),
-    referenceCode: text("Kode satuan acuan", 20),
-    referenceName: text("Nama satuan acuan", 100),
+    code: requiredText("Kode kategori", 30),
+    name: requiredText("Nama kategori", 100),
+    referenceCode: requiredText("Kode satuan acuan", 20),
+    referenceName: requiredText("Nama satuan acuan", 100),
   }),
   successMessage: "Kategori satuan ditambahkan.",
   handler: async ({ input, tx }) => {
@@ -78,8 +58,8 @@ export const createUom = defineFormAction({
   permission: "master:write",
   schema: z.object({
     categoryId: z.uuid("Kategori satuan wajib dipilih."),
-    code: text("Kode satuan", 20),
-    name: text("Nama satuan", 100),
+    code: requiredText("Kode satuan", 20),
+    name: requiredText("Nama satuan", 100),
     factor,
   }),
   successMessage: "Satuan ditambahkan.",
@@ -102,7 +82,7 @@ export const updateUom = defineFormAction({
   permission: "master:write",
   schema: z.object({
     id: z.uuid("Satuan tidak valid."),
-    name: text("Nama satuan", 100),
+    name: requiredText("Nama satuan", 100),
     factor,
     active: checkbox,
   }),

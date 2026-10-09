@@ -1,5 +1,6 @@
 import { z } from "zod"
 
+import { requiredText } from "./form-fields"
 import { digitsOnly, headOfficeNitku, npwp16, npwpIdentityType } from "./npwp"
 
 // Profil perusahaan (PRD bagian 5.1). Dipakai bersama oleh form dan server.
@@ -13,15 +14,12 @@ export const FACILITY_TYPE_LABELS: Record<FacilityType, string> = {
   kite: "Kemudahan Impor Tujuan Ekspor (KITE)",
 }
 
-const required = (label: string, max: number) =>
-  z.string().trim().min(1, `${label} wajib diisi.`).max(max, `${label} maksimal ${max} karakter.`)
-
 // Input dari form. NPWP, NITKU, dan NIB boleh ditulis dengan titik/strip/spasi;
 // yang disimpan hanya angkanya. NITKU kosong = kantor pusat (NPWP 16 digit + 000000).
 export const companyProfileSchema = z
   .object({
-    name: required("Nama perusahaan", 200),
-    address: required("Alamat", 500),
+    name: requiredText("Nama perusahaan", 200),
+    address: requiredText("Alamat", 500),
     npwp: z
       .string()
       .transform(digitsOnly)
@@ -32,7 +30,7 @@ export const companyProfileSchema = z
       .transform(digitsOnly)
       .refine((value) => value.length === 13, "NIB harus 13 digit."),
     facilityType: z.enum(FACILITY_TYPES, "Jenis fasilitas wajib dipilih."),
-    permitNumber: required("Nomor izin fasilitas", 100),
+    permitNumber: requiredText("Nomor izin fasilitas", 100),
     permitDate: z.iso.date("Tanggal izin fasilitas wajib diisi."),
     supervisingOfficeCode: z.string().trim().min(1, "Kantor pabean pengawas wajib dipilih."),
   })

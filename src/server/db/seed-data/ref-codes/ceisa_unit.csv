@@ -1,0 +1,1514 @@
+code,name
+1,None
+10,Group
+13,Ration
+14,Shot
+15,"Stick, Military"
+16,Hundred Fifteen Kg Drum
+17,Hundred Lb Drum
+18,Fiftyfive Gallon (Us) Drum
+19,Tank Truck
+1C,Locomotive Count
+1F,Train Mile
+1I,Fixed Rate
+1L,Total Car Count
+1M,Total Car Mile
+1X,Quarter Mile
+20,Twenty Foot Container
+21,Forty Foot Container
+22,Decilitre Per Gram
+24,Theoretical Pound
+26,Actual Ton
+28,Kilogram Per Square Metre
+29,Pound Per Thousand Square Foot
+2B,Radian Per Second Squared
+2C,Roentgen
+2H,Volt Dc
+2I,British Thermal Unit(International Table) Per Hour
+2J,Cubic Centimetre Per Second
+2K,Cubic Foot Per Hour
+2L,Cubic Foot Per Minute
+2M,Centimetre Per Second
+2P,Kilobyte
+2Q,Kilobecquerel
+2R,Kilocurie
+2U,Megagram
+2V,Megagram Per Hour
+2W,Bin
+2X,Metre Per Minute
+2Z,Millivolt
+30,Horse Power Day Per Air Dry Metric Ton
+31,Catch Weight
+32,Kilogram Per Air Dry Metric Ton
+33,Kilopascal Square Metre Per Gram
+34,Kilopascal Per Millimetre
+35,Millilitre Per Square Centimetre Second
+36,Cubic Foot Per Minute Per Square Foot
+38,"Ounce Per Square Foot Per 0,01inch"
+3E,Pound Per Pound Of Product
+3G,Pound Per Piece Of Product
+40,Millilitre Per Second
+43,Super Bulk Bag
+44,Fivehundred Kg Bulk Bag
+46,Fifty Lb Bulk Bag
+47,Fifty Lb Bag
+48,Bulk Car Load
+4A,Bobbin
+4G,Microlitre
+4H,Micrometre (Micron)
+4L,Megabyte
+4M,Milligram Per Hour
+4O,Microfarad
+4P,Newton Per Metre
+4R,Ounce Foot
+4T,Picofarad
+4U,Pound Per Hour
+4W,Ton (Us) Per Hour
+53,Theoretical Kilogram
+54,Theoretical Tonne
+57,Mesh
+58,Net Kilogram
+5B,Batch
+5C,Gallon(Us) Per Thousand
+5E,Mmscf/Day
+5G,Pump
+5H,Stage
+5K,Count Per Minute
+5P,Seismic Level
+5Q,Seismic Line
+6,Small Spray
+60,Percent Weight
+61,Part Per Billion (Us)
+62,Percent Per 1000 Hour
+63,Failure Rate In Time
+64,"Pound Per Square Inch, Gauge"
+66,Oersted
+71,Volt Ampere Per Pound
+72,Watt Per Pound
+73,Ampere Tum Per Centimetre
+78,Kilogauss
+8,Heat Lot
+84,Kilopound-Force Per Square Inch
+85,Foot Pound-Force
+89,Poise
+92,Calorie Per Cubic Centimetre
+93,Calorie Per Gram
+94,Curl Unit
+96,Ten Thousand Gallon (Us) Tankcar
+97,Ten Kg Drum
+98,Fifteen Kg Drum
+A1,15 �C Calorie
+A11,Angstrom
+A12,Astronomical Unit
+A13,Attojoule
+A15,Barn Per Electronvolt
+A2,Ampere Per Centimetre
+A20,British Thermal Unit/Second Squarefoot D/Rankine
+A21,British Thermal Unit (It) Per Pound Degree Rankine
+A23,Britishthermalunit/Hour Square Foot Degree Rankine
+A24,Candela Per Square Metre
+A26,Coulomb Metre
+A27,Coulomb Metre Squared Per Volt
+A28,Coulomb Per Cubic Centimetre
+A3,Ampere Per Millimetre
+A32,Coulomb Per Mole
+A33,Coulomb Per Square Centimetre
+A36,Cubic Centimetre Per Mole
+A38,Cubic Metre Per Coulomb
+A4,Ampere Per Square Centimetre
+A41,Ampere Per Square Metre
+A43,Deadweight Tonnage
+A44,Decalitre
+A45,Decametre
+A47,Decitex
+A49,Denier
+A51,Dyne Second Per Centimetre
+A52,Dyne Second Per Centimetre To The Fifth Power
+A56,Electronvolt Square Metre Per Kilogram
+A58,Erg Per Centimetre
+A59,8-Part Cloud Cover
+A6,Ampere Per Square Metre Kelvin Squared
+A60,Erg Per Cubic Centimetre
+A62,Erg Per Gram Second
+A64,Erg Per Second Square Centimetre
+A65,Erg Per Square Centimetre Second
+A66,Erg Square Centimetre
+A67,Erg Square Centimetre Per Gram
+A69,Farad Per Metre
+A7,Ampere Per Square Millimetre
+A70,Femtojoule
+A71,Femtometre
+A73,Foot Per Second Squared
+A74,Foot Pound-Force Per Second
+A76,Gal
+A77,Gaussian Cgs Unit Of Displacement
+A78,Gaussian Cgs Unit Of Electric Current
+A79,Gaussian Cgs Unit Of Electric Charge
+A81,Gaussian Cgs Unit Of Electric Polarization
+A82,Gaussian Cgs Unit Of Electric Potential
+A83,Gaussian Cgs Unit Of Magnetization
+A85,Gigaelectronvolt
+A87,Gigaohm
+A88,Gigaohm Metre
+A9,Rate
+A93,Gram Per Cubic Metre
+A95,Gray
+A96,Gray Per Second
+AA,Ball
+AB,Bulk Pack
+ACR,Acre (4840 Yd2)
+ACT,Activity
+AD,Byte
+AED,United Arab Emirates Dirham
+AFN,Afghanistan Afghani
+AH,Additional Minute
+AJ,Cop
+AK,Fathom
+AL,Access Line
+AMH,"Ampere-Hour (3,6 Kc)"
+ANG,Netherlands Antilles Guilder
+APZ,"Ounce Gb,Us (31,10348 G)"
+AQ,Anti-Hemophilic Factor (Ahf) Unit
+ARE,Are (100m2)
+AS,Assortment
+ASM,Alcoholic Strength By Mass
+ASU,Alcoholic Strength By Volume
+ATT,"Technical Atmosphere (98066,5 Pa)"
+AUD,Australia Dollar
+AV,Capsule
+AW,Powder Filled Vial
+AY,Assembly
+AZN,Azerbaijan Manat
+B0,Btu Per Cubic Foot
+B10,Bit Per Second
+B12,Joule Per Metre
+B14,Joule Per Metre To The Fourth Power
+B15,Joule Per Mole
+B17,Credit
+B19,Digit
+B20,Joule Square Metre Per Kilogram
+B21,Kelvin Per Watt
+B22,Kiloampere
+B26,Kilocoulomb
+B27,Kilocoulomb Per Cubic Metre
+B29,Kiloelectronvolt
+B34,Kilogram Per Cubic Decimetre
+B35,Kilogram Per Litre
+B38,Kilogram-Force Metre
+B39,Kilogram-Force Metre Per Second
+B4,"Barrel, Imperial"
+B41,Kilojoule Per Kelvin
+B43,Kilojoule Per Kilogram Kelvin
+B45,Kilomole
+B46,Kilomole Per Cubic Metre
+B49,Kiloohm
+B5,Billet
+B50,Kiloohm Metre
+B51,Kilopond
+B54,Kilosiemens Per Metre
+B55,Kilovolt Per Metre
+B56,Kiloweber Per Metre
+B59,Lumen Hour
+B6,Bun
+B60,Lumen Per Square Metre
+B64,Lux Second
+B65,Maxwell
+B66,Megaampere Per Square Metre
+B67,Megabecquerel Per Kilogram
+B68,Gigabit
+B71,Megaelectronvolt
+B74,Meganewton Metre
+B78,Megavolt
+B79,Megavolt Per Metre
+B81,Reciprocal Metre Squared Reciprocal Second
+B85,Microbar
+B86,Microcoulomb
+B87,Microcoulomb Per Cubic Metre
+B88,Microcoulomb Per Square Metre
+B89,Microfarad Per Metre
+B9,Batt
+B90,Microhenry
+B91,Microhenry Per Metre
+B93,Micronewton Metre
+B99,Microsiemens
+BAM,Bosnia And Herzegovina Convertible Marka
+BAR,Bar
+BB,Base Box
+BBD,Barbados Dollar
+BBT,Bangladesh Taka
+BFT,Board Foot
+BHD,Bahrain Dinar
+BHP,Brake Horse Power
+BIF,Burundi Franc
+BL,Bale
+BLD,"Dry Barrel (115,627 Dm3)"
+BMD,Bermuda Dollar
+BND,Brunei Darussalam Dollar
+BO,Bottle
+BOB,Bolivia Bol�Viano
+BP,Hundred Board Foot
+BPM,Beats Per Minute
+BQL,Becquerel
+BR,Bar [Unit Of Packaging]
+BRL,Brazil Real
+BSD,Bahamas Dollar
+BT,Bolt
+BTU,British Thermal Unit
+BUA,"Bushel (35,2391 Dm3)"
+BUI,"Bushel (36,36874 Dm3)"
+BW,Base Weight
+BWP,Botswana Pula
+BX,Box
+BYN,Belarus Ruble
+BZ,Million Btus
+BZD,Belize Dollar
+C0,Call
+C12,Milligram Per Metre
+C13,Milligray
+C14,Millihenry
+C15,Millijoule
+C2,Carset
+C22,Millinewton Per Metre
+C23,Milliohm Metre
+C24,Millipascal Second
+C26,Millisecond
+C30,Millivolt Per Metre
+C34,Mole
+C35,Mole Per Cubic Decimetre
+C36,Mole Per Cubic Metre
+C38,Mole Per Litre
+C4,Carload
+C41,Nanofarad
+C42,Nanofarad Per Metre
+C43,Nanohenry
+C47,Nanosecond
+C49,Nanowatt
+C5,Cost
+C53,Newton Metre Second
+C54,Newton Metre Squared Kilogram Squared
+C56,Newton Per Square Millimetre
+C60,Ohm Centimetre
+C65,Pascal Second
+C66,Pascal Second Per Cubic Metre
+C67,Pascal Second Per Metre
+C68,Petajoule
+C69,Phon
+C7,Centipoise
+C73,Picohenry
+C75,Picowatt
+C79,Kilovolt Ampere Hour
+C8,Millicoulomb Per Kilogram
+C82,Radian Square Metre Per Mole
+C85,Reciprocal Angstrom
+C88,Reciprocal Electron Volt Per Cubic Metre
+C90,Reciprocal Joule Per Cubic Metre
+C92,Reciprocal Metre
+C94,Reciprocal Minute
+C95,Reciprocal Mole
+C99,Reciprocal Second Per Metre Squared
+CAD,Canada Dollar
+CCT,Carrying Capacity In Metric Tonnes
+CDF,Congo/Kinshasa Franc
+CEL,Degree Celcius
+CEN,Hundred
+CG,Card
+CGM,Centigram
+CHF,Switzerland Franc
+CJ,Cone
+CKG,Coulomb Per Kilogram
+CMT,Centimetre
+CNP,Hundred Packs
+CNY,China Yuan Renminbi
+COP,Colombia Peso
+CR,Crate
+CS,Case
+CT,Carton
+CTG,Content Gram
+CTM,Metric Carat (200 Mg = 2.10-4 Kg)
+CUR,Curie
+CVE,Cape Verde Escudo
+CWA,"Hundredweight, Us (45,3592 Kg)"
+CY,Cylinder
+D04,Lot [Unit Of Weight]
+D10,Siemens Per Metre
+D11,Mebibit
+D12,Siemens Square Metre Per Mole
+D13,Sievert
+D16,Square Centimetre Per Erg
+D17,Square Centimetre Per Steradian Erg
+D18,Metre Kelvin
+D19,Square Metre Kelvin Per Watt
+D2,Reciprocal Second Per Steradian Metre Squared
+D20,Square Metre Per Joule
+D22,Square Metre Per Mole
+D23,Pen Gram (Protein)
+D25,Square Metre Per Steradian Joule
+D27,Steradian
+D28,Syphon
+D29,Terahertz
+D31,Terawatt
+D36,Megabit
+D37,Calorie (Thermochemical) Per Gram Kelvin
+D42,Tropical Year
+D43,Unified Atomic Mass Unit
+D45,Volt Squared Per Kelvin Squared
+D46,Volt - Ampere
+D49,Millivolt Per Kelvin
+D5,Kilogram Per Square Centimetre
+D50,Volt Per Metre
+D52,Watt Per Kelvin
+D54,Watt Per Square Metre
+D56,Watt Per Square Metre Kelvin To The Fourth Power
+D57,Watt Per Steradian
+D58,Watt Per Steradian Square Metre
+D59,Weber Per Metre
+D6,Roentgen Per Second
+D61,Minute [Unit Of Angle]
+D64,Block
+D65,Round
+D66,Cassette
+D67,Dollar Per Hour
+D69,Inch To The Fourth Power
+D7,Sandwich
+D70,International Table (It) Calorie
+D71,It Calorie Per Second Centimetre Kelvin
+D72,It Calorie Per Second Square Centimetre Kelvin
+D74,Kilogram Per Mole
+D75,Calorie (International Table) Per Gram
+D76,Calorie (International Table) Per Gram Kelvin
+D79,Beam
+D8,Draize Score
+D82,Microvolt
+D83,Millinewton Metre
+D85,Microwatt Per Square Metre
+D88,Millicoulomb Per Cubic Metre
+D89,Millicoulomb Per Square Metre
+D90,Cubic Metre (Net)
+D91,Rem
+D94,Second Per Cubic Metre Radian
+D95,Joule Per Gram
+D97,Pallet/Unit Load
+D99,Sleeve
+DAA,Decare
+DAD,Ten Day
+DB,Dry Pound
+DBC,Decade (Ten Years)
+DC,Disk (Disc)
+DD,Degree [Unit Of Angle]
+DE,Deal
+DED,Decade
+DJF,Djibouti Franc
+DKK,Denmark Krone
+DMA,Cubic Decametre
+DMK,Square Decimetre
+DMO,Standard Kilolitre
+DMQ,Cubic Decimetre
+DN,Decinewton Metre
+DOP,Dominican Republic Peso
+DPC,Dozen Piece
+DPR,Dozen Pairs
+DPT,Displecement Tonnege
+DS,Display
+DTN,"Centner, Metric (100 Kg)"
+DU,Dyne
+DX,Dyne Per Centimetre
+DZD,Algeria Dinar
+DZN,Dozen
+E01,Newton Per Square Centimetre
+E07,Megawatt Hour Per Hour
+E08,Megawatt Per Hertz
+E09,Milliampere Hour
+E10,Degree Day
+E11,Gigacalorie
+E12,Mille
+E14,Kilocalorie (International Table)
+E16,Million Btu(It) Per Hour
+E17,Cubic Foot Per Second
+E2,Belt
+E20,Megabit Per Second
+E21,Shares
+E23,Tyre
+E25,Active Unit
+E31,Square Metre Per Litre
+E33,Foot Per Thousand
+E34,Gigabyte
+E35,Terabyte
+E36,Petabyte
+E4,Gross Kilogram
+E40,Part Per Hundred Thousand
+E42,Kilogram-Force Per Square Centimetre
+E43,Joule Per Square Centimetre
+E44,Kilogram-Force Metre Per Square Centimetre
+E45,Milliohm
+E46,Kilowatt Hour Per Cubic Metre
+E47,Kilowatt Hour Per Kelvin
+E50,Accounting Unit
+E53,Test
+E54,Trip
+E55,Use
+E56,Well
+E57,Zone
+E58,Exabit Per Second
+E61,Tebibyte
+E63,Mebibyte
+E64,Kibibyte
+E65,Exbibit Per Metre
+E69,Gibibit Per Metre
+E70,Gibibit Per Square Metre
+E71,Gibibit Per Cubic Metre
+E72,Kibibit Per Metre
+E73,Kibibit Per Square Metre
+E74,Kibibit Per Cubic Metre
+E75,Mebibit Per Metre
+E76,Mebibit Per Square Metre
+E77,Mebibit Per Cubic Metre
+E79,Petabit Per Second
+E82,Pebibit Per Cubic Metre
+E85,Tebibit Per Metre
+E87,Tebibit Per Square Metre
+E88,Bit Per Metre
+E89,Bit Per Square Metre
+E90,Reciprocal Centimetre
+E92,Cubic Decimetre Per Hour
+E93,Kilogram Per Hour
+E94,Kilomole Per Second
+E96,Degree Per Second
+E97,Millimetre Per Degree Celcius Metre
+E98,Degree Celsius Per Kelvin
+E99,Hektopascal Per Bar
+EA,Each
+EB,Electronic Mail Box
+EP,Eleven Pack
+EUR,Euro Member Countries
+F01,Bit Per Cubic Metre
+F02,Kelvin Per Kelvin
+F04,Millibar Per Bar
+F05,Megapascal Per Bar
+F07,Pascal Per Bar
+F08,Milliampere Per Inch
+F10,Kelvin Per Hour
+F11,Kelvin Per Minute
+F12,Kelvin Per Second
+F13,Slug
+F14,Gram Per Kelvin
+F17,Pound-Force Per Foot
+F18,Kilogram Square Centimetre
+F19,Kilogram Square Millimetre
+F23,Gram Per Cubic Decimetre
+F26,Gram Per Day
+F27,Gram Per Hour
+F29,Gram Per Second
+F31,Kilogram Per Minute
+F33,Milligram Per Minute
+F35,Gram Per Day Kelvin
+F36,Gram Per Hour Kelvin
+F38,Gram Per Second Kelvin
+F39,Kilogram Per Day Kelvin
+F40,Kilogram Per Hour Kelvin
+F41,Kilogram Per Minute Kelvin
+F42,Kilogram Per Second Kelvin
+F43,Milligram Per Day Kelvin
+F44,Milligram Per Hour Kelvin
+F46,Milligram Per Second Kelvin
+F48,Pound-Force Per Inch
+F50,Micrometre Per Kelvin
+F53,Millimetre Per Kelvin
+F54,Milliohm Per Metre
+F55,Ohm Per Mile
+F56,Ohm Per Kilometre
+F59,Milliampere Per Bar
+F61,Kelvin Per Bar
+F62,Gram Per Day Bar
+F63,Gram Per Hour Bar
+F64,Gram Per Minute Bar
+F65,Gram Per Second Bar
+F66,Kilogram Per Day Bar
+F67,Kilogram Per Hour Bar
+F69,Kilogram Per Second Bar
+F70,Milligram Per Day Bar
+F71,Milligram Per Hour Bar
+F72,Milligram Per Minute Bar
+F74,Gram Per Bar
+F75,Milligram Per Bar
+F76,Milliampere Per Millimetre
+F77,Pascal Second Per Kelvin
+F78,Inch Of Water
+F79,Inch Of Mercury
+F80,Water Horse Power
+F82,Hektopascal Per Kelvin
+F83,Kilopascal Per Kelvin
+F84,Millibar Per Kelvin
+F85,Megapascal Per Kelvin
+F86,Poise Per Kelvin
+F89,Newton Metre Per Degree
+F9,Fibre Per Cubic Centimetre Of Air
+F90,Newton Metre Per Ampere
+F91,Bar Litre Per Second
+F92,Bar Cubic Metre Per Second
+F94,Hektopascal Cubic Metre Per Second
+F95,Millibar Litre Per Second
+F97,Megapascal Litre Per Second
+F99,Pascal Litre Per Second
+FAH,Degree Fahrenheit
+FAR,Farad
+FB,Field
+FBM,Fibre Metre
+FC,Thousand Cubic Foot
+FD,Million Particle Per Cubic Foot
+FE,Track Foot
+FF,Hundred Cubic Metre
+FG,Transdermal Patch
+FH,Micromole
+FJD,Fiji Dollar
+FKP,Falkland Islands (Malvinas) Pound
+FL,Flake Ton
+FM,Million Cubic Foot
+FOT,Foot (0.3048 M)
+FR,Foot Per Minute
+FTK,Square Foot
+FTQ,Cubic Foot
+G01,Pascal Cubic Metre Per Second
+G05,Metre Per Bar
+G06,Millimetre Per Bar
+G08,Square Inch Per Second
+G09,Square Metre Per Second Kelvin
+G10,Stokes Per Kelvin
+G11,Gram Per Cubic Centimetre Bar
+G12,Gram Per Cubic Decimetre Bar
+G16,Kilogram Per Cubic Centimetre Bar
+G17,Kilogram Per Litre Bar
+G18,Kilogram Per Cubic Metre Bar
+G19,Newton Metre Per Kilogram
+G2,Us Gallon Per Minute
+G20,Pound-Force Foot Per Pound
+G21,Cup [Unit Of Volume]
+G23,Peck
+G24,Tablespoon (Us)
+G25,Teaspoon (Us)
+G26,Stere
+G27,Cubic Centimetre Per Kelvin
+G28,Litre Per Kelvin
+G3,Imperial Gallon Per Minute
+G30,Millilitre Per Kelvin
+G31,Kilogram Per Cubic Centimetre
+G32,Ounce (Avoirdupois) Per Cubic Yard
+G33,Gram Per Cubic Centimetre Kelvin
+G34,Gram Per Cubic Decimetre Kelvin
+G35,Gram Per Litre Kelvin
+G37,Gram Per Millilitre Kelvin
+G38,Kilogram Per Cubic Centimetre Kelvin
+G39,Kilogram Per Litre Kelvin
+G41,Square Metre Per Second Bar
+G42,Microsiemens Per Centimetre
+G43,Microsiemens Per Metre
+G44,Nanosiemens Per Centimetre
+G46,Stokes Per Bar
+G47,Cubic Centimetre Per Day
+G48,Cubic Centimetre Per Hour
+G49,Cubic Centimetre Per Minute
+G51,Litre Per Second
+G52,Cubic Metre Per Day
+G54,Millilitre Per Day
+G55,Millilitre Per Hour
+G56,Cubic Inch Per Hour
+G57,Cubic Inch Per Minute
+G58,Cubic Inch Per Second
+G59,Milliampere Per Litre Minute
+G60,Volt Per Bar
+G61,Cubic Centimetre Per Day Kelvin
+G62,Cubic Centimetre Per Hour Kelvin
+G63,Cubic Centimetre Per Minute Kelvin
+G64,Cubic Centimetre Per Second Kelvin
+G65,Litre Per Day Kelvin
+G66,Litre Per Hour Kelvin
+G67,Litre Per Minute Kelvin
+G68,Litre Per Second Kelvin
+G69,Cubic Metre Per Day Kelvin
+G7,Microfiche Sheet
+G70,Cubic Metre Per Hour Kelvin
+G71,Cubic Metre Per Minute Kelvin
+G72,Cubic Metre Per Second Kelvin
+G73,Millilitre Per Day Kelvin
+G74,Millilitre Per Hour Kelvin
+G75,Millilitre Per Minute Kelvin
+G76,Millilitre Per Second Kelvin
+G77,Millimetre To The Fourth Power
+G78,Cubic Centimetre Per Day Bar
+G79,Cubic Centimetre Per Hour Bar
+G80,Cubic Centimetre Per Minute Bar
+G81,Cubic Centimetre Per Second Bar
+G82,Litre Per Day Bar
+G83,Litre Per Hour Bar
+G84,Litre Per Minute Bar
+G85,Litre Per Second Bar
+G86,Cubic Metre Per Day Bar
+G87,Cubic Metre Per Hour Bar
+G88,Cubic Metre Per Minute Bar
+G89,Cubic Metre Per Second Bar
+G90,Millilitre Per Day Bar
+G91,Millilitre Per Hour Bar
+G92,Millilitre Per Minute Bar
+G93,Millilitre Per Second Bar
+G94,Cubic Centimetre Per Bar
+G95,Litre Per Bar
+G96,Cubic Metre Per Bar
+G97,Millilitre Per Bar
+G98,Microhenry Per Kiloohm
+G99,Microhenry Per Ohm
+GB,Gallon (Us) Per Day
+GBP,United Kingdom Pound
+GBQ,Gigabecquerel
+GC,Gram Per 100 Gram
+GD,Gross Barrel
+GDW,"Gram, Dry Weight"
+GE,Pound Per Gallon (Us)
+GEL,Georgia Lari
+GF,Gram Per Metre (Gram Per 100 Centimetres)
+GFI,Gram Of Fissile Isotope
+GGP,Guernsey Pound
+GGR,Great Gross (12 Gross)
+GH,Half Gallon (Us)
+GHS,Ghana Cedi
+GIA,"Gill (11,8294 Cm3)"
+GIC,"Gram, Including Container"
+GII,"Gill (0,142065 Dm3)"
+GK,Gram Per Kilogram
+GLD,"Dry Gallon (4,404884 Dm3)"
+GLI,"Gallon (4,546092 Dm3)"
+GM,Gram Per Square Metre
+GMD,Gambia Dalasi
+GNF,Guinea Franc
+GO,Milligram Per Square Metre
+GP,Milligram Per Cubic Metre
+GQ,Microgram Per Cubic Metre
+GRN,"Grain Gb,Us (64,798910 Mg)"
+GRO,Gross
+GRT,Gross (Register) Ton
+GTQ,Guatemala Quetzal
+GV,Gigajoule
+GW,Gallon Per Thousand Cubic Foot
+GWH,Gigawatt-Hour (1 Million Kw/H)
+GY,Gross Yard
+GYD,Guyana Dollar
+H03,Henry Per Kiloohm
+H04,Henry Per Ohm
+H05,Millihenry Per Kiloohm
+H06,Millihenry Per Ohm
+H08,Microbecquerel
+H09,Reciprocal Year
+H1,Half Page - Electronic
+H11,Reciprocal Month
+H12,Degree Celsius Per Hour
+H14,Degree Celsius Per Second
+H16,Square Decametre
+H18,Square Hectometre
+H19,Cubic Hectometre
+H2,Half Litre
+H21,Blank
+H22,Volt Square Inch Per Pound-Force
+H23,Volt Per Inch
+H24,Volt Per Microsecond
+H26,Ohm Per Metre
+H29,Microgram Per Litre
+H30,Square Micrometre
+H31,Ampere Per Kilogram
+H32,Ampere Squared Second
+H34,Hertz Metre
+H35,Kelvin Metre Per Watt
+H36,Megaohm Per Kilometre
+H37,Megaohm Per Metre
+H40,Newton Per Ampere
+H41,"Newton Metre Watt To The Power Minus 0,5"
+H42,Pascal Per Metre
+H43,Siemens Per Centimetre
+H44,Teraohm
+H45,Volt Second Per Metre
+H46,Volt Per Second
+H47,Watt Per Cubic Metre
+H48,Attofarad
+H49,Centimetre Per Hour
+H50,Reciprocal Cubic Centimetre
+H51,Decibel Per Kilometre
+H52,Decibel Per Metre
+H53,Kilogram Per Bar
+H54,Kilogram Per Cubic Decimetre Kelvin
+H56,Kilogram Per Square Metre Second
+H57,Inch Per Two Pi Radiant
+H58,Metre Per Volt Second
+H60,Cubic Metre Per Cubic Metre
+H62,Millivolt Per Minute
+H63,Milligram Per Square Centimetre
+H65,Millilitre Per Cubic Metre
+H68,Millimole Per Gram
+H69,Picopascal Per Kilometre
+H70,Picosecond
+H71,Percent Per Month
+H74,Watt Per Metre
+H76,Gram Per Millimetre
+H77,Module Width
+H78,Conventional Centimetre Of Water
+H79,French Gauge
+H80,Rack Unit
+H81,Millimetre Per Minute
+H83,Litre Per Kilogram
+H84,Gram Millimetre
+H85,Reciprocal Week
+H87,Piece
+H88,Megaohm Kilometre
+H90,Percent Per Degree
+H92,Percent Per One Hundred Thousand
+H93,Percent Per Hundred
+H94,Percent Per Thousand
+H95,Percent Per Volt
+H96,Percent Per Bar
+H98,Percent Per Inch
+H99,Percent Per Metre
+HA,Hank
+HAR,Hectare
+HBA,Hectobar
+HBX,Hundred Boxes
+HC,Hundred Count
+HD,Half Dozen
+HDW,"Hundred Kilogram, Dry Weight"
+HE,Hundredth Of A Carat
+HEA,Head
+HF,Hundred Foot
+HH,Hundred Cubic Foot
+HI,Hundred Sheet
+HIU,Hundred Intenational Units
+HJ,Metric Horse Power
+HK,Hundred Kilogram
+HKD,Hong Kong Dollar
+HKM,"Hundred Kilogram, Net Mass"
+HL,Hundred Foot (Linear)
+HLT,Hectolitre
+HM,Mile Per Hour
+HMT,Hectometre
+HN,Conventional Millimetre Of Mercury
+HNL,Honduras Lempira
+HO,Hundred Troy Ounce
+HPA,Hectolitre Of Pure Alcohol
+HRK,Croatia Kuna
+HS,Hundred Square Foot
+HT,Half Hour
+HTG,Haiti Gourde
+HTZ,Hertz
+HUF,Hungary Forint
+HUR,Hour
+HY,Hundred Yard
+IC,Count Per Inch
+IDR,Indonesia Rupiah
+IE,Person
+II,Column Inch
+IL,Inch Per Minute
+ILS,Israel Shekel
+IM,Impression
+IMP,Isle Of Man Pound
+INH,Inch (2.54 Mm)
+INK,Square Inch
+INQ,Cubic Inch
+INR,India Rupee
+ISK,Iceland Krona
+IU,Inch Per Second
+IUG,International Unit Per Gram
+IV,Inch Per Second Squared
+J12,Per Mille Per Psi
+J13,Degree Api
+J14,Degree Baume (Origin Scale)
+J15,Degree Baume (Us Heavy)
+J16,Degree Baume (Us Light)
+J18,Degree Brix
+J19,D/Fhrnhet Hoursquarefoot/Brtshthermlunt/Thrmochemc
+J2,Joule Per Kilogram
+J20,Degree Fahrenheit Per Kelvin
+J21,Degree Fahrenheit Per Bar
+J22,British Thermalunit/Hour Square Foot D/Fahrenheit
+J25,Degree Fahrenheit Per Second
+J26,Reciprocal Degree Fahrenheit
+J28,Degree Rankine Per Hour
+J29,Degree Rankine Per Minute
+J30,Degree Rankine Per Second
+J31,Degree Twaddell
+J32,Micropoise
+J33,Microgram Per Kilogram
+J34,Microgram Per Cubic Metre Kelvin
+J35,Microgram Per Cubic Metre Bar
+J36,Microlitre Per Litre
+J38,Baud
+J39,British Thermal Unit (Mean)
+J40,Brtish Thermalunit Foot/Hour�Squarefoot D/Fhrnheit
+J41,Brtishthermalunit Inch/Hour Squarefoot D/Fahrnheit
+J42,Brtishthermalunit Inch/Scond Squarefoot D/Fahrenht
+J43,British Thermal Unit Per Pound Degree Fahrenheit
+J44,British Thermal Unit (International Table) /Minute
+J45,British Thermal Unit (International Table) /Second
+J46,Brtishthermalunit Foot/Hour Squarefoot D/Fhrenheit
+J47,British Thermal Unit (Thermochemical) Per Hour
+J48,Brtishthermalunit Inch/Hour Squarefoot D/Fhrenheit
+J49,Brtishthrmalunit Inch/Scond�Squarefoot D/Fahrnheit
+J51,British Thermal Unit (Thermochemical) Per Minute
+J53,Coulomb Square Metre Per Kilogram
+J54,Megabaud
+J55,Watt Second
+J56,Bar Per Bar
+J57,Barrel (Uk Petroleum)
+J58,Barrel (Uk Petroleum) Per Minute
+J60,Barrel (Uk Petroleum) Per Hour
+J61,Barrel (Uk Petroleum) Per Second
+J63,Barrel (Us Petroleum) Per Second
+J64,Bushel (Uk) Per Day
+J65,Bushel (Uk) Per Hour
+J66,Bushel (Uk) Per Minute
+J67,Bushel (Uk) Per Second
+J69,Bushel (Us Dry) Per Hour
+J71,Bushel (Us Dry) Per Second
+J72,Centinewton Metre
+J73,Centipoise Per Kelvin
+J74,Centipoise Per Bar
+J75,Calorie (Mean)
+J76,Calorie (International Table) /Gram Degree Celsius
+J79,Calorie (Thermochemical) Per Gram Degree Celsius
+J81,Calorie (Thermochemical) Per Minute
+J82,Calorie (Thermochemical) Per Second
+J83,Clo
+J84,Centimetre Per Second Kelvin
+J85,Centimetre Per Second Bar
+J89,Centimetre Of Mercury
+J90,Cubic Decimetre Per Day
+J92,Cubic Decimetre Per Minute
+J93,Cubic Decimetre Per Second
+J94,Dyne Centimetre
+J95,Ounce (Uk Fluid) Per Day
+J98,Ounce (Uk Fluid) Per Second
+JB,Jumbo
+JEP,Jersey Pound
+JK,Megajoule Per Kilogram
+JM,Megajoule Per Cubic Metre
+JNT,Pipeline Joint
+JO,Joint
+JOD,Jordan Dinar
+JPS,Hundred Metre
+JR,Jar
+JWL,Number Of Jewels
+K1,Kilowatt Demand
+K10,Ounce (Us Fluid) Per Hour
+K11,Ounce (Us Fluid) Per Minute
+K13,Foot Per Degree Fahrenheit
+K14,Foot Per Hour
+K15,Foot Pound-Force Per Hour
+K16,Foot Pound-Force Per Minute
+K17,Foot Per Psi
+K19,Foot Per Second Psi
+K2,Kilovolt Ampere Reactive Demand
+K20,Reciprocal Cubic Foot
+K21,Cubic Foot Per Degree Fahrenheit
+K22,Cubic Foot Per Day
+K23,Cubic Foot Per Psi
+K25,Foot Of Mercury
+K26,Gallon (Uk) Per Day
+K27,Gallon (Uk) Per Hour
+K28,Gallon (Uk) Per Second
+K3,Kilovolt Ampere Reactive Hour
+K31,Gram-Force Per Square Centimetre
+K32,Gill (Uk) Per Day
+K33,Gill (Uk) Per Hour
+K35,Gill (Uk) Per Second
+K37,Gill (Us) Per Hour
+K38,Gill (Us) Per Minute
+K39,Gill (Us) Per Second
+K41,Grain Per Gallon (Us)
+K42,Horsepower (Boiler)
+K43,Horsepower (Electric)
+K46,Inch Per Psi
+K48,Inch Per Second Psi
+K49,Reciprocal Cubic Inch
+K5,Kilovolt Ampere (Reactive)
+K50,Kilobaud
+K51,Kilocalorie (Mean)
+K52,Kilocalorie (It) Per Hour Metre Degree Celsius
+K53,Kilocalorie (Thermochemical)
+K54,Kilocalorie (Thermochemical) Per Minute
+K55,Kilocalorie (Thermochemical) Per Second
+K58,Kilomole Per Hour
+K59,Kilomole Per Cubic Metre Kelvin
+K6,Kilolitre
+K60,Kilomole Per Cubic Metre Bar
+K61,Kilomole Per Minute
+K62,Litre Per Litre
+K63,Reciprocal Litre
+K64,Pound (Avoirdupois) Per Degree Fahrenheit
+K65,Pound (Avoirdupois) Square Foot
+K67,Pound Per Foot Hour
+K68,Pound Per Foot Second
+K70,Pound (Avoirdupois) Per Cubic Foot Psi
+K71,Pound (Avoirdupois) Per Gallon (Uk)
+K73,Pound (Avoirdupois) Per Hour Degree Fahrenheit
+K74,Pound (Avoirdupois) Per Hour Psi
+K75,Pound/Avoirdupois Per Cubic Inch Degree Fahrenheit
+K76,Pound (Avoirdupois) Per Cubic Inch Psi
+K77,Pound (Avoirdupois) Per Psi
+K78,Pound (Avoirdupois) Per Minute
+K79,Pound (Avoirdupois) Per Minute Degree Fahrenheit
+K80,Pound (Avoirdupois) Per Minute Psi
+K81,Pound (Avoirdupois) Per Second
+K83,Pound (Avoirdupois) Per Second Psi
+K84,Pound Per Cubic Yard
+K85,Pound-Force Per Square Foot
+K86,Pound-Force Per Square Inch Degree Fahrenheit
+K87,Psi Cubic Inch Per Second
+K88,Psi Litre Per Second
+K89,Psi Cubic Metre Per Second
+K90,Psi Cubic Yard Per Second
+K92,Pound-Force Second Per Square Inch
+K93,Reciprocal Psi
+K94,Ton-Force (Us Short)
+K95,Quart (Uk Liquid) Per Hour
+K96,Sidereal Year
+K97,Quart (Uk Liquid) Per Second
+K98,Quart (Us Liquid) Per Day
+K99,Yard Per Psi
+KA,Cake
+KAT,Katal
+KB,Kilocharacter
+KBA,Kilobar
+KCC,Kilogram Of Choline Chloride
+KD,Kilogram Decimal
+KDW,Kilogram Drained Net Weight
+KEL,Kelvin
+KES,Kenya Shilling
+KF,Kilopacket
+KGM,Kilogram
+KGS,Kilogram Per Second
+KHR,Cambodia Riel
+KI,Kilogram Per Millimetre Width
+KIC,"Kilogram, Including Container"
+KIP,"Kilogram, Including Inner Packaging"
+KJO,Kilojoule
+KL,Kilogram Per Metre
+KLK,Lactic Dry Material Percentage
+KMA,Kilogram Of Methylamine
+KMF,Comorian Franc
+KMK,Square Kilometre
+KMQ,Kilogram Per Cubic Meter
+KNI,Kilogram Of Nitrogen
+KNM,Kilonewton Per Square Metre
+KNS,Kilogram Of Named Substance
+KNT,Knot (1 Mile Per Hour)
+KO,Milliequivalence Causticpotash Per Gram Of Product
+KPA,Kilopascal
+KPH,Kilogram Of Potassium Hydroxide (Caustic Potasn)
+KPP,Kgm Of Phosphorus Pentoxide(Phosphoric Anhydride
+KPW,Korea (North) Won
+KR,Kiloroentgen
+KRW,Korea (South) Won
+KS,Thousand Pound Per Square Inch
+KSD,Kilogram Of Substance 90 Per Cent Dry
+KSH,Kilogram Of Sodium Hydyoxide (Caustic Soda)
+KTM,Kilometre
+KTN,Kilotonne
+KUR,Kilogram Of Uranium
+KVA,Kilovolt - Ampere
+KVT,Kilovolt
+KW,Kilogram Per Millimetre
+KWD,Kuwait Dinar
+KWN,Kilowatt Hour Per Normalized Cubic Metre
+KWO,Kilogram Of Tungsten Trioxide
+KWS,Kilowatt Hour Per Standard Cubic Metre
+KWT,Kilowatt
+KX,Millilitre Per Kilogram
+KYD,Cayman Islands Dollar
+KZT,Kazakhstan Tenge
+L13,Metre Per Second Bar
+L14,Square Metre Hour Degree Celsius Per Kilocalorie
+L15,Millipascal Second Per Kelvin
+L16,Millipascal Second Per Bar
+L17,Milligram Per Cubic Metre Kelvin
+L18,Milligram Per Cubic Metre Bar
+L19,Millilitre Per Litre
+L2,Litre Per Minute
+L23,Mole Per Hour
+L25,Mole Per Kilogram Bar
+L26,Mole Per Litre Kelvin
+L27,Mole Per Litre Bar
+L31,Milliroentgen Aequivalent Men
+L32,Nanogram Per Kilogram
+L33,Ounce (Avoirdupois) Per Day
+L34,Ounce (Avoirdupois) Per Hour
+L35,Ounce (Avoirdupois) Per Minute
+L36,Ounce (Avoirdupois) Per Second
+L37,Ounce (Avoirdupois) Per Gallon (Uk)
+L39,Ounce (Avoirdupois) Per Cubic Inch
+L43,Peck (Uk)
+L45,Peck (Uk) Per Hour
+L46,Peck (Uk) Per Minute
+L47,Peck (Uk) Per Second
+L51,Peck (Us Dry) Per Second
+L52,Psi Per Psi
+L53,Pint (Uk) Per Day
+L54,Pint (Uk) Per Hour
+L55,Pint (Uk) Per Minute
+L58,Pint (Us Liquid) Per Hour
+L60,Pint (Us Liquid) Per Second
+L61,Pint (Us Dry)
+L63,Slug Per Day
+L64,Slug Per Foot Second
+L65,Slug Per Cubic Foot
+L66,Slug Per Hour
+L69,Tonne Per Kelvin
+L72,Tonne Per Day Kelvin
+L73,Tonne Per Day Bar
+L74,Tonne Per Hour Kelvin
+L78,Tonne Per Minute
+L81,Tonne Per Second
+L82,Tonne Per Second Kelvin
+L83,Tonne Per Second Bar
+L84,Ton (Uk Shipping)
+L85,Ton Long Per Day
+LA,Pound Per Cubic Inch
+LAC,Lactose Excess Percentage
+LAK,Laos Kip
+LBP,Lebanon Pound
+LBR,"Pound Gb,Us (0,45359237 Kg)"
+LC,Linear Centimetre
+LD,Litre Per Day
+LEF,Leaf
+LF,Linear Foot
+LH,Labour Hour
+LJ,Large Spray
+LK,Link
+LKR,Sri Lanka Rupee
+LM,Linear Metre
+LN,Length
+LO,Lot [Unit Of Procurement]
+LPA,Litre Of Pure Alcohol
+LS,Lump Sum
+LSL,Lesotho Loti
+LTR,Liter
+LUB,"Metric Ton, Lubricating Oil"
+LUM,Lumen
+LX,Linear Yard Per Pound
+LY,Linear Yard
+LYD,Libya Dinar
+M0,Magnetic Tape
+M1,Milligram Per Litre
+M11,Cubic Yard Per Degree Fahrenheit
+M13,Cubic Yard Per Hour
+M15,Cubic Yard Per Minute
+M16,Cubic Yard Per Second
+M17,Kilohertz Metre
+M19,Beaufort
+M21,Reciprocal Kilovolt - Ampere Hour
+M22,Millilitre Per Square Centimetre Minute
+M23,Newton Per Centimetre
+M25,Percent Per Degree Celsius
+M26,Gigaohm Per Metre
+M30,Reciprocal Volt - Ampere Second
+M32,Pascal Second Per Litre
+M33,Millimole Per Litre
+M34,Newton Metre Per Square Metre
+M35,Millivolt - Ampere
+M39,Centimetre Per Second Squared
+M4,Monetary Value
+M40,Yard Per Second Squared
+M44,Revolution
+M46,Revolution Per Minute
+M49,Chain (Based On U.S. Survey Foot)
+M5,Microcurie
+M50,Furlong
+M51,Foot (U.S. Survey)
+M52,Mile (Based On U.S. Survey Foot)
+M55,Metre Per Radiant
+M57,Mile Per Minute
+M58,Mile Per Second
+M59,Metre Per Second Pascal
+M60,Metre Per Hour
+M61,Inch Per Year
+M62,Kilometre Per Second
+M63,Inch Per Minute
+M64,Yard Per Second
+M65,Yard Per Minute
+M66,Yard Per Hour
+M7,Micro-Inch
+M70,"Ton, Register"
+M71,Cubic Metre Per Pascal
+M73,Kilogram Per Cubic Metre Pascal
+M74,Kilogram Per Pascal
+M76,Poundal
+M78,Pond
+M81,Square Centimetre Per Second
+M82,Square Metre Per Second Pascal
+M83,Denier
+M84,Pound Per Yard
+M87,Kilogram Per Second Pascal
+M89,Tonne Per Year
+M90,Kilopound Per Hour
+M95,Poundal Foot
+M97,Dyne Metre
+MA,Machine Per Unit
+MAD,Morocco Dirham
+MAH,Megavolt Ampere Reactive Hour
+MAL,Megalitre
+MAR,Megavolt Ampere Reactive
+MAW,Megawatt
+MBE,Thousand Standard Brick Equivalent
+MBF,Thousand Board Foot
+MDL,Moldova Leu
+MF,Milligram Per Square Foot Per Side
+MGA,Madagascar Ariary
+MGM,Milligram
+MID,Thousand
+MIL,Thousand
+MIN,Minute
+MKD,Macedonia Denar
+MLD,Billion Us
+MMK,Square Millimetre
+MMT,Millimetre
+MNT,Mongolia Tughrik
+MOP,Macau Pataca
+MPA,Megapascal
+MQ,Thousand Metre
+MQH,Cubic Metre Per Hour
+MQS,Cubic Metre Per Second
+MT,Mat
+MTK,Square Metre
+MUR,Mauritius Rupee
+MWK,Malawi Kwacha
+MXN,Mexico Peso
+MYR,Malaysia Ringgit
+N10,Pound Foot Per Second
+N11,Pound Inch Per Second
+N17,Inch Of Mercury (60 �F)
+N18,Inch Of Water (39.2 �F)
+N19,Inch Of Water (60 �F)
+N2,Number Of Lines
+N20,Kip Per Square Inch
+N21,Poundal Per Square Foot
+N22,Ounce (Avoirdupois) Per Square Inch
+N23,Conventional Metre Of Water
+N24,Gram Per Square Millimetre
+N25,Pound Per Square Yard
+N27,Foot To The Fourth Power
+N28,Cubic Decimetre Per Kilogram
+N3,Print Point
+N30,Cubic Inch Per Pound
+N31,Kilonewton Per Metre
+N32,Poundal Per Inch
+N33,Pound-Force Per Yard
+N36,Newton Second Per Square Metre
+N37,Kilogram Per Metre Second
+N39,Kilogram Per Metre Day
+N40,Kilogram Per Metre Hour
+N42,Poundal Second Per Square Inch
+N44,Pound Per Foot Day
+N46,Foot Poundal
+N49,Watt Per Square Inch
+N66,British Thermal Unit (39 �F)
+N68,British Thermal Unit (60 �F)
+N69,Calorie (20 �C)
+N71,Therm (Ec)
+N73,British Thermal Unit (Thermochemical) Per Pound
+N79,Kelvin Per Pascal
+N81,Kilowatt Per Metre Kelvin
+N82,Kilowatt Per Metre Degree Celsius
+N83,Metre Per Degree Celcius Metre
+N90,Kilofarad
+N92,Picosiemens
+N97,Gilbert
+N98,Volt Per Pascal
+N99,Picovolt
+NA,Milligram Per Kilogram
+NAD,Namibia Dollar
+NAR,Number Of Articles
+NB,Barge
+NBB,Number Bobbins
+NCL,Number Of Cells
+NE,Net Litre
+NEW,Newton
+NG,Net Gallon (Us)
+NGN,Nigeria Naira
+NH,Message Hour
+NI,Net Imperial Gallon
+NIL,Nil
+NIO,Nicaragua Cordoba
+NJ,Number Of Screens
+NMB,Number
+NMI,Nautical Mile (1852 M)
+NMP,Number Of Packs
+NOK,Norway Krone
+NPL,Number Of Parcels
+NPR,Number Of Pairs
+NPT,Number Of Parts
+NQ,Mho
+NR,Micromho
+NRL,Number Of Rolls
+NT,Net Ton
+NTT,Net (Regirter) Ton
+NU,Newton Metre
+NV,Vehicle
+NX,Part Per Thousand
+NY,Pound Per Air Dry Metric Ton
+NZD,New Zealand Dollar
+OA,Panel
+ODE,Ozone Depletion Equivalent
+ODG,Ods Grams
+ODK,Ods Kilograms
+ODM,Ods Milligrams
+OHM,Ohm
+ON,Ounce Per Square Yard
+ONZ,"Ounce Gb,Us (28,349523 G)"
+OP,Two Pack
+OPM,Oscillations Per Minute
+OT,Overtime Hour
+OZ,Ounce Av
+OZA,"Fluid Ounce (29,5735 Cm3)"
+OZI,"Fluid Ounce (29,5735 Cm3)"
+P0,Page - Electronic
+P1,Percent
+P10,Coulomb Per Metre
+P11,Kiloweber
+P13,Kilotesla
+P15,Joule Per Minute
+P16,Joule Per Hour
+P17,Joule Per Day
+P18,Kilojoule Per Second
+P19,Kilojoule Per Minute
+P2,Pound Per Foot
+P20,Kilojoule Per Hour
+P21,Kilojoule Per Day
+P22,Nanoohm
+P24,Kilohenry
+P25,Lumen Per Square Foot
+P26,Phot
+P27,Footcandle
+P28,Candela Per Square Inch
+P29,Footlambert
+P3,Three Pack
+P32,Candela Per Square Foot
+P33,Kilocandela
+P34,Millicandela
+P39,Calorie (Thermochemical) Per Square Centimetre
+P4,Four Pack
+P40,Langley
+P42,Pascal Squared Second
+P43,Bel Per Metre
+P44,Pound Mole
+P45,Pound Mole Per Second
+P46,Pound Mole Per Minute
+P49,Newton Square Metre Per Ampere
+P50,Weber Metre
+P53,Unit Pole
+P54,Milligray Per Second
+P55,Microgray Per Second
+P56,Nanogray Per Second
+P59,Microgray Per Minute
+PA,Packet
+PAL,Pascal
+PB,Pair Inch
+PCE,Piece
+PD,Pad
+PE,Pound Equivalent
+PEN,Peru Sol
+PFL,Proof Litre
+PG,Plate
+PGK,Papua New Guinea Kina
+PHP,Philippines Piso
+PI,Pitch
+PK,Pack
+PLA,Degree Plato
+PM,Pound Percentage
+PO,Pound Per Inch Of Length
+PS,Pound-Force Per Square Inch
+PT,Pint (Us)
+PU,Tray / Tray Pack
+PV,Half Pint (Us)
+PY,Peck Dry (Us)
+PYG,Paraguay Guarani
+Q10,Joule Per Tesla
+Q12,Octet
+Q13,Octet Per Second
+Q16,Natural Unit Of Information
+Q17,Shannon Per Second
+Q19,Natural Unit Of Information Per Second
+Q22,Second Per Radian Cubic Metre
+Q23,Weber To The Power Minus One
+Q27,Newton Metre Per Metre
+Q29,Microgram Per Hectogram
+Q3,Meal
+Q30,pH (potential of Hydrogen)
+Q31,Kilojoule Per Gram
+Q35,Megawatts Per Minute
+Q36,Square Metre Per Cubic Metre
+Q37,Standard Cubic Metre Per Day
+Q38,Standard Cubic Metre Per Hour
+Q39,Normalized Cubic Metre Per Day
+Q40,Normalized Cubic Metre Per Hour
+Q42,Joule Per Standard Cubic Metre
+QAN,Quarter (Of A Year)
+QD,Quarter Dozen
+QH,Quarter Hour
+QK,Quarter Kilogram
+QR,Quire
+QT,Quart (Us)
+QTD,"Dry Quart (1,101221 Dm3)"
+QTI,"Quart (1,136523 Dm3)"
+QTL,"Liquid Quart (0,946353 Dm3)"
+R1,Pica
+R4,Calorie
+R9,Thousand Cubic Metre
+RG,Ring
+RH,Running Or Operating Hour
+RK,Roll Metric Measure
+RL,Reel
+RM,Ream
+RO,Roll
+ROM,Room
+RON,Romania Leu
+RP,Pound Per Ream
+RPM,Revolution Per Minute
+RPS,Revolution Per Second
+RS,Reset
+RT,Revenue Ton Mile
+RUB,Russia Ruble
+RWF,Rwanda Franc
+S3,square foot per second
+S4,square metre per second
+S6,session
+S7,storage unit
+S8,standard advertising unit
+SA,sack
+SAN,Half year (six Months)
+SBD,Solomon Islands Dollar
+SCO,Score
+SCR,"Scruple GP,US (1,295982 g)"
+SD,solid pound
+SDG,Sudan Pound
+SE,section
+SEC,Second
+SEK,Sweden Krona
+SET,Set
+SG,segment
+SGD,Singapore Dollar
+SHP,Saint Helena Pound
+SHT,Shipping ton
+SIE,Siemens
+SK,split tank truck
+SL,slipsheet
+SLL,Sierra Leone Leone
+SM3,Standard cubic metre
+SMI,Statute mile (1609.344 m)
+SN,square rod
+SOS,Somalia Shilling
+SPL,Seborga Luigino
+SQ,square
+SQR,"square, roofing"
+SRD,Suriname Dollar
+SS,sheet metric measure
+ST,sheet
+STC,stick
+STI,"Stone GB (6,350293 kg)"
+STK,"stick, cigarette"
+STL,standard litre
+STN,"Short ton GB, US 2/ (0,90718474 t)"
+STW,straw
+SW,skein
+SX,shipment
+SZL,Swaziland Lilangeni
+T0,telecommunication line in service
+T1,thousand pound gross
+T3,thousand piece
+T5,thousand casing
+T6,thousand gallon (US)
+T7,thousand impression
+T8,thousand linear inch
+TA,tenth cubic foot
+TAH,Thousand ampere-hour
+TAN,total acid number
+TC,truckload
+TE,tote
+TF,ten square yard
+THB,Thailand Baht
+TI,thousand square inch
+TIP,"metric ton, including inner packaging"
+TJ,thousand square centimetre
+TK,"tank, rectangular"
+TL,thousand foot (linear)
+TMS,"kilogram of imported meat, less offal"
+TMT,Turkmenistan Manat
+TN,tin
+TND,Tunisia Dinar
+TOP,Tonga Pa'anga
+TPI,teeth per inch
+TPR,Ten pairs
+TQ,thousand foot
+TQD,thousand cubic metres per day
+TR,ten square foot
+TRL,Trillion Eur
+TRY,Turkey Lira
+TS,thousand square foot
+TSH,Ton of steam per hour
+TST,ten set
+TT,thousand linear metre
+TTD,Trinidad and Tobago Dollar
+TTS,ten thousand sticks
+TU,tube
+TV,thousand kilogram
+TVD,Tuvalu Dollar
+TWD,Taiwan New Dollar
+TY,"tank, cylindrical"
+TZS,Tanzania Shilling
+U1,treatment
+U2,tablet
+UA,torr
+UAH,Ukraine Hryvnia
+UB,telecommunication line in service average
+UC,telecommunication port
+UD,tenth minute
+UE,tenth hour
+UF,usage per telecommunication line average
+UGX,Uganda Shilling
+UH,ten thousand yard
+UM,million unit
+USD,United States Dollar
+UYU,Uruguay Peso
+UZS,Uzbekistan Som
+VA,volt - ampere per kilogram
+VEF,Venezuela Bol?var
+VI,vial
+VLT,Volt
+VND,Viet Nam Dong
+VP,percent volume
+VQ,bulk
+VS,visit
+VUV,Vanuatu Vatu
+W2,wet kilo
+W4,two week
+WCD,"Cord (3,63 m3)"
+WE,wet ton
+WEE,Week
+WG,wine gallon
+WHR,Watt-hour
+WI,weight per square inch
+WM,working month
+WSD,Standard
+WST,Samoa Tala
+WW,millilitre of water
+X1,Gunters chain
+XAF,Communaut? Financi?re Africaine (BEAC) CFA Franc?B
+XCD,East Caribbean Dollar
+XOF,Communaut? Financi?re Africaine (BCEAO) Franc
+XPF,Comptoirs Fran?ais du Pacifique (CFP) Franc
+YDK,Square yard
+YER,Yemen Rial
+YL,hundred linear yard
+YRD,Yard (0.9144 m)
+Z1,lift van
+Z11,hanging container
+Z2,chest
+Z3,cask
+Z4,hogshead
+Z6,conference point
+Z8,newspage agate line
+ZAR,South Africa Rand
+ZMW,Zambia Kwacha
+ZWD,Zimbabwe Dollar
+ZZ,mutually defined

@@ -1,7 +1,122 @@
-import { ModulePlaceholder, moduleMetadata } from "@/components/module-placeholder"
+import { Plus } from "lucide-react"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { Suspense } from "react"
 
-export const metadata = moduleMetadata("/master/produk")
+import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
+import { DataTableFilter } from "@/components/data-table/data-table-filter"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableSearch } from "@/components/data-table/data-table-search"
+import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { PageHeader } from "@/components/page-header"
+import { Badge } from "@/components/ui/badge"
+import { buttonVariants } from "@/components/ui/button"
+import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
+import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
+import { hasPermission } from "@/lib/permissions"
+import { requirePermission } from "@/server/auth/session"
+import { listProducts, type ProductRow } from "@/server/queries/products"
 
-export default function Page() {
-  return <ModulePlaceholder href="/master/produk" />
+import { CustomsReadiness } from "./customs-readiness"
+
+export const metadata: Metadata = { title: "Produk · IT Inventory" }
+
+const CATEGORY_FILTER = "kategori"
+const READINESS_FILTER = "dokumen-bc"
+const READINESS_OPTIONS = [
+  { value: "siap", label: "Siap dokumen BC" },
+  { value: "belum", label: "Belum siap dokumen BC" },
+]
+
+const COLUMNS: DataTableColumn<ProductRow>[] = [
+  {
+    header: "SKU",
+    cell: (row) => (
+      <Link
+        href={`/master/produk/${row.id}`}
+        className="font-mono underline-offset-4 hover:underline"
+      >
+        {row.sku}
+      </Link>
+    ),
+  },
+  { header: "Nama", cell: (row) => row.name, className: "whitespace-normal" },
+  { header: "Kategori", cell: (row) => INVENTORY_CATEGORY_LABELS[row.category] },
+  { header: "Satuan stok", cell: (row) => <span className="font-mono">{row.uomCode}</span> },
+  {
+    header: "Kode HS",
+    cell: (row) => (row.hsCode ? <span className="font-mono">{row.hsCode}</span> : "—"),
+  },
+  { header: "Dokumen BC", cell: (row) => <CustomsReadiness product={row} /> },
+  {
+    header: "Status",
+    cell: (row) =>
+      row.active ? (
+        <Badge variant="secondary">Aktif</Badge>
+      ) : (
+        <Badge variant="outline">Arsip</Badge>
+      ),
+  },
+]
+
+export default function ProductsPage({ searchParams }: PageProps<"/master/produk">) {
+  return (
+    <>
+      <PageHeader
+        title="Produk"
+        description="Produk tanpa kode HS atau satuan CEISA belum bisa dipakai di dokumen BC."
+      />
+      <Suspense fallback={<DataTableSkeleton />}>
+        <ProductTable searchParams={searchParams} />
+      </Suspense>
+    </>
+  )
+}
+
+async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+  const user = await requirePermission("master:read")
+  const raw = await searchParams
+  const params = parseListParams(raw)
+  const category = pickFilter(raw, CATEGORY_FILTER, INVENTORY_CATEGORIES)
+  const readiness = pickFilter(raw, READINESS_FILTER, ["siap", "belum"] as const)
+  const { rows, total } = await listProducts({
+    ...params,
+    category,
+    customsReady: readiness === undefined ? undefined : readiness === "siap",
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <DataTableSearch placeholder="Cari SKU, nama, atau kode HS" />
+        <DataTableFilter
+          name={CATEGORY_FILTER}
+          label="Kategori"
+          options={INVENTORY_CATEGORIES.map((value) => ({
+            value,
+            label: INVENTORY_CATEGORY_LABELS[value],
+          }))}
+        />
+        <DataTableFilter name={READINESS_FILTER} label="Dokumen BC" options={READINESS_OPTIONS} />
+        {hasPermission(user.roles, "master:write") && (
+          <Link href="/master/produk/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
+            <Plus />
+            Tambah produk
+          </Link>
+        )}
+      </div>
+      <DataTable
+        columns={COLUMNS}
+        rows={rows}
+        rowKey={(row) => row.id}
+        emptyMessage="Tidak ada produk yang cocok."
+      />
+      <DataTablePagination
+        searchParams={raw}
+        page={params.page}
+        pageSize={params.pageSize}
+        total={total}
+      />
+    </div>
+  )
 }

@@ -3,6 +3,7 @@
 import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 
+import { checkbox, requiredText } from "@/lib/form-fields"
 import { INVENTORY_CATEGORIES, WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import { locations, users, userWarehouses, warehouses } from "@/server/db/schema"
@@ -11,18 +12,9 @@ import { locations, users, userWarehouses, warehouses } from "@/server/db/schema
 // Akses gudang per user: izin user:manage. Kode, tipe, dan gudang sebuah lokasi tidak bisa
 // diubah setelah dibuat; aturannya dipaksakan trigger di database (migrasi 0013).
 
-const text = (label: string, max: number) =>
-  z.string().trim().min(1, `${label} wajib diisi.`).max(max, `${label} maksimal ${max} karakter.`)
-
-// Checkbox hanya terkirim saat dicentang.
-const checkbox = z
-  .literal("on")
-  .optional()
-  .transform((value) => value === "on")
-
 const warehouseFields = {
-  name: text("Nama gudang", 200),
-  address: text("Alamat", 500),
+  name: requiredText("Nama gudang", 200),
+  address: requiredText("Alamat", 500),
   category: z.enum(INVENTORY_CATEGORIES, "Kategori gudang wajib dipilih."),
   isBonded: checkbox,
 }
@@ -30,7 +22,7 @@ const warehouseFields = {
 export const createWarehouse = defineFormAction({
   name: "createWarehouse",
   permission: "master:write",
-  schema: z.object({ code: text("Kode gudang", 30), ...warehouseFields }),
+  schema: z.object({ code: requiredText("Kode gudang", 30), ...warehouseFields }),
   successMessage: "Gudang ditambahkan.",
   handler: async ({ input, tx }) => {
     const [existing] = await tx
@@ -71,8 +63,8 @@ export const createLocation = defineFormAction({
   permission: "master:write",
   schema: z.object({
     warehouseId: z.uuid("Gudang tidak valid."),
-    code: text("Kode lokasi", 30),
-    name: text("Nama lokasi", 200),
+    code: requiredText("Kode lokasi", 30),
+    name: requiredText("Nama lokasi", 200),
     type: z.enum(WAREHOUSE_LOCATION_TYPES, "Tipe lokasi wajib dipilih."),
     parentId,
   }),
@@ -102,7 +94,7 @@ export const updateLocation = defineFormAction({
   permission: "master:write",
   schema: z.object({
     id: z.uuid("Lokasi tidak valid."),
-    name: text("Nama lokasi", 200),
+    name: requiredText("Nama lokasi", 200),
     parentId,
     active: checkbox,
   }),
