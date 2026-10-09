@@ -1,11 +1,9 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
 import { PageHeader } from "@/components/page-header"
-import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { IDENTITY_TYPE_LABELS } from "@/lib/partner"
 import { hasPermission } from "@/lib/permissions"
@@ -45,15 +43,7 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title={`${partner.code} · ${partner.name}`}
-        description={roles.join(" dan ")}
-        actions={
-          <Link href="/master/partner" className={buttonVariants({ variant: "outline" })}>
-            Kembali ke daftar
-          </Link>
-        }
-      />
+      <PageHeader title={`${partner.code} · ${partner.name}`} description={roles.join(" dan ")} />
       {hasPermission(user.roles, "master:write") ? (
         <PartnerForm partner={partner} />
       ) : (

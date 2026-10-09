@@ -6,11 +6,12 @@ import { DataTableFilter } from "@/components/data-table/data-table-filter"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
+import { NameCell, StatusBadge } from "@/components/status-badge"
 import { formatDate } from "@/lib/format"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
-import { ROLE_LABELS, ROLES } from "@/lib/permissions"
+import { requiresMfa, ROLE_LABELS, ROLES } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listUsers, type UserListRow } from "@/server/queries/users"
 
@@ -21,35 +22,35 @@ const ROLE_FILTER = "peran"
 const ROLE_OPTIONS = ROLES.map((role) => ({ value: role, label: ROLE_LABELS[role] }))
 
 const COLUMNS: DataTableColumn<UserListRow>[] = [
-  { header: "Nama", cell: (user) => <span className="font-medium">{user.name}</span> },
-  { header: "Email", cell: (user) => user.email },
+  { header: "Nama", cell: (user) => <NameCell>{user.name}</NameCell> },
+  { header: "Email", cell: (user) => user.email, className: "w-full" },
   {
     header: "Peran",
     cell: (user) =>
       user.roles.length ? (
-        <div className="flex flex-wrap gap-1">
-          {user.roles.map((role) => (
-            <Badge key={role} variant="secondary">
-              {ROLE_LABELS[role]}
-            </Badge>
-          ))}
-        </div>
+        user.roles.map((role) => ROLE_LABELS[role]).join(", ")
       ) : (
-        <span className="text-muted-foreground">Belum punya peran</span>
+        <StatusBadge tone="warning">Belum punya peran</StatusBadge>
       ),
   },
   {
     header: "MFA",
     cell: (user) =>
-      user.twoFactorEnabled ? <Badge>Aktif</Badge> : <Badge variant="outline">Belum aktif</Badge>,
+      user.twoFactorEnabled ? (
+        <StatusBadge tone="success">Aktif</StatusBadge>
+      ) : requiresMfa(user.roles) ? (
+        <StatusBadge tone="warning">Wajib, belum aktif</StatusBadge>
+      ) : (
+        <span className="text-muted-foreground">Tidak wajib</span>
+      ),
   },
-  { header: "Dibuat", cell: (user) => formatDate(user.createdAt), className: "text-right" },
+  { header: "Dibuat", cell: (user) => formatDate(user.createdAt), align: "right" },
 ]
 
 export default function UsersPage({ searchParams }: PageProps<"/admin/users">) {
   return (
     <>
-      <PageHeader title="Pengguna" description="Daftar user dan perannya." />
+      <PageHeader title="Pengguna" />
       <Suspense fallback={<DataTableSkeleton />}>
         <UserTable searchParams={searchParams} />
       </Suspense>
@@ -74,7 +75,7 @@ async function UserTable({ searchParams }: { searchParams: Promise<RawSearchPara
         columns={COLUMNS}
         rows={rows}
         rowKey={(user) => user.id}
-        emptyMessage="Tidak ada user yang cocok."
+        empty={listEmptyState({ searchParams: raw, basePath: "/admin/users", noun: "user" })}
       />
       <DataTablePagination
         searchParams={raw}

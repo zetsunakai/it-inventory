@@ -41,6 +41,7 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <FormField label="Kategori" htmlFor="categoryId" errors={fieldErrors?.categoryId}>
         <Select name="categoryId" items={items} value={categoryId} onValueChange={setCategoryId}>
           <SelectTrigger id="categoryId" className="w-full">
@@ -79,7 +80,6 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
             : "Pilih kategori dulu untuk melihat satuan acuannya."
         }
       />
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       <Button type="submit" disabled={pending}>
         {pending ? "Menyimpan…" : "Simpan"}
       </Button>
@@ -108,6 +108,7 @@ export function UomEditForm({
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="id" value={uom.id} />
       {/* Satuan acuan selalu berfaktor 1, jadi faktornya dikirim tetap. */}
       {uom.isReference && <input type="hidden" name="factor" value="1" />}
@@ -136,7 +137,6 @@ export function UomEditForm({
         description="Satuan yang diarsipkan tidak bisa dipilih untuk produk dan transaksi baru."
         defaultChecked={state?.ok === false ? state.values?.active === "on" : uom.active}
       />
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}
@@ -181,6 +181,7 @@ export function UomCategoryForm() {
 
   return (
     <form action={formAction} className="space-y-4 rounded-lg border p-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <p className="font-medium">Tambah kategori</p>
       <div className="grid gap-4 sm:grid-cols-2">
         <FormField label="Kode kategori" htmlFor="category-code" errors={fieldErrors?.code}>
@@ -227,7 +228,6 @@ export function UomCategoryForm() {
           />
         </FormField>
       </div>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}

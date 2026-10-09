@@ -5,7 +5,7 @@ import { useActionState, useEffect } from "react"
 
 import { FormErrors } from "@/components/form-errors"
 import { CheckboxField } from "@/components/checkbox-field"
-import { FormField } from "@/components/form-field"
+import { FormField, StaticField } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -57,23 +57,27 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
 
   return (
     <form action={formAction} className="max-w-2xl space-y-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       {warehouse && <input type="hidden" name="id" value={warehouse.id} />}
       <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
-        <FormField
-          label="Kode gudang"
-          htmlFor="code"
-          errors={fieldErrors?.code}
-          hint={warehouse ? "Tidak bisa diubah." : undefined}
-        >
-          <Input
-            id="code"
-            name={warehouse ? undefined : "code"}
-            defaultValue={warehouse?.code ?? fieldValue(state, "code")}
-            disabled={Boolean(warehouse)}
-            maxLength={30}
-            autoComplete="off"
+        {warehouse ? (
+          <StaticField
+            label="Kode gudang"
+            value={warehouse.code}
+            mono
+            reason="Tidak bisa diubah."
           />
-        </FormField>
+        ) : (
+          <FormField label="Kode gudang" htmlFor="code" errors={fieldErrors?.code}>
+            <Input
+              id="code"
+              name="code"
+              defaultValue={fieldValue(state, "code")}
+              maxLength={30}
+              autoComplete="off"
+            />
+          </FormField>
+        )}
         <FormField label="Nama gudang" htmlFor="name" errors={fieldErrors?.name}>
           <Input
             id="name"
@@ -119,7 +123,6 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
           defaultChecked={checked("active", warehouse.active)}
         />
       )}
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && warehouse && state.message && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}

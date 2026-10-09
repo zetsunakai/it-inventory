@@ -21,6 +21,7 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  // Semua halaman kecuali halaman login, endpoint auth, dan aset statis.
-  matcher: ["/((?!login|api/auth|_next/static|_next/image|favicon.ico).*)"],
+  // Semua halaman kecuali halaman login, endpoint auth, dan aset statis (termasuk public/brand,
+  // yang diambil pengoptimal gambar tanpa cookie sesi).
+  matcher: ["/((?!login|api/auth|_next/static|_next/image|favicon.ico|brand/).*)"],
 }

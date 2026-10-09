@@ -5,7 +5,7 @@ import { useActionState, useEffect, useState } from "react"
 
 import { CheckboxField } from "@/components/checkbox-field"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection, StaticField } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -79,26 +79,24 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
 
   return (
     <form action={formAction} className="max-w-3xl space-y-6">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       {product && <input type="hidden" name="id" value={product.id} />}
 
-      <fieldset className="space-y-4">
-        <legend className="mb-2 font-medium">Data produk</legend>
+      <FormSection title="Data produk">
         <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
-          <FormField
-            label="SKU"
-            htmlFor="sku"
-            errors={fieldErrors?.sku}
-            hint={product ? "Tidak bisa diubah." : undefined}
-          >
-            <Input
-              id="sku"
-              name={product ? undefined : "sku"}
-              defaultValue={product?.sku ?? fieldValue(state, "sku")}
-              disabled={Boolean(product)}
-              maxLength={50}
-              autoComplete="off"
-            />
-          </FormField>
+          {product ? (
+            <StaticField label="SKU" value={product.sku} mono reason="Tidak bisa diubah." />
+          ) : (
+            <FormField label="SKU" htmlFor="sku" errors={fieldErrors?.sku}>
+              <Input
+                id="sku"
+                name="sku"
+                defaultValue={fieldValue(state, "sku")}
+                maxLength={50}
+                autoComplete="off"
+              />
+            </FormField>
+          )}
           <FormField label="Nama produk" htmlFor="name" errors={fieldErrors?.name}>
             <Input
               id="name"
@@ -136,17 +134,14 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
               </SelectContent>
             </Select>
           </FormField>
-          <FormField
-            label="Satuan stok"
-            htmlFor="uomId"
-            errors={fieldErrors?.uomId}
-            hint={
-              product ? "Tidak bisa diubah: qty di ledger tersimpan dalam satuan ini." : undefined
-            }
-          >
-            {product ? (
-              <Input id="uomId" value={`[${product.uom.code}] ${product.uom.name}`} disabled />
-            ) : (
+          {product ? (
+            <StaticField
+              label="Satuan stok"
+              value={`[${product.uom.code}] ${product.uom.name}`}
+              reason="Tidak bisa diubah: qty di ledger tersimpan dalam satuan ini."
+            />
+          ) : (
+            <FormField label="Satuan stok" htmlFor="uomId" errors={fieldErrors?.uomId}>
               <Select name="uomId" items={uomItems} value={uomId} onValueChange={setUomId}>
                 <SelectTrigger id="uomId" className="w-full">
                   <SelectValue placeholder="Pilih satuan stok" />
@@ -159,8 +154,8 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
                   ))}
                 </SelectContent>
               </Select>
-            )}
-          </FormField>
+            </FormField>
+          )}
         </div>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand}>
@@ -185,7 +180,7 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
           label="Berat netto (kg)"
           htmlFor="netWeight"
           errors={fieldErrors?.netWeight}
-          hint={`Per 1 ${stockUom ?? "satuan stok"}. Boleh dikosongkan.`}
+          hint={`Per 1 ${stockUom ?? "satuan stok"}.`}
         >
           <Input
             id="netWeight"
@@ -205,13 +200,12 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
           description="Setiap penerimaan dan pengeluaran produk ini harus mencantumkan nomor lot/batch."
           defaultChecked={checked("lotRequired", product?.lotRequired ?? false)}
         />
-      </fieldset>
+      </FormSection>
 
-      <fieldset className="space-y-4">
-        <legend className="mb-1 font-medium">Data kepabeanan</legend>
-        <p className="text-sm text-muted-foreground">
-          Kode HS dan satuan CEISA wajib lengkap sebelum produk bisa dipakai di dokumen BC.
-        </p>
+      <FormSection
+        title="Data kepabeanan"
+        description="Kode HS dan satuan CEISA wajib lengkap sebelum produk bisa dipakai di dokumen BC."
+      >
         <FormField label="Kode HS" htmlFor="hsCode" errors={fieldErrors?.hsCode}>
           <RefCodeSelect
             id="hsCode"
@@ -254,7 +248,7 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
             />
           </FormField>
         </div>
-      </fieldset>
+      </FormSection>
 
       {product && (
         <CheckboxField
@@ -264,7 +258,6 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
           defaultChecked={checked("active", product.active)}
         />
       )}
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && product && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}

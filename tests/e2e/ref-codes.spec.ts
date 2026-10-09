@@ -24,7 +24,9 @@ test.describe("Auditor", () => {
 
     await page.getByRole("searchbox", { name: "Cari kode atau nama" }).fill("tanjung priok")
     await expect(page.getByRole("cell", { name: "KPU Tanjung Priok" })).toBeVisible()
-    await expect(page.getByRole("link", { name: /^Ubah/ })).toHaveCount(0)
+    await expect(
+      page.getByRole("row").filter({ hasText: "KPU Tanjung Priok" }).getByRole("link"),
+    ).toHaveCount(0)
   })
 
   test("tidak bisa membuka halaman tambah referensi", async ({ page }) => {
@@ -70,7 +72,7 @@ test.describe("Administrator", () => {
     const row = page.getByRole("row").filter({ hasText: code })
     await expect(row).toContainText("TPS Uji E2E")
     await expect(row).toContainText("Kantor pabean 040300")
-    await expect(row).toContainText("Aktif")
+    await expect(row).not.toContainText("Arsip")
 
     // Muncul di pencarian untuk pilihan baru.
     const search = (q: string) =>
@@ -96,7 +98,7 @@ test.describe("Administrator", () => {
 
     // Arsipkan: tetap ada di daftar, tapi tidak bisa dipilih untuk data baru.
     await page.goto(`/master/referensi?jenis=tps&q=${code}`)
-    await page.getByRole("link", { name: `Ubah ${code}` }).click()
+    await page.getByRole("row").filter({ hasText: code }).getByRole("link").first().click()
     await page.getByRole("checkbox", { name: "Aktif" }).uncheck()
     await page.getByRole("button", { name: "Simpan" }).click()
     await expect(page.getByRole("status")).toHaveText("Perubahan disimpan.")

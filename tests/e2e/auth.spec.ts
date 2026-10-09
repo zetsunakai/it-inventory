@@ -31,7 +31,10 @@ test("auditor bisa login lalu logout", async ({ page }) => {
   await login(page, ACCOUNTS.auditor)
 
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByText(`Selamat datang, ${ACCOUNTS.auditor.name}.`)).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Perlu perhatian" })).toBeVisible()
+  await expect(
+    page.locator('[data-slot="sidebar-inner"]').getByText(ACCOUNTS.auditor.name),
+  ).toBeVisible()
 
   await page.getByRole("button", { name: "Keluar" }).click()
   await expect(page).toHaveURL(/\/login$/)
@@ -76,5 +79,7 @@ test("user dengan MFA aktif wajib memasukkan kode TOTP saat login", async ({ pag
   await page.getByLabel("Kode autentikasi").fill(totp(secret))
   await page.getByRole("button", { name: "Verifikasi" }).click()
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByText(`Selamat datang, ${ACCOUNTS.admin.name}.`)).toBeVisible()
+  await expect(
+    page.locator('[data-slot="sidebar-inner"]').getByText(ACCOUNTS.admin.name).first(),
+  ).toBeVisible()
 })

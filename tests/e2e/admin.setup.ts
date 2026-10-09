@@ -23,7 +23,9 @@ setup("Administrator mengaktifkan MFA", async ({ page }) => {
   await expect(page.getByText("MFA sudah aktif untuk akun Anda.")).toBeVisible()
   await page.getByRole("link", { name: "Kembali ke beranda" }).click()
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByText(`Selamat datang, ${ACCOUNTS.admin.name}.`)).toBeVisible()
+  await expect(
+    page.locator('[data-slot="sidebar-inner"]').getByText(ACCOUNTS.admin.name).first(),
+  ).toBeVisible()
 
   writeFileSync(ADMIN_TOTP_FILE, secret!)
   await page.context().storageState({ path: ADMIN_STATE_FILE })

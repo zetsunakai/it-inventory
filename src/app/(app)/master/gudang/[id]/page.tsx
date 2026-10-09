@@ -1,13 +1,11 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
-import { buttonVariants } from "@/components/ui/button"
+import { ArchivedBadge, NameCell, StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { INVENTORY_CATEGORY_LABELS, LOCATION_TYPE_LABELS } from "@/lib/inventory"
 import { ALL_WAREHOUSE_ROLES, hasPermission, ROLE_LABELS } from "@/lib/permissions"
@@ -34,47 +32,23 @@ export default function WarehousePage({ params }: PageProps<"/master/gudang/[id]
   )
 }
 
-function locationColumns(warehouseId: string, canEdit: boolean): DataTableColumn<LocationRow>[] {
-  const columns: DataTableColumn<LocationRow>[] = [
-    {
-      header: "Kode",
-      cell: (row) => (
-        <span className="font-mono" style={{ paddingLeft: `${row.depth * 1.25}rem` }}>
-          {row.code}
-        </span>
-      ),
-    },
-    { header: "Nama", cell: (row) => row.name, className: "whitespace-normal" },
-    { header: "Jalur", cell: (row) => <span className="font-mono text-xs">{row.path}</span> },
-    { header: "Tipe", cell: (row) => LOCATION_TYPE_LABELS[row.type] },
-    {
-      header: "Status",
-      cell: (row) =>
-        row.active ? (
-          <Badge variant="secondary">Aktif</Badge>
-        ) : (
-          <Badge variant="outline">Arsip</Badge>
-        ),
-    },
-  ]
-  if (!canEdit) return columns
-  return [
-    ...columns,
-    {
-      header: "Aksi",
-      className: "text-right",
-      cell: (row) => (
-        <Link
-          href={`/master/gudang/${warehouseId}/lokasi/${row.id}`}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-          aria-label={`Ubah lokasi ${row.code}`}
-        >
-          Ubah
-        </Link>
-      ),
-    },
-  ]
-}
+const LOCATION_COLUMNS: DataTableColumn<LocationRow>[] = [
+  {
+    header: "Kode",
+    cell: (row) => (
+      <span className="font-mono text-foreground" style={{ paddingLeft: `${row.depth * 1.25}rem` }}>
+        {row.code}
+      </span>
+    ),
+  },
+  {
+    header: "Nama",
+    cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
+    className: "w-full whitespace-normal",
+  },
+  { header: "Jalur", cell: (row) => <span className="font-mono text-xs">{row.path}</span> },
+  { header: "Tipe", cell: (row) => LOCATION_TYPE_LABELS[row.type] },
+]
 
 async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePermission("master:read")
@@ -100,38 +74,33 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
       <PageHeader
         title={`${warehouse.code} · ${warehouse.name}`}
         description={
-          <>
-            {INVENTORY_CATEGORY_LABELS[warehouse.category]} ·{" "}
-            {warehouse.isBonded ? "Gudang berikat" : "Gudang non-berikat"}
-            {!warehouse.active && " · Diarsipkan"}
-          </>
-        }
-        actions={
-          <Link href="/master/gudang" className={buttonVariants({ variant: "outline" })}>
-            Kembali ke daftar
-          </Link>
+          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+            {warehouse.isBonded ? (
+              <StatusBadge tone="bonded">Gudang berikat</StatusBadge>
+            ) : (
+              <span>Gudang non-berikat</span>
+            )}
+            <span>{INVENTORY_CATEGORY_LABELS[warehouse.category]}</span>
+            <span>{warehouse.address}</span>
+            {!warehouse.active && <ArchivedBadge />}
+          </span>
         }
       />
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Data gudang</h2>
-        {canEdit ? (
-          <WarehouseForm warehouse={warehouse} />
-        ) : (
-          <dl className="grid max-w-2xl grid-cols-[10rem_1fr] gap-x-4 gap-y-2 text-sm">
-            <dt className="text-muted-foreground">Alamat</dt>
-            <dd>{warehouse.address}</dd>
-          </dl>
-        )}
-      </section>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-semibold">Lokasi</h2>
+        <h2 className="text-base font-semibold">Lokasi</h2>
         <DataTable
-          columns={locationColumns(warehouse.id, canEdit)}
+          columns={LOCATION_COLUMNS}
           rows={locations}
           rowKey={(row) => row.id}
-          emptyMessage="Belum ada lokasi di gudang ini."
+          rowHref={canEdit ? (row) => `/master/gudang/${warehouse.id}/lokasi/${row.id}` : undefined}
+          rowMuted={(row) => !row.active}
+          empty={{
+            title: "Belum ada lokasi di gudang ini.",
+            description: canEdit
+              ? "Tambahkan lokasi di bawah supaya barang bisa diterima ke gudang ini."
+              : "Barang belum bisa diterima ke gudang ini.",
+          }}
         />
         {canEdit && <LocationCreateForm warehouseId={warehouse.id} parents={parentOptions} />}
       </section>
@@ -139,13 +108,19 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
       {canManageAccess && (
         <section className="space-y-3">
           <div>
-            <h2 className="text-lg font-semibold">Akses user</h2>
+            <h2 className="text-base font-semibold">Akses user</h2>
             <p className="text-sm text-muted-foreground">
               {ALL_WAREHOUSE_ROLES.map((role) => ROLE_LABELS[role]).join(", ")} otomatis bisa
               melihat semua gudang. Peran lain hanya melihat gudang yang diberikan di sini.
             </p>
           </div>
           <AccessManager warehouseId={warehouse.id} members={members} candidates={candidates} />
+        </section>
+      )}
+      {canEdit && (
+        <section className="space-y-3">
+          <h2 className="text-base font-semibold">Data gudang</h2>
+          <WarehouseForm warehouse={warehouse} />
         </section>
       )}
     </div>

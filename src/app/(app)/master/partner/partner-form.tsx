@@ -5,7 +5,7 @@ import { useActionState, useEffect, useState } from "react"
 
 import { CheckboxField } from "@/components/checkbox-field"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, StaticField } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -75,23 +75,22 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
 
   return (
     <form action={formAction} className="max-w-3xl space-y-6">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       {partner && <input type="hidden" name="id" value={partner.id} />}
       <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
-        <FormField
-          label="Kode partner"
-          htmlFor="code"
-          errors={fieldErrors?.code}
-          hint={partner ? "Tidak bisa diubah." : undefined}
-        >
-          <Input
-            id="code"
-            name={partner ? undefined : "code"}
-            defaultValue={partner?.code ?? fieldValue(state, "code")}
-            disabled={Boolean(partner)}
-            maxLength={30}
-            autoComplete="off"
-          />
-        </FormField>
+        {partner ? (
+          <StaticField label="Kode partner" value={partner.code} mono reason="Tidak bisa diubah." />
+        ) : (
+          <FormField label="Kode partner" htmlFor="code" errors={fieldErrors?.code}>
+            <Input
+              id="code"
+              name="code"
+              defaultValue={fieldValue(state, "code")}
+              maxLength={30}
+              autoComplete="off"
+            />
+          </FormField>
+        )}
         <FormField label="Nama partner" htmlFor="name" errors={fieldErrors?.name}>
           <Input
             id="name"
@@ -210,7 +209,6 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
           defaultChecked={checked("active", partner.active)}
         />
       )}
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && partner && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}

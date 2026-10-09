@@ -8,8 +8,9 @@ import { DataTableFilter } from "@/components/data-table/data-table-filter"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
+import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { IDENTITY_TYPE_LABELS } from "@/lib/partner"
@@ -26,56 +27,34 @@ const ROLE_OPTIONS = [
 ]
 
 const COLUMNS: DataTableColumn<PartnerRow>[] = [
+  { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
   {
-    header: "Kode",
-    cell: (row) => (
-      <Link
-        href={`/master/partner/${row.id}`}
-        className="font-mono underline-offset-4 hover:underline"
-      >
-        {row.code}
-      </Link>
-    ),
+    header: "Nama",
+    cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
+    className: "w-full whitespace-normal",
   },
-  { header: "Nama", cell: (row) => row.name, className: "whitespace-normal" },
   {
     header: "Peran",
-    cell: (row) => (
-      <div className="flex gap-1">
-        {row.isVendor && <Badge variant="secondary">Vendor</Badge>}
-        {row.isCustomer && <Badge variant="secondary">Customer</Badge>}
-      </div>
-    ),
+    cell: (row) =>
+      [row.isVendor && "Vendor", row.isCustomer && "Customer"].filter(Boolean).join(", "),
   },
-  { header: "Negara", cell: (row) => <span className="font-mono">{row.countryCode}</span> },
+  { header: "Negara", cell: (row) => row.countryCode },
   {
     header: "Identitas",
     cell: (row) => (
-      <div>
-        <p className="text-xs text-muted-foreground">{IDENTITY_TYPE_LABELS[row.identityType]}</p>
-        <p className="font-mono">{row.identityNumber}</p>
-      </div>
+      <span>
+        <span className="text-muted-foreground">{IDENTITY_TYPE_LABELS[row.identityType]} </span>
+        <span className="font-mono">{row.identityNumber}</span>
+      </span>
     ),
   },
   { header: "NITKU", cell: (row) => <span className="font-mono">{row.nitku ?? "—"}</span> },
-  {
-    header: "Status",
-    cell: (row) =>
-      row.active ? (
-        <Badge variant="secondary">Aktif</Badge>
-      ) : (
-        <Badge variant="outline">Arsip</Badge>
-      ),
-  },
 ]
 
 export default function PartnersPage({ searchParams }: PageProps<"/master/partner">) {
   return (
     <>
-      <PageHeader
-        title="Partner"
-        description="Vendor dan customer, dipakai sebagai entitas di dokumen BC."
-      />
+      <PageHeader title="Partner" />
       <Suspense fallback={<DataTableSkeleton />}>
         <PartnerTable searchParams={searchParams} />
       </Suspense>
@@ -85,6 +64,7 @@ export default function PartnersPage({ searchParams }: PageProps<"/master/partne
 
 async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
   const user = await requirePermission("master:read")
+  const canEdit = hasPermission(user.roles, "master:write")
   const raw = await searchParams
   const params = parseListParams(raw)
   const role = pickFilter(raw, ROLE_FILTER, ["vendor", "customer"] as const)
@@ -95,7 +75,7 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
       <div className="flex flex-col gap-2 sm:flex-row">
         <DataTableSearch placeholder="Cari kode, nama, NPWP, atau NITKU" />
         <DataTableFilter name={ROLE_FILTER} label="Peran" options={ROLE_OPTIONS} />
-        {hasPermission(user.roles, "master:write") && (
+        {canEdit && (
           <Link href="/master/partner/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
             <Plus />
             Tambah partner
@@ -106,7 +86,14 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        emptyMessage="Tidak ada partner yang cocok."
+        rowHref={(row) => `/master/partner/${row.id}`}
+        rowMuted={(row) => !row.active}
+        empty={listEmptyState({
+          searchParams: raw,
+          basePath: "/master/partner",
+          noun: "partner",
+          create: canEdit ? { href: "/master/partner/baru", label: "Tambah partner" } : undefined,
+        })}
       />
       <DataTablePagination
         searchParams={raw}

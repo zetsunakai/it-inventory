@@ -71,6 +71,7 @@ export function LocationCreateForm({
 
   return (
     <form action={formAction} className="space-y-4 rounded-lg border p-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <p className="font-medium">Tambah lokasi</p>
       <input type="hidden" name="warehouseId" value={warehouseId} />
       <div className="grid gap-4 sm:grid-cols-[10rem_1fr_12rem]">
@@ -109,7 +110,6 @@ export function LocationCreateForm({
       <FormField label="Lokasi induk" htmlFor="location-parentId" errors={fieldErrors?.parentId}>
         <ParentSelect options={parents} defaultValue={fieldValue(state, "parentId")} />
       </FormField>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}
@@ -137,6 +137,7 @@ export function LocationEditForm({
 
   return (
     <form action={formAction} className="max-w-2xl space-y-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="id" value={location.id} />
       <FormField label="Nama lokasi" htmlFor="location-name" errors={fieldErrors?.name}>
         <Input
@@ -155,7 +156,6 @@ export function LocationEditForm({
         description="Lokasi yang diarsipkan tidak bisa dipilih untuk transaksi baru."
         defaultChecked={state?.ok === false ? state.values?.active === "on" : location.active}
       />
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}

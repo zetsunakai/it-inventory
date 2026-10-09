@@ -1,11 +1,9 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
 import { PageHeader } from "@/components/page-header"
-import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatRefCode, REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
@@ -18,15 +16,7 @@ export const metadata: Metadata = { title: "Ubah referensi · IT Inventory" }
 export default function EditRefCodePage({ params }: PageProps<"/master/referensi/[id]">) {
   return (
     <>
-      <PageHeader
-        title="Ubah referensi"
-        description="Jenis dan kode tidak bisa diubah."
-        actions={
-          <Link href="/master/referensi" className={buttonVariants({ variant: "outline" })}>
-            Kembali ke daftar
-          </Link>
-        }
-      />
+      <PageHeader title="Ubah referensi" description="Jenis dan kode tidak bisa diubah." />
       <Suspense fallback={<Skeleton className="h-64 w-full max-w-xl" />}>
         <EditRefCode params={params} />
       </Suspense>

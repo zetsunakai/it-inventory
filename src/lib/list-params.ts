@@ -63,3 +63,8 @@ export function pageHref(raw: RawSearchParams, page: number) {
 function first(value: string | string[] | undefined) {
   return Array.isArray(value) ? value[0] : value
 }
+
+// Ada pencarian atau filter yang aktif (selain nomor halaman)?
+export function hasActiveFilters(raw: RawSearchParams) {
+  return Object.entries(raw).some(([key, value]) => key !== PAGE_PARAM && Boolean(first(value)))
+}

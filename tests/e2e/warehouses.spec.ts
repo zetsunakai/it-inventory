@@ -30,7 +30,8 @@ test.describe("Administrator", () => {
     await expect(
       page.getByRole("heading", { name: `${GRANTED} · Gudang Bahan Baku E2E` }),
     ).toBeVisible()
-    await expect(page.getByText("Bahan baku · Gudang berikat")).toBeVisible()
+    // Pertama = deskripsi di header (label checkbox di form ubah ada di bawah).
+    await expect(page.getByText("Gudang berikat", { exact: true }).first()).toBeVisible()
 
     const addLocation = page.locator("form").filter({ hasText: "Tambah lokasi" })
     await addLocation.getByLabel("Kode lokasi").fill(`${GRANTED}-RAK`)

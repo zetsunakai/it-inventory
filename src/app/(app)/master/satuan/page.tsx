@@ -8,8 +8,9 @@ import { DataTableFilter } from "@/components/data-table/data-table-filter"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
+import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
@@ -25,50 +26,26 @@ export const metadata: Metadata = { title: "Satuan · IT Inventory" }
 
 const CATEGORY_FILTER = "kategori"
 
-function columns(canEdit: boolean): DataTableColumn<UomRow>[] {
-  const base: DataTableColumn<UomRow>[] = [
-    { header: "Kode", cell: (row) => <span className="font-mono">{row.code}</span> },
-    { header: "Nama", cell: (row) => row.name },
-    { header: "Kategori", cell: (row) => row.categoryName },
-    {
-      header: "Konversi",
-      cell: (row) =>
-        row.isReference ? (
-          <Badge variant="secondary">Acuan</Badge>
-        ) : (
-          <span>
-            1 {row.code} = {formatDecimal(row.factor)} {row.referenceCode}
-          </span>
-        ),
-    },
-    {
-      header: "Status",
-      cell: (row) =>
-        row.active ? (
-          <Badge variant="secondary">Aktif</Badge>
-        ) : (
-          <Badge variant="outline">Arsip</Badge>
-        ),
-    },
-  ]
-  if (!canEdit) return base
-  return [
-    ...base,
-    {
-      header: "Aksi",
-      className: "text-right",
-      cell: (row) => (
-        <Link
-          href={`/master/satuan/${row.id}`}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-          aria-label={`Ubah satuan ${row.code}`}
-        >
-          Ubah
-        </Link>
+const COLUMNS: DataTableColumn<UomRow>[] = [
+  { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
+  {
+    header: "Nama",
+    cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
+    className: "w-full",
+  },
+  { header: "Kategori", cell: (row) => row.categoryName },
+  {
+    header: "Konversi",
+    cell: (row) =>
+      row.isReference ? (
+        <span className="text-muted-foreground">Satuan acuan</span>
+      ) : (
+        <span>
+          1 {row.code} = {formatDecimal(row.factor)} {row.referenceCode}
+        </span>
       ),
-    },
-  ]
-}
+  },
+]
 
 export default function UomsPage({ searchParams }: PageProps<"/master/satuan">) {
   return (
@@ -82,7 +59,7 @@ export default function UomsPage({ searchParams }: PageProps<"/master/satuan">) 
       </Suspense>
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold">Kategori satuan</h2>
+          <h2 className="text-base font-semibold">Kategori satuan</h2>
           <p className="text-sm text-muted-foreground">
             Setiap kategori punya satu satuan acuan dengan faktor 1.
           </p>
@@ -125,10 +102,17 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
         )}
       </div>
       <DataTable
-        columns={columns(canEdit)}
+        columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        emptyMessage="Tidak ada satuan yang cocok."
+        rowHref={canEdit ? (row) => `/master/satuan/${row.id}` : undefined}
+        rowMuted={(row) => !row.active}
+        empty={listEmptyState({
+          searchParams: raw,
+          basePath: "/master/satuan",
+          noun: "satuan",
+          create: canEdit ? { href: "/master/satuan/baru", label: "Tambah satuan" } : undefined,
+        })}
       />
       <DataTablePagination
         searchParams={raw}
@@ -149,7 +133,7 @@ const CATEGORY_COLUMNS: DataTableColumn<CategoryRow>[] = [
     header: "Satuan acuan",
     cell: (row) => (row.referenceCode ? `${row.referenceCode} · ${row.referenceName}` : "—"),
   },
-  { header: "Jumlah satuan", cell: (row) => formatNumber(row.uomCount), className: "text-right" },
+  { header: "Jumlah satuan", cell: (row) => formatNumber(row.uomCount), align: "right" },
 ]
 
 async function Categories() {

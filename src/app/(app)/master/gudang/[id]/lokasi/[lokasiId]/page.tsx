@@ -5,7 +5,6 @@ import { Suspense } from "react"
 import { z } from "zod"
 
 import { PageHeader } from "@/components/page-header"
-import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
 import { requirePermission } from "@/server/auth/session"
@@ -53,14 +52,17 @@ async function EditLocation({ params }: { params: Promise<{ id: string; lokasiId
     <div className="space-y-6">
       <PageHeader
         title={`Ubah lokasi ${location.code}`}
-        description={`${warehouse.code} · ${LOCATION_TYPE_LABELS[location.type]} · kode, tipe, dan gudang tidak bisa diubah.`}
-        actions={
-          <Link
-            href={`/master/gudang/${warehouse.id}`}
-            className={buttonVariants({ variant: "outline" })}
-          >
-            Kembali ke gudang
-          </Link>
+        description={
+          <>
+            Lokasi {LOCATION_TYPE_LABELS[location.type].toLowerCase()} di gudang{" "}
+            <Link
+              href={`/master/gudang/${warehouse.id}`}
+              className="font-medium text-foreground underline underline-offset-4"
+            >
+              {warehouse.code} · {warehouse.name}
+            </Link>
+            . Kode, tipe, dan gudang tidak bisa diubah.
+          </>
         }
       />
       <LocationEditForm location={location} parents={parents} />

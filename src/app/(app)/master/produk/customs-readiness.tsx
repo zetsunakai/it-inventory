@@ -1,4 +1,4 @@
-import { Badge } from "@/components/ui/badge"
+import { StatusBadge } from "@/components/status-badge"
 
 // Kesiapan produk untuk dokumen BC (PRD bagian 5.3), dari kolom customs_ready di database.
 export function missingCustomsData(product: {
@@ -16,10 +16,10 @@ export function CustomsReadiness({
 }: {
   product: { customsReady: boolean; hsCode: string | null; ceisaUnitCode: string | null }
 }) {
-  if (product.customsReady) return <Badge variant="secondary">Siap</Badge>
+  if (product.customsReady) return <StatusBadge tone="success">Siap</StatusBadge>
   return (
-    <Badge variant="outline" title={`Belum ada ${missingCustomsData(product).join(" dan ")}`}>
+    <StatusBadge tone="warning" title={`Belum ada ${missingCustomsData(product).join(" dan ")}`}>
       Belum siap
-    </Badge>
+    </StatusBadge>
   )
 }

@@ -8,8 +8,9 @@ import { DataTableFilter } from "@/components/data-table/data-table-filter"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
+import { NameCell, StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatNumber } from "@/lib/format"
@@ -18,7 +19,12 @@ import {
   INVENTORY_CATEGORY_LABELS,
   LOCATION_TYPE_LABELS,
 } from "@/lib/inventory"
-import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
+import {
+  hasActiveFilters,
+  parseListParams,
+  pickFilter,
+  type RawSearchParams,
+} from "@/lib/list-params"
 import { hasAllWarehouseAccess, hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import {
@@ -38,39 +44,23 @@ const CATEGORY_OPTIONS = INVENTORY_CATEGORIES.map((category) => ({
 }))
 
 const COLUMNS: DataTableColumn<WarehouseRow & { locationCount: number }>[] = [
+  { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
   {
-    header: "Kode",
-    cell: (row) => (
-      <Link
-        href={`/master/gudang/${row.id}`}
-        className="font-mono underline-offset-4 hover:underline"
-      >
-        {row.code}
-      </Link>
-    ),
+    header: "Nama",
+    cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
+    className: "w-full whitespace-normal",
   },
-  { header: "Nama", cell: (row) => row.name, className: "whitespace-normal" },
-  { header: "Kategori", cell: (row) => INVENTORY_CATEGORY_LABELS[row.category] },
   {
     header: "Berikat",
-    cell: (row) =>
-      row.isBonded ? <Badge>Berikat</Badge> : <Badge variant="outline">Non-berikat</Badge>,
+    cell: (row) => (row.isBonded ? <StatusBadge tone="bonded">Berikat</StatusBadge> : "—"),
   },
-  { header: "Lokasi", cell: (row) => formatNumber(row.locationCount), className: "text-right" },
-  {
-    header: "Status",
-    cell: (row) =>
-      row.active ? (
-        <Badge variant="secondary">Aktif</Badge>
-      ) : (
-        <Badge variant="outline">Arsip</Badge>
-      ),
-  },
+  { header: "Kategori", cell: (row) => INVENTORY_CATEGORY_LABELS[row.category] },
+  { header: "Lokasi", cell: (row) => formatNumber(row.locationCount), align: "right" },
 ]
 
 const VIRTUAL_COLUMNS: DataTableColumn<LocationRow>[] = [
-  { header: "Kode", cell: (row) => <span className="font-mono">{row.code}</span> },
-  { header: "Nama", cell: (row) => row.name },
+  { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
+  { header: "Nama", cell: (row) => <NameCell>{row.name}</NameCell>, className: "w-full" },
   { header: "Tipe", cell: (row) => LOCATION_TYPE_LABELS[row.type] },
 ]
 
@@ -124,10 +114,22 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        emptyMessage={
-          hasAllWarehouseAccess(user.roles)
-            ? "Belum ada gudang yang cocok."
-            : "Tidak ada gudang yang cocok, atau Anda belum diberi akses ke gudang mana pun."
+        rowHref={(row) => `/master/gudang/${row.id}`}
+        rowMuted={(row) => !row.active}
+        empty={
+          hasActiveFilters(raw) || hasAllWarehouseAccess(user.roles)
+            ? listEmptyState({
+                searchParams: raw,
+                basePath: "/master/gudang",
+                noun: "gudang",
+                create: canEdit
+                  ? { href: "/master/gudang/baru", label: "Tambah gudang" }
+                  : undefined,
+              })
+            : {
+                title: "Anda belum diberi akses ke gudang mana pun.",
+                description: "Minta Administrator memberi akses di halaman detail gudang.",
+              }
         }
       />
       <DataTablePagination

@@ -1,11 +1,9 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
 import { PageHeader } from "@/components/page-header"
-import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
@@ -65,11 +63,6 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
           product.customsReady
             ? "Siap dipakai di dokumen BC."
             : `Belum siap dokumen BC: ${missing.join(" dan ")} belum diisi.`
-        }
-        actions={
-          <Link href="/master/produk" className={buttonVariants({ variant: "outline" })}>
-            Kembali ke daftar
-          </Link>
         }
       />
       {hasPermission(user.roles, "master:write") ? (

@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { findNavItem, isActivePath, NAVIGATION, navigationFor } from "./navigation"
+import { findNavItem, isActivePath, NAVIGATION, navigationFor, navigationTrail } from "./navigation"
 import { PERMISSIONS } from "./permissions"
 
 function hrefs(groups: ReturnType<typeof navigationFor>) {
@@ -52,5 +52,18 @@ describe("isActivePath", () => {
     expect(isActivePath("/dokumen-bc", "/dokumen-bc")).toBe(true)
     expect(isActivePath("/dokumen-bc/123", "/dokumen-bc")).toBe(true)
     expect(isActivePath("/dokumen-bc-lain", "/dokumen-bc")).toBe(false)
+  })
+})
+
+describe("navigationTrail", () => {
+  test("halaman turunan memakai modul induknya", () => {
+    const trail = navigationTrail("/master/produk/123")
+    expect(trail?.group.label).toBe("Master data")
+    expect(trail?.item.title).toBe("Produk")
+  })
+
+  test("beranda dan path tak dikenal", () => {
+    expect(navigationTrail("/")?.item.title).toBe("Beranda")
+    expect(navigationTrail("/tidak-ada")).toBeNull()
   })
 })

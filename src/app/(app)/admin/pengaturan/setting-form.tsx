@@ -17,6 +17,7 @@ export function SettingForm({ settingKey, value }: { settingKey: string; value: 
 
   return (
     <form action={formAction} className="space-y-2">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="key" value={settingKey} />
       <div className="flex gap-2">
         <Input
@@ -28,7 +29,6 @@ export function SettingForm({ settingKey, value }: { settingKey: string; value: 
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
       </div>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && state.message && (
         <p className="text-sm text-muted-foreground">{state.message}</p>
       )}

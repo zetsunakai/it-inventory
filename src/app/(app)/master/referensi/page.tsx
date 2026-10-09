@@ -8,8 +8,9 @@ import { DataTableFilter } from "@/components/data-table/data-table-filter"
 import { DataTablePagination } from "@/components/data-table/data-table-pagination"
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
-import { Badge } from "@/components/ui/badge"
+import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
@@ -26,58 +27,35 @@ const TYPE_OPTIONS = REF_CODE_TYPES.map((type) => ({
   label: REF_CODE_TYPE_LABELS[type],
 }))
 
-function columns(canEdit: boolean): DataTableColumn<RefCodeRow>[] {
-  const base: DataTableColumn<RefCodeRow>[] = [
-    { header: "Jenis", cell: (row) => REF_CODE_TYPE_LABELS[row.type] },
-    { header: "Kode", cell: (row) => <span className="font-mono">{row.code}</span> },
-    { header: "Nama", cell: (row) => row.name, className: "whitespace-normal" },
-    {
-      header: "Induk",
-      cell: (row) => {
-        const parentType = REF_CODE_PARENT_TYPES[row.type]
-        if (!parentType || !row.parentCode) return <span className="text-muted-foreground">—</span>
-        return (
-          <span>
-            {REF_CODE_TYPE_LABELS[parentType]} <span className="font-mono">{row.parentCode}</span>
-          </span>
-        )
-      },
+const COLUMNS: DataTableColumn<RefCodeRow>[] = [
+  { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
+  {
+    header: "Nama",
+    cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
+    className: "w-full whitespace-normal",
+  },
+  { header: "Jenis", cell: (row) => REF_CODE_TYPE_LABELS[row.type] },
+  {
+    header: "Induk",
+    cell: (row) => {
+      const parentType = REF_CODE_PARENT_TYPES[row.type]
+      if (!parentType || !row.parentCode) return "—"
+      return (
+        <span>
+          <span className="text-muted-foreground">{REF_CODE_TYPE_LABELS[parentType]} </span>
+          <span className="font-mono">{row.parentCode}</span>
+        </span>
+      )
     },
-    {
-      header: "Status",
-      cell: (row) =>
-        row.active ? (
-          <Badge variant="secondary">Aktif</Badge>
-        ) : (
-          <Badge variant="outline">Arsip</Badge>
-        ),
-    },
-  ]
-  if (!canEdit) return base
-  return [
-    ...base,
-    {
-      header: "Aksi",
-      className: "text-right",
-      cell: (row) => (
-        <Link
-          href={`/master/referensi/${row.id}`}
-          className={buttonVariants({ variant: "ghost", size: "sm" })}
-          aria-label={`Ubah ${row.code}`}
-        >
-          Ubah
-        </Link>
-      ),
-    },
-  ]
-}
+  },
+]
 
 export default function RefCodesPage({ searchParams }: PageProps<"/master/referensi">) {
   return (
     <>
       <PageHeader
         title="Referensi kepabeanan"
-        description="Kode resmi yang dipakai di dokumen BC. Hanya Administrator yang bisa menambah atau mengubah."
+        description="Kode resmi untuk dokumen BC. Hanya Administrator yang bisa menambah atau mengubah."
       />
       <Suspense fallback={<DataTableSkeleton />}>
         <RefCodeTable searchParams={searchParams} />
@@ -110,10 +88,16 @@ async function RefCodeTable({ searchParams }: { searchParams: Promise<RawSearchP
         )}
       </div>
       <DataTable
-        columns={columns(canEdit)}
+        columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        emptyMessage="Tidak ada referensi yang cocok."
+        rowHref={canEdit ? (row) => `/master/referensi/${row.id}` : undefined}
+        rowMuted={(row) => !row.active}
+        empty={listEmptyState({
+          searchParams: raw,
+          basePath: "/master/referensi",
+          noun: "referensi",
+        })}
       />
       <DataTablePagination
         searchParams={raw}

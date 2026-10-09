@@ -26,7 +26,7 @@ test.describe("Administrator", () => {
     const row = page.getByRole("row").filter({ hasText: code })
     await expect(row).toContainText(`1 ${code} = 100 KG`)
 
-    await page.getByRole("link", { name: `Ubah satuan ${code}` }).click()
+    await row.getByRole("link").first().click()
     await expect(page.getByLabel("Faktor konversi")).toHaveValue("100")
     await page.getByLabel("Faktor konversi").fill("100,5")
     await page.getByRole("button", { name: "Simpan" }).click()

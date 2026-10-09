@@ -40,6 +40,7 @@ export function CompanyProfileForm({
 
   return (
     <form action={formAction} className="max-w-2xl space-y-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <FormField label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name}>
         <Input
           id="name"
@@ -154,7 +155,6 @@ export function CompanyProfileForm({
           />
         </FormField>
       </div>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && state.message && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}

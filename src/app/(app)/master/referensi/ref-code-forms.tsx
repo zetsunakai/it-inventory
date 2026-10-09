@@ -51,6 +51,7 @@ export function RefCodeCreateForm() {
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <FormField label="Jenis" htmlFor="type" errors={fieldErrors?.type}>
         <Select
           name="type"
@@ -98,7 +99,6 @@ export function RefCodeCreateForm() {
           autoComplete="off"
         />
       </FormField>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
@@ -128,6 +128,7 @@ export function RefCodeEditForm({
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
+      {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="id" value={id} />
       <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name}>
         <Input
@@ -152,7 +153,6 @@ export function RefCodeEditForm({
           </p>
         </div>
       </div>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && state.message && (
         <p role="status" className="text-sm text-muted-foreground">
           {state.message}

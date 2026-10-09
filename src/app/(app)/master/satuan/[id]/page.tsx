@@ -1,11 +1,9 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
 import { PageHeader } from "@/components/page-header"
-import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { getUom } from "@/server/queries/uoms"
@@ -34,11 +32,6 @@ async function EditUom({ params }: { params: Promise<{ id: string }> }) {
       <PageHeader
         title={`Ubah satuan ${uom.code}`}
         description={`Kategori ${uom.categoryName}. Kode, kategori, dan status acuan tidak bisa diubah.`}
-        actions={
-          <Link href="/master/satuan" className={buttonVariants({ variant: "outline" })}>
-            Kembali ke daftar
-          </Link>
-        }
       />
       <UomEditForm uom={uom} />
     </div>

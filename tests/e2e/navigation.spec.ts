@@ -12,7 +12,10 @@ function sidebar(page: Page) {
 async function menuLinks(page: Page) {
   const links = sidebar(page).locator('[data-sidebar="content"]').getByRole("link")
   await expect(links.first()).toBeVisible()
-  return links.allTextContents()
+  // Teks pertama tiap menu adalah nama modulnya (label "segera" menyusul).
+  return links.evaluateAll((elements) =>
+    elements.map((element) => element.querySelector("span")?.textContent ?? ""),
+  )
 }
 
 test("menu Auditor: bisa melihat modul baca, tanpa Administrasi dan Tutup periode", async ({
@@ -53,6 +56,10 @@ test("klik menu membuka modul dan menandai menu yang aktif", async ({ page }) =>
   await expect(page).toHaveURL(/\/inventory\/opname$/)
   await expect(page.getByRole("heading", { name: "Stock opname", level: 1 })).toBeVisible()
   await expect(page.getByText("Dijadwalkan di M2-09.")).toBeVisible()
+  await expect(sidebar(page).getByRole("link", { name: "Stock opname" })).toHaveAttribute(
+    "title",
+    "Belum tersedia, dijadwalkan di M2-09",
+  )
   await expect(sidebar(page).getByRole("link", { name: "Stock opname" })).toHaveAttribute(
     "aria-current",
     "page",
