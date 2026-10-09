@@ -1,0 +1,21 @@
+# Database untuk development lokal saja. Kredensial di sini bukan untuk production.
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: it_inventory
+      POSTGRES_PASSWORD: it_inventory
+      POSTGRES_DB: it_inventory
+    # 5433 di host supaya tidak bentrok dengan Postgres lain (misalnya Odoo) di 5432.
+    ports:
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U it_inventory -d it_inventory"]
+      interval: 2s
+      timeout: 5s
+      retries: 15
+
+volumes:
+  pgdata:

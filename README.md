@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# IT Inventory
 
-## Getting Started
+Aplikasi IT Inventory untuk perusahaan Kawasan Berikat: mencatat pergerakan barang di gudang berikat
+dan menghubungkannya dengan dokumen BC. Spesifikasi lengkap ada di PRD.
 
-First, run the development server:
+Stack: Next.js 16 (App Router, React, Tailwind CSS, shadcn/ui), PostgreSQL 16, Drizzle ORM,
+Better Auth.
+
+## Kebutuhan
+
+- Node.js 22 atau lebih baru
+- Docker dengan plugin Compose
+
+## Menjalankan di lokal
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm install
+cp .env.example .env.local
+# isi BETTER_AUTH_SECRET (openssl rand -base64 32) dan SEED_ADMIN_PASSWORD di .env.local
+npm run db:up        # Postgres 16 di Docker, port 5433
+npm run db:migrate   # terapkan semua migrasi
+npm run db:seed      # data awal + akun Administrator (aman dijalankan berulang)
+npm run dev          # http://localhost:3000, otomatis menyalakan database
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Login dengan `SEED_ADMIN_EMAIL` dan `SEED_ADMIN_PASSWORD` dari `.env.local`. Sign-up publik
+dimatikan: user baru dibuat oleh Administrator.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Auth
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- Better Auth, endpoint di `/api/auth/*`. Konfigurasi di `src/server/auth/index.ts`.
+- Baca sesi hanya lewat `getSession()` / `requireUser()` di `src/server/auth/session.ts`, dan
+  panggil dari komponen yang dibungkus `<Suspense>` (aturan `cacheComponents` di Next 16).
+- `src/proxy.ts` hanya mengecek keberadaan cookie untuk redirect cepat ke `/login`. Validasi
+  sesi yang sebenarnya tetap di server.
+- Tabel auth (`users`, `sessions`, `accounts`, `verifications`) di
+  `src/server/db/schema/auth.ts`. Kalau menambah plugin Better Auth, generate ulang dengan
+  `npx auth@latest generate` lalu sesuaikan dengan konvensi repo.
 
-## Learn More
+## Script
 
-To learn more about Next.js, take a look at the following resources:
+| Script                                    | Fungsi                                               |
+| ----------------------------------------- | ---------------------------------------------------- |
+| `npm run dev`                             | Server development (menyalakan database lebih dulu)  |
+| `npm run lint` / `npm run typecheck`      | ESLint dan pengecekan TypeScript                     |
+| `npm run format` / `npm run format:check` | Prettier                                             |
+| `npm run db:up` / `npm run db:down`       | Nyalakan / matikan Postgres di Docker                |
+| `npm run db:generate -- --name=<nama>`    | Buat migrasi dari perubahan schema Drizzle           |
+| `npm run db:custom -- <nama>`             | Buat file migrasi SQL kosong (fungsi, trigger, view) |
+| `npm run db:migrate`                      | Terapkan migrasi                                     |
+| `npm run db:seed`                         | Isi data awal                                        |
+| `npm run db:reset`                        | Hapus database lokal, lalu migrasi dan seed ulang    |
+| `npm run db:studio`                       | Drizzle Studio untuk melihat isi database            |
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Struktur folder
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+drizzle/                 migrasi SQL (hasil generate + file SQL kustom)
+src/
+  app/                   route Next.js (halaman, layout, route handler)
+  components/ui/         komponen shadcn/ui
+  components/            komponen bersama
+  lib/                   utilitas yang aman dipakai di client maupun server
+  server/                kode khusus server, tidak boleh diimpor dari client
+    db/
+      schema/            schema Drizzle per kelompok tabel
+      client.ts          pembuat koneksi (dipakai app dan script CLI)
+      index.ts           koneksi untuk aplikasi (server-only)
+      seed.ts            data awal
+```
 
-## Deploy on Vercel
+## Aturan migrasi
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Perubahan tabel: ubah schema di `src/server/db/schema`, lalu `npm run db:generate -- --name=<nama>`.
+- Fungsi, trigger, dan view: `npm run db:custom -- <nama>`, tulis SQL-nya, pisahkan statement dengan
+  `--> statement-breakpoint`.
+- Jangan pernah mengubah database secara manual. Setiap tabel yang punya `updated_at` diberi trigger
+  `set_updated_at()`.

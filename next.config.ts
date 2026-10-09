@@ -1,9 +1,12 @@
-import type { NextConfig } from "next";
+import type { NextConfig } from "next"
 
 const nextConfig: NextConfig = {
-  /* config options here */
   cacheComponents: true,
   partialPrefetching: true,
+  experimental: {
+    // Mengaktifkan forbidden() untuk halaman 403 saat peran tidak punya izin.
+    authInterrupts: true,
+  },
   turbopack: {
     rules: {
       "*.css": {
@@ -12,6 +15,6 @@ const nextConfig: NextConfig = {
       },
     },
   },
-};
+}
 
-export default nextConfig;
+export default nextConfig
