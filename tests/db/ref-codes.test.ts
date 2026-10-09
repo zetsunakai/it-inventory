@@ -151,7 +151,7 @@ describe("createRefCode", () => {
         null,
         form({ type: "incoterm", code: "ZQI", name: "Tidak boleh" }),
       )
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         ok: false,
         errors: ["Anda tidak punya izin untuk melakukan aksi ini."],
       })
@@ -177,7 +177,7 @@ describe("createRefCode", () => {
       null,
       form({ type: "tps", code: "ZQT3", name: "X", parentCode: "ZQ7777" }),
     )
-    expect(missingParent).toEqual({
+    expect(missingParent).toMatchObject({
       ok: false,
       errors: ["Kantor pabean dengan kode ZQ7777 tidak ditemukan."],
     })
@@ -186,7 +186,7 @@ describe("createRefCode", () => {
       null,
       form({ type: "tps", code: "ZQT1", name: "X", parentCode: "ZQ0100" }),
     )
-    expect(duplicate).toEqual({
+    expect(duplicate).toMatchObject({
       ok: false,
       errors: ["Kode ZQT1 sudah ada di TPS untuk Kantor pabean ZQ0100."],
     })

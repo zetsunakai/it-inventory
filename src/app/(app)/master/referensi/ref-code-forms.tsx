@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import type { FormState } from "@/lib/action-result"
+import { fieldValue, type FormState } from "@/lib/action-result"
 import {
   REF_CODE_PARENT_TYPES,
   REF_CODE_TYPE_LABELS,
@@ -80,10 +80,22 @@ export function RefCodeCreateForm() {
         </Field>
       )}
       <Field label="Kode" htmlFor="code" errors={fieldErrors?.code}>
-        <Input id="code" name="code" maxLength={50} autoComplete="off" />
+        <Input
+          id="code"
+          name="code"
+          defaultValue={fieldValue(state, "code")}
+          maxLength={50}
+          autoComplete="off"
+        />
       </Field>
       <Field label="Nama" htmlFor="name" errors={fieldErrors?.name}>
-        <Input id="name" name="name" maxLength={200} autoComplete="off" />
+        <Input
+          id="name"
+          name="name"
+          defaultValue={fieldValue(state, "name")}
+          maxLength={200}
+          autoComplete="off"
+        />
       </Field>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <div className="flex gap-2">
@@ -117,10 +129,20 @@ export function RefCodeEditForm({
     <form action={formAction} className="max-w-xl space-y-4">
       <input type="hidden" name="id" value={id} />
       <Field label="Nama" htmlFor="name" errors={fieldErrors?.name}>
-        <Input id="name" name="name" defaultValue={name} maxLength={200} autoComplete="off" />
+        <Input
+          id="name"
+          name="name"
+          defaultValue={fieldValue(state, "name", name)}
+          maxLength={200}
+          autoComplete="off"
+        />
       </Field>
       <div className="flex items-start gap-2">
-        <Checkbox id="active" name="active" defaultChecked={active} />
+        <Checkbox
+          id="active"
+          name="active"
+          defaultChecked={state?.ok === false ? state.values?.active === "on" : active}
+        />
         <div className="grid gap-1 leading-none">
           <Label htmlFor="active">Aktif</Label>
           <p className="text-sm text-muted-foreground">

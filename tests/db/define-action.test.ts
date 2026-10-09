@@ -81,7 +81,7 @@ describe("defineFormAction (contoh: updateSetting)", () => {
 
     const result = await updateSetting(null, form({ key, value: "baru" }))
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: false,
       errors: ["Anda tidak punya izin untuk melakukan aksi ini."],
     })
@@ -99,12 +99,14 @@ describe("defineFormAction (contoh: updateSetting)", () => {
       key: [expect.any(String)],
       value: ["Nilai wajib diisi."],
     })
+    // Isi form dikembalikan supaya ketikan user tidak hilang saat React me-reset form.
+    expect(result.values).toEqual({ key: "", value: "   " })
   })
 
   test("AppError dari handler ditampilkan ke user", async () => {
     const result = await updateSetting(null, form({ key: "tidak.ada", value: "baru" }))
 
-    expect(result).toEqual({ ok: false, errors: ['Pengaturan "tidak.ada" tidak ditemukan.'] })
+    expect(result).toMatchObject({ ok: false, errors: ['Pengaturan "tidak.ada" tidak ditemukan.'] })
   })
 })
 
@@ -128,7 +130,7 @@ describe("defineAction", () => {
 
     const result = await action({ key })
 
-    expect(result).toEqual({ ok: false, errors: ["Alasan pertama.", "Alasan kedua."] })
+    expect(result).toMatchObject({ ok: false, errors: ["Alasan pertama.", "Alasan kedua."] })
     expect(await settingValue(key)).toBe("awal")
     expect(refresh).not.toHaveBeenCalled()
   })
@@ -149,7 +151,7 @@ describe("defineAction", () => {
 
     const result = await action({})
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: false,
       errors: ["Stok produk A tidak cukup.", "Dokumen BC belum Terdaftar."],
     })
@@ -168,7 +170,7 @@ describe("defineAction", () => {
 
     const result = await action({ key })
 
-    expect(result).toEqual({ ok: false, errors: ["Data dengan nilai yang sama sudah ada."] })
+    expect(result).toMatchObject({ ok: false, errors: ["Data dengan nilai yang sama sudah ada."] })
   })
 
   test("error tak terduga tidak membocorkan detail ke user", async () => {
@@ -184,7 +186,7 @@ describe("defineAction", () => {
 
     const result = await action({})
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       ok: false,
       errors: ["Terjadi kesalahan sistem. Coba lagi atau hubungi Administrator."],
     })

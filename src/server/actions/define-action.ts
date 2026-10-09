@@ -98,8 +98,20 @@ export function defineAction<Schema extends z.ZodType, Output>(
 export function defineFormAction<Schema extends z.ZodType, Output>(
   definition: ActionDefinition<Schema, Output>,
 ) {
-  return async (_prev: FormState<Output>, formData: FormData): Promise<ActionResult<Output>> =>
-    execute(definition, Object.fromEntries(formData))
+  return async (_prev: FormState<Output>, formData: FormData): Promise<ActionResult<Output>> => {
+    const values = formValues(formData)
+    const result = await execute(definition, values)
+    return result.ok ? result : { ...result, values }
+  }
+}
+
+// Field teks dari form. File diabaikan; field berawalan $ adalah milik React/Next.
+function formValues(formData: FormData) {
+  const values: Record<string, string> = {}
+  for (const [name, value] of formData) {
+    if (typeof value === "string" && !name.startsWith("$")) values[name] = value
+  }
+  return values
 }
 
 // Fungsi database (gerbang validasi, dll.) melapor kesalahan bisnis dengan

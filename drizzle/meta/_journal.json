@@ -71,6 +71,20 @@
       "when": 1791548091966,
       "tag": "0009_ref_codes_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1791550965447,
+      "tag": "0010_company",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1791550966031,
+      "tag": "0011_company_rules",
+      "breakpoints": true
     }
   ]
 }

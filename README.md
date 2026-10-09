@@ -65,6 +65,9 @@ dimatikan: user baru dibuat oleh Administrator.
 - Halaman daftar memakai komponen di `src/components/data-table/`: pencarian, filter, dan pagination
   disimpan di URL (`?q=`, `?page=`, filter), lalu query dijalankan di server. Contoh lengkap:
   `src/app/(app)/admin/users/page.tsx` dengan query `src/server/queries/users.ts`.
+- Form memakai `defineFormAction` + `useActionState`. React me-reset form setelah action selesai, jadi
+  isi field diambil lewat `fieldValue(state, "nama", nilaiTersimpan)` supaya ketikan user tidak
+  hilang saat validasi gagal.
 - Bagian yang membaca sesi atau `searchParams` dibungkus `<Suspense>`, supaya layout dan judul halaman
   ikut di-prerender (aturan `cacheComponents`).
 
@@ -87,6 +90,14 @@ dimatikan: user baru dibuat oleh Administrator.
   `[kode] nama` dan mencari ke `/api/ref-codes`. Referensi yang diarsipkan tidak muncul sebagai
   pilihan.
 - Hanya Administrator (izin `ref:write`) yang bisa menambah, mengubah nama, atau mengarsipkan.
+
+## Profil perusahaan
+
+- Tabel `company` hanya satu baris (dipaksa di database). NPWP disimpan 16 digit, NITKU 22 digit
+  (kosong di form = NPWP + `000000`), NIB 13 digit. Aturan NPWP/NITKU ada di `src/lib/npwp.ts` dan
+  dipakai juga untuk partner.
+- Untuk dokumen BC, ambil profil dengan `getCompanyProfile()` lalu `companyAsCustomsParty()` sebagai
+  entitas Pengusaha/Pemilik.
 
 ## Testing
 

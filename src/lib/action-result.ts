@@ -8,7 +8,16 @@ export type ActionResult<T = undefined> =
       errors: string[]
       // Kesalahan per field form, bila berasal dari validasi input.
       fieldErrors?: Record<string, string[]>
+      // Isi form yang dikirim (hanya dari defineFormAction). React me-reset form setelah
+      // action selesai, jadi form memakai nilai ini sebagai default agar ketikan user tidak hilang.
+      values?: Record<string, string>
     }
 
 // State awal untuk useActionState.
 export type FormState<T = undefined> = ActionResult<T> | null
+
+// Nilai awal sebuah field: ketikan terakhir user bila action gagal, selain itu nilai tersimpan.
+export function fieldValue<T>(state: FormState<T>, name: string, saved?: string | null) {
+  if (state?.ok === false && state.values && name in state.values) return state.values[name]
+  return saved ?? undefined
+}

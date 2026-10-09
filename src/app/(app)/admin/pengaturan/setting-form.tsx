@@ -5,7 +5,7 @@ import { useActionState } from "react"
 import { FormErrors } from "@/components/form-errors"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import type { FormState } from "@/lib/action-result"
+import { fieldValue, type FormState } from "@/lib/action-result"
 
 import { updateSetting } from "./actions"
 
@@ -19,7 +19,11 @@ export function SettingForm({ settingKey, value }: { settingKey: string; value: 
     <form action={formAction} className="space-y-2">
       <input type="hidden" name="key" value={settingKey} />
       <div className="flex gap-2">
-        <Input name="value" defaultValue={value} aria-label={settingKey} />
+        <Input
+          name="value"
+          defaultValue={fieldValue(state, "value", value)}
+          aria-label={settingKey}
+        />
         <Button type="submit" variant="outline" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
