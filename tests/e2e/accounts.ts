@@ -13,6 +13,11 @@ export const ACCOUNTS = {
     email: "auditor@it-inventory.local",
     password: DEMO_PASSWORD,
   },
+  gudang: {
+    name: "Demo Admin Gudang",
+    email: "gudang@it-inventory.local",
+    password: DEMO_PASSWORD,
+  },
 }
 
 export const SEED_ENV = {

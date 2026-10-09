@@ -54,6 +54,20 @@ dimatikan: user baru dibuat oleh Administrator.
 | `npm test` / `npm run test:watch`         | Unit test dan tes database (Vitest)                  |
 | `npm run test:e2e`                        | Tes end-to-end di browser (Playwright)               |
 
+## Layout dan halaman
+
+- Halaman setelah login ada di route group `src/app/(app)/` dan memakai layout dengan sidebar.
+  `/login` dan `/akun/mfa` sengaja di luar layout itu.
+- Menu sidebar diatur di `src/lib/navigation.ts` (judul, ikon, izin, tiket yang mengisinya). Menu
+  hanya menyembunyikan; setiap halaman tetap memanggil `requirePermission()` sendiri.
+- Modul yang belum dikerjakan memakai `<ModulePlaceholder href="..." />`. Saat modulnya dibuat, ganti
+  isi `page.tsx`-nya dan hapus `plannedIn` di menu.
+- Halaman daftar memakai komponen di `src/components/data-table/`: pencarian, filter, dan pagination
+  disimpan di URL (`?q=`, `?page=`, filter), lalu query dijalankan di server. Contoh lengkap:
+  `src/app/(app)/admin/users/page.tsx` dengan query `src/server/queries/users.ts`.
+- Bagian yang membaca sesi atau `searchParams` dibungkus `<Suspense>`, supaya layout dan judul halaman
+  ikut di-prerender (aturan `cacheComponents`).
+
 ## Testing
 
 ```bash
@@ -82,10 +96,14 @@ di setiap push dan pull request.
 drizzle/                 migrasi SQL (hasil generate + file SQL kustom)
 src/
   app/                   route Next.js (halaman, layout, route handler)
+  app/(app)/             halaman setelah login (layout dengan sidebar)
   components/ui/         komponen shadcn/ui
-  components/            komponen bersama
+  components/data-table/ tabel daftar dengan cari, filter, pagination di server
+  components/            komponen bersama (sidebar, header halaman, placeholder modul)
+  hooks/                 React hooks untuk client
   lib/                   utilitas yang aman dipakai di client maupun server
   server/                kode khusus server, tidak boleh diimpor dari client
+    queries/             query baca per modul
     db/
       schema/            schema Drizzle per kelompok tabel
       client.ts          pembuat koneksi (dipakai app dan script CLI)

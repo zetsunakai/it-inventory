@@ -1,12 +1,7 @@
-import { expect, test, type Page } from "@playwright/test"
+import { expect, test } from "@playwright/test"
 
 import { ACCOUNTS } from "./accounts"
-
-async function login(page: Page, account: { email: string; password: string }) {
-  await page.getByLabel("Email").fill(account.email)
-  await page.getByLabel("Password").fill(account.password)
-  await page.getByRole("button", { name: "Masuk" }).click()
-}
+import { login } from "./login"
 
 test("halaman tanpa sesi diarahkan ke login dan menyimpan tujuan awal", async ({ page }) => {
   await page.goto("/admin/users")
@@ -33,7 +28,7 @@ test("auditor bisa login lalu logout", async ({ page }) => {
   await login(page, ACCOUNTS.auditor)
 
   await expect(page).toHaveURL(/\/$/)
-  await expect(page.getByText(ACCOUNTS.auditor.name)).toBeVisible()
+  await expect(page.getByText(`Selamat datang, ${ACCOUNTS.auditor.name}.`)).toBeVisible()
 
   await page.getByRole("button", { name: "Keluar" }).click()
   await expect(page).toHaveURL(/\/login$/)

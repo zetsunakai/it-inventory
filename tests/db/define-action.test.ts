@@ -3,7 +3,7 @@ import { refresh } from "next/cache"
 import { afterAll, beforeEach, describe, expect, test, vi } from "vitest"
 import { z } from "zod"
 
-import { updateSetting } from "@/app/admin/pengaturan/actions"
+import { updateSetting } from "@/app/(app)/admin/pengaturan/actions"
 import type { Role } from "@/lib/permissions"
 import { AppError, defineAction } from "@/server/actions/define-action"
 import type { CurrentUser } from "@/server/auth/session"
