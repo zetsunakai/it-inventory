@@ -2,11 +2,20 @@
 // di database tes.
 const DEMO_PASSWORD = "demo-e2e-password"
 
+// Sesi Administrator (MFA sudah aktif) dan kunci TOTP-nya, ditulis oleh admin.setup.ts.
+export const ADMIN_STATE_FILE = "playwright/.auth/admin.json"
+export const ADMIN_TOTP_FILE = "playwright/.auth/admin-totp.txt"
+
 export const ACCOUNTS = {
   admin: {
     name: "Administrator",
     email: "admin@it-inventory.local",
     password: "admin-e2e-password",
+  },
+  manajer: {
+    name: "Demo Manajer",
+    email: "manajer@it-inventory.local",
+    password: DEMO_PASSWORD,
   },
   auditor: {
     name: "Demo Auditor",

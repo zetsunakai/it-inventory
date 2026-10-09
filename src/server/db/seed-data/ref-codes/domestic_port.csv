@@ -1,0 +1,345 @@
+code,name
+IDAAS,Apalapsili
+IDABU,Atambua
+IDADB,Adang Bay
+IDAEG,Aekgodang
+IDAGD,Anggi
+IDAHI,Amahai
+IDAJN,Arjuna - Java
+IDAKE,Akeselaka
+IDAMA,Amamapare - Ij
+IDAMI,Mataram
+IDAMP,Ampenan - Bali
+IDAMQ,Ambon - Molucas
+IDANG,Angar
+IDANR,Anyer Kidul
+IDAPI,Api Api
+IDAPN,Ampana
+IDARB,Aroe Bay
+IDARD,Alor Island
+IDARJ,Arso
+IDASI,Asike
+IDAUN,Arun
+IDAUT,Atauro
+IDAYW,Ayawasi
+IDBAK,Batu Kilat
+IDBAL,Balongan Terminal
+IDBCH,Baucau
+IDBDJ,Banjarmasin
+IDBDO,Bandung - Java
+IDBEJ,Berau
+IDBEK,Bekapai Terminal
+IDBEN,Benete
+IDBET,Belida Terminal
+IDBGG,Banggai
+IDBIK,Biak - Irian Jaya
+IDBIR,Biringkassi
+IDBIT,Bitung - Sulawesi
+IDBJG,Bolaang
+IDBJU,Banjuwangi - Java
+IDBJW,Bajawa
+IDBKA,Bekasi
+IDBKI,Bengkalis - St
+IDBKS,Bengkulu - Sumatra
+IDBLI,Blinju - Banka
+IDBLL,Blang Lancang - St
+IDBLT,Belitung
+IDBLV,Beliling
+IDBLW,Belawan - Sumatra
+IDBMT,Bima Terminal - Jv
+IDBMU,Bima - Sb
+IDBNG,Bonggala
+IDBNT,Belanak Terminal
+IDBOA,Benoa - Bali
+IDBOG,Bogor
+IDBPN,Balikpapan - Kalimantan
+IDBTH,Batam (ex Batu Besar)
+IDBTJ,Banda Aceh
+IDBTM,Batam Island
+IDBTN,Banten
+IDBTW,Batulicin
+IDBUA,Bula
+IDBUG,Buleleng - Bali
+IDBUI,Bokondini
+IDBUN,Buatan
+IDBUR,Batu Ampal
+IDBUW,Baubau - Butung
+IDBXD,Bade
+IDBXT,Bontang - Kl
+IDBYQ,Bunyu
+IDCBN,Cirebon (Tjeribon)
+IDCDK,Cilandak
+IDCEB,Celukan Bawang - Bl
+IDCEN,Cengkareng
+IDCER,Cereweh
+IDCIG,Cigading
+IDCIK,Cikampek
+IDCIN,Cinta - Java
+IDCIW,Ciwandan
+IDCSA,Cape Sago
+IDCTT,Ciputat
+IDCXP,Cilacap (Tjilatjap)
+IDDAS,Dabo - Singkep Isl
+IDDIV,Diviematra
+IDDJA,Djankar
+IDDJB,Jambi - Sumatra
+IDDJJ,Jayapura - Irian Jaya
+IDDMA,Demta
+IDDOB,Dobo
+IDDOG,Donggi
+IDDPS,Denpasar - Bali
+IDDUM,Dumai - Sumatra
+IDELA,Elat
+IDENE,Ende - Flores
+IDENO,Kuala Enok
+IDEWE,Ewer
+IDEWI,Enarotali
+IDFKQ,Fak Fak - Irian Jaya
+IDFOO,Numfoor
+IDFTG,Pelabuhan Futong Terminal
+IDGAG,Gag Island
+IDGEB,Gebe
+IDGEE,Gee I.
+IDGIL,Gilimanuk - Bali
+IDGLX,Galela - Halmahera
+IDGNS,Gunung Sitoli - St
+IDGRE,Gresik - Java
+IDGTO,Gorontalo - Sulawesi
+IDIAM,Asam Asam
+IDIBL,Bantul
+IDIBT,Indonesia Bulk Terminal
+IDICU,Cepu
+IDIGR,Gianyar
+IDILA,Illaga
+IDINA,Inanwatan
+IDISO,Sawahlunto
+IDJBG,Jatibarang
+IDJBT,Jabung Terminal
+IDJEM,Jember
+IDJEP,Jepara
+IDJKT,Jakarta - Java
+IDJTH,Jatitujuh
+IDKAB,Kabil
+IDKAH,Kahayan Bay
+IDKAM,Kambunong - Celebes
+IDKAR,Karosa - Sulawesi
+IDKAS,Kasim - Ij
+IDKAT,Kalianget
+IDKAU,Kau
+IDKBF,Karubaga
+IDKBH,Kalabahi
+IDKBU,Kotabaru
+IDKCI,Kon
+IDKDI,Kendari - Sulawesi
+IDKDW,Kendawangan
+IDKEA,Keisah
+IDKEI,Kepi
+IDKEM,Kempo - Sb
+IDKEQ,Kebar
+IDKHY,Kahyangan
+IDKID,Kidjang - Bintan
+IDKIJ,Kijang
+IDKJN,Kajang
+IDKKA,Kuala Kapuas - Kl
+IDKKB,Kunak - Borneo
+IDKLQ,Keluang
+IDKLT,Kaltim
+IDKMA,Kuala Mandah - Sumatra
+IDKMM,Kimam
+IDKNG,Kaimana - Irian Jaya
+IDKNL,Kolonodale
+IDKOD,Kotabangun
+IDKOE,Kupang - Timor
+IDKOJ,Koja
+IDKOK,Kokas
+IDKOL,Kolaka
+IDKOX,Kokonao
+IDKPN,Kotapinang - Baru
+IDKRC,Kerinci
+IDKRG,Kariangau
+IDKSE,Kassue
+IDKSO,Kalbut Situbondo
+IDKTG,Ketapang - Kl
+IDKTJ,Kualatanjung
+IDKTK,Kualatungkal
+IDKUA,Kualalangsa
+IDKUM,Kumai
+IDLAH,Labuha - Molucas
+IDLAJ,Labuhan
+IDLAS,Langsa - Sumatra
+IDLAT,Lalang Terminal - St
+IDLBJ,Labuanbajo
+IDLBM,Lobam
+IDLBW,Long Bawan
+IDLHI,Lereh
+IDLHK,Lhoknga
+IDLIF,Lifamatola
+IDLII,Mulia
+IDLKA,Larantuka
+IDLKI,Loki
+IDLLA,Lawe -Lawe - Kl
+IDLLN,Kelila
+IDLMB,Lombok Strait
+IDLOL,Loli
+IDLOM,Lombok
+IDLPU,Long Apung
+IDLRT,Larat
+IDLSW,Lhokseumawe
+IDLSX,Lhok Sukon
+IDLUV,Langgur
+IDLUW,Luwuk
+IDLWE,Lewoleba
+IDLYK,Lunyuk
+IDMAI,Mapia I.s
+IDMAJ,Majene - Sv
+IDMAK,Makassar
+IDMAL,Mangole
+IDMAN,Manggar
+IDMAR,Marabahan
+IDMBK,Muara Bangkong
+IDMDC,Manado
+IDMDP,Mindiptana
+IDMDR,Madura Terminal
+IDMEQ,Meulaboh - Sumatra
+IDMES,Medan - Sumatra
+IDMGB,Manggis
+IDMIT,Misool Terminal
+IDMJU,Mamuju
+IDMJY,Mangunjaya
+IDMKJ,Mangkajang
+IDMKQ,Merauke - Irian Jaya
+IDMKW,Manokwari - Irian Jaya
+IDMLG,Malang
+IDMLI,Malili - Sulawesi
+IDMNA,Melonguanne
+IDMNT,Mantang - Riau
+IDMOF,Maumere - Flores
+IDMOR,Mornopo
+IDMPC,Muko -Muko
+IDMPT,Maliana
+IDMRB,Merantibunting - Sumatra
+IDMRI,Musi River - Sumatra
+IDMRK,Merak - Java
+IDMSB,Muara Siberut
+IDMSI,Masalembo
+IDMTU,Muturi
+IDMUB,Muara Berau
+IDMUD,Muara Djawa
+IDMUF,Muting
+IDMUO,Muntok - Banka
+IDMUP,Muara Pegah
+IDMWK,Matak
+IDMXB,Masamba
+IDNAF,Banaina
+IDNAH,Naha
+IDNAM,Namlea
+IDNBX,Nabire
+IDNDA,Bandanaira
+IDNNX,Nunukan
+IDNPL,North Pulau Laut
+IDNPO,Nangapinoh
+IDNRE,Namrole
+IDNTI,Bintuni
+IDNTX,Natuna Ranai
+IDOBD,Obano
+IDOBI,Obi Island
+IDOEC,Ocussi
+IDOJA,Olah Jasa Andal/Jakarta
+IDOKA,Karimun Besar Offshore
+IDOKL,Oksibil
+IDOKQ,Okaba - Irian Jaya
+IDOLO,Olee Lheue
+IDONI,Moanamani
+IDORA,Oransbari
+IDOZI,Morotai I
+IDPAG,Pagatan - Kalimantan
+IDPAI,Paiton
+IDPAL,Palu
+IDPAP,Pare Pare
+IDPAS,Pasir Panjang
+IDPAZ,Pasuruan - Java
+IDPBG,Perbaungan
+IDPBJ,Pulau Bunyu
+IDPBW,Palibelo
+IDPCB,Pondok Cabe
+IDPDG,Padang
+IDPDO,Pendopo
+IDPEM,Pemangkat - Kl
+IDPER,Perawang
+IDPEX,Pekalongan - Java
+IDPGA,Pagerungan
+IDPGK,Pangkalpinang - Banka
+IDPGM,Pagimana
+IDPGX,Pangkal Balam - Banka
+IDPIR,Piru
+IDPJG,Panjang (Lampung - Sumatra)
+IDPJM,Pandjung Mani
+IDPKN,Pangkalanbuun
+IDPKR,Pangkalan Brandan - Sumatra
+IDPKS,Pangkalan Susu - Sumatra
+IDPKU,Pekanbaru - Sumatra
+IDPKY,Palangkaraya
+IDPLA,Plaju - Sumatra
+IDPLM,Palembang - Sumatra
+IDPMG,Port Meneng
+IDPMK,Pomako
+IDPNG,Penuba
+IDPNJ,Panjang
+IDPNK,Pontianak - Kalimantan
+IDPNN,Pamanukan - Java
+IDPNT,Prointal - Jv
+IDPOT,Poto Tano
+IDPPJ,Pulau Panjang
+IDPPO,Palapo - Sulawesi
+IDPPR,Pasir Pangarayan
+IDPPS,Pulangpisau
+IDPRN,Panarukan - Java
+IDPRO,Probolinggo - Java
+IDPSJ,Poso - Sulawesi
+IDPSS,Pulau Sambu - Riau
+IDPSU,Putussibau
+IDPTL,Pantoloan - Sv
+IDPTO,Port Okha
+IDPUM,Pomalaa - Sulawesi
+IDPUR,Purwakarta
+IDPUT,Pulau Laut
+IDPWG,Perawang - Sumatra
+IDPWL,Purwokerto
+IDRAQ,Raha
+IDRDE,Merdey
+IDREM,Rembang
+IDREO,Reo
+IDRGT,Rengat - Sumatra
+IDRKI,Rokot
+IDRNI,Ranai
+IDRSK,Ransiki
+IDRTG,Ruteng - Flores
+IDRTI,Roti
+IDRUN,Rungkut
+IDSAD,Sadau - Borneo
+IDSAE,Sangir
+IDSAN,Sanang - Celebes
+IDSAS,Sasayap
+IDSAT,Santan Terminal - Kl
+IDSAU,Sawu
+IDSBG,Sabang - Sumatra
+IDSBS,Sambas - Kalimantan
+IDSEB,Sebangan Bay - Kalimantan
+IDSGO,Port Segoro Fajar Satryo/Jakarta
+IDSGQ,Sanggata
+IDSGU,Sanggau
+IDSKI,Sangkulirang - Kalimantan
+IDSMQ,Sampit - Kalimantan
+IDSQN,Sanana
+IDSRI,Samarinda - Kalimantan
+IDSTG,Salatiga Semarang
+IDSTU,Satui
+IDSWT,Salawati Terminal
+IDSXK,Saumlaki
+IDTJP,Tanjungperak
+IDTKG,Bandar Lampung
+IDTPE,Tanjung Perak
+IDUOL,Buol
+IDUTC,Jakarta UTC1
+IDUTE,Jakarta UTC3
+IDZRM,Sarmi

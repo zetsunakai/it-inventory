@@ -1,0 +1,383 @@
+code,name
+1A,"Drum, Steel"
+1B,"Drum, Aluminium"
+1D,"Drum, Plywood"
+1F,"Container, flexible"
+1G,"Drum, fibre"
+1W,"Drum, wooden"
+2C,"Barrel, wooden"
+3A,"Jerrican, steel"
+3H,"Jerrican, plastic"
+43,"Bag, super bulk"
+44,"Bag, polybag"
+4A,"Box, steel"
+4B,"Box, aluminium"
+4C,"Box, natural wood"
+4D,"Box, plywood"
+4F,"Box, reconstituted wood"
+4G,"Box, fibreboard"
+4H,"Box, plastic"
+5H,"Bag, woven plastic"
+5L,"Bag, textile"
+5M,"Bag, paper"
+6H,"Composite packaging, plastic receptacle"
+6P,"Composite packaging, glass receptacle"
+7A,"Case, car"
+7B,"Case, wooden"
+8A,"Pallet, wooden"
+8B,"Crate, wooden"
+8C,"Bundle, wooden"
+AA,"Intermediate bulk container, rigid plastic"
+AB,"Receptacle, fibre"
+AC,"Receptacle, paper"
+AD,"Receptacle, wooden"
+AE,Aerosol
+AF,"Pallet, modular, collars 80cms * 60cms"
+AG,"Pallet, shrinkwrapped"
+AH,"Pallet, 100cms * 110cms"
+AI,Clamshell
+AJ,Cone
+AL,Ball
+AM,"Ampoule, non protected"
+AP,"Ampoule, protected"
+AT,Atomizer
+AV,Capsule
+B4,Belt
+BA,Barrel
+BB,Bobbin
+BC,"Bottlecrate, bottlerack"
+BD,Board
+BE,Bundle
+BF,"Balloon, non-protected"
+BG,Bag
+BH,Bunch
+BI,Bin
+BJ,Bucket
+BK,Basket
+BL,"Bale, compressed"
+BM,Basin
+BN,"Bale, non -compressed"
+BO,"Bottle, non-protected, cylindrical"
+BP,"Balloon, protected"
+BQ,"Bottle, protected cylindrical"
+BR,Bar
+BS,"Bottle, non-protected, bulbous"
+BT,Bolt
+BU,Butt
+BV,"Bottle, protected bulbous"
+BW,"Box, for liquids"
+BX,Box
+BY,"Board, in bundle/bunch/truss"
+BZ,"Bars, in bundle/bunch/truss"
+CA,"Can, rectangular"
+CB,Beer crate
+CC,Churn
+CD,"Can, with handle and spout"
+CE,Creel
+CF,Coffer
+CG,Cage
+CH,Chest
+CI,Canister
+CJ,Coffin
+CK,Cask
+CL,Coil
+CM,Card
+CN,"Cont,not otherwise specfied as transport equipment"
+CO,"Carboy, non-protected"
+CP,"Carboy, protected"
+CQ,Cartridge
+CR,Crate
+CS,Case
+CT,Carton
+CU,Cup
+CV,Cover
+CW,"Cage, roll"
+CX,"Can, cylindical"
+CY,Cylinder
+CZ,Canvas
+DA,"Crate, multiple layer, plastic"
+DB,"Crate, multiple layer, wooden"
+DC,"Crate, multiple layer, cardboard"
+DG,"Cage, Commonwealth Handling Equipment Pool (CHEP)"
+DH,"Box,Commnwealth Hndling Equipmnt Pool/CHEP,Eurobox"
+DI,"Drum, iron"
+DJ,"Demijohn, non-protected"
+DK,"Crate, bulk, cardboard"
+DL,"Crate, bulk, plastic"
+DM,"Crate, bulk, wooden"
+DN,Dispenser
+DP,"Demijohn, protected"
+DR,Drum
+DS,"Tray, one layer no cover, plastic"
+DT,"Tray, one layer no cover, wooden"
+DU,"Tray, one layer no cover, polystyrene"
+DV,"Tray, one layer no cover, cardboard"
+DW,"Tray, two layers no cover, plastic tray"
+DX,"Tray, two layers no cover, wooden"
+DY,"Tray, two layers no cover, cardboard"
+EC,"Bag, plastic"
+ED,"Case, with pallet base"
+EE,"Case, with pallet base, wooden"
+EF,"Case, with pallet base, cardboard"
+EG,"Case, with pallet base, plastic"
+EH,"Case, with pallet base, metal"
+EI,"Case, isothermic"
+EN,Envelope
+FB,Flexibag
+FC,Fruit crate
+FD,Framed crate
+FE,Flexitank
+FI,Firkin
+FL,Flask
+FO,Footlocker
+FP,Filmpack
+FR,Frame
+FT,Foodtainer
+FW,"Cart, flatbed"
+FX,"Bag, flexible container"
+GB,Gas bottle
+GI,Girder
+GL,"Container, gallon"
+GR,"Receptacle, glass"
+GU,"Tray, containing horizontally stacked flat items"
+GY,"Bag, gunny"
+GZ,"Girders, in bundle/bunch/truss"
+HA,"Basket, with handle, plastic"
+HB,"Basket, with handle, wooden"
+HC,"Basket, with handle, cardboard"
+HG,Hogshead
+HN,Hanger
+HR,Hamper
+HZ,Bukan Kaleng Kaleng
+IA,"Package, display, wooden"
+IB,"Package, display, cardboard"
+IC,"Package, display, plastic"
+ID,"Package, display, metal"
+IE,"Package, show"
+IF,"Package, flow"
+IG,"Package, paper wrapped"
+IH,"Drum, plastic"
+IK,"Package, cardboard, with bottle grip-holes"
+IL,"Tray, rigid, lidded stackable (CEN TS 14482:2002)"
+IN,Ingot
+IZ,"Ingots, in bundle/bunch/truss"
+JB,"Bag, jumbo"
+JC,"Jerrican, rectangular"
+JG,Jug
+JR,Jar
+JT,Jutebag
+JY,"Jerrican, cylindrical"
+KG,Keg
+KI,Kit
+KR,Karung
+LE,Luggage
+LG,Log
+LT,Lot
+LU,Lug
+LV,Liftvan
+LZ,"Logs, in bundle/bunch/truss"
+MA,"Crate, metal"
+MB,Multiply bag
+MC,milk crate
+ME,"Container, metal"
+MR,"Receptacle, metal"
+MS,Multiwall sack
+MT,Mat
+MW,"Receptacle, plastic wrapped"
+MX,Macth box
+NA,Not available
+NE,Unpacked or unpackaged
+NF,"Unpacked or unpackaged, single unit"
+NG,"Unpacked or unpackaged, multiple units"
+NS,Nest
+NT,Net
+NU,"Net, tube, plastic"
+NV,"Net, tube, textile"
+OA,"Pallet, CHEP 40 cm x 60 cm"
+OB,"Pallet, CHEP 80 cm x 120 cm"
+OC,"Pallet, CHEP 100 cm x 120 cm"
+OD,"Pallet, AS 4068-1993"
+OE,"Pallet, ISO T11"
+OF,"Platform, unspecified weight or dimension"
+OK,Block
+OT,Octabin
+OU,"Container, outer"
+P2,Pan
+PA,Packet
+PB,"Pallet, box Combined open-ended box and pallet"
+PC,Parcel
+PD,"Pallet, modular, collars 80cms * 100cms"
+PE,"Pallet, modular, collars 80cms * 120cms"
+PF,Pen
+PG,Plate
+PH,Pitcher
+PI,Pipe
+PJ,Punnet
+PK,Package
+PL,Pail
+PN,Plank
+PO,Pouch
+PP,Piece
+PR,"Receptacle, plastic"
+PT,Pot
+PU,Tray
+PV,"Pipes, in bundle/bunch/truss"
+PX,Pallet
+PY,"Plates, in bundle/bunch/truss"
+PZ,"Pipes, in bundle/bunch/truss"
+QA,"Drum, steel, non-removable head"
+QB,"Drum, steel, removable head"
+QC,"Drum, aluminium, non-removable head"
+QD,"Drum, aluminium, removable head"
+QF,"Drum, plastic, non-removable head"
+QG,"Drum, plastic, removable head"
+QH,"Barrel, wooden, bung type"
+QJ,"Barrel, wooden, removable head"
+QK,"Jerrican, steel, non-removable head"
+QL,"Jerrican, steel, removable head"
+QM,"Jerrican, plastic, non-removable head"
+QN,"Jerrican, plastic, removable head"
+QP,"Box, wooden, natural wood, ordinary"
+QQ,"Box, wooden, natural wood, with sift proof walls"
+QR,"Box, plastic, expanded"
+QS,"Box, plastic, solid"
+RD,Rod
+RG,Ring
+RJ,"Rack, clothing hanger"
+RK,Rack
+RL,Reel
+RO,Roll
+RT,Rednet
+RZ,"Rods, in bundle/ bunch/truss"
+SA,Sack
+SB,Slab
+SC,Shallow crate
+SD,Spindle
+SE,Sea-chest
+SH,Sachet
+SI,Skid
+SK,Skeleton case
+SL,Slipsheet
+SM,Sheetmetal
+SO,Spool
+SP,"Sheet, plastic wrapping"
+SS,"Case, steel"
+ST,Sheet
+SU,Suitcase
+SV,"Envelope, steel"
+SW,Shrinkwrapped
+SX,Set
+SY,Sleeve
+SZ,"Sheets, in bundle/bunch/truss"
+T1,Tablet
+TB,Tub
+TC,Tea-chest
+TD,Collapsible tube
+TE,Tyre
+TG,"Tank container, generic"
+TI,Tierce
+TK,"Tank, rectangular"
+TL,"Tub, with lid"
+TN,Tin
+TO,Tun
+TP,Tray
+TR,Trunk
+TS,Truss
+TT,"Bag, tote"
+TU,Tube
+TV,"Tube, with nozzle"
+TW,"Pallet, triwall"
+TY,"Tank, cylindrical"
+TZ,"Tubes, in bundle/bunch/truss"
+UC,Uncaged
+UN,Unpackage
+VA,Vat
+VG,"Bulk, gas ( at 1031 mbar and 15C )"
+VI,Vial
+VK,Vanpack
+VL,"Bulk, liquid"
+VN,Vehicle
+VO,"Bulk, solid, large particles (""""nodules"""")"
+VP,Vacuumpacked
+VQ,"Bulk,liquefied gas (at abnorml temprture/pressure)"
+VR,"Bulk, solid, granular particles (""""grains"""")"
+VS,"Bulk, scrap metal"
+VY,"Bulk, solid, fine particles (""""powders"""")"
+WA,Intermediate bulk container
+WB,Wickerbottle
+WC,"Intermediate bulk container, steel"
+WD,"Intermediate bulk container, aluminium"
+WF,"Intermediate bulk container, metal"
+WG,"Intermediate bulk cont,steel,pressurised >10 kpa"
+WH,"Intermedt bulk cont,aluminium,pressurised >10 kpa"
+WJ,"Intermediate bulk container,metal, pressure 10 kpa"
+WK,"Intermediate bulk container, steel, liquid"
+WL,"Intermediate bulk container, aluminium, liquid"
+WM,"Intermediate bulk container, metal, liquid"
+WN,"Intermd bulk cont,woven plastic,without coat/liner"
+WP,"Intermediate bulk container, woven plastic, coated"
+WQ,"Intermediate bulk cont,woven plastic,with liner"
+WR,"Intermedt bulk cont,woven plastic,coated and liner"
+WS,"Intermediate bulk container, plastic film"
+WT,"Intermediate bulk cont,textile with out coat/liner"
+WU,"Intermdte bulk cont,natural wood,with inner liner"
+WV,"Intermediate bulk container, textile, coated"
+WW,"Intermediate bulk container, textile, with liner"
+WX,"Intermediate bulk cont,textile,coated and liner"
+WY,"Intermediate bulk cont,plywood,with inner liner"
+WZ,"Intermd bulk cont,reconstttd wood,with inner liner"
+XA,"Bag, woven plastic, without inner coat/liner"
+XB,"Bag, woven plastic, sift proof"
+XC,"Bag, woven plastic, water resistant"
+XD,"Bag, plastics film"
+XF,"Bag, textile, without inner coat/liner"
+XG,"Bag, textile, sift proof"
+XH,"Bag, textile, water resistant"
+XJ,"Bag, paper, multi-wall"
+XK,"Bag, paper, multi-wall, water resistant"
+XN,Test
+YA,"Compsite packging,plastic receptacle in steel drum"
+YB,"Compste packgng,plastc recptcle in steel crate box"
+YC,"Compste packgng,plastic recptcle in aluminium drum"
+YD,"Compste packgng,plastic recptcle in alumnium crate"
+YF,"Compsite packging,plastic receptacle in wooden box"
+YG,"Compste packgng,plastic receptacle in plywood drum"
+YH,"Compste packging,plastic receptacle in plywood box"
+YJ,"Compsite packging,plastic receptacle in fibre drum"
+YK,"Compste packgng,plastic recptcle in fibreboard box"
+YL,"Compste packgng,plastic receptacle in plastic drum"
+YM,"Compsite packgng,plstc recptcle in solid plstc box"
+YN,"Composite packaging,glass receptacle in steel drum"
+YP,"Compste packgng,glass recptacle in steel crate box"
+YQ,"Compste packgng,glass receptacle in aluminium drum"
+YR,"Compste packgng,glass recptacle in aluminium crate"
+YS,"Composite packaging,glass receptacle in wooden box"
+YT,"Compsite packging,glass receptacle in plywood drum"
+YV,"Compste packgng,glass recptcle in wickrwork hamper"
+YW,"Composite packaging,glass receptacle in fibre drum"
+YX,"Compste packgng,glass receptacle in fibreboard box"
+YY,"Compste pckgng,glss recptcl in expndbl plastc pack"
+YZ,"Compsite packgng,glass recptcle in solid plstc pck"
+ZA,"Intermediate bulk container, paper, multi-wall"
+ZB,"Bag, large"
+ZC,"Intermd bulk cont,paper,multi-wall,water resistant"
+ZD,"Intermd bulk cont,rgd plstc,w/strctrl equipm,solid"
+ZF,"Intermd bulk cont,rgid plstc,freestandng,solds"
+ZG,"Intermdbulk cnt,rgd plstc,w/strctrl equipm,pressrd"
+ZH,"Intermd bulk cont,rgd plstc,freestnd,pressurised"
+ZJ,"Intermd bulk cont,rgd plstc,w/strctrl equipm,lquid"
+ZK,"Intermd bulk cont,rgid plstc,freestanding,liquids"
+ZL,"Intermd bulk cont,composite,rigid plastic,solids"
+ZM,"Intermd bulk cont,compste,flexbl plastic, solids"
+ZN,"Intermd bulk cont,compsit,rgid plstc,pressurised"
+ZP,"Intermd bulk cont,compsit,flexbl plstc,pressurised"
+ZQ,"Intermd bulk cont,composite,rigid plastic,liquids"
+ZR,"Intermd bulk cont,compsite,flexible plastc,liquids"
+ZS,"Intermediate bulk container, composite"
+ZT,"Intermediate bulk container, fibreboard"
+ZU,"Intermediate bulk container, flexible"
+ZV,"Intermediate bulk container,metal,other than steel"
+ZW,"Intermediate bulk container, natural wood"
+ZX,"Intermediate bulk container, plywood"
+ZY,"Intermediate bulk container, reconstituted wood"
+ZZ,Mutually defined

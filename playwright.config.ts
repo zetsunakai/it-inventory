@@ -17,7 +17,11 @@ export default defineConfig({
     baseURL: BASE_URL,
     trace: "retain-on-failure",
   },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
+  projects: [
+    // Aktivasi MFA Administrator, sekali sebelum tes lain (tests/e2e/admin.setup.ts).
+    { name: "setup", testMatch: /.*\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
+    { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
+  ],
   webServer: {
     // Build production, sesuai saran dokumentasi Next.js untuk e2e.
     command: `npm run build && npm run start -- --port ${PORT}`,

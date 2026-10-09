@@ -1,5 +1,4 @@
 import type { Metadata } from "next"
-import Link from "next/link"
 import { Suspense } from "react"
 
 import { buttonVariants } from "@/components/ui/button"
@@ -38,9 +37,12 @@ async function MfaStatus() {
     return (
       <div className="space-y-4">
         <p className="text-sm">MFA sudah aktif untuk akun Anda.</p>
-        <Link href="/" className={buttonVariants({ variant: "outline" })}>
+        {/* Sengaja <a>, bukan <Link>: muat ulang penuh. Dengan cacheComponents, router menyimpan
+            halaman yang dibuka sebelum MFA aktif, dan halaman itu masih mengarah ke sini. */}
+        {/* eslint-disable-next-line @next/next/no-html-link-for-pages */}
+        <a href="/" className={buttonVariants({ variant: "outline" })}>
           Kembali ke beranda
-        </Link>
+        </a>
       </div>
     )
   }

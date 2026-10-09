@@ -1,7 +1,7 @@
 import "server-only"
 
 import { eq } from "drizzle-orm"
-import { headers } from "next/headers"
+import { cookies, headers } from "next/headers"
 import { forbidden, redirect } from "next/navigation"
 import { cache } from "react"
 
@@ -17,7 +17,16 @@ import { auth } from "."
 // harus berada di dalam <Suspense> (Next.js cacheComponents).
 
 export async function getSession() {
-  return auth.api.getSession({ headers: await headers() })
+  // Header Cookie dibangun dari cookies(), bukan dari request asli: di server action yang baru
+  // mengganti token sesi (aktivasi MFA, login), render lanjutan di request yang sama harus
+  // membaca token baru, bukan token lama yang sudah dihapus Better Auth.
+  const requestHeaders = new Headers(await headers())
+  const cookie = (await cookies())
+    .getAll()
+    .map(({ name, value }) => `${name}=${encodeURIComponent(value)}`)
+    .join("; ")
+  requestHeaders.set("cookie", cookie)
+  return auth.api.getSession({ headers: requestHeaders })
 }
 
 export type CurrentUser = {
@@ -54,6 +63,14 @@ export async function requireUser({ allowMissingMfa = false } = {}) {
   if (!allowMissingMfa && requiresMfa(user.roles) && !user.twoFactorEnabled) {
     redirect(MFA_SETUP_PATH)
   }
+  return user
+}
+
+// Untuk route handler yang dipanggil dari browser: tanpa redirect, pemanggil membalas 401.
+// null = belum login, atau perannya wajib MFA tapi MFA belum aktif.
+export async function getApiUser() {
+  const user = await getCurrentUser()
+  if (!user || (requiresMfa(user.roles) && !user.twoFactorEnabled)) return null
   return user
 }
 

@@ -59,6 +59,19 @@ export function MfaSetup() {
         // SVG dibuat server oleh library qrcode dari URI TOTP milik user sendiri.
         dangerouslySetInnerHTML={{ __html: setup.qrSvg }}
       />
+      {setup.manualKey && (
+        <div className="space-y-1">
+          <p className="text-sm text-muted-foreground">
+            Tidak bisa memindai? Masukkan kunci ini secara manual di aplikasi authenticator:
+          </p>
+          <code
+            data-testid="mfa-manual-key"
+            className="block rounded-lg border p-3 font-mono text-sm break-all"
+          >
+            {setup.manualKey}
+          </code>
+        </div>
+      )}
       <div className="space-y-2">
         <p className="text-sm font-medium">Backup code</p>
         <ul className="grid grid-cols-2 gap-1 rounded-lg border p-3 font-mono text-sm">

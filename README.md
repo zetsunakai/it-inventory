@@ -68,6 +68,26 @@ dimatikan: user baru dibuat oleh Administrator.
 - Bagian yang membaca sesi atau `searchParams` dibungkus `<Suspense>`, supaya layout dan judul halaman
   ikut di-prerender (aturan `cacheComponents`).
 
+## Referensi kepabeanan
+
+- Tabel `ref_codes` (jenis, kode, nama, `parent_code`, aktif). Daftar jenis dan labelnya di
+  `src/lib/ref-codes.ts`. TPS unik per kantor pabean dan pelabuhan luar negeri unik per negara, jadi
+  keduanya memakai `parent_code`.
+- Data awal ada di `src/server/db/seed-data/ref-codes/*.csv` dan dipasang oleh `npm run db:seed`
+  (baris yang sudah ada tidak ditimpa). CSV dibuat dari modul Odoo lama:
+
+  ```bash
+  npx tsx scripts/import-ref-codes-from-odoo.ts \
+    ~/odoo14/Equip3-moduleboard/core/equip3_manuf_it_inventory ~/odoo14/odoo14/odoo/addons/base/data
+  ```
+
+  Nama negara dan valuta diambil dari data CLDR (`Intl.DisplayNames`, bahasa Indonesia).
+
+- Pilihan referensi di form memakai `<RefCodeSelect type="..." name="..." />`, tampil sebagai
+  `[kode] nama` dan mencari ke `/api/ref-codes`. Referensi yang diarsipkan tidak muncul sebagai
+  pilihan.
+- Hanya Administrator (izin `ref:write`) yang bisa menambah, mengubah nama, atau mengarsipkan.
+
 ## Testing
 
 ```bash
@@ -81,7 +101,9 @@ npx playwright install chromium   # sekali saja sebelum test:e2e pertama
   terhadap Postgres sungguhan. Tes SQL membungkus perubahannya dengan `inRollback()` supaya tidak
   meninggalkan data.
 - **End-to-end** (`tests/e2e/`): alur di browser. Akun tes dibuat oleh `tests/e2e/global-setup.ts`
-  lewat script seed.
+  lewat script seed. `tests/e2e/admin.setup.ts` mengaktifkan MFA Administrator lewat UI (kode TOTP
+  dihitung oleh `tests/e2e/totp.ts`) dan menyimpan sesinya; tes yang butuh Administrator memakai
+  `test.use({ storageState: ADMIN_STATE_FILE })`.
 
 Semua tes memakai database terpisah `it_inventory_test` di container yang sama, yang dikosongkan lalu
 dimigrasi ulang setiap kali tes jalan. Database development tidak tersentuh. Ganti lewat env
@@ -105,10 +127,12 @@ src/
   server/                kode khusus server, tidak boleh diimpor dari client
     queries/             query baca per modul
     db/
+      seed-data/         CSV data awal (referensi kepabeanan)
       schema/            schema Drizzle per kelompok tabel
       client.ts          pembuat koneksi (dipakai app dan script CLI)
       index.ts           koneksi untuk aplikasi (server-only)
       seed.ts            data awal
+scripts/                 script satu kali (mis. impor referensi dari Odoo)
 tests/
   db/                    tes fungsi/trigger SQL dan kode server (Vitest + Postgres)
   e2e/                   tes browser (Playwright)

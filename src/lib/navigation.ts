@@ -159,7 +159,6 @@ export const NAVIGATION: NavGroup[] = [
         href: "/master/referensi",
         icon: BookOpen,
         permission: "master:read",
-        plannedIn: "M1-01",
       },
       {
         title: "Profil perusahaan",

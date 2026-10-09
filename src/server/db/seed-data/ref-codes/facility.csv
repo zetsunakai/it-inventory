@@ -1,0 +1,61 @@
+code,name
+1,PMA
+10,Perwakilan Negara Asing dan Pejabatnya
+11,Badan Internasional dan Pejabatnya
+12,--
+13,"Hadiah untuk ibadah umum, amal,sosial/kebudayaan"
+14,"Keperluan museum, kebun binatang dan tempat lain yang semacam itu"
+15,Keperluan khusus tuna netra dan penyandang cacat
+16,Penelitian dan Pengembangan Ilmu Pengetahuan
+17,Barang contoh tidak untuk diperdagangkan
+18,Barang re-impor yang mendapat fasilitas KITE
+19,Pencegahan Pencemaran Lingkungan
+2,PMDN
+20,"Bibit atau benih untuk pengembangan pertanian, peternakan dan perikanan"
+21,Hasil laut
+22,"Barang yang semula diekspor untuk perbaikan, pengerjaan dan pengujian"
+23,"Bahan terapi manusia, pengelompokan darah, dan bahan penjenisan jaringan"
+24,Diimpor pleh pemerintah pusat/ daerah untuk kepentingan umum
+25,Berasal dari Kawasan Berikat
+26,Berasal dari Gudang Berikat
+28,Keputusan lainnya (selain 01-26 dan 29-36)
+29,Pertamina
+3,KITE/Kemudahan Impor Tujuan Ekspor - KITE PEMBEBASAN
+30,Pembangunan atau pengembangan Industri non PMA/PMDN
+31,Barang reimpor yang tidak mendapatkan fasilitas KITE
+32,"Barang yang semula diekspor untuk pengerjaan proyek, pameran dan pengemasan"
+33,Berasal dari Toko Bebas Bea
+34,Berasal dari Entreport Tujuan Pameran
+35,Impor Sementara
+36,AIDA
+37,BKPM
+38,Pertambangan
+39,"Penundaan Bea Masuk, Cukai dan/atau Pajak"
+4,Insentif Otomotif
+40,KITE Pengembalian
+41,KITE IKM
+44,test
+5,PTNI
+50,Keterangan Karantina
+51,Keterangan Kesehatan / POM
+52,Keterangan Pajak
+53,Keterangan lainnya (selain 50 s.d 52)
+54,Preferensi Tarif Importasi Asean-China (ACFTA)
+55,Preferensi Tarif Importasi Asean-Korea (AKFTA)
+56,Preferensi Tarif Indonesia-Japan (IJ-EPA)
+57,Preferensi Tarif Importasi Asean-India (AIFTA)
+58,Preferensi Tarif Asean-Australia-New Zealand (AANZFTA)
+59,Preferensi Tarif Indonesia Pakistan FTA
+6,ATIGA
+60,USDFS
+61,AJCEP
+62,Preferensi Tarif Indonesia - Palestina
+63,Preferensi Tarif Indonesia - Chili (ICCEPA)
+64,"Preferensi Tarif ASEAN - Hongkong, China FTA"
+65,Preferensi Tarif Indonesia Australia (IACEPA)
+7,Keperluan Pertahanan dan Keamanan
+70,Pembebasan Bea Masuk barang dan bahan untuk pembangunan dan pengembangan industri dalam rangka penanaman modal
+71,Pembebasan Bea Masuk barang dan bahan dalam rangka pembangunan dan pengembangan industri untuk jangka waktu tertentu
+8,Industri Strategis
+9,Proyek pemerintah yang dibiayai dengan hibah atau dana pinjaman luar negeri
+99,Terdapat beberapa fasilitas/ pemenuhan peryaratan impor untuk 1 dokumen

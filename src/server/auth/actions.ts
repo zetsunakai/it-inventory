@@ -9,7 +9,7 @@ import { z } from "zod"
 import { LOGIN_PATH, MFA_VERIFY_PATH, safeRedirectPath } from "@/lib/auth-config"
 
 import { auth } from "."
-import { requireUser } from "./session"
+import { getSession, requireUser } from "./session"
 
 // ---------- Login ----------
 
@@ -85,8 +85,10 @@ export async function verifyLoginCode(_prev: CodeState, formData: FormData): Pro
 
 export type MfaSetupState = {
   errors?: string[]
-  // Diisi setelah password benar: QR untuk dipindai dan backup code.
+  // Diisi setelah password benar: QR untuk dipindai, kunci yang sama untuk diketik
+  // manual bila kamera tidak bisa dipakai, dan backup code.
   qrSvg?: string
+  manualKey?: string
   backupCodes?: string[]
 }
 
@@ -106,7 +108,8 @@ export async function startMfaSetup(
     if (result.method !== "totp") throw new Error("Metode MFA yang diharapkan TOTP.")
     // QR dibuat di server sendiri: URI berisi secret, jangan dikirim ke layanan pihak ketiga.
     const qrSvg = await QRCode.toString(result.totpURI, { type: "svg", margin: 1 })
-    return { qrSvg, backupCodes: result.backupCodes }
+    const manualKey = new URL(result.totpURI).searchParams.get("secret") ?? undefined
+    return { qrSvg, manualKey, backupCodes: result.backupCodes }
   } catch (error) {
     if (error instanceof APIError) return { errors: ["Password salah."] }
     throw error
@@ -114,7 +117,9 @@ export async function startMfaSetup(
 }
 
 export async function confirmMfaSetup(_prev: CodeState, formData: FormData): Promise<CodeState> {
-  await requireUser({ allowMissingMfa: true })
+  // Sengaja bukan requireUser(): hasilnya di-cache per request (React cache) dengan status MFA
+  // lama, padahal halaman ini dirender ulang di request yang sama setelah MFA aktif.
+  if (!(await getSession())) redirect(LOGIN_PATH)
   const parsed = codeSchema.safeParse(Object.fromEntries(formData))
   if (!parsed.success) return { errors: parsed.error.issues.map((issue) => issue.message) }
 
@@ -125,5 +130,8 @@ export async function confirmMfaSetup(_prev: CodeState, formData: FormData): Pro
     if (error instanceof APIError) return { errors: ["Kode salah. Coba kode terbaru di aplikasi."] }
     throw error
   }
-  redirect("/")
+  // Tanpa redirect("/"): dengan cacheComponents, router menyimpan tree beranda dari kunjungan
+  // sebelum MFA aktif (berisi redirect ke halaman ini) dan menampilkannya lagi. Halaman ini
+  // dirender ulang menampilkan "MFA sudah aktif" dengan link muat ulang penuh ke beranda.
+  return {}
 }

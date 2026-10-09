@@ -57,6 +57,20 @@
       "when": 1791468995883,
       "tag": "0007_audit_triggers",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1791548085077,
+      "tag": "0008_ref_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1791548091966,
+      "tag": "0009_ref_codes_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -9,6 +9,11 @@ export function proxy(request: NextRequest) {
   const hasSession = getSessionCookie(request, { cookiePrefix: AUTH_COOKIE_PREFIX })
   if (hasSession) return NextResponse.next()
 
+  // API dipanggil lewat fetch, jadi balas 401 alih-alih redirect ke halaman login.
+  if (request.nextUrl.pathname.startsWith("/api/")) {
+    return NextResponse.json({ error: "Sesi tidak valid. Silakan login." }, { status: 401 })
+  }
+
   const loginUrl = new URL(LOGIN_PATH, request.url)
   const target = request.nextUrl.pathname + request.nextUrl.search
   if (target !== "/") loginUrl.searchParams.set("next", target)

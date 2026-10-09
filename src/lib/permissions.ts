@@ -21,6 +21,8 @@ export const PERMISSIONS = [
   "report:read",
   "master:read",
   "master:write",
+  // Referensi kepabeanan: hanya Administrator (PRD bagian 5.2).
+  "ref:write",
   "user:manage",
   "settings:write",
 ] as const

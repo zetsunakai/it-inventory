@@ -1,10 +1,15 @@
+import { readFileSync } from "node:fs"
+import path from "node:path"
+
 import { loadEnvConfig } from "@next/env"
 import { hashPassword } from "better-auth/crypto"
+import { parse } from "csv-parse/sync"
 import { eq } from "drizzle-orm"
 
 import type { Role } from "../../lib/permissions"
+import { REF_CODE_TYPES } from "../../lib/ref-codes"
 import { createDb, type Db } from "./client"
-import { accounts, systemSettings, userRoles, users } from "./schema"
+import { accounts, refCodes, systemSettings, userRoles, users } from "./schema"
 
 // Seed bersifat idempoten: aman dijalankan berulang kali,
 // dan tidak menimpa nilai yang sudah diubah lewat aplikasi.
@@ -15,6 +20,7 @@ async function main() {
   const { db, pool } = createDb(url)
   try {
     await seedSettings(db)
+    await seedRefCodes(db)
     await seedAdmin(db)
     if (process.env.SEED_DEMO_USERS === "true") await seedDemoUsers(db)
     console.log("Seed selesai.")
@@ -31,6 +37,38 @@ async function seedSettings(db: Db) {
       { key: "app.locale", value: "id-ID", description: "Format tanggal dan angka" },
     ])
     .onConflictDoNothing()
+}
+
+// Referensi kepabeanan dari CSV di seed-data/ref-codes (PRD bagian 5.2). Baris yang sudah ada
+// tidak disentuh, jadi perubahan Administrator lewat aplikasi tetap aman. CSV dibuat oleh
+// scripts/import-ref-codes-from-odoo.ts.
+const REF_CODES_DIR = path.join(import.meta.dirname, "seed-data/ref-codes")
+const INSERT_BATCH = 2000
+
+async function seedRefCodes(db: Db) {
+  for (const type of REF_CODE_TYPES) {
+    const rows: { code: string; name: string; parent_code?: string }[] = parse(
+      readFileSync(path.join(REF_CODES_DIR, `${type}.csv`)),
+      { columns: true, skip_empty_lines: true },
+    )
+    let inserted = 0
+    for (let start = 0; start < rows.length; start += INSERT_BATCH) {
+      const result = await db
+        .insert(refCodes)
+        .values(
+          rows.slice(start, start + INSERT_BATCH).map((row) => ({
+            type,
+            code: row.code,
+            name: row.name,
+            parentCode: row.parent_code || null,
+          })),
+        )
+        .onConflictDoNothing()
+        .returning({ id: refCodes.id })
+      inserted += result.length
+    }
+    if (inserted) console.log(`Referensi ${type}: ${inserted} baris baru`)
+  }
 }
 
 // Akun login pertama. Sign-up publik dimatikan, jadi user berikutnya
