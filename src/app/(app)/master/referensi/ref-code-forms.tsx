@@ -1,9 +1,10 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useState, type ReactNode } from "react"
+import { useActionState, useEffect, useState } from "react"
 
 import { FormErrors } from "@/components/form-errors"
+import { FormField } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -50,7 +51,7 @@ export function RefCodeCreateForm() {
 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
-      <Field label="Jenis" htmlFor="type" errors={fieldErrors?.type}>
+      <FormField label="Jenis" htmlFor="type" errors={fieldErrors?.type}>
         <Select
           name="type"
           items={TYPE_ITEMS}
@@ -68,18 +69,18 @@ export function RefCodeCreateForm() {
             ))}
           </SelectContent>
         </Select>
-      </Field>
+      </FormField>
       {parentType && (
-        <Field
+        <FormField
           label={REF_CODE_TYPE_LABELS[parentType]}
           htmlFor="parentCode"
           errors={fieldErrors?.parentCode}
         >
           {/* key: pilihan induk dikosongkan saat jenis berganti. */}
           <RefCodeSelect key={parentType} id="parentCode" type={parentType} name="parentCode" />
-        </Field>
+        </FormField>
       )}
-      <Field label="Kode" htmlFor="code" errors={fieldErrors?.code}>
+      <FormField label="Kode" htmlFor="code" errors={fieldErrors?.code}>
         <Input
           id="code"
           name="code"
@@ -87,8 +88,8 @@ export function RefCodeCreateForm() {
           maxLength={50}
           autoComplete="off"
         />
-      </Field>
-      <Field label="Nama" htmlFor="name" errors={fieldErrors?.name}>
+      </FormField>
+      <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name}>
         <Input
           id="name"
           name="name"
@@ -96,7 +97,7 @@ export function RefCodeCreateForm() {
           maxLength={200}
           autoComplete="off"
         />
-      </Field>
+      </FormField>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <div className="flex gap-2">
         <Button type="submit" disabled={pending}>
@@ -128,7 +129,7 @@ export function RefCodeEditForm({
   return (
     <form action={formAction} className="max-w-xl space-y-4">
       <input type="hidden" name="id" value={id} />
-      <Field label="Nama" htmlFor="name" errors={fieldErrors?.name}>
+      <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name}>
         <Input
           id="name"
           name="name"
@@ -136,7 +137,7 @@ export function RefCodeEditForm({
           maxLength={200}
           autoComplete="off"
         />
-      </Field>
+      </FormField>
       <div className="flex items-start gap-2">
         <Checkbox
           id="active"
@@ -161,29 +162,5 @@ export function RefCodeEditForm({
         {pending ? "Menyimpan…" : "Simpan"}
       </Button>
     </form>
-  )
-}
-
-function Field({
-  label,
-  htmlFor,
-  errors,
-  children,
-}: {
-  label: string
-  htmlFor: string
-  errors?: string[]
-  children: ReactNode
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {errors?.map((message) => (
-        <p key={message} className="text-sm text-destructive">
-          {message}
-        </p>
-      ))}
-    </div>
   )
 }

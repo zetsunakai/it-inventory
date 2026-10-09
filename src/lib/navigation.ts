@@ -145,7 +145,6 @@ export const NAVIGATION: NavGroup[] = [
         href: "/master/gudang",
         icon: Warehouse,
         permission: "master:read",
-        plannedIn: "M1-03",
       },
       {
         title: "Partner",

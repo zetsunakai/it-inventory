@@ -9,7 +9,7 @@ import { eq } from "drizzle-orm"
 import type { Role } from "../../lib/permissions"
 import { REF_CODE_TYPES } from "../../lib/ref-codes"
 import { createDb, type Db } from "./client"
-import { accounts, refCodes, systemSettings, userRoles, users } from "./schema"
+import { accounts, locations, refCodes, systemSettings, userRoles, users } from "./schema"
 
 // Seed bersifat idempoten: aman dijalankan berulang kali,
 // dan tidak menimpa nilai yang sudah diubah lewat aplikasi.
@@ -21,6 +21,7 @@ async function main() {
   try {
     await seedSettings(db)
     await seedRefCodes(db)
+    await seedVirtualLocations(db)
     await seedAdmin(db)
     if (process.env.SEED_DEMO_USERS === "true") await seedDemoUsers(db)
     console.log("Seed selesai.")
@@ -69,6 +70,19 @@ async function seedRefCodes(db: Db) {
     }
     if (inserted) console.log(`Referensi ${type}: ${inserted} baris baru`)
   }
+}
+
+// Lokasi virtual di luar gudang, asal/tujuan pergerakan (PRD bagian 5.1 dan 6.2).
+async function seedVirtualLocations(db: Db) {
+  await db
+    .insert(locations)
+    .values([
+      { code: "VENDOR", name: "Vendor", type: "vendor" },
+      { code: "CUSTOMER", name: "Customer", type: "customer" },
+      { code: "SCRAP", name: "Scrap", type: "scrap" },
+      { code: "PENYESUAIAN", name: "Penyesuaian stok", type: "adjustment" },
+    ])
+    .onConflictDoNothing()
 }
 
 // Akun login pertama. Sign-up publik dimatikan, jadi user berikutnya

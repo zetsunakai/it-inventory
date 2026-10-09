@@ -99,6 +99,18 @@ dimatikan: user baru dibuat oleh Administrator.
 - Untuk dokumen BC, ambil profil dengan `getCompanyProfile()` lalu `companyAsCustomsParty()` sebagai
   entitas Pengusaha/Pemilik.
 
+## Gudang, lokasi, dan akses gudang
+
+- `warehouses` (flag `is_bonded` = gudang berikat), `locations` (hierarki lewat `parent_id`, jalur
+  lengkap di view `location_paths`), dan `user_warehouses`.
+- Aturan lokasi dipaksakan trigger dan CHECK di database: lokasi internal wajib di dalam gudang;
+  vendor, customer, dan penyesuaian adalah lokasi virtual di luar gudang; induk harus satu gudang dan
+  tidak boleh melingkar; kode, tipe, dan gudang lokasi serta kode gudang tidak bisa diubah.
+- Akses gudang hanya lewat fungsi database `can_access_warehouse(user, gudang)`: Administrator,
+  Manajer, dan Auditor melihat semua gudang (`ALL_WAREHOUSE_ROLES`), peran lain hanya gudang yang
+  diberikan di halaman detail gudang. Gudang tanpa akses diperlakukan seperti tidak ada (404).
+- Lokasi virtual VENDOR, CUSTOMER, SCRAP, dan PENYESUAIAN dibuat oleh seed.
+
 ## Testing
 
 ```bash

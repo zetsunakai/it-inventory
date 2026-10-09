@@ -85,6 +85,20 @@
       "when": 1791550966031,
       "tag": "0011_company_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1791552275250,
+      "tag": "0012_warehouses",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1791552275835,
+      "tag": "0013_warehouses_rules",
+      "breakpoints": true
     }
   ]
 }

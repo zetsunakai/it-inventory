@@ -1,12 +1,12 @@
 "use client"
 
-import { useActionState, type ReactNode } from "react"
+import { useActionState } from "react"
 
 import { FormErrors } from "@/components/form-errors"
+import { FormField } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -40,24 +40,24 @@ export function CompanyProfileForm({
 
   return (
     <form action={formAction} className="max-w-2xl space-y-4">
-      <Field label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name}>
+      <FormField label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name}>
         <Input
           id="name"
           name="name"
           defaultValue={fieldValue(state, "name", profile?.name)}
           maxLength={200}
         />
-      </Field>
-      <Field label="Alamat" htmlFor="address" errors={fieldErrors?.address}>
+      </FormField>
+      <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address}>
         <Input
           id="address"
           name="address"
           defaultValue={fieldValue(state, "address", profile?.address)}
           maxLength={500}
         />
-      </Field>
+      </FormField>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field
+        <FormField
           label="NPWP"
           htmlFor="npwp"
           errors={fieldErrors?.npwp}
@@ -69,17 +69,17 @@ export function CompanyProfileForm({
             defaultValue={fieldValue(state, "npwp", profile?.npwp)}
             inputMode="numeric"
           />
-        </Field>
-        <Field label="NIB" htmlFor="nib" errors={fieldErrors?.nib} hint="13 digit.">
+        </FormField>
+        <FormField label="NIB" htmlFor="nib" errors={fieldErrors?.nib} hint="13 digit.">
           <Input
             id="nib"
             name="nib"
             defaultValue={fieldValue(state, "nib", profile?.nib)}
             inputMode="numeric"
           />
-        </Field>
+        </FormField>
       </div>
-      <Field
+      <FormField
         label="NITKU"
         htmlFor="nitku"
         errors={fieldErrors?.nitku}
@@ -91,9 +91,13 @@ export function CompanyProfileForm({
           defaultValue={fieldValue(state, "nitku", profile?.nitku)}
           inputMode="numeric"
         />
-      </Field>
+      </FormField>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Jenis fasilitas" htmlFor="facilityType" errors={fieldErrors?.facilityType}>
+        <FormField
+          label="Jenis fasilitas"
+          htmlFor="facilityType"
+          errors={fieldErrors?.facilityType}
+        >
           <Select
             name="facilityType"
             items={FACILITY_ITEMS}
@@ -110,8 +114,8 @@ export function CompanyProfileForm({
               ))}
             </SelectContent>
           </Select>
-        </Field>
-        <Field
+        </FormField>
+        <FormField
           label="Kantor pabean pengawas"
           htmlFor="supervisingOfficeCode"
           errors={fieldErrors?.supervisingOfficeCode}
@@ -122,10 +126,10 @@ export function CompanyProfileForm({
             name="supervisingOfficeCode"
             defaultValue={office}
           />
-        </Field>
+        </FormField>
       </div>
       <div className="grid gap-4 sm:grid-cols-2">
-        <Field
+        <FormField
           label="Nomor izin fasilitas"
           htmlFor="permitNumber"
           errors={fieldErrors?.permitNumber}
@@ -136,15 +140,19 @@ export function CompanyProfileForm({
             defaultValue={fieldValue(state, "permitNumber", profile?.permitNumber)}
             maxLength={100}
           />
-        </Field>
-        <Field label="Tanggal izin fasilitas" htmlFor="permitDate" errors={fieldErrors?.permitDate}>
+        </FormField>
+        <FormField
+          label="Tanggal izin fasilitas"
+          htmlFor="permitDate"
+          errors={fieldErrors?.permitDate}
+        >
           <Input
             id="permitDate"
             name="permitDate"
             type="date"
             defaultValue={fieldValue(state, "permitDate", profile?.permitDate)}
           />
-        </Field>
+        </FormField>
       </div>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {state?.ok && state.message && (
@@ -156,32 +164,5 @@ export function CompanyProfileForm({
         {pending ? "Menyimpan…" : "Simpan"}
       </Button>
     </form>
-  )
-}
-
-function Field({
-  label,
-  htmlFor,
-  errors,
-  hint,
-  children,
-}: {
-  label: string
-  htmlFor: string
-  errors?: string[]
-  hint?: string
-  children: ReactNode
-}) {
-  return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
-      {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
-      {errors?.map((message) => (
-        <p key={message} className="text-sm text-destructive">
-          {message}
-        </p>
-      ))}
-    </div>
   )
 }
