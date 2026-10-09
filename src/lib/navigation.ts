@@ -138,7 +138,6 @@ export const NAVIGATION: NavGroup[] = [
         href: "/master/satuan",
         icon: Ruler,
         permission: "master:read",
-        plannedIn: "M1-04",
       },
       {
         title: "Gudang & lokasi",

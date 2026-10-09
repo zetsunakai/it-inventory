@@ -3,6 +3,7 @@
 import { useActionState } from "react"
 
 import { FormErrors } from "@/components/form-errors"
+import { CheckboxField } from "@/components/checkbox-field"
 import { FormField } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,7 +18,6 @@ import { fieldValue, type FormState } from "@/lib/action-result"
 import { LOCATION_TYPE_LABELS, WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
 
 import { createLocation, updateLocation } from "./actions"
-import { CheckboxField } from "./warehouse-forms"
 
 const TYPE_ITEMS = WAREHOUSE_LOCATION_TYPES.map((type) => ({
   value: type,

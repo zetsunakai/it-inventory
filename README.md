@@ -111,6 +111,16 @@ dimatikan: user baru dibuat oleh Administrator.
   diberikan di halaman detail gudang. Gudang tanpa akses diperlakukan seperti tidak ada (404).
 - Lokasi virtual VENDOR, CUSTOMER, SCRAP, dan PENYESUAIAN dibuat oleh seed.
 
+## Satuan dan konversi
+
+- `uom_categories` dan `uoms`. `factor` = berapa satuan acuan dalam 1 satuan (acuan selalu 1, tepat
+  satu per kategori), misalnya kategori Berat dengan acuan KG: G = 0,001, TON = 1000.
+- Konversi qty hanya lewat fungsi database `convert_qty(qty, dari, ke)`: menolak kategori berbeda
+  dan membulatkan ke 4 desimal. Angka desimal tidak pernah dihitung sebagai float di aplikasi
+  (`src/lib/decimal.ts` hanya mengurai input dan memformat tampilan).
+- Kode, kategori, dan status acuan satuan tidak bisa diubah. Satuan dasar (PCS, KG, L, M, M2, dan
+  turunannya) dibuat oleh seed. Satuan CEISA (kode resmi per produk) terpisah, menyusul di M1-05.
+
 ## Testing
 
 ```bash

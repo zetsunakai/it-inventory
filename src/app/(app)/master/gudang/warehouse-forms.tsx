@@ -4,11 +4,10 @@ import { useRouter } from "next/navigation"
 import { useActionState, useEffect } from "react"
 
 import { FormErrors } from "@/components/form-errors"
+import { CheckboxField } from "@/components/checkbox-field"
 import { FormField } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -130,27 +129,5 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
         {pending ? "Menyimpan…" : "Simpan"}
       </Button>
     </form>
-  )
-}
-
-export function CheckboxField({
-  name,
-  label,
-  description,
-  defaultChecked,
-}: {
-  name: string
-  label: string
-  description: string
-  defaultChecked: boolean
-}) {
-  return (
-    <div className="flex items-start gap-2">
-      <Checkbox id={name} name={name} defaultChecked={defaultChecked} />
-      <div className="grid gap-1 leading-none">
-        <Label htmlFor={name}>{label}</Label>
-        <p className="text-sm text-muted-foreground">{description}</p>
-      </div>
-    </div>
   )
 }

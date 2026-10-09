@@ -4,12 +4,21 @@ import path from "node:path"
 import { loadEnvConfig } from "@next/env"
 import { hashPassword } from "better-auth/crypto"
 import { parse } from "csv-parse/sync"
-import { eq } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 
 import type { Role } from "../../lib/permissions"
 import { REF_CODE_TYPES } from "../../lib/ref-codes"
 import { createDb, type Db } from "./client"
-import { accounts, locations, refCodes, systemSettings, userRoles, users } from "./schema"
+import {
+  accounts,
+  locations,
+  refCodes,
+  systemSettings,
+  uomCategories,
+  uoms,
+  userRoles,
+  users,
+} from "./schema"
 
 // Seed bersifat idempoten: aman dijalankan berulang kali,
 // dan tidak menimpa nilai yang sudah diubah lewat aplikasi.
@@ -22,6 +31,7 @@ async function main() {
     await seedSettings(db)
     await seedRefCodes(db)
     await seedVirtualLocations(db)
+    await seedUoms(db)
     await seedAdmin(db)
     if (process.env.SEED_DEMO_USERS === "true") await seedDemoUsers(db)
     console.log("Seed selesai.")
@@ -82,6 +92,91 @@ async function seedVirtualLocations(db: Db) {
       { code: "SCRAP", name: "Scrap", type: "scrap" },
       { code: "PENYESUAIAN", name: "Penyesuaian stok", type: "adjustment" },
     ])
+    .onConflictDoNothing()
+}
+
+// Satuan dasar per kategori (PRD bagian 5.1). Satuan pertama tiap kategori adalah acuannya;
+// factor = berapa satuan acuan dalam 1 satuan.
+const UOM_SEED: {
+  code: string
+  name: string
+  units: [code: string, name: string, factor: string][]
+}[] = [
+  {
+    code: "UNIT",
+    name: "Unit",
+    units: [
+      ["PCS", "Buah (pcs)", "1"],
+      ["LUSIN", "Lusin", "12"],
+      ["KODI", "Kodi", "20"],
+    ],
+  },
+  {
+    code: "BERAT",
+    name: "Berat",
+    units: [
+      ["KG", "Kilogram", "1"],
+      ["G", "Gram", "0.001"],
+      ["TON", "Ton", "1000"],
+    ],
+  },
+  {
+    code: "VOLUME",
+    name: "Volume",
+    units: [
+      ["L", "Liter", "1"],
+      ["ML", "Mililiter", "0.001"],
+      ["M3", "Meter kubik", "1000"],
+    ],
+  },
+  {
+    code: "PANJANG",
+    name: "Panjang",
+    units: [
+      ["M", "Meter", "1"],
+      ["CM", "Sentimeter", "0.01"],
+      ["MM", "Milimeter", "0.001"],
+    ],
+  },
+  {
+    code: "LUAS",
+    name: "Luas",
+    units: [
+      ["M2", "Meter persegi", "1"],
+      ["CM2", "Sentimeter persegi", "0.0001"],
+    ],
+  },
+]
+
+async function seedUoms(db: Db) {
+  await db
+    .insert(uomCategories)
+    .values(UOM_SEED.map(({ code, name }) => ({ code, name })))
+    .onConflictDoNothing()
+  const categories = await db
+    .select({ id: uomCategories.id, code: uomCategories.code })
+    .from(uomCategories)
+    .where(
+      inArray(
+        uomCategories.code,
+        UOM_SEED.map((category) => category.code),
+      ),
+    )
+  const categoryId = new Map(categories.map((category) => [category.code, category.id]))
+
+  await db
+    .insert(uoms)
+    .values(
+      UOM_SEED.flatMap((category) =>
+        category.units.map(([code, name, factor], index) => ({
+          code,
+          name,
+          factor,
+          categoryId: categoryId.get(category.code)!,
+          isReference: index === 0,
+        })),
+      ),
+    )
     .onConflictDoNothing()
 }
 
