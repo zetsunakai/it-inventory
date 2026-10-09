@@ -18,7 +18,12 @@
     "db:migrate": "drizzle-kit migrate",
     "db:seed": "tsx src/server/db/seed.ts",
     "db:studio": "drizzle-kit studio",
-    "db:reset": "docker compose down -v && docker compose up -d --wait db && npm run db:migrate && npm run db:seed"
+    "db:reset": "docker compose down -v && docker compose up -d --wait db && npm run db:migrate && npm run db:seed",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "pretest": "docker compose up -d --wait db",
+    "pretest:e2e": "docker compose up -d --wait db"
   },
   "dependencies": {
     "@base-ui/react": "^1.8.0",
@@ -39,8 +44,9 @@
   },
   "devDependencies": {
     "@next/env": "^16.4.0",
+    "@playwright/test": "^1.64.0",
     "@tailwindcss/turbopack": "^4",
-    "@types/node": "^20",
+    "@types/node": "^24.19.1",
     "@types/pg": "^8.23.1",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19",
@@ -53,6 +59,7 @@
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.3"
   }
 }

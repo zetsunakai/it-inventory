@@ -1,0 +1,49 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# Push baru ke branch yang sama membatalkan run sebelumnya.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint, typecheck, format
+        run: |
+          npm run lint
+          npm run typecheck
+          npm run format:check
+
+      # Postgres lewat docker-compose.yml yang sama dengan lokal.
+      - name: Unit dan tes database
+        run: npm test
+
+      - name: Install browser Playwright
+        run: npx playwright install --with-deps chromium
+
+      - name: Tes end-to-end
+        run: npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

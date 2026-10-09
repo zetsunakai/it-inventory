@@ -51,6 +51,30 @@ dimatikan: user baru dibuat oleh Administrator.
 | `npm run db:seed`                         | Isi data awal                                        |
 | `npm run db:reset`                        | Hapus database lokal, lalu migrasi dan seed ulang    |
 | `npm run db:studio`                       | Drizzle Studio untuk melihat isi database            |
+| `npm test` / `npm run test:watch`         | Unit test dan tes database (Vitest)                  |
+| `npm run test:e2e`                        | Tes end-to-end di browser (Playwright)               |
+
+## Testing
+
+```bash
+npm test                    # unit test + tes database, menyalakan Postgres lebih dulu
+npm run test:e2e            # build production di port 3100, lalu tes di Chromium
+npx playwright install chromium   # sekali saja sebelum test:e2e pertama
+```
+
+- **Unit** (`src/**/*.test.ts`, di sebelah file yang dites): logika murni tanpa database.
+- **Database** (`tests/db/`): fungsi dan trigger SQL serta kode server yang menulis data, dijalankan
+  terhadap Postgres sungguhan. Tes SQL membungkus perubahannya dengan `inRollback()` supaya tidak
+  meninggalkan data.
+- **End-to-end** (`tests/e2e/`): alur di browser. Akun tes dibuat oleh `tests/e2e/global-setup.ts`
+  lewat script seed.
+
+Semua tes memakai database terpisah `it_inventory_test` di container yang sama, yang dikosongkan lalu
+dimigrasi ulang setiap kali tes jalan. Database development tidak tersentuh. Ganti lewat env
+`TEST_DATABASE_URL` bila perlu; namanya wajib berakhiran `_test`.
+
+CI (`.github/workflows/ci.yml`) menjalankan lint, typecheck, format, `npm test`, dan `npm run test:e2e`
+di setiap push dan pull request.
 
 ## Struktur folder
 
@@ -67,6 +91,9 @@ src/
       client.ts          pembuat koneksi (dipakai app dan script CLI)
       index.ts           koneksi untuk aplikasi (server-only)
       seed.ts            data awal
+tests/
+  db/                    tes fungsi/trigger SQL dan kode server (Vitest + Postgres)
+  e2e/                   tes browser (Playwright)
 ```
 
 ## Aturan migrasi
