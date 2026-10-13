@@ -148,6 +148,20 @@
       "when": 1791555884493,
       "tag": "0020_partners_nitku_required",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "7",
+      "when": 1791898061255,
+      "tag": "0021_inventory",
+      "breakpoints": true
+    },
+    {
+      "idx": 22,
+      "version": "7",
+      "when": 1791898082030,
+      "tag": "0022_inventory_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -33,3 +33,16 @@ export async function pgErrorMessage(promise: Promise<unknown>) {
   }
   throw new Error("Query seharusnya gagal, tapi berhasil.")
 }
+
+// Seperti pgErrorMessage, tapi di dalam savepoint: transaksi tes tetap bisa dipakai setelah query
+// yang gagal, jadi beberapa pelanggaran bisa diuji berurutan di satu transaksi.
+export async function pgErrorInSavepoint(
+  tx: Transaction,
+  fn: (savepoint: Transaction) => Promise<unknown>,
+) {
+  return pgErrorMessage(
+    tx.transaction(async (savepoint) => {
+      await fn(savepoint)
+    }),
+  )
+}

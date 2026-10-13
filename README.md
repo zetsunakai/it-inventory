@@ -144,6 +144,22 @@ dimatikan: user baru dibuat oleh Administrator.
 - Pemeriksaan lintas field di zod memakai `superRefine(..., { when: () => true })` supaya tetap
   berjalan walaupun field lain gagal, sehingga semua kesalahan tampil sekaligus.
 
+## Inventory
+
+- Stok dihitung dari ledger `stock_moves` berstatus `done` (PRD bagian 6). `transfers` adalah
+  dokumen operasionalnya (penerimaan, pengiriman, transfer internal, retur, scrap, penyesuaian)
+  dengan status Draft → Siap → Selesai atau Batal. `stock_balances` hanya ringkasan per produk ×
+  lokasi × lot; lot kosong dihitung satu nilai (`NULLS NOT DISTINCT`).
+- Nomor transfer dibuat database saat insert, per jenis dan tahun WIB (`PNR/2026/00001`), lewat
+  `next_number(lingkup, periode)` yang aman dipanggil bersamaan. Pembuat diisi dari `app.user_id`.
+- Aturan di trigger (migrasi `inventory_rules`): asal dan tujuan harus sesuai jenis transfer
+  (penerimaan: vendor → internal, pengiriman: internal → customer, dst.), retur hanya dari
+  penerimaan/pengiriman Selesai dengan arah terbalik dan partner yang sama, data arsip (lokasi,
+  partner, produk) tidak bisa dipakai untuk transaksi baru, lot harus milik produknya, dan lokasi
+  baris harus sesuai lokasi transfernya (sub-lokasi di gudang yang sama boleh).
+- Qty baris diinput dalam satuan apa pun (`input_qty`, `input_uom_id`); database menghitung `qty`
+  dalam satuan stok produk lewat `convert_qty`. Gudang asal/tujuan disalin ke baris untuk laporan.
+
 ## Arsip dan hapus
 
 - Data master yang sudah dipakai tidak dihapus, tapi diarsipkan (kolom `active`, centang Aktif di

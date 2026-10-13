@@ -48,3 +48,50 @@ export const VIRTUAL_ONLY_TYPES: readonly LocationType[] = ["vendor", "customer"
 export const WAREHOUSE_LOCATION_TYPES = LOCATION_TYPES.filter(
   (type) => !VIRTUAL_ONLY_TYPES.includes(type),
 )
+
+// Jenis transaksi inventory (PRD bagian 6.2). Retur adalah kebalikan transfer Selesai
+// (penerimaan atau pengiriman) yang dirujuk lewat return_of_id.
+export const TRANSFER_TYPES = [
+  "receipt",
+  "delivery",
+  "internal",
+  "return",
+  "scrap",
+  "adjustment",
+] as const
+export type TransferType = (typeof TRANSFER_TYPES)[number]
+
+export const TRANSFER_TYPE_LABELS: Record<TransferType, string> = {
+  receipt: "Penerimaan",
+  delivery: "Pengiriman",
+  internal: "Transfer internal",
+  return: "Retur",
+  scrap: "Scrap",
+  adjustment: "Penyesuaian",
+}
+
+// Awalan nomor transfer, mis. PNR/2026/00001. Sama dengan fungsi transfer_number_prefix()
+// di database (migrasi inventory_rules).
+export const TRANSFER_NUMBER_PREFIXES: Record<TransferType, string> = {
+  receipt: "PNR",
+  delivery: "PGR",
+  internal: "TRF",
+  return: "RTR",
+  scrap: "SCR",
+  adjustment: "ADJ",
+}
+
+// Alur status transfer (PRD bagian 6.3): Draft → Siap → Selesai, atau Batal dari Draft/Siap.
+export const TRANSFER_STATUSES = ["draft", "ready", "done", "cancelled"] as const
+export type TransferStatus = (typeof TRANSFER_STATUSES)[number]
+
+export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
+  draft: "Draft",
+  ready: "Siap",
+  done: "Selesai",
+  cancelled: "Batal",
+}
+
+// Status baris pergerakan: mengikuti transfernya, tanpa tahap Siap.
+export const STOCK_MOVE_STATUSES = ["draft", "done", "cancelled"] as const
+export type StockMoveStatus = (typeof STOCK_MOVE_STATUSES)[number]
