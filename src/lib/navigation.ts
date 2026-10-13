@@ -85,7 +85,6 @@ export const NAVIGATION: NavGroup[] = [
         title: "Tutup periode",
         href: "/inventory/periode",
         permission: "inventory:approve",
-        plannedIn: "M2-10",
       },
     ],
   },

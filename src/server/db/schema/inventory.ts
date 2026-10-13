@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import {
   check,
   date,
+  smallint,
   index,
   integer,
   numeric,
@@ -291,5 +292,50 @@ export const stockCountLines = pgTable(
       "stock_count_lines_qty_not_negative",
       sql`(${table.countedQty} is null or ${table.countedQty} >= 0)`,
     ),
+  ],
+)
+
+// Periode bulanan yang sudah ditutup (PRD bagian 6.4 dan 9.4). Tidak ada pergerakan baru dengan
+// tanggal di periode tertutup. Bulan = kalender WIB.
+export const inventoryPeriods = pgTable(
+  "inventory_periods",
+  {
+    year: smallint().notNull(),
+    month: smallint().notNull(),
+    closedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    closedBy: uuid(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.year, table.month] }),
+    check("inventory_periods_month_valid", sql`${table.month} between 1 and 12`),
+  ],
+)
+
+// Saldo per produk × gudang × kategori × bulan, disimpan saat periode ditutup supaya laporan
+// periode lama cepat dan angkanya tetap (PRD bagian 9.4 dan 13.2). Dihitung close_period().
+export const periodBalances = pgTable(
+  "period_balances",
+  {
+    year: smallint().notNull(),
+    month: smallint().notNull(),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    warehouseId: uuid()
+      .notNull()
+      .references(() => warehouses.id, { onDelete: "restrict" }),
+    category: inventoryCategory().notNull(),
+    openingQty: qty().notNull(),
+    inQty: qty().notNull(),
+    outQty: qty().notNull(),
+    // Bertanda: penyesuaian dan hasil opname (PRD bagian 9.3).
+    adjustmentQty: qty().notNull(),
+    closingQty: qty().notNull(),
+  },
+  (table) => [
+    primaryKey({
+      columns: [table.year, table.month, table.warehouseId, table.productId, table.category],
+    }),
+    index("period_balances_product_idx").on(table.productId),
   ],
 )

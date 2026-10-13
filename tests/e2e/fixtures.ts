@@ -79,6 +79,8 @@ export async function stockAt(productId: string, locationId: string) {
 export async function receiveStock(
   fixture: Awaited<ReturnType<typeof createInventoryFixture>>,
   qty: string,
+  // Tanggal efektif (ISO); kosong = sekarang.
+  at?: string,
 ) {
   const { db, pool } = createDb(TEST_DATABASE_URL)
   try {
@@ -105,7 +107,7 @@ export async function receiveStock(
         sourceLocationId: vendor.id,
         destinationLocationId: fixture.rack.id,
       })
-      await tx.execute(sql`select validate_transfer(${transfer.id})`)
+      await tx.execute(sql`select validate_transfer(${transfer.id}, ${at ?? null}::timestamptz)`)
       return transfer.id
     })
   } finally {

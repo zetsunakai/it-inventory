@@ -177,6 +177,15 @@ dimatikan: user baru dibuat oleh Administrator.
 - Tes yang butuh data Selesai memakai `enableLedgerWrite()`, dan membersihkannya dengan
   `purgeInventory()` (`tests/db/helpers.ts`).
 
+- Tutup periode bulanan (`/inventory/periode`, Manajer): `close_period(tahun, bulan)` menyimpan
+  `period_balances` (saldo awal, masuk, keluar, penyesuaian, saldo akhir per produk × gudang ×
+  kategori) dan mengunci periodenya. Penutupan berurutan tanpa melompati bulan; semua tanggal
+  sampai akhir periode tertutup terakhir ditolak untuk transaksi baru (`period_is_closed`), baik di
+  `validate_transfer` maupun lewat trigger. Masuk/keluar dihitung per gudang: perpindahan di dalam
+  gudang yang sama tidak dihitung, dari/ke lokasi penyesuaian masuk kolom penyesuaian
+  (`warehouse_movements`). Batas bulan selalu WIB lewat `period_start`/`period_end`; jangan pakai
+  `+ interval '1 month'` pada timestamptz.
+
 ## Layar transaksi inventory
 
 - Halaman daftar, buat, dan detail sama untuk semua jenis transfer: `src/components/inventory/`

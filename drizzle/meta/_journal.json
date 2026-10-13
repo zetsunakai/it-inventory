@@ -218,6 +218,20 @@
       "when": 1791901241420,
       "tag": "0030_stock_count_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "7",
+      "when": 1791935325688,
+      "tag": "0031_periods",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "7",
+      "when": 1791935326744,
+      "tag": "0032_period_rules",
+      "breakpoints": true
     }
   ]
 }
