@@ -2,6 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, stockAt } from "./fixtures"
+import { fillInteractive } from "./interactive"
 
 // Penerimaan (backlog M2-03, M2-05): Draft → Siap → Selesai menambah saldo di lokasi tujuan;
 // qty yang belum datang menjadi penerimaan lanjutan.
@@ -13,12 +14,12 @@ type Fixture = Awaited<ReturnType<typeof createInventoryFixture>>
 async function createReadyReceipt(page: Page, fixture: Fixture, qty: string) {
   await page.goto("/inventory/penerimaan")
   await page.getByRole("link", { name: "Buat penerimaan" }).first().click()
-  await page.getByLabel("Vendor").fill(fixture.partner.code)
+  await fillInteractive(page.getByLabel("Vendor", { exact: true }), fixture.partner.code)
   await page.getByRole("option", { name: new RegExp(fixture.partner.code) }).click()
   await page.getByLabel("Lokasi tujuan").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
   await page.getByLabel("Referensi PO/SO").fill("PO-E2E-1")
-  await page.getByLabel("Produk baris 1").fill(fixture.product.sku)
+  await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill(qty)
   await page.getByRole("button", { name: "Simpan penerimaan" }).click()

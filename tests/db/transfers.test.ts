@@ -34,7 +34,7 @@ vi.mock("@/server/auth/session", () => ({ requireUser: async () => session.user 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }))
 
 const ids = {} as Record<
-  "pcs" | "dozen" | "product" | "lotProduct" | "vendor" | "rack" | "partner",
+  "pcs" | "dozen" | "product" | "lotProduct" | "vendor" | "rack" | "otherRack" | "partner",
   string
 >
 const people = {} as Record<"admin" | "gudang" | "auditor", CurrentUser>
@@ -116,6 +116,21 @@ beforeAll(async () => {
     .returning({ id: locations.id })
   ids.vendor = vendor.id
   ids.rack = rack.id
+  const [second] = await db
+    .insert(warehouses)
+    .values({
+      code: "ZTG2",
+      name: "Gudang uji 2",
+      address: "Bekasi",
+      isBonded: false,
+      category: "wip",
+    })
+    .returning({ id: warehouses.id })
+  const [otherRack] = await db
+    .insert(locations)
+    .values({ code: "ZTRAK2", name: "Rak gudang 2", type: "internal", warehouseId: second.id })
+    .returning({ id: locations.id })
+  ids.otherRack = otherRack.id
   const [partner] = await db
     .insert(partners)
     .values({
@@ -467,6 +482,67 @@ describe("penerimaan parsial dan backorder", () => {
     expect(await validateTransfer({ id, quantities: { [line.id]: "3,0" } })).toMatchObject({
       ok: true,
       data: { backorder: null },
+    })
+  })
+})
+
+describe("transfer internal", () => {
+  function internal(lines: object[], values: Record<string, string> = {}) {
+    return saveTransfer(
+      null,
+      form({
+        type: "internal",
+        locationId: ids.rack,
+        otherLocationId: ids.otherRack,
+        lines: JSON.stringify(lines),
+        ...values,
+      }),
+    )
+  }
+
+  async function companyStock() {
+    const [here, there] = await Promise.all([
+      stockAvailability(ids.product, ids.rack),
+      stockAvailability(ids.product, ids.otherRack),
+    ])
+    return [Number(here.qty), Number(there.qty)]
+  }
+
+  test("saldo pindah antar gudang tanpa mengubah total stok perusahaan", async () => {
+    loginAs("admin")
+    const receiptId = await savedId(
+      await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
+    )
+    await markTransferReady({ id: receiptId })
+    await validateTransfer({ id: receiptId })
+    expect(await companyStock()).toEqual([10, 0])
+
+    const id = await savedId(
+      await internal([{ productId: ids.product, inputQty: "4", uomId: ids.pcs }]),
+    )
+    const transfer = await getTransfer(people.admin.id, id)
+    expect([
+      transfer!.number.slice(0, 4),
+      transfer!.partnerId,
+      transfer!.destinationLocationId,
+    ]).toEqual(["TRF/", null, ids.otherRack])
+    expect(await markTransferReady({ id })).toMatchObject({ ok: true })
+    expect(await validateTransfer({ id })).toMatchObject({ ok: true })
+
+    const [here, there] = await companyStock()
+    expect([here, there, here + there]).toEqual([6, 4, 10])
+  })
+
+  test("lokasi tujuan wajib dan harus berbeda dari lokasi asal", async () => {
+    loginAs("admin")
+    const line = [{ productId: ids.product, inputQty: "1", uomId: ids.pcs }]
+    expect(await internal(line, { otherLocationId: "" })).toMatchObject({
+      ok: false,
+      errors: ["Pilih lokasi tujuan."],
+    })
+    expect(await internal(line, { otherLocationId: ids.rack })).toMatchObject({
+      ok: false,
+      errors: ["Lokasi asal dan tujuan harus berbeda."],
     })
   })
 })

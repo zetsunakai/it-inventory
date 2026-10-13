@@ -33,6 +33,8 @@ export type TransferFormValues = {
   id: string
   partner: PartnerChoice | null
   locationId: string
+  // Lokasi tujuan transfer internal.
+  otherLocationId?: string
   scheduledDate: string | null
   reference: string | null
   notes: string | null
@@ -83,6 +85,9 @@ export function TransferForm({
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
   const [partner, setPartner] = useState(transfer?.partner ?? null)
   const [locationId, setLocationId] = useState<string | null>(transfer?.locationId ?? null)
+  const [otherLocationId, setOtherLocationId] = useState<string | null>(
+    transfer?.otherLocationId ?? null,
+  )
   const outbound = kind.locationSide === "source"
   const nextKey = useRef(transfer?.lines.length || 1)
   const [lines, setLines] = useState<Line[]>(() =>
@@ -164,6 +169,31 @@ export function TransferForm({
               </SelectContent>
             </Select>
           </FormField>
+          {kind.secondLocationLabel && (
+            <FormField
+              label={kind.secondLocationLabel}
+              htmlFor={fieldId("transfer-other-location")}
+              errors={fieldErrors?.otherLocationId}
+            >
+              <Select
+                name="otherLocationId"
+                items={locationItems}
+                value={otherLocationId}
+                onValueChange={setOtherLocationId}
+              >
+                <SelectTrigger id={fieldId("transfer-other-location")} className="w-full">
+                  <SelectValue placeholder="Pilih lokasi gudang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationItems.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
           <FormField
             label="Tanggal rencana"
             htmlFor={fieldId("transfer-date")}
@@ -177,7 +207,7 @@ export function TransferForm({
             />
           </FormField>
           <FormField
-            label="Referensi PO/SO"
+            label={kind.partnerRole ? "Referensi PO/SO" : "Referensi"}
             htmlFor={fieldId("transfer-reference")}
             errors={fieldErrors?.reference}
           >

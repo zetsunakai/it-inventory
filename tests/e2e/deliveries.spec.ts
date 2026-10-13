@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
+import { fillInteractive } from "./interactive"
 
 // Pengiriman (backlog M2-04): stok gudang berikat tidak boleh minus, pesan per produk.
 
@@ -14,11 +15,11 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   await receiveStock(fixture, "5")
 
   await page.goto("/inventory/pengiriman/baru")
-  await page.getByLabel("Customer").fill(fixture.partner.code)
+  await fillInteractive(page.getByLabel("Customer", { exact: true }), fixture.partner.code)
   await page.getByRole("option", { name: new RegExp(fixture.partner.code) }).click()
   await page.getByLabel("Lokasi asal").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
-  await page.getByLabel("Produk baris 1").fill(fixture.product.sku)
+  await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await expect(page.getByText("Tersedia 5 PCS")).toBeVisible()
   await page.getByLabel("Qty baris 1").fill("8")

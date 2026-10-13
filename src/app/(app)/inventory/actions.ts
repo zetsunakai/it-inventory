@@ -15,7 +15,8 @@ import { locations, lots, products, stockMoves, transfers } from "@/server/db/sc
 // di migrasi inventory_rules/validate_transfer); di sini hanya menyusun data dan meneruskan
 // pesan kesalahannya.
 
-// Lokasi virtual di sisi luar transfer, dibuat seed.
+// Lokasi virtual di sisi luar transfer, dibuat seed. Transfer internal tidak punya sisi luar:
+// kedua lokasinya dipilih user.
 const VIRTUAL_SIDE: Partial<Record<TransferType, "vendor" | "customer">> = {
   receipt: "vendor",
   delivery: "customer",
@@ -23,6 +24,25 @@ const VIRTUAL_SIDE: Partial<Record<TransferType, "vendor" | "customer">> = {
 
 // Barang masuk ke gudang: lokasi yang dipilih user adalah tujuan.
 const INBOUND: TransferType[] = ["receipt"]
+
+// Lokasi gudang yang dipilih user harus ada dan gudangnya boleh diakses (PRD bagian 3).
+async function warehouseLocationErrors(
+  tx: Transaction,
+  userId: string,
+  locationId: string,
+  messages: { missing: string; forbidden: string },
+) {
+  const [location] = await tx
+    .select({
+      warehouseId: locations.warehouseId,
+      allowed: sql<boolean>`can_access_warehouse(${userId}, ${locations.warehouseId})`,
+    })
+    .from(locations)
+    .where(eq(locations.id, locationId))
+  if (!location?.warehouseId) return [messages.missing]
+  if (!location.allowed) return [messages.forbidden]
+  return []
+}
 
 const optionalDate = z
   .string()
@@ -44,6 +64,8 @@ export const saveTransfer = defineFormAction({
     type: z.enum(TRANSFER_TYPES),
     partnerId: optionalUuid("Partner"),
     locationId: z.uuid("Pilih lokasi gudang."),
+    // Lokasi tujuan transfer internal.
+    otherLocationId: optionalUuid("Lokasi tujuan"),
     scheduledDate: optionalDate,
     reference: optionalText("Referensi", 100),
     notes: optionalText("Catatan", 2000),
@@ -53,41 +75,54 @@ export const saveTransfer = defineFormAction({
   handler: async ({ input, user, tx }) => {
     const errors: string[] = []
     const virtualType = VIRTUAL_SIDE[input.type]
-    if (!virtualType) throw new AppError("Jenis transfer ini belum didukung.")
-    if (!input.partnerId) {
-      errors.push(`Pilih ${virtualType === "vendor" ? "vendor" : "customer"}.`)
+    if (!virtualType && input.type !== "internal") {
+      throw new AppError("Jenis transfer ini belum didukung.")
     }
+    if (virtualType && !input.partnerId) errors.push(`Pilih ${virtualType}.`)
+    errors.push(
+      ...(await warehouseLocationErrors(tx, user.id, input.locationId, {
+        missing: "Lokasi gudang tidak ditemukan.",
+        forbidden: "Anda tidak punya akses ke gudang lokasi ini.",
+      })),
+    )
 
-    const [location] = await tx
-      .select({
-        warehouseId: locations.warehouseId,
-        allowed: sql<boolean>`can_access_warehouse(${user.id}, ${locations.warehouseId})`,
-      })
-      .from(locations)
-      .where(eq(locations.id, input.locationId))
-    if (!location?.warehouseId) errors.push("Lokasi gudang tidak ditemukan.")
-    else if (!location.allowed) errors.push("Anda tidak punya akses ke gudang lokasi ini.")
-
-    const [outside] = await tx
-      .select({ id: locations.id })
-      .from(locations)
-      .where(
-        and(
-          eq(locations.type, virtualType),
-          isNull(locations.warehouseId),
-          eq(locations.active, true),
-        ),
-      )
-      .orderBy(asc(locations.code))
-      .limit(1)
-    if (!outside) errors.push(`Lokasi virtual ${virtualType} belum ada. Hubungi Administrator.`)
+    let otherId: string | undefined
+    if (input.type === "internal") {
+      if (!input.otherLocationId) errors.push("Pilih lokasi tujuan.")
+      else if (input.otherLocationId === input.locationId) {
+        errors.push("Lokasi asal dan tujuan harus berbeda.")
+      } else {
+        errors.push(
+          ...(await warehouseLocationErrors(tx, user.id, input.otherLocationId, {
+            missing: "Lokasi tujuan tidak ditemukan.",
+            forbidden: "Anda tidak punya akses ke gudang lokasi tujuan.",
+          })),
+        )
+      }
+      otherId = input.otherLocationId ?? undefined
+    } else {
+      const [outside] = await tx
+        .select({ id: locations.id })
+        .from(locations)
+        .where(
+          and(
+            eq(locations.type, virtualType!),
+            isNull(locations.warehouseId),
+            eq(locations.active, true),
+          ),
+        )
+        .orderBy(asc(locations.code))
+        .limit(1)
+      if (!outside) errors.push(`Lokasi virtual ${virtualType} belum ada. Hubungi Administrator.`)
+      otherId = outside?.id
+    }
     if (errors.length) throw new AppError(errors)
 
     const inbound = INBOUND.includes(input.type)
     const header = {
-      partnerId: input.partnerId,
-      sourceLocationId: inbound ? outside.id : input.locationId,
-      destinationLocationId: inbound ? input.locationId : outside.id,
+      partnerId: virtualType ? input.partnerId : null,
+      sourceLocationId: inbound ? otherId! : input.locationId,
+      destinationLocationId: inbound ? input.locationId : otherId!,
       scheduledDate: input.scheduledDate,
       reference: input.reference,
       notes: input.notes,

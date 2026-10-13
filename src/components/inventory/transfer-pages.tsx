@@ -100,10 +100,19 @@ async function TransferTable({
         ]
       : []),
     {
-      header: kind.locationSide === "destination" ? "Ke" : "Dari",
+      header: kind.secondLocationLabel
+        ? "Dari → ke"
+        : kind.locationSide === "destination"
+          ? "Ke"
+          : "Dari",
+      className: kind.partnerLabel ? undefined : "w-full",
       cell: (row) => (
         <span className="font-mono text-xs">
-          {kind.locationSide === "destination" ? row.destinationPath : row.sourcePath}
+          {kind.secondLocationLabel
+            ? `${row.sourcePath} → ${row.destinationPath}`
+            : kind.locationSide === "destination"
+              ? row.destinationPath
+              : row.sourcePath}
         </span>
       ),
     },
@@ -124,7 +133,13 @@ async function TransferTable({
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <DataTableSearch placeholder="Cari nomor, referensi, atau partner" />
+        <DataTableSearch
+          placeholder={
+            kind.partnerLabel
+              ? `Cari nomor, referensi, atau ${kind.partnerLabel.toLowerCase()}`
+              : "Cari nomor atau referensi"
+          }
+        />
         <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canWrite && (
           <Link href={createHref} className={buttonVariants({ className: "sm:ml-auto" })}>
@@ -256,6 +271,7 @@ async function TransferDetail({
               kind.locationSide === "destination"
                 ? transfer.destinationLocationId
                 : transfer.sourceLocationId,
+            otherLocationId: kind.secondLocationLabel ? transfer.destinationLocationId : undefined,
             scheduledDate: transfer.scheduledDate,
             reference: transfer.reference,
             notes: transfer.notes,

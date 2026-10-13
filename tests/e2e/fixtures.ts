@@ -31,9 +31,12 @@ export async function createInventoryFixture(prefix: string) {
         category: "raw_material",
       })
       .returning({ id: warehouses.id, code: warehouses.code })
-    const [rack] = await db
+    const [rack, rack2] = await db
       .insert(locations)
-      .values({ code: code("R"), name: "Rak A", type: "internal", warehouseId: warehouse.id })
+      .values([
+        { code: code("R"), name: "Rak A", type: "internal" as const, warehouseId: warehouse.id },
+        { code: code("S"), name: "Rak B", type: "internal" as const, warehouseId: warehouse.id },
+      ])
       .returning({ id: locations.id, code: locations.code })
     const [partner] = await db
       .insert(partners)
@@ -52,7 +55,7 @@ export async function createInventoryFixture(prefix: string) {
       .insert(products)
       .values({ sku: code("P"), name: `Baut ${prefix}`, category: "raw_material", uomId: pcs.id })
       .returning({ id: products.id, sku: products.sku })
-    return { warehouse, rack, partner, product }
+    return { warehouse, rack, rack2, partner, product }
   } finally {
     await pool.end()
   }

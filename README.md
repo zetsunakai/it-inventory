@@ -196,7 +196,11 @@ dimatikan: user baru dibuat oleh Administrator.
 - Produk dan partner dicari lewat `/api/products` dan `/api/partners` dengan komponen
   `SearchSelect`. Input baris barang punya target sentuh 44px di perangkat sentuh
   (`pointer-coarse:`).
-- Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`.
+- Transfer internal: kedua lokasi dipilih user (gudang yang boleh diakses), tanpa partner; total stok
+  perusahaan tidak berubah.
+- Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`. Isi pemilih
+  berpencarian dengan `fillInteractive()` (`tests/e2e/interactive.ts`), yang menunggu hidrasi React
+  dulu; label dicari dengan `exact: true` supaya tidak cocok dengan placeholder lain.
 
 ## Arsip dan hapus
 

@@ -93,6 +93,8 @@ export type TransferKind = {
   // Lokasi gudang yang dipilih user: tujuan (barang masuk) atau asal (barang keluar).
   locationSide: "source" | "destination"
   locationLabel: string
+  // Transfer internal: lokasi tujuan juga lokasi gudang yang dipilih user.
+  secondLocationLabel?: string
 }
 
 export const TRANSFER_KINDS = {
@@ -113,5 +115,13 @@ export const TRANSFER_KINDS = {
     partnerLabel: "Customer",
     locationSide: "source",
     locationLabel: "Lokasi asal",
+  },
+  internal: {
+    type: "internal",
+    path: "/inventory/transfer",
+    noun: "transfer internal",
+    locationSide: "source",
+    locationLabel: "Lokasi asal",
+    secondLocationLabel: "Lokasi tujuan",
   },
 } satisfies Partial<Record<TransferType, TransferKind>>

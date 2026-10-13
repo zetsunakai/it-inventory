@@ -54,7 +54,7 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
         : "—",
     ],
     ["Tanggal efektif", transfer.doneAt ? formatDate(transfer.doneAt) : "—"],
-    ["Referensi PO/SO", transfer.reference ?? "—"],
+    [kind.partnerRole ? "Referensi PO/SO" : "Referensi", transfer.reference ?? "—"],
     ...(transfer.backorderOfNumber
       ? [["Lanjutan dari", transfer.backorderOfNumber] as [string, string]]
       : []),
