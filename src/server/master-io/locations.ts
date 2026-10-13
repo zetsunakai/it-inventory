@@ -153,12 +153,15 @@ export async function importLocationRows(
     })
     .from(locations)
   const warehouseRows = await tx
-    .select({ id: warehouses.id, code: warehouses.code })
+    .select({ id: warehouses.id, code: warehouses.code, active: warehouses.active })
     .from(warehouses)
   const savedByCode = new Map(savedRows.map((row) => [row.code, row]))
   const codeById = new Map(savedRows.map((row) => [row.id, row.code]))
   const warehouseByCode = new Map(warehouseRows.map((row) => [row.code, row.id]))
   const warehouseCode = new Map(warehouseRows.map((row) => [row.id, row.code]))
+  const archivedWarehouses = new Set(
+    warehouseRows.filter((row) => !row.active).map((row) => row.id),
+  )
 
   // Tahap 1: periksa setiap baris sendiri-sendiri.
   const duplicates = new DuplicateKeys()
@@ -212,6 +215,9 @@ export async function importLocationRows(
         )
       }
       if (!sheet.warehouse) messages.push("Gudang wajib diisi untuk lokasi baru.")
+      else if (warehouseId && archivedWarehouses.has(warehouseId)) {
+        messages.push(`Gudang ${sheet.warehouse} diarsipkan. Aktifkan dulu untuk menambah lokasi.`)
+      }
     }
 
     return {
@@ -228,16 +234,26 @@ export async function importLocationRows(
   })
 
   // Tahap 2: induk dicek terhadap pohon akhir (lokasi tersimpan yang ditimpa isi file).
-  const tree = new Map<string, { warehouseId: string | null; parentCode: string }>()
+  type Node = { warehouseId: string | null; parentCode: string; active: boolean }
+  const tree = new Map<string, Node>()
   for (const row of savedRows) {
     tree.set(row.code, {
       warehouseId: row.warehouseId,
       parentCode: row.parentId ? codeById.get(row.parentId)! : "",
+      active: row.active,
     })
   }
   for (const row of checked) {
-    if (row.code) tree.set(row.code, { warehouseId: row.warehouseId, parentCode: row.parentCode })
+    if (row.code) {
+      tree.set(row.code, {
+        warehouseId: row.warehouseId,
+        parentCode: row.parentCode,
+        active: row.active,
+      })
+    }
   }
+  const savedParentCode = (row: CheckedRow) =>
+    row.saved?.parentId ? codeById.get(row.saved.parentId) : undefined
   for (const row of checked) {
     if (!row.parentCode) continue
     const parentNode = tree.get(row.parentCode)
@@ -247,6 +263,9 @@ export async function importLocationRows(
       row.messages.push(`Lokasi induk ${row.parentCode} tidak ditemukan.`)
     } else if (parentNode.warehouseId !== row.warehouseId) {
       row.messages.push(`Lokasi induk ${row.parentCode} harus berada di gudang yang sama.`)
+    } else if (!parentNode.active && row.parentCode !== savedParentCode(row)) {
+      // Induk yang diarsipkan hanya boleh bila memang induk yang tersimpan sebelumnya.
+      row.messages.push(`Lokasi induk ${row.parentCode} diarsipkan.`)
     } else if (ancestors(tree, row.parentCode).includes(row.code)) {
       row.messages.push(`Lokasi induk ${row.parentCode} berada di bawah lokasi ini sendiri.`)
     }

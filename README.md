@@ -144,6 +144,20 @@ dimatikan: user baru dibuat oleh Administrator.
 - Pemeriksaan lintas field di zod memakai `superRefine(..., { when: () => true })` supaya tetap
   berjalan walaupun field lain gagal, sehingga semua kesalahan tampil sekaligus.
 
+## Arsip dan hapus
+
+- Data master yang sudah dipakai tidak dihapus, tapi diarsipkan (kolom `active`, centang Aktif di
+  form). Data arsip tetap tampil di daftar (diredupkan) dan bisa disaring lewat filter Status
+  (`?status=aktif` / `?status=arsip`, `pickActive()` di `src/lib/list-params.ts`).
+- Data arsip tidak bisa dipilih untuk data baru. Pilihan di form hanya berisi data aktif, dan server
+  memeriksanya lagi (gudang dan induk lokasi, kategori satuan, satuan stok, kode referensi, juga
+  saat import). Nilai arsip yang sudah tersimpan sebelumnya tetap boleh disimpan ulang.
+- Produk, partner, satuan (kecuali satuan acuan), gudang, dan lokasi di dalam gudang bisa dihapus
+  dari halaman detailnya bila belum dipakai, misalnya salah input. Yang menolak adalah database:
+  `deleteUnlessUsed()` (`src/server/db/delete-record.ts`) menghapus, lalu menerjemahkan penolakan
+  foreign key jadi pesan "masih dipakai di data ..., arsipkan saja". Referensi kepabeanan, profil
+  perusahaan, dan lokasi virtual tidak bisa dihapus.
+
 ## Import dan export master data
 
 - Produk, partner, dan lokasi bisa di-export (Excel atau CSV, semua peran dengan `master:read`) dan
@@ -219,5 +233,8 @@ tests/
 - Perubahan tabel: ubah schema di `src/server/db/schema`, lalu `npm run db:generate -- --name=<nama>`.
 - Fungsi, trigger, dan view: `npm run db:custom -- <nama>`, tulis SQL-nya, pisahkan statement dengan
   `--> statement-breakpoint`.
+- Foreign key ke tabel master selalu `ON DELETE RESTRICT`, supaya data master yang sudah dipakai
+  tidak bisa dihapus. Daftarkan nama tabel baru yang merujuk master di `REFERENCING_TABLES`
+  (`src/server/db/delete-record.ts`) supaya pesan penolakannya jelas.
 - Jangan pernah mengubah database secara manual. Setiap tabel yang punya `updated_at` diberi trigger
   `set_updated_at()`.

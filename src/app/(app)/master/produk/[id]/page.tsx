@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
+import { DeleteRecord } from "@/components/delete-record"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
@@ -13,6 +14,7 @@ import { requirePermission } from "@/server/auth/session"
 import { getProduct } from "@/server/queries/products"
 
 import { missingCustomsData } from "../customs-readiness"
+import { deleteProduct } from "../actions"
 import { ProductForm } from "../product-form"
 
 export const metadata: Metadata = { title: "Detail produk · IT Inventory" }
@@ -66,7 +68,16 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
         }
       />
       {hasPermission(user.roles, "master:write") ? (
-        <ProductForm product={product} uoms={[]} />
+        <>
+          <ProductForm product={product} uoms={[]} />
+          <DeleteRecord
+            action={deleteProduct}
+            id={product.id}
+            noun="produk"
+            label={product.sku}
+            listHref="/master/produk"
+          />
+        </>
       ) : (
         <dl className="grid max-w-3xl grid-cols-[12rem_1fr] gap-x-4 gap-y-3 text-sm">
           {rows.map(([label, value]) => (

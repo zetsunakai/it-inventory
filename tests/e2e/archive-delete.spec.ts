@@ -1,0 +1,45 @@
+import { expect, test } from "@playwright/test"
+
+import { ADMIN_STATE_FILE } from "./accounts"
+
+// Arsip vs hapus (backlog M1-08): data yang belum dipakai bisa dihapus setelah konfirmasi,
+// dan semua daftar master punya filter status.
+
+const SKU = `LTD-${Date.now().toString(36).slice(-5).toUpperCase()}`
+
+test.use({ storageState: ADMIN_STATE_FILE })
+
+test("produk yang belum dipakai dihapus setelah konfirmasi", async ({ page }) => {
+  await page.goto("/master/produk/baru")
+  await page.getByLabel("SKU").fill(SKU)
+  await page.getByLabel("Nama produk").fill("Produk salah input")
+  await page.getByLabel("Kategori IT Inventory").click()
+  await page.getByRole("option", { name: "WIP" }).click()
+  await page.getByLabel("Satuan stok").click()
+  await page.getByRole("option", { name: /^\[PCS\]/ }).click()
+  await page.getByRole("button", { name: "Simpan" }).click()
+  await expect(page).toHaveURL(new RegExp(`/master/produk\\?q=${SKU}$`))
+
+  await page.getByRole("link", { name: SKU }).click()
+  await page.getByRole("button", { name: "Hapus produk" }).click()
+  const dialog = page.getByRole("alertdialog")
+  await expect(dialog).toContainText(`Hapus produk ${SKU}?`)
+  // Batal tidak menghapus apa pun.
+  await dialog.getByRole("button", { name: "Batal" }).click()
+  await expect(dialog).toBeHidden()
+
+  await page.getByRole("button", { name: "Hapus produk" }).click()
+  await page.getByRole("alertdialog").getByRole("button", { name: "Hapus", exact: true }).click()
+  await expect(page).toHaveURL(/\/master\/produk$/)
+
+  await page.goto(`/master/produk?q=${SKU}`)
+  await expect(page.getByText("Tidak ada produk yang cocok")).toBeVisible()
+})
+
+test("filter status menyaring daftar ke data aktif atau arsip", async ({ page }) => {
+  await page.goto("/master/satuan")
+  await page.getByRole("combobox").filter({ hasText: "Status: semua" }).click()
+  await page.getByRole("option", { name: "Diarsipkan" }).click()
+  await expect(page).toHaveURL(/status=arsip/)
+  await expect(page.getByRole("combobox").filter({ hasText: "Diarsipkan" })).toBeVisible()
+})

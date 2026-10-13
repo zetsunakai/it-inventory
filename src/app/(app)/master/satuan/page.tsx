@@ -15,7 +15,14 @@ import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatNumber } from "@/lib/format"
-import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
+import {
+  parseListParams,
+  pickFilter,
+  type RawSearchParams,
+  pickActive,
+  STATUS_FILTER,
+  STATUS_OPTIONS,
+} from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listUomCategories, listUoms, type UomRow } from "@/server/queries/uoms"
@@ -83,7 +90,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
     CATEGORY_FILTER,
     categories.map((category) => category.id),
   )
-  const { rows, total } = await listUoms({ ...params, categoryId })
+  const { rows, total } = await listUoms({ ...params, categoryId, active: pickActive(raw) })
 
   return (
     <div className="space-y-4">
@@ -94,6 +101,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
           label="Kategori"
           options={categories.map((category) => ({ value: category.id, label: category.name }))}
         />
+        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canEdit && (
           <Link href="/master/satuan/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
             <Plus />

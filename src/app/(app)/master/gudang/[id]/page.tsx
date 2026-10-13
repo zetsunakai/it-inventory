@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
+import { DeleteRecord } from "@/components/delete-record"
 import { PageHeader } from "@/components/page-header"
 import { ArchivedBadge, NameCell, StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -19,6 +20,7 @@ import {
 } from "@/server/queries/warehouses"
 
 import { AccessManager } from "../access-manager"
+import { deleteWarehouse } from "../actions"
 import { LocationCreateForm } from "../location-forms"
 import { WarehouseForm } from "../warehouse-forms"
 
@@ -102,7 +104,14 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
               : "Barang belum bisa diterima ke gudang ini.",
           }}
         />
-        {canEdit && <LocationCreateForm warehouseId={warehouse.id} parents={parentOptions} />}
+        {canEdit &&
+          (warehouse.active ? (
+            <LocationCreateForm warehouseId={warehouse.id} parents={parentOptions} />
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              Gudang ini diarsipkan. Aktifkan lagi di Data gudang untuk menambah lokasi.
+            </p>
+          ))}
       </section>
 
       {canManageAccess && (
@@ -122,6 +131,15 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
           <h2 className="text-base font-semibold">Data gudang</h2>
           <WarehouseForm warehouse={warehouse} />
         </section>
+      )}
+      {canEdit && (
+        <DeleteRecord
+          action={deleteWarehouse}
+          id={warehouse.id}
+          noun="gudang"
+          label={warehouse.code}
+          listHref="/master/gudang"
+        />
       )}
     </div>
   )

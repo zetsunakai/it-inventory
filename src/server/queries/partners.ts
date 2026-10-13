@@ -16,10 +16,12 @@ export type PartnerRole = "vendor" | "customer"
 export async function listPartners({
   search,
   role,
+  active,
   pageSize,
   offset,
-}: ListParams & { role?: PartnerRole }) {
+}: ListParams & { active?: boolean; role?: PartnerRole }) {
   const conditions: SQL[] = []
+  if (active !== undefined) conditions.push(eq(partners.active, active))
   if (role === "vendor") conditions.push(eq(partners.isVendor, true))
   if (role === "customer") conditions.push(eq(partners.isCustomer, true))
   if (search) {

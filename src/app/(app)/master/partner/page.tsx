@@ -13,7 +13,14 @@ import { ImportExportActions } from "@/components/import/import-export-actions"
 import { PageHeader } from "@/components/page-header"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
-import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
+import {
+  parseListParams,
+  pickFilter,
+  type RawSearchParams,
+  pickActive,
+  STATUS_FILTER,
+  STATUS_OPTIONS,
+} from "@/lib/list-params"
 import { IDENTITY_TYPE_LABELS } from "@/lib/partner"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
@@ -77,13 +84,14 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
   const raw = await searchParams
   const params = parseListParams(raw)
   const role = pickFilter(raw, ROLE_FILTER, ["vendor", "customer"] as const)
-  const { rows, total } = await listPartners({ ...params, role })
+  const { rows, total } = await listPartners({ active: pickActive(raw), ...params, role })
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row">
         <DataTableSearch placeholder="Cari kode, nama, NPWP, atau NITKU" />
         <DataTableFilter name={ROLE_FILTER} label="Peran" options={ROLE_OPTIONS} />
+        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canEdit && (
           <Link href="/master/partner/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
             <Plus />

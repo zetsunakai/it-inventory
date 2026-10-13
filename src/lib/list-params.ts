@@ -68,3 +68,17 @@ function first(value: string | string[] | undefined) {
 export function hasActiveFilters(raw: RawSearchParams) {
   return Object.entries(raw).some(([key, value]) => key !== PAGE_PARAM && Boolean(first(value)))
 }
+
+// Filter status di semua daftar master (backlog M1-08): tanpa filter tampil semua, data arsip
+// diredupkan. ?status=aktif atau ?status=arsip.
+export const STATUS_FILTER = "status"
+export const STATUS_OPTIONS = [
+  { value: "aktif", label: "Aktif" },
+  { value: "arsip", label: "Diarsipkan" },
+]
+
+// true = hanya aktif, false = hanya arsip, undefined = semua.
+export function pickActive(raw: RawSearchParams): boolean | undefined {
+  const status = pickFilter(raw, STATUS_FILTER, ["aktif", "arsip"] as const)
+  return status === undefined ? undefined : status === "aktif"
+}

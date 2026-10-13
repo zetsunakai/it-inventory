@@ -25,6 +25,9 @@ import {
   parseListParams,
   pickFilter,
   type RawSearchParams,
+  pickActive,
+  STATUS_FILTER,
+  STATUS_OPTIONS,
 } from "@/lib/list-params"
 import { hasAllWarehouseAccess, hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
@@ -104,13 +107,19 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
   const raw = await searchParams
   const params = parseListParams(raw)
   const category = pickFilter(raw, CATEGORY_FILTER, INVENTORY_CATEGORIES)
-  const { rows, total } = await listWarehouses({ ...params, category, userId: user.id })
+  const { rows, total } = await listWarehouses({
+    active: pickActive(raw),
+    ...params,
+    category,
+    userId: user.id,
+  })
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row">
         <DataTableSearch placeholder="Cari kode atau nama gudang" />
         <DataTableFilter name={CATEGORY_FILTER} label="Kategori" options={CATEGORY_OPTIONS} />
+        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canEdit && (
           <Link href="/master/gudang/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
             <Plus />

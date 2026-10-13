@@ -6,6 +6,8 @@ import { z } from "zod"
 import { checkbox, requiredText } from "@/lib/form-fields"
 import { INVENTORY_CATEGORIES, WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
+import type { Transaction } from "@/server/db/audit"
+import { deleteUnlessUsed } from "@/server/db/delete-record"
 import { locations, users, userWarehouses, warehouses } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
 import { importLocationRows, LOCATION_COLUMNS } from "@/server/master-io/locations"
@@ -74,10 +76,16 @@ export const createLocation = defineFormAction({
   handler: async ({ input, tx }) => {
     const errors: string[] = []
     const [warehouse] = await tx
-      .select({ id: warehouses.id })
+      .select({ active: warehouses.active })
       .from(warehouses)
       .where(eq(warehouses.id, input.warehouseId))
     if (!warehouse) errors.push("Gudang tidak ditemukan.")
+    else if (!warehouse.active) {
+      errors.push("Gudang ini diarsipkan. Aktifkan dulu untuk menambah lokasi.")
+    }
+    if (input.parentId && !(await locationIsActive(tx, input.parentId))) {
+      errors.push("Lokasi induk tidak ditemukan atau sudah diarsipkan.")
+    }
     const [existing] = await tx
       .select({ id: locations.id })
       .from(locations)
@@ -102,12 +110,73 @@ export const updateLocation = defineFormAction({
   }),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {
-    const [row] = await tx
-      .update(locations)
-      .set(values)
+    const [saved] = await tx
+      .select({ parentId: locations.parentId })
+      .from(locations)
       .where(eq(locations.id, id))
-      .returning({ id: locations.id })
-    if (!row) throw new AppError("Lokasi tidak ditemukan.")
+    if (!saved) throw new AppError("Lokasi tidak ditemukan.")
+    // Induk yang diarsipkan hanya boleh bila memang induk yang tersimpan sebelumnya.
+    if (
+      values.parentId &&
+      values.parentId !== saved.parentId &&
+      !(await locationIsActive(tx, values.parentId))
+    ) {
+      throw new AppError("Lokasi induk tidak ditemukan atau sudah diarsipkan.")
+    }
+    await tx.update(locations).set(values).where(eq(locations.id, id))
+  },
+})
+
+async function locationIsActive(tx: Transaction, id: string) {
+  const [row] = await tx
+    .select({ active: locations.active })
+    .from(locations)
+    .where(eq(locations.id, id))
+  return Boolean(row?.active)
+}
+
+const idInput = (noun: string) => z.object({ id: z.uuid(`${noun} tidak valid.`) })
+
+// Hapus gudang (backlog M1-08): hanya bila belum punya lokasi. Akses user ke gudang ini adalah
+// pengaturan gudang itu sendiri, jadi ikut dihapus.
+export const deleteWarehouse = defineAction({
+  name: "deleteWarehouse",
+  permission: "master:write",
+  schema: idInput("Gudang"),
+  successMessage: "Gudang dihapus.",
+  handler: async ({ input, tx }) => {
+    await tx.delete(userWarehouses).where(eq(userWarehouses.warehouseId, input.id))
+    await deleteUnlessUsed(tx, warehouses, warehouses.id, input.id, "Gudang")
+  },
+})
+
+// Hapus lokasi: hanya lokasi di dalam gudang yang belum dipakai dan tidak punya lokasi anak.
+// Lokasi virtual (vendor, customer, scrap, penyesuaian) dibuat sistem dan selalu dibutuhkan.
+export const deleteLocation = defineAction({
+  name: "deleteLocation",
+  permission: "master:write",
+  schema: idInput("Lokasi"),
+  successMessage: "Lokasi dihapus.",
+  handler: async ({ input, tx }) => {
+    const [location] = await tx
+      .select({ warehouseId: locations.warehouseId })
+      .from(locations)
+      .where(eq(locations.id, input.id))
+    if (!location) throw new AppError("Lokasi tidak ditemukan.")
+    if (!location.warehouseId) {
+      throw new AppError("Lokasi virtual dibuat oleh sistem dan tidak bisa dihapus.")
+    }
+    const [child] = await tx
+      .select({ code: locations.code })
+      .from(locations)
+      .where(eq(locations.parentId, input.id))
+      .limit(1)
+    if (child) {
+      throw new AppError(
+        `Lokasi ini masih punya lokasi di bawahnya (${child.code}). Hapus atau pindahkan dulu lokasi itu, atau arsipkan saja.`,
+      )
+    }
+    await deleteUnlessUsed(tx, locations, locations.id, input.id, "Lokasi")
   },
 })
 

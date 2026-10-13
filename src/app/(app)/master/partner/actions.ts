@@ -5,8 +5,9 @@ import { z } from "zod"
 
 import { checkbox, requiredText } from "@/lib/form-fields"
 import { partnerFieldsSchema, type PartnerFields } from "@/lib/partner"
-import { AppError, defineFormAction } from "@/server/actions/define-action"
+import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
+import { deleteUnlessUsed } from "@/server/db/delete-record"
 import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { partners } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
@@ -84,4 +85,13 @@ export const importPartners = defineFormAction({
   schema: importFileSchema,
   handler: async ({ input, tx }) =>
     importPartnerRows(tx, await readImportFile(input.file, PARTNER_COLUMNS, "code")),
+})
+
+// Hapus partner (backlog M1-08): hanya partner yang belum dipakai, sama seperti deleteProduct.
+export const deletePartner = defineAction({
+  name: "deletePartner",
+  permission: "master:write",
+  schema: z.object({ id: z.uuid("Partner tidak valid.") }),
+  successMessage: "Partner dihapus.",
+  handler: ({ input, tx }) => deleteUnlessUsed(tx, partners, partners.id, input.id, "Partner"),
 })

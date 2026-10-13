@@ -5,8 +5,9 @@ import { z } from "zod"
 
 import { checkbox } from "@/lib/form-fields"
 import { ALWAYS, pairCeisaUnit, productFields, skuField } from "@/lib/product"
-import { AppError, defineFormAction } from "@/server/actions/define-action"
+import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
+import { deleteUnlessUsed } from "@/server/db/delete-record"
 import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { products, uomCategories, uoms } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
@@ -108,4 +109,14 @@ export const importProducts = defineFormAction({
   schema: importFileSchema,
   handler: async ({ input, tx }) =>
     importProductRows(tx, await readImportFile(input.file, PRODUCT_COLUMNS, "sku")),
+})
+
+// Hapus produk (backlog M1-08): hanya produk yang belum dipakai. Database menolak bila produk
+// sudah dirujuk data lain (foreign key restrict); produk itu diarsipkan saja.
+export const deleteProduct = defineAction({
+  name: "deleteProduct",
+  permission: "master:write",
+  schema: z.object({ id: z.uuid("Produk tidak valid.") }),
+  successMessage: "Produk dihapus.",
+  handler: ({ input, tx }) => deleteUnlessUsed(tx, products, products.id, input.id, "Produk"),
 })

@@ -16,10 +16,12 @@ export async function listProducts({
   search,
   category,
   customsReady,
+  active,
   pageSize,
   offset,
-}: ListParams & { category?: InventoryCategory; customsReady?: boolean }) {
+}: ListParams & { active?: boolean; category?: InventoryCategory; customsReady?: boolean }) {
   const conditions: SQL[] = []
+  if (active !== undefined) conditions.push(eq(products.active, active))
   if (category) conditions.push(eq(products.category, category))
   if (customsReady !== undefined) conditions.push(eq(products.customsReady, customsReady))
   if (search) {

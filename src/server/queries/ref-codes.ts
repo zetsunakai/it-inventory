@@ -14,10 +14,12 @@ export type RefCodeRow = typeof refCodes.$inferSelect
 export async function listRefCodes({
   search,
   type,
+  active,
   pageSize,
   offset,
-}: ListParams & { type?: RefCodeType }) {
+}: ListParams & { active?: boolean; type?: RefCodeType }) {
   const conditions: SQL[] = []
+  if (active !== undefined) conditions.push(eq(refCodes.active, active))
   if (type) conditions.push(eq(refCodes.type, type))
   if (search) {
     const pattern = containsPattern(search)

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
+import { DeleteRecord } from "@/components/delete-record"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { IDENTITY_TYPE_LABELS } from "@/lib/partner"
@@ -11,6 +12,7 @@ import { formatRefCode } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
 import { getPartner } from "@/server/queries/partners"
 
+import { deletePartner } from "../actions"
 import { PartnerForm } from "../partner-form"
 
 export const metadata: Metadata = { title: "Detail partner · IT Inventory" }
@@ -45,7 +47,16 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <PageHeader title={`${partner.code} · ${partner.name}`} description={roles.join(" dan ")} />
       {hasPermission(user.roles, "master:write") ? (
-        <PartnerForm partner={partner} />
+        <>
+          <PartnerForm partner={partner} />
+          <DeleteRecord
+            action={deletePartner}
+            id={partner.id}
+            noun="partner"
+            label={partner.code}
+            listHref="/master/partner"
+          />
+        </>
       ) : (
         <dl className="grid max-w-3xl grid-cols-[12rem_1fr] gap-x-4 gap-y-3 text-sm">
           {rows.map(([label, value]) => (

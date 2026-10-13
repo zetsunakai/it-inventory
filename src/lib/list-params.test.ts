@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { pageCount, pageHref, parseListParams, pickFilter } from "./list-params"
+import { pageCount, pageHref, parseListParams, pickActive, pickFilter } from "./list-params"
 
 describe("parseListParams", () => {
   test("default saat URL kosong", () => {
@@ -63,4 +63,11 @@ describe("pageHref", () => {
     expect(pageHref({ q: "budi", page: "3" }, 1)).toBe("?q=budi")
     expect(pageHref({}, 1)).toBe("?")
   })
+})
+
+test("pickActive membaca filter status arsip", () => {
+  expect(pickActive({ status: "aktif" })).toBe(true)
+  expect(pickActive({ status: "arsip" })).toBe(false)
+  expect(pickActive({ status: "lain" })).toBeUndefined()
+  expect(pickActive({})).toBeUndefined()
 })

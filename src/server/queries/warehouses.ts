@@ -41,10 +41,12 @@ export async function listWarehouses({
   userId,
   search,
   category,
+  active,
   pageSize,
   offset,
-}: ListParams & { userId: string; category?: InventoryCategory }) {
+}: ListParams & { active?: boolean; userId: string; category?: InventoryCategory }) {
   const conditions: SQL[] = [accessibleBy(userId)]
+  if (active !== undefined) conditions.push(eq(warehouses.active, active))
   if (category) conditions.push(eq(warehouses.category, category))
   if (search) {
     const pattern = containsPattern(search)

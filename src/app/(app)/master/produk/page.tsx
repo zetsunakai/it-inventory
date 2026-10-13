@@ -14,7 +14,14 @@ import { PageHeader } from "@/components/page-header"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
-import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
+import {
+  parseListParams,
+  pickFilter,
+  type RawSearchParams,
+  pickActive,
+  STATUS_FILTER,
+  STATUS_OPTIONS,
+} from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listProducts, type ProductRow } from "@/server/queries/products"
@@ -74,6 +81,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
   const category = pickFilter(raw, CATEGORY_FILTER, INVENTORY_CATEGORIES)
   const readiness = pickFilter(raw, READINESS_FILTER, ["siap", "belum"] as const)
   const { rows, total } = await listProducts({
+    active: pickActive(raw),
     ...params,
     category,
     customsReady: readiness === undefined ? undefined : readiness === "siap",
@@ -92,6 +100,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
           }))}
         />
         <DataTableFilter name={READINESS_FILTER} label="Dokumen BC" options={READINESS_OPTIONS} />
+        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canEdit && (
           <Link href="/master/produk/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
             <Plus />

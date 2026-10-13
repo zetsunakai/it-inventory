@@ -40,6 +40,7 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 | Kembali ke daftar            | breadcrumb di header (`AppBreadcrumb`)                                                                                | Tombol "Kembali ke daftar" di setiap detail                        |
 | Beranda                      | daftar "Perlu perhatian" dari data nyata (`src/server/queries/home.ts`)                                               | Kartu sapaan, angka karangan, duplikasi menu                       |
 | Import/export master data    | `ImportExportActions` di `actions` `PageHeader`; halaman import pakai `ImportForm` + `ImportColumnGuide`              | Tombol Export/Import di toolbar tabel (toolbar jadi terlalu penuh) |
+| Hapus data master            | `DeleteRecord` di bawah form detail (konfirmasi `AlertDialog`, pesan tolak dari server); filter `Status` di daftar    | Tombol hapus di baris tabel, hapus tanpa konfirmasi                |
 | Ikon menu                    | Hanya untuk menu induk (area kerja) di `NAVIGATION`, masing-masing berbeda; menu anak tanpa ikon dan menjorok         | Ikon di setiap menu anak                                           |
 | Logo                         | `public/brand/logo.png` di header sidebar (ganti file untuk ganti logo); `public/brand` dikecualikan dari proxy login | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)   |
 

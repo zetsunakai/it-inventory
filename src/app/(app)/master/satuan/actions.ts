@@ -4,8 +4,9 @@ import { eq, inArray } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox, decimal, requiredText } from "@/lib/form-fields"
-import { AppError, defineFormAction } from "@/server/actions/define-action"
+import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
+import { deleteUnlessUsed } from "@/server/db/delete-record"
 import { uomCategories, uoms } from "@/server/db/schema"
 
 // Satuan dan konversi (PRD bagian 5.1): hanya Administrator (izin master:write).
@@ -66,10 +67,10 @@ export const createUom = defineFormAction({
   handler: async ({ input, tx }) => {
     const errors = await takenUomCodes(tx, [input.code])
     const [category] = await tx
-      .select({ id: uomCategories.id })
+      .select({ active: uomCategories.active })
       .from(uomCategories)
       .where(eq(uomCategories.id, input.categoryId))
-    if (!category) errors.unshift("Kategori satuan tidak ditemukan.")
+    if (!category?.active) errors.unshift("Kategori satuan tidak ditemukan atau sudah diarsipkan.")
     if (errors.length) throw new AppError(errors)
 
     const [row] = await tx.insert(uoms).values(input).returning({ id: uoms.id })
@@ -98,5 +99,25 @@ export const updateUom = defineFormAction({
     }
     await tx.update(uoms).set(values).where(eq(uoms.id, id))
     return { id }
+  },
+})
+
+// Hapus satuan (backlog M1-08): hanya satuan yang belum dipakai produk. Satuan acuan tidak bisa
+// dihapus karena faktor satuan lain di kategorinya dihitung terhadapnya.
+export const deleteUom = defineAction({
+  name: "deleteUom",
+  permission: "master:write",
+  schema: z.object({ id: z.uuid("Satuan tidak valid.") }),
+  successMessage: "Satuan dihapus.",
+  handler: async ({ input, tx }) => {
+    const [uom] = await tx
+      .select({ isReference: uoms.isReference })
+      .from(uoms)
+      .where(eq(uoms.id, input.id))
+    if (!uom) throw new AppError("Satuan tidak ditemukan.")
+    if (uom.isReference) {
+      throw new AppError("Satuan acuan tidak bisa dihapus. Arsipkan saja bila tidak dipakai lagi.")
+    }
+    await deleteUnlessUsed(tx, uoms, uoms.id, input.id, "Satuan")
   },
 })

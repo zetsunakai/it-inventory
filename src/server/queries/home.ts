@@ -37,7 +37,8 @@ export async function attentionItems(user: { id: string; roles: Role[] }) {
             db
               .select({ one: sql`1` })
               .from(locations)
-              .where(eq(locations.warehouseId, warehouses.id)),
+              // Lokasi yang diarsipkan tidak bisa menerima barang.
+              .where(and(eq(locations.warehouseId, warehouses.id), eq(locations.active, true))),
           ),
         ),
       ),

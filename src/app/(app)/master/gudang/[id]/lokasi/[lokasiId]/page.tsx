@@ -4,6 +4,7 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
+import { DeleteRecord } from "@/components/delete-record"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
@@ -14,6 +15,7 @@ import {
   listWarehouseLocations,
 } from "@/server/queries/warehouses"
 
+import { deleteLocation } from "../../../actions"
 import { LocationEditForm } from "../../../location-forms"
 
 export const metadata: Metadata = { title: "Ubah lokasi · IT Inventory" }
@@ -44,7 +46,9 @@ async function EditLocation({ params }: { params: Promise<{ id: string; lokasiId
   const parents = (await listWarehouseLocations(warehouse.id))
     .filter(
       (option) =>
-        option.active && option.id !== location.id && !option.path.startsWith(`${location.path}/`),
+        (option.active || option.id === location.parentId) &&
+        option.id !== location.id &&
+        !option.path.startsWith(`${location.path}/`),
     )
     .map((option) => ({ id: option.id, path: option.path }))
 
@@ -66,6 +70,13 @@ async function EditLocation({ params }: { params: Promise<{ id: string; lokasiId
         }
       />
       <LocationEditForm location={location} parents={parents} />
+      <DeleteRecord
+        action={deleteLocation}
+        id={location.id}
+        noun="lokasi"
+        label={location.code}
+        listHref={`/master/gudang/${warehouse.id}`}
+      />
     </div>
   )
 }

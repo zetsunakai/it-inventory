@@ -3,11 +3,13 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
+import { DeleteRecord } from "@/components/delete-record"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { getUom } from "@/server/queries/uoms"
 
+import { deleteUom } from "../actions"
 import { UomEditForm } from "../uom-forms"
 
 export const metadata: Metadata = { title: "Ubah satuan · IT Inventory" }
@@ -34,6 +36,16 @@ async function EditUom({ params }: { params: Promise<{ id: string }> }) {
         description={`Kategori ${uom.categoryName}. Kode, kategori, dan status acuan tidak bisa diubah.`}
       />
       <UomEditForm uom={uom} />
+      {/* Satuan acuan tidak bisa dihapus (deleteUom), jadi bagian ini tidak ditampilkan. */}
+      {!uom.isReference && (
+        <DeleteRecord
+          action={deleteUom}
+          id={uom.id}
+          noun="satuan"
+          label={uom.code}
+          listHref="/master/satuan"
+        />
+      )}
     </div>
   )
 }

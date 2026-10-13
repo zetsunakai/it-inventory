@@ -12,7 +12,14 @@ import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
-import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
+import {
+  parseListParams,
+  pickFilter,
+  type RawSearchParams,
+  pickActive,
+  STATUS_FILTER,
+  STATUS_OPTIONS,
+} from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import { REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS, REF_CODE_TYPES } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
@@ -70,13 +77,14 @@ async function RefCodeTable({ searchParams }: { searchParams: Promise<RawSearchP
   const raw = await searchParams
   const params = parseListParams(raw)
   const type = pickFilter(raw, TYPE_FILTER, REF_CODE_TYPES)
-  const { rows, total } = await listRefCodes({ ...params, type })
+  const { rows, total } = await listRefCodes({ active: pickActive(raw), ...params, type })
 
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row">
         <DataTableSearch placeholder="Cari kode atau nama" />
         <DataTableFilter name={TYPE_FILTER} label="Jenis" options={TYPE_OPTIONS} />
+        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canEdit && (
           <Link
             href="/master/referensi/baru"

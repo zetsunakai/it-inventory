@@ -51,10 +51,12 @@ function withCategory() {
 export async function listUoms({
   search,
   categoryId,
+  active,
   pageSize,
   offset,
-}: ListParams & { categoryId?: string }) {
+}: ListParams & { active?: boolean; categoryId?: string }) {
   const conditions: SQL[] = []
+  if (active !== undefined) conditions.push(eq(uoms.active, active))
   if (categoryId) conditions.push(eq(uoms.categoryId, categoryId))
   if (search) {
     const pattern = containsPattern(search)
