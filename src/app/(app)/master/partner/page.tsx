@@ -9,6 +9,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
+import { ImportExportActions } from "@/components/import/import-export-actions"
 import { PageHeader } from "@/components/page-header"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -54,7 +55,15 @@ const COLUMNS: DataTableColumn<PartnerRow>[] = [
 export default function PartnersPage({ searchParams }: PageProps<"/master/partner">) {
   return (
     <>
-      <PageHeader title="Partner" />
+      <PageHeader
+        title="Partner"
+        actions={
+          <ImportExportActions
+            exportHref="/master/partner/export"
+            importHref="/master/partner/import"
+          />
+        }
+      />
       <Suspense fallback={<DataTableSkeleton />}>
         <PartnerTable searchParams={searchParams} />
       </Suspense>

@@ -10,6 +10,10 @@ import { hasPermission, type Permission } from "@/lib/permissions"
 import { withAuditUser, type Transaction } from "@/server/db/audit"
 import { requireUser, type CurrentUser } from "@/server/auth/session"
 
+import { AppError } from "./app-error"
+
+export { AppError }
+
 // Pola standar untuk SEMUA perubahan data (backlog M0-08):
 //   1. user wajib login (dan MFA bila perannya mengharuskan)
 //   2. cek izin peran
@@ -33,18 +37,6 @@ type ActionDefinition<Schema extends z.ZodType, Output> = {
   handler: (ctx: HandlerContext<z.infer<Schema>>) => Promise<Output>
   // Pesan sukses opsional untuk ditampilkan di UI.
   successMessage?: string
-}
-
-// Kesalahan bisnis yang aman ditampilkan ke user, misalnya
-// throw new AppError("Stok tidak cukup untuk produk X.")
-export class AppError extends Error {
-  readonly errors: string[]
-  constructor(errors: string | string[]) {
-    const list = Array.isArray(errors) ? errors : [errors]
-    super(list.join("\n"))
-    this.name = "AppError"
-    this.errors = list
-  }
 }
 
 async function execute<Schema extends z.ZodType, Output>(
@@ -99,19 +91,23 @@ export function defineFormAction<Schema extends z.ZodType, Output>(
   definition: ActionDefinition<Schema, Output>,
 ) {
   return async (_prev: FormState<Output>, formData: FormData): Promise<ActionResult<Output>> => {
-    const values = formValues(formData)
-    const result = await execute(definition, values)
+    const { values, files } = formValues(formData)
+    const result = await execute(definition, { ...values, ...files })
     return result.ok ? result : { ...result, values }
   }
 }
 
-// Field teks dari form. File diabaikan; field berawalan $ adalah milik React/Next.
+// Field form: teks dan file (mis. import, M1-07). Hanya teks yang dikembalikan ke form saat gagal;
+// file dipilih ulang oleh user. Field berawalan $ adalah milik React/Next.
 function formValues(formData: FormData) {
   const values: Record<string, string> = {}
+  const files: Record<string, File> = {}
   for (const [name, value] of formData) {
-    if (typeof value === "string" && !name.startsWith("$")) values[name] = value
+    if (name.startsWith("$")) continue
+    if (typeof value === "string") values[name] = value
+    else files[name] = value
   }
-  return values
+  return { values, files }
 }
 
 // Fungsi database (gerbang validasi, dll.) melapor kesalahan bisnis dengan

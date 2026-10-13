@@ -7,6 +7,8 @@ import { checkbox, requiredText } from "@/lib/form-fields"
 import { INVENTORY_CATEGORIES, WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import { locations, users, userWarehouses, warehouses } from "@/server/db/schema"
+import { importFileSchema, readImportFile } from "@/server/master-io/common"
+import { importLocationRows, LOCATION_COLUMNS } from "@/server/master-io/locations"
 
 // Gudang dan lokasi (PRD bagian 5.1): hanya Administrator (izin master:write).
 // Akses gudang per user: izin user:manage. Kode, tipe, dan gudang sebuah lokasi tidak bisa
@@ -141,4 +143,13 @@ export const revokeWarehouseAccess = defineAction({
         ),
       )
   },
+})
+
+// Import lokasi dari Excel/CSV (backlog M1-07), dengan aturan yang sama seperti importProducts.
+export const importLocations = defineFormAction({
+  name: "importLocations",
+  permission: "master:write",
+  schema: importFileSchema,
+  handler: async ({ input, tx }) =>
+    importLocationRows(tx, await readImportFile(input.file, LOCATION_COLUMNS, "code")),
 })

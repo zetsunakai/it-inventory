@@ -144,6 +144,26 @@ dimatikan: user baru dibuat oleh Administrator.
 - Pemeriksaan lintas field di zod memakai `superRefine(..., { when: () => true })` supaya tetap
   berjalan walaupun field lain gagal, sehingga semua kesalahan tampil sekaligus.
 
+## Import dan export master data
+
+- Produk, partner, dan lokasi bisa di-export (Excel atau CSV, semua peran dengan `master:read`) dan
+  di-import (`master:write`) dari tombol di header halaman daftarnya. Lokasi untuk semua gudang ada
+  dalam satu file di halaman Gudang & lokasi.
+- Baris dicocokkan lewat kode/SKU: kode baru menjadi data baru, kode yang sudah ada diperbarui. Kolom
+  yang tidak ada di file tidak mengubah data tersimpan, jadi file boleh hanya berisi kode dan kolom
+  yang ingin diubah (mis. SKU + Kode HS). Baris yang isinya sama dilewati supaya audit log tidak penuh.
+- Semua baris divalidasi dulu dengan schema dan pemeriksaan yang sama dengan form. Bila ada satu
+  saja yang salah, tidak ada yang disimpan dan hasilnya berisi semua kesalahan per nomor baris.
+- File export adalah template import: judul kolom sama, semua sel ditulis sebagai teks (kode HS dan
+  NPWP tidak kehilangan angka 0 di depan). CSV boleh memakai koma atau titik koma. Batas 5 MB dan
+  20.000 baris per file (`src/server/spreadsheet.ts`); `serverActions.bodySizeLimit` di
+  `next.config.ts` harus sedikit di atas batas itu.
+- Kode: kolom dan aturan per modul di `src/server/master-io/` (`products.ts`, `partners.ts`,
+  `locations.ts`), baca/tulis file di `src/server/spreadsheet.ts`, UI di `src/components/import/`.
+  `defineFormAction` meneruskan file dari form ke schema (`importFileSchema`).
+- Import 5.000 produk baru sekitar 1,5 detik, 5.000 perubahan sekitar 2,5 detik (tes
+  `tests/db/master-import.test.ts`).
+
 ## Testing
 
 ```bash

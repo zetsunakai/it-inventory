@@ -9,6 +9,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
+import { ImportExportActions } from "@/components/import/import-export-actions"
 import { PageHeader } from "@/components/page-header"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -51,6 +52,12 @@ export default function ProductsPage({ searchParams }: PageProps<"/master/produk
       <PageHeader
         title="Produk"
         description="Produk tanpa kode HS atau satuan CEISA belum bisa dipakai di dokumen BC."
+        actions={
+          <ImportExportActions
+            exportHref="/master/produk/export"
+            importHref="/master/produk/import"
+          />
+        }
       />
       <Suspense fallback={<DataTableSkeleton />}>
         <ProductTable searchParams={searchParams} />

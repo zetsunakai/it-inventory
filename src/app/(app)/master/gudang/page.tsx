@@ -9,6 +9,7 @@ import { DataTablePagination } from "@/components/data-table/data-table-paginati
 import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
+import { ImportExportActions } from "@/components/import/import-export-actions"
 import { PageHeader } from "@/components/page-header"
 import { NameCell, StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -70,6 +71,13 @@ export default function WarehousesPage({ searchParams }: PageProps<"/master/guda
       <PageHeader
         title="Gudang & lokasi"
         description="Gudang berikat mewajibkan dokumen BC untuk setiap pergerakan barang."
+        actions={
+          <ImportExportActions
+            exportHref="/master/gudang/lokasi/export"
+            importHref="/master/gudang/lokasi/import"
+            noun="lokasi"
+          />
+        }
       />
       <Suspense fallback={<DataTableSkeleton />}>
         <WarehouseTable searchParams={searchParams} />

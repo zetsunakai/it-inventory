@@ -9,6 +9,8 @@ import { AppError, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { partners } from "@/server/db/schema"
+import { importFileSchema, readImportFile } from "@/server/master-io/common"
+import { importPartnerRows, PARTNER_COLUMNS } from "@/server/master-io/partners"
 
 // Partner (PRD bagian 5.1): hanya Administrator (izin master:write). Kode partner tidak bisa
 // diubah (trigger partners_guard). NITKU NPWP dihitung otomatis bila dikosongkan.
@@ -73,4 +75,13 @@ export const updatePartner = defineFormAction({
     await tx.update(partners).set(values).where(eq(partners.id, id))
     return { id, code: saved.code }
   },
+})
+
+// Import partner dari Excel/CSV (backlog M1-07), dengan aturan yang sama seperti importProducts.
+export const importPartners = defineFormAction({
+  name: "importPartners",
+  permission: "master:write",
+  schema: importFileSchema,
+  handler: async ({ input, tx }) =>
+    importPartnerRows(tx, await readImportFile(input.file, PARTNER_COLUMNS, "code")),
 })

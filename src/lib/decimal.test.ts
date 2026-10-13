@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { formatDecimal, parseDecimalInput, toDecimalInput } from "./decimal"
+import { formatDecimal, parseDecimalInput, sameDecimal, toDecimalInput } from "./decimal"
 
 describe("parseDecimalInput", () => {
   test("koma dan titik sama-sama pemisah desimal", () => {
@@ -30,4 +30,12 @@ describe("tampilan", () => {
     }
     expect(toDecimalInput("1000.0000000000")).toBe("1000")
   })
+})
+
+test("sameDecimal mengabaikan nol di belakang koma", () => {
+  expect(sameDecimal("1.5000000000", "1.5")).toBe(true)
+  expect(sameDecimal("1000.0000000000", "1000")).toBe(true)
+  expect(sameDecimal("1.5", "1.05")).toBe(false)
+  expect(sameDecimal(null, null)).toBe(true)
+  expect(sameDecimal(null, "1")).toBe(false)
 })

@@ -27,3 +27,15 @@ export function toDecimalInput(value: string) {
   const trimmed = fraction.replace(/0+$/, "")
   return trimmed ? `${integer},${trimmed}` : integer
 }
+
+// Dua angka desimal bernilai sama walau beda jumlah nol di belakang: "1.5000000000" = "1.5".
+// Dipakai import (M1-07) untuk melewati baris yang tidak berubah.
+export function sameDecimal(a: string | null, b: string | null) {
+  if (a === null || b === null) return a === b
+  const trim = (value: string) => {
+    const [integer, fraction = ""] = value.split(".")
+    const digits = fraction.replace(/0+$/, "")
+    return digits ? `${integer}.${digits}` : integer
+  }
+  return trim(a) === trim(b)
+}

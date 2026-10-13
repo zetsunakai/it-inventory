@@ -3,62 +3,22 @@
 import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 
-import { checkbox, optionalDecimal, optionalText, requiredText } from "@/lib/form-fields"
-import { INVENTORY_CATEGORIES } from "@/lib/inventory"
+import { checkbox } from "@/lib/form-fields"
+import { ALWAYS, pairCeisaUnit, productFields, skuField } from "@/lib/product"
 import { AppError, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { products, uomCategories, uoms } from "@/server/db/schema"
+import { importFileSchema, readImportFile } from "@/server/master-io/common"
+import { importProductRows, PRODUCT_COLUMNS } from "@/server/master-io/products"
 
 // Produk (PRD bagian 5.1): hanya Administrator (izin master:write). SKU dan satuan stok tidak
 // bisa diubah setelah dibuat (trigger products_guard). Kode HS dan satuan CEISA boleh menyusul;
 // selama belum lengkap produk berstatus "belum siap dokumen BC" (kolom customs_ready).
 
-const fields = {
-  name: requiredText("Nama produk", 200),
-  description: optionalText("Deskripsi", 2000),
-  category: z.enum(INVENTORY_CATEGORIES, "Kategori IT Inventory wajib dipilih."),
-  hsCode: z
-    .string()
-    .trim()
-    .optional()
-    .transform((value) => value || null)
-    .refine((value) => value === null || /^\d{8}$/.test(value), "Kode HS harus 8 digit."),
-  ceisaUnitCode: optionalText("Satuan CEISA", 20),
-  ceisaFactor: optionalDecimal("Faktor satuan CEISA", 10),
-  netWeight: optionalDecimal("Berat netto", 6),
-  brand: optionalText("Merk", 100),
-  model: optionalText("Tipe", 100),
-  size: optionalText("Ukuran", 100),
-  lotRequired: checkbox,
-}
-
 type ProductFields = {
   hsCode: string | null
   ceisaUnitCode: string | null
-  ceisaFactor: string | null
-}
-
-// Pemeriksaan lintas field tetap dijalankan walaupun field lain gagal, supaya semua
-// kesalahan tampil sekaligus.
-const ALWAYS = { when: () => true }
-
-// Satuan CEISA dan faktornya berpasangan (dipaksakan juga di database).
-function pairCeisaUnit(input: ProductFields, ctx: z.RefinementCtx) {
-  if (input.ceisaUnitCode && !input.ceisaFactor) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["ceisaFactor"],
-      message: "Faktor satuan CEISA wajib diisi bila satuan CEISA dipilih.",
-    })
-  }
-  if (!input.ceisaUnitCode && input.ceisaFactor) {
-    ctx.addIssue({
-      code: "custom",
-      path: ["ceisaUnitCode"],
-      message: "Pilih satuan CEISA untuk faktor yang diisi.",
-    })
-  }
 }
 
 // Kode HS dan satuan CEISA harus ada di referensi kepabeanan dan aktif
@@ -86,9 +46,9 @@ export const createProduct = defineFormAction({
   permission: "master:write",
   schema: z
     .object({
-      sku: requiredText("SKU", 50),
+      sku: skuField,
       uomId: z.uuid("Satuan stok wajib dipilih."),
-      ...fields,
+      ...productFields,
     })
     .superRefine(pairCeisaUnit, ALWAYS),
   successMessage: "Produk ditambahkan.",
@@ -119,7 +79,7 @@ export const updateProduct = defineFormAction({
   name: "updateProduct",
   permission: "master:write",
   schema: z
-    .object({ id: z.uuid("Produk tidak valid."), ...fields, active: checkbox })
+    .object({ id: z.uuid("Produk tidak valid."), ...productFields, active: checkbox })
     .superRefine(pairCeisaUnit, ALWAYS),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {
@@ -138,4 +98,14 @@ export const updateProduct = defineFormAction({
     await tx.update(products).set(values).where(eq(products.id, id))
     return { id, sku: saved.sku }
   },
+})
+
+// Import produk dari Excel/CSV (backlog M1-07). Semua baris divalidasi dulu; bila ada yang salah,
+// tidak ada yang disimpan dan hasilnya berisi kesalahan per baris.
+export const importProducts = defineFormAction({
+  name: "importProducts",
+  permission: "master:write",
+  schema: importFileSchema,
+  handler: async ({ input, tx }) =>
+    importProductRows(tx, await readImportFile(input.file, PRODUCT_COLUMNS, "sku")),
 })
