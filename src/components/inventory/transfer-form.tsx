@@ -38,6 +38,8 @@ export type TransferFormValues = {
   scheduledDate: string | null
   reference: string | null
   notes: string | null
+  reason?: string | null
+  direction?: "increase" | "decrease"
   lines: { product: ProductChoice; inputQty: string; uomId: string; lotName: string | null }[]
 }
 
@@ -57,6 +59,11 @@ const newLine = (key: string): Line => ({
   uomId: "",
   lotName: "",
 })
+
+const DIRECTION_ITEMS = [
+  { value: "decrease", label: "Kurangi stok (hilang, rusak, selisih kurang)" },
+  { value: "increase", label: "Tambah stok (ditemukan, selisih lebih)" },
+]
 
 // Target sentuh lebih besar di tablet/HP (admin gudang menerima barang sambil memegang perangkat).
 const TOUCH = "pointer-coarse:h-11"
@@ -88,7 +95,9 @@ export function TransferForm({
   const [otherLocationId, setOtherLocationId] = useState<string | null>(
     transfer?.otherLocationId ?? null,
   )
-  const outbound = kind.locationSide === "source"
+  const [direction, setDirection] = useState<string | null>(transfer?.direction ?? null)
+  // Barang keluar dari lokasi gudang: lot dipilih dari stok yang ada.
+  const outbound = kind.directional ? direction !== "increase" : kind.locationSide === "source"
   const nextKey = useRef(transfer?.lines.length || 1)
   const [lines, setLines] = useState<Line[]>(() =>
     transfer?.lines.length
@@ -132,6 +141,31 @@ export function TransferForm({
 
       <FormSection title={`Data ${kind.noun}`}>
         <div className="grid gap-4 sm:grid-cols-2">
+          {kind.directional && (
+            <FormField
+              label="Arah"
+              htmlFor={fieldId("transfer-direction")}
+              errors={fieldErrors?.direction}
+            >
+              <Select
+                name="direction"
+                items={DIRECTION_ITEMS}
+                value={direction}
+                onValueChange={setDirection}
+              >
+                <SelectTrigger id={fieldId("transfer-direction")} className="w-full">
+                  <SelectValue placeholder="Tambah atau kurangi stok" />
+                </SelectTrigger>
+                <SelectContent>
+                  {DIRECTION_ITEMS.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
           {kind.partnerRole && (
             <FormField label={kind.partnerLabel ?? "Partner"} htmlFor={fieldId("transfer-partner")}>
               <SearchSelect<PartnerChoice>
@@ -218,6 +252,21 @@ export function TransferForm({
             />
           </FormField>
         </div>
+        {kind.needsApproval && (
+          <FormField
+            label="Alasan"
+            htmlFor={fieldId("transfer-reason")}
+            errors={fieldErrors?.reason}
+            hint="Wajib. Dibaca Manajer saat menyetujui dan tercatat di laporan penyesuaian."
+          >
+            <Textarea
+              id={fieldId("transfer-reason")}
+              name="reason"
+              rows={2}
+              defaultValue={fieldValue(state, "reason", transfer?.reason)}
+            />
+          </FormField>
+        )}
         <FormField label="Catatan" htmlFor={fieldId("transfer-notes")} errors={fieldErrors?.notes}>
           <Textarea
             id={fieldId("transfer-notes")}

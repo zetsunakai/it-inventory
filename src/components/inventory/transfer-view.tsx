@@ -83,6 +83,17 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
         ]
       : []),
     ["Catatan", transfer.notes ?? "—"],
+    ...(kind.needsApproval
+      ? [
+          ["Alasan", transfer.reason ?? "—"] as [string, ReactNode],
+          [
+            "Disetujui",
+            transfer.approvedAt
+              ? `${formatDate(transfer.approvedAt)} oleh ${transfer.approvedByName ?? "—"}`
+              : "Belum",
+          ] as [string, ReactNode],
+        ]
+      : []),
   ]
   return (
     <div className="max-w-5xl space-y-6">

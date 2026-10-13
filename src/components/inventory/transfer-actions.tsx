@@ -5,6 +5,7 @@ import Link from "next/link"
 import { useEffect, useRef, useState, useTransition } from "react"
 
 import {
+  approveTransfer,
   cancelTransfer,
   markTransferReady,
   reopenTransfer,
@@ -38,6 +39,8 @@ export function TransferActions({
   canBackdate,
   path,
   lines,
+  needsApproval = false,
+  canApprove = false,
 }: {
   id: string
   number: string
@@ -51,6 +54,9 @@ export function TransferActions({
   path: string
   // Baris barang untuk qty selesai saat validasi. Kosong = selalu penuh.
   lines: { id: string; sku: string; inputQty: string; uomCode: string }[]
+  // Scrap/penyesuaian: Validasi diganti "Setujui dan validasi" khusus Manajer.
+  needsApproval?: boolean
+  canApprove?: boolean
 }) {
   const [result, setResult] = useState<ActionResult<unknown> | null>(null)
   const [pending, startTransition] = useTransition()
@@ -67,6 +73,7 @@ export function TransferActions({
     (line) => Number(quantities[line.id].replace(",", ".")) !== Number(line.inputQty),
   )
   const messageRef = useRef<HTMLDivElement>(null)
+  const verb = needsApproval ? "Setujui dan validasi" : "Validasi"
 
   useEffect(() => {
     if (result) messageRef.current?.focus()
@@ -152,13 +159,19 @@ export function TransferActions({
           {status === "ready" && (
             <>
               <AlertDialog open={validateOpen} onOpenChange={setValidateOpen}>
-                <AlertDialogTrigger render={<Button className="pointer-coarse:h-11" />}>
-                  Validasi
-                </AlertDialogTrigger>
+                {needsApproval && !canApprove ? (
+                  <p className="self-center text-sm text-muted-foreground">
+                    Menunggu persetujuan Manajer.
+                  </p>
+                ) : (
+                  <AlertDialogTrigger render={<Button className="pointer-coarse:h-11" />}>
+                    {verb}
+                  </AlertDialogTrigger>
+                )}
                 <AlertDialogContent>
                   <AlertDialogHeader>
                     <AlertDialogTitle>
-                      Validasi {noun} {number}?
+                      {verb} {noun} {number}?
                     </AlertDialogTitle>
                     <AlertDialogDescription>
                       {effect}. Setelah divalidasi, transfer terkunci; koreksi hanya lewat retur
@@ -220,16 +233,21 @@ export function TransferActions({
                       onClick={() =>
                         run(
                           () =>
-                            validateTransfer({
-                              id,
-                              effectiveDate: canBackdate ? effectiveDate : undefined,
-                              quantities: partial ? quantities : undefined,
-                            }),
+                            needsApproval
+                              ? approveTransfer({
+                                  id,
+                                  effectiveDate: canBackdate ? effectiveDate : undefined,
+                                })
+                              : validateTransfer({
+                                  id,
+                                  effectiveDate: canBackdate ? effectiveDate : undefined,
+                                  quantities: partial ? quantities : undefined,
+                                }),
                           () => setValidateOpen(false),
                         )
                       }
                     >
-                      {pending ? "Memvalidasi…" : "Validasi"}
+                      {pending ? "Memproses…" : verb}
                     </Button>
                   </AlertDialogFooter>
                 </AlertDialogContent>

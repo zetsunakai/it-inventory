@@ -17,13 +17,17 @@ import { locations, lots, products, stockMoves, transfers } from "@/server/db/sc
 
 // Lokasi virtual di sisi luar transfer, dibuat seed. Transfer internal tidak punya sisi luar:
 // kedua lokasinya dipilih user.
-const VIRTUAL_SIDE: Partial<Record<TransferType, "vendor" | "customer">> = {
-  receipt: "vendor",
-  delivery: "customer",
-}
+const VIRTUAL_SIDE: Partial<Record<TransferType, "vendor" | "customer" | "scrap" | "adjustment">> =
+  {
+    receipt: "vendor",
+    delivery: "customer",
+    scrap: "scrap",
+    adjustment: "adjustment",
+  }
 
-// Barang masuk ke gudang: lokasi yang dipilih user adalah tujuan.
-const INBOUND: TransferType[] = ["receipt"]
+// Jenis yang punya partner (vendor/customer) dan yang wajib alasan serta persetujuan Manajer.
+const WITH_PARTNER: TransferType[] = ["receipt", "delivery"]
+const NEEDS_APPROVAL: TransferType[] = ["scrap", "adjustment"]
 
 // Lokasi gudang yang dipilih user harus ada dan gudangnya boleh diakses (PRD bagian 3).
 async function warehouseLocationErrors(
@@ -69,6 +73,9 @@ export const saveTransfer = defineFormAction({
     scheduledDate: optionalDate,
     reference: optionalText("Referensi", 100),
     notes: optionalText("Catatan", 2000),
+    // Scrap dan penyesuaian: alasan wajib; penyesuaian juga arahnya.
+    reason: optionalText("Alasan", 500),
+    direction: z.enum(["increase", "decrease"]).optional(),
     lines: transferLinesField,
   }),
   successMessage: "Transfer disimpan.",
@@ -78,7 +85,12 @@ export const saveTransfer = defineFormAction({
     if (!virtualType && input.type !== "internal") {
       throw new AppError("Jenis transfer ini belum didukung.")
     }
-    if (virtualType && !input.partnerId) errors.push(`Pilih ${virtualType}.`)
+    const withPartner = WITH_PARTNER.includes(input.type)
+    if (withPartner && !input.partnerId) errors.push(`Pilih ${virtualType}.`)
+    if (NEEDS_APPROVAL.includes(input.type) && !input.reason) errors.push("Alasan wajib diisi.")
+    if (input.type === "adjustment" && !input.direction) {
+      errors.push("Pilih arah penyesuaian: tambah atau kurangi stok.")
+    }
     errors.push(
       ...(await warehouseLocationErrors(tx, user.id, input.locationId, {
         missing: "Lokasi gudang tidak ditemukan.",
@@ -118,9 +130,12 @@ export const saveTransfer = defineFormAction({
     }
     if (errors.length) throw new AppError(errors)
 
-    const inbound = INBOUND.includes(input.type)
+    // Barang masuk ke gudang: lokasi yang dipilih user adalah tujuan.
+    const inbound =
+      input.type === "receipt" || (input.type === "adjustment" && input.direction === "increase")
     const header = {
-      partnerId: virtualType ? input.partnerId : null,
+      partnerId: withPartner ? input.partnerId : null,
+      reason: NEEDS_APPROVAL.includes(input.type) ? input.reason : null,
       sourceLocationId: inbound ? otherId! : input.locationId,
       destinationLocationId: inbound ? input.locationId : otherId!,
       scheduledDate: input.scheduledDate,
@@ -242,6 +257,13 @@ export const markTransferReady = defineAction({
         ),
       )
     const errors = missingLots.map((row) => `Produk ${row.sku} wajib diisi nomor lot.`)
+    const [header] = await tx
+      .select({ type: transfers.type, reason: transfers.reason })
+      .from(transfers)
+      .where(eq(transfers.id, input.id))
+    if (NEEDS_APPROVAL.includes(header.type) && !header.reason?.trim()) {
+      errors.unshift("Alasan wajib diisi.")
+    }
     // Barang keluar: stok dicek saat Siap dengan aturan yang sama seperti validasi (PRD 6.3).
     const shortages = await tx.execute<{ errors: string[] }>(
       sql`select transfer_stock_errors(${input.id}) as errors`,
@@ -283,6 +305,12 @@ export const cancelTransfer = defineAction({
   },
 })
 
+// Tanggal efektif (YYYY-MM-DD, WIB) → timestamp pukul 12.00 WIB; hari ini atau kosong = sekarang.
+function effectiveTimestamp(date: string | null) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
+  return date && date !== today ? `${date}T12:00:00+07:00` : null
+}
+
 // Qty selesai per baris untuk penerimaan/pengiriman parsial (M2-05): boleh 0, koma atau titik.
 const doneQuantities = z
   .record(z.string(), z.string())
@@ -313,11 +341,7 @@ export const validateTransfer = defineAction({
   schema: idInput.extend({ effectiveDate: optionalDate, quantities: doneQuantities }),
   successMessage: "Transfer divalidasi. Stok sudah diperbarui.",
   handler: async ({ input, tx }) => {
-    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
-    const effectiveAt =
-      input.effectiveDate && input.effectiveDate !== today
-        ? `${input.effectiveDate}T12:00:00+07:00`
-        : null
+    const effectiveAt = effectiveTimestamp(input.effectiveDate)
     let backorder: { id: string; number: string } | null = null
     if (input.quantities) {
       const split = await tx.execute<{ id: string | null }>(
@@ -463,5 +487,32 @@ export const saveReturnQuantities = defineAction({
     }
     const errors = await returnErrors(tx, input.id)
     if (errors.length) throw new AppError(errors)
+  },
+})
+
+// Scrap dan penyesuaian (M2-08): Manajer menyetujui dan memvalidasi sekaligus, jadi pergerakan
+// baru tercatat setelah disetujui. Bila validasi gagal (mis. stok kurang), persetujuan ikut batal.
+export const approveTransfer = defineAction({
+  name: "approveTransfer",
+  permission: "inventory:approve",
+  schema: idInput.extend({ effectiveDate: optionalDate }),
+  successMessage: "Disetujui dan divalidasi. Stok sudah diperbarui.",
+  handler: async ({ input, user, tx }) => {
+    const [saved] = await tx
+      .select({ type: transfers.type, status: transfers.status })
+      .from(transfers)
+      .where(eq(transfers.id, input.id))
+    if (!saved) throw new AppError("Transfer tidak ditemukan.")
+    if (!NEEDS_APPROVAL.includes(saved.type)) {
+      throw new AppError("Transfer ini tidak memerlukan persetujuan.")
+    }
+    if (saved.status !== "ready") throw new AppError("Hanya transfer Siap yang bisa disetujui.")
+    await tx
+      .update(transfers)
+      .set({ approvedAt: new Date(), approvedBy: user.id })
+      .where(eq(transfers.id, input.id))
+    await tx.execute(
+      sql`select validate_transfer(${input.id}, ${effectiveTimestamp(input.effectiveDate)}::timestamptz)`,
+    )
   },
 })

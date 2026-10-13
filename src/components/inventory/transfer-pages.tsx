@@ -103,15 +103,16 @@ async function TransferTable({
         ]
       : []),
     {
-      header: kind.secondLocationLabel
-        ? "Dari → ke"
-        : kind.locationSide === "destination"
-          ? "Ke"
-          : "Dari",
+      header:
+        kind.secondLocationLabel || kind.directional
+          ? "Dari → ke"
+          : kind.locationSide === "destination"
+            ? "Ke"
+            : "Dari",
       className: kind.partnerLabel ? undefined : "w-full",
       cell: (row) => (
         <span className="font-mono text-xs">
-          {kind.secondLocationLabel
+          {kind.secondLocationLabel || kind.directional
             ? `${row.sourcePath} → ${row.destinationPath}`
             : kind.locationSide === "destination"
               ? row.destinationPath
@@ -269,7 +270,9 @@ async function TransferDetail({
           effect={effect}
           canBackdate={user.roles.includes("manajer")}
           path={kind.path}
-          lines={transfer.lines.map((line) => ({
+          needsApproval={Boolean(kind.needsApproval)}
+          canApprove={hasPermission(user.roles, "inventory:approve")}
+          lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
             id: line.id,
             sku: line.sku,
             inputQty: line.inputQty,
@@ -299,10 +302,20 @@ async function TransferDetail({
           transfer={{
             id: transfer.id,
             partner: transfer.partner,
-            locationId:
-              kind.locationSide === "destination"
+            // Penyesuaian: lokasi gudang adalah sisi yang punya gudang; arahnya dari sisi itu.
+            locationId: kind.directional
+              ? transfer.sourceWarehouseId
+                ? transfer.sourceLocationId
+                : transfer.destinationLocationId
+              : kind.locationSide === "destination"
                 ? transfer.destinationLocationId
                 : transfer.sourceLocationId,
+            direction: kind.directional
+              ? transfer.sourceWarehouseId
+                ? "decrease"
+                : "increase"
+              : undefined,
+            reason: transfer.reason,
             otherLocationId: kind.secondLocationLabel ? transfer.destinationLocationId : undefined,
             scheduledDate: transfer.scheduledDate,
             reference: transfer.reference,

@@ -97,6 +97,10 @@ export type TransferKind = {
   secondLocationLabel?: string
   // false = tidak dibuat dari halaman ini (retur dibuat dari transfer asalnya).
   creatable?: boolean
+  // Penyesuaian: user memilih arah (tambah/kurangi stok); lokasi gudang bisa jadi asal atau tujuan.
+  directional?: boolean
+  // Scrap dan penyesuaian: alasan wajib dan Manajer menyetujui sekaligus memvalidasi.
+  needsApproval?: boolean
 }
 
 export const TRANSFER_KINDS = {
@@ -135,5 +139,22 @@ export const TRANSFER_KINDS = {
     locationLabel: "Lokasi asal",
     secondLocationLabel: "Lokasi tujuan",
     creatable: false,
+  },
+  scrap: {
+    type: "scrap",
+    path: "/inventory/scrap",
+    noun: "scrap",
+    locationSide: "source",
+    locationLabel: "Lokasi asal",
+    needsApproval: true,
+  },
+  adjustment: {
+    type: "adjustment",
+    path: "/inventory/penyesuaian",
+    noun: "penyesuaian",
+    locationSide: "source",
+    locationLabel: "Lokasi gudang",
+    directional: true,
+    needsApproval: true,
   },
 } satisfies Partial<Record<TransferType, TransferKind>>

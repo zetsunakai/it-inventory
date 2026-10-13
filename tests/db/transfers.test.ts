@@ -2,6 +2,7 @@ import { eq, like } from "drizzle-orm"
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest"
 
 import {
+  approveTransfer,
   cancelTransfer,
   createReturn,
   markTransferReady,
@@ -19,6 +20,7 @@ import {
   products,
   stockBalances,
   stockMoves,
+  transfers,
   uomCategories,
   userRoles,
   users,
@@ -39,7 +41,7 @@ const ids = {} as Record<
   "pcs" | "dozen" | "product" | "lotProduct" | "vendor" | "rack" | "otherRack" | "partner",
   string
 >
-const people = {} as Record<"admin" | "gudang" | "auditor", CurrentUser>
+const people = {} as Record<"admin" | "gudang" | "auditor" | "manajer", CurrentUser>
 
 function loginAs(person: keyof typeof people) {
   session.user = people[person]
@@ -114,6 +116,8 @@ beforeAll(async () => {
       { code: "ZTVENDOR", name: "Vendor", type: "vendor" as const },
       { code: "ZTRAK", name: "Rak", type: "internal" as const, warehouseId: warehouse.id },
       { code: "ZTCUST", name: "Customer", type: "customer" as const },
+      { code: "ZTSCRAP", name: "Scrap", type: "scrap" as const },
+      { code: "ZTADJ", name: "Penyesuaian", type: "adjustment" as const },
     ])
     .returning({ id: locations.id })
   ids.vendor = vendor.id
@@ -152,6 +156,7 @@ beforeAll(async () => {
     ["admin", "administrator"],
     ["gudang", "admin_gudang"],
     ["auditor", "auditor"],
+    ["manajer", "manajer"],
   ] as [keyof typeof people, Role][]) {
     const [user] = await db
       .insert(users)
@@ -654,5 +659,121 @@ describe("retur", () => {
       ok: false,
       errors: ["Retur hanya bisa dibuat dari penerimaan atau pengiriman yang sudah Selesai."],
     })
+  })
+})
+
+describe("scrap dan penyesuaian", () => {
+  function adjustment(lines: object[], values: Record<string, string> = {}) {
+    return saveTransfer(
+      null,
+      form({
+        type: "adjustment",
+        locationId: ids.rack,
+        direction: "decrease",
+        reason: "Rusak saat bongkar muat",
+        lines: JSON.stringify(lines),
+        ...values,
+      }),
+    )
+  }
+
+  async function stockOnRack(productId = ids.product) {
+    return (await stockAvailability(productId, ids.rack)).qty
+  }
+
+  async function receiveTen() {
+    const id = await savedId(
+      await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
+    )
+    await markTransferReady({ id })
+    await validateTransfer({ id })
+  }
+
+  test("alasan dan arah penyesuaian wajib", async () => {
+    loginAs("admin")
+    const line = [{ productId: ids.product, inputQty: "1", uomId: ids.pcs }]
+    expect(await adjustment(line, { reason: "", direction: "" })).toMatchObject({ ok: false })
+    const result = await adjustment(line, { reason: "" })
+    expect(result).toMatchObject({ ok: false, errors: ["Alasan wajib diisi."] })
+  })
+
+  test("pergerakan baru tercatat setelah Manajer menyetujui", async () => {
+    loginAs("admin")
+    await receiveTen()
+    const id = await savedId(
+      await adjustment([{ productId: ids.product, inputQty: "2", uomId: ids.pcs }]),
+    )
+    await markTransferReady({ id })
+
+    // Tanpa persetujuan: validasi biasa ditolak, stok tidak berubah.
+    expect(await validateTransfer({ id })).toEqual({
+      ok: false,
+      errors: ["Belum disetujui Manajer."],
+    })
+    loginAs("gudang")
+    expect(await approveTransfer({ id })).toMatchObject({
+      ok: false,
+      errors: ["Anda tidak punya izin untuk melakukan aksi ini."],
+    })
+    expect(await stockOnRack()).toBe("10.0000")
+
+    loginAs("manajer")
+    expect(await approveTransfer({ id })).toMatchObject({ ok: true })
+    expect(await stockOnRack()).toBe("8.0000")
+    const transfer = await getTransfer(people.manajer.id, id)
+    expect(transfer).toMatchObject({
+      status: "done",
+      reason: "Rusak saat bongkar muat",
+      approvedBy: people.manajer.id,
+      approvedByName: "Uji manajer",
+      sourceLocationId: ids.rack,
+    })
+  })
+
+  test("penyesuaian tambah stok boleh membawa lot baru", async () => {
+    loginAs("admin")
+    const id = await savedId(
+      await adjustment(
+        [{ productId: ids.lotProduct, inputQty: "3", uomId: ids.pcs, lotName: "TEMU-1" }],
+        { direction: "increase", reason: "Ditemukan saat opname" },
+      ),
+    )
+    const saved = await getTransfer(people.admin.id, id)
+    expect(saved!.destinationLocationId).toBe(ids.rack)
+    await markTransferReady({ id })
+    loginAs("manajer")
+    expect(await approveTransfer({ id })).toMatchObject({ ok: true })
+    expect(await stockOnRack(ids.lotProduct)).toBe("3.0000")
+  })
+
+  test("scrap memindah stok ke lokasi scrap; gagal validasi membatalkan persetujuan", async () => {
+    loginAs("admin")
+    await receiveTen()
+    const scrap = (qty: string) =>
+      saveTransfer(
+        null,
+        form({
+          type: "scrap",
+          locationId: ids.rack,
+          reason: "Reject QC",
+          lines: JSON.stringify([{ productId: ids.product, inputQty: qty, uomId: ids.pcs }]),
+        }),
+      )
+    const tooMuch = await savedId(await scrap("12"))
+    await db.update(transfers).set({ status: "ready" }).where(eq(transfers.id, tooMuch))
+    loginAs("manajer")
+    expect(await approveTransfer({ id: tooMuch })).toEqual({
+      ok: false,
+      errors: ["Stok ZTP1 di ZTRAK tidak cukup: tersedia 10, dibutuhkan 12."],
+    })
+    expect((await getTransfer(people.manajer.id, tooMuch))!.approvedAt).toBeNull()
+
+    loginAs("admin")
+    const id = await savedId(await scrap("4"))
+    await markTransferReady({ id })
+    loginAs("manajer")
+    expect(await approveTransfer({ id })).toMatchObject({ ok: true })
+    expect(await stockOnRack()).toBe("6.0000")
+    expect((await getTransfer(people.manajer.id, id))!.number).toMatch(/^SCR\//)
   })
 })

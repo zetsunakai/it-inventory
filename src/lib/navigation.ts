@@ -67,10 +67,14 @@ export const NAVIGATION: NavGroup[] = [
         permission: "inventory:read",
       },
       {
-        title: "Scrap & penyesuaian",
+        title: "Penyesuaian",
         href: "/inventory/penyesuaian",
         permission: "inventory:read",
-        plannedIn: "M2-08",
+      },
+      {
+        title: "Scrap",
+        href: "/inventory/scrap",
+        permission: "inventory:read",
       },
       {
         title: "Stock opname",

@@ -1,7 +1,17 @@
-import { ModulePlaceholder, moduleMetadata } from "@/components/module-placeholder"
+import type { Metadata } from "next"
 
-export const metadata = moduleMetadata("/inventory/penyesuaian")
+import { TransferListPage } from "@/components/inventory/transfer-pages"
+import { TRANSFER_KINDS } from "@/lib/transfer"
 
-export default function Page() {
-  return <ModulePlaceholder href="/inventory/penyesuaian" />
+export const metadata: Metadata = { title: "Penyesuaian · IT Inventory" }
+
+export default function AdjustmentsPage({ searchParams }: PageProps<"/inventory/penyesuaian">) {
+  return (
+    <TransferListPage
+      kind={TRANSFER_KINDS.adjustment}
+      title="Penyesuaian"
+      description="Koreksi stok karena hilang, rusak, atau selisih hitung. Stok berubah setelah disetujui Manajer."
+      searchParams={searchParams}
+    />
+  )
 }

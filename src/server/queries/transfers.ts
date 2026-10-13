@@ -151,6 +151,9 @@ export async function getTransfer(userId: string, id: string) {
       returnOfNumber: sql<
         string | null
       >`(select t.number from transfers t where t.id = ${transfers.returnOfId})`,
+      approvedByName: sql<
+        string | null
+      >`(select u.name from users u where u.id = ${transfers.approvedBy})`,
       sourceWarehouseId: source.warehouseId,
       destinationWarehouseId: destination.warehouseId,
     })
@@ -193,6 +196,9 @@ export async function getTransfer(userId: string, id: string) {
     destinationPath: header.destinationPath,
     backorderOfNumber: header.backorderOfNumber,
     returnOfNumber: header.returnOfNumber,
+    approvedByName: header.approvedByName,
+    sourceWarehouseId: header.sourceWarehouseId,
+    destinationWarehouseId: header.destinationWarehouseId,
     returns: await db
       .select({ id: transfers.id, number: transfers.number, status: transfers.status })
       .from(transfers)
