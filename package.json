@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "predev": "docker compose up -d --wait db",
+    "predev": "docker compose up -d --wait db && drizzle-kit migrate",
     "typecheck": "next typegen && tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",

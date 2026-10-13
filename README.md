@@ -20,7 +20,7 @@ cp .env.example .env.local
 npm run db:up        # Postgres 16 di Docker, port 5433
 npm run db:migrate   # terapkan semua migrasi
 npm run db:seed      # data awal + akun Administrator (aman dijalankan berulang)
-npm run dev          # http://localhost:3000, otomatis menyalakan database
+npm run dev          # http://localhost:3000, menyalakan database dan menerapkan migrasi baru
 ```
 
 Login dengan `SEED_ADMIN_EMAIL` dan `SEED_ADMIN_PASSWORD` dari `.env.local`. Sign-up publik
@@ -41,7 +41,7 @@ dimatikan: user baru dibuat oleh Administrator.
 
 | Script                                    | Fungsi                                               |
 | ----------------------------------------- | ---------------------------------------------------- |
-| `npm run dev`                             | Server development (menyalakan database lebih dulu)  |
+| `npm run dev`                             | Server development (nyalakan database, lalu migrasi) |
 | `npm run lint` / `npm run typecheck`      | ESLint dan pengecekan TypeScript                     |
 | `npm run format` / `npm run format:check` | Prettier                                             |
 | `npm run db:up` / `npm run db:down`       | Nyalakan / matikan Postgres di Docker                |
