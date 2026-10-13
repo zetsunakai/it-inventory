@@ -15,7 +15,13 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, pgErrorMessage, setAuditUser } from "./helpers"
+import {
+  enableLedgerWrite,
+  inRollback,
+  pgErrorInSavepoint,
+  pgErrorMessage,
+  setAuditUser,
+} from "./helpers"
 
 // Skema inventory (backlog M2-01): transfer, ledger pergerakan, lot, dan saldo, dengan aturan
 // yang dipaksakan database. Semua data uji berawalan ZI.
@@ -286,6 +292,7 @@ describe("transfer", () => {
       ).toBe("Retur hanya bisa dibuat dari penerimaan atau pengiriman yang sudah Selesai.")
     })
     await inRollback(db, async (tx) => {
+      await enableLedgerWrite(tx)
       const [done] = await receipt(tx, { status: "done", doneAt: new Date() })
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
@@ -317,6 +324,7 @@ describe("transfer", () => {
       ).toBe("Jenis transfer tidak bisa diubah.")
     })
     await inRollback(db, async (tx) => {
+      await enableLedgerWrite(tx)
       expect(await pgErrorMessage(receipt(tx, { status: "done" }))).toContain(
         "transfers_done_has_date",
       )
@@ -387,6 +395,7 @@ describe("baris pergerakan", () => {
   test("baris Selesai wajib punya tanggal dan salinan kategori", async () => {
     await inRollback(db, async (tx) => {
       const [transfer] = await receipt(tx)
+      await enableLedgerWrite(tx)
       expect(await pgErrorMessage(move(tx, transfer.id, { status: "done" }))).toContain(
         "stock_moves_done_complete",
       )
@@ -396,6 +405,7 @@ describe("baris pergerakan", () => {
 
 test("saldo unik per produk × lokasi × lot, termasuk saat lot kosong", async () => {
   await inRollback(db, async (tx) => {
+    await enableLedgerWrite(tx)
     await tx.insert(stockBalances).values({ productId: ids.product, locationId: ids.rack })
     expect(
       await pgErrorMessage(

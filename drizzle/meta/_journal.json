@@ -162,6 +162,13 @@
       "when": 1791898082030,
       "tag": "0022_inventory_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 23,
+      "version": "7",
+      "when": 1791898296271,
+      "tag": "0023_validate_transfer",
+      "breakpoints": true
     }
   ]
 }

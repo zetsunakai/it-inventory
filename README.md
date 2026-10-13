@@ -160,6 +160,23 @@ dimatikan: user baru dibuat oleh Administrator.
 - Qty baris diinput dalam satuan apa pun (`input_qty`, `input_uom_id`); database menghitung `qty`
   dalam satuan stok produk lewat `convert_qty`. Gudang asal/tujuan disalin ke baris untuk laporan.
 
+- Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
+  (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
+  sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate
+  hanya Manajer, tidak boleh masa depan), alasan dan persetujuan untuk scrap/penyesuaian, nomor lot
+  untuk produk wajib lot, stok cukup (gudang berikat selalu; non-berikat kecuali pengaturan
+  `inventory.allow_negative_stock`), dan gerbang dokumen BC (`customs_gate_errors()`, diisi di
+  M4). Bila lolos, baris menjadi Selesai dengan salinan kategori produk, saldo diperbarui, dan
+  transfer dikunci, semuanya dalam satu transaksi. Saldo dikunci baris per baris, jadi dua
+  validasi bersamaan tidak bisa menghabiskan stok yang sama.
+- Trigger menolak: perubahan dan penghapusan transfer/baris Selesai atau Batal, baris baru di
+  transfer Selesai, status Selesai di luar validasi, dan tulisan langsung ke `stock_balances`.
+  Pengecualiannya penanda transaksi `app.ledger_write`, yang dinyalakan fungsi database sendiri.
+  Koreksi selalu lewat transaksi baru (retur atau penyesuaian). Membatalkan transfer ikut
+  membatalkan barisnya.
+- Tes yang butuh data Selesai memakai `enableLedgerWrite()`, dan membersihkannya dengan
+  `purgeInventory()` (`tests/db/helpers.ts`).
+
 ## Arsip dan hapus
 
 - Data master yang sudah dipakai tidak dihapus, tapi diarsipkan (kolom `active`, centang Aktif di

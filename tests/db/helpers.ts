@@ -46,3 +46,32 @@ export async function pgErrorInSavepoint(
     }),
   )
 }
+
+// Izinkan tulisan langsung ke ledger di transaksi tes ini, seperti yang dilakukan
+// validate_transfer(). Untuk menyiapkan data Selesai tanpa melewati validasi.
+export async function enableLedgerWrite(tx: Transaction) {
+  await tx.execute(sql`select set_config('app.ledger_write', 'on', true)`)
+}
+
+// Hapus data inventory milik produk uji yang sudah tersimpan (termasuk yang Selesai, yang
+// biasanya dikunci trigger). Hanya untuk membersihkan tes: semua trigger dimatikan sementara
+// (butuh user superuser, seperti di database tes Docker), jadi urutannya harus anak dulu.
+export async function purgeInventory(db: Db, productIds: string[]) {
+  if (!productIds.length) return
+  const ids = sql.join(
+    productIds.map((id) => sql`${id}::uuid`),
+    sql`, `,
+  )
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`set local session_replication_role = replica`)
+    await tx.execute(sql`delete from stock_balances where product_id in (${ids})`)
+    await tx.execute(sql`
+      create temporary table purged_transfers on commit drop as
+      select distinct transfer_id as id from stock_moves where product_id in (${ids})`)
+    await tx.execute(
+      sql`delete from stock_moves where transfer_id in (select id from purged_transfers)`,
+    )
+    await tx.execute(sql`delete from transfers where id in (select id from purged_transfers)`)
+    await tx.execute(sql`delete from lots where product_id in (${ids})`)
+  })
+}
