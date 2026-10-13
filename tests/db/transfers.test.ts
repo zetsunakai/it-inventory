@@ -3,8 +3,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vite
 
 import {
   cancelTransfer,
+  createReturn,
   markTransferReady,
   reopenTransfer,
+  saveReturnQuantities,
   saveTransfer,
   validateTransfer,
 } from "@/app/(app)/inventory/actions"
@@ -543,6 +545,114 @@ describe("transfer internal", () => {
     expect(await internal(line, { otherLocationId: ids.rack })).toMatchObject({
       ok: false,
       errors: ["Lokasi asal dan tujuan harus berbeda."],
+    })
+  })
+})
+
+describe("retur", () => {
+  async function done(save: ReturnType<typeof receipt>) {
+    const id = await savedId(await save)
+    await markTransferReady({ id })
+    const result = await validateTransfer({ id })
+    if (!result.ok) throw new Error(result.errors.join(" | "))
+    return id
+  }
+
+  async function newReturn(originId: string) {
+    const result = await createReturn({ originId })
+    if (!result.ok) throw new Error(result.errors.join(" | "))
+    return result.data.id
+  }
+
+  test("retur penerimaan: arah terbalik, qty tidak melebihi sisa setelah retur sebelumnya", async () => {
+    loginAs("admin")
+    const originId = await done(
+      receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
+    )
+    const origin = await getTransfer(people.admin.id, originId)
+
+    const firstId = await newReturn(originId)
+    const first = await getTransfer(people.admin.id, firstId)
+    expect(first).toMatchObject({
+      type: "return",
+      status: "draft",
+      returnOfId: originId,
+      returnOfNumber: origin!.number,
+      partnerId: ids.partner,
+      sourceLocationId: ids.rack,
+      destinationLocationId: ids.vendor,
+      reference: origin!.number,
+    })
+    expect(first!.lines.map((line) => line.qty)).toEqual(["10.0000"])
+
+    const [line] = first!.lines
+    expect(
+      await saveReturnQuantities({ id: firstId, quantities: { [line.id]: "4" } }),
+    ).toMatchObject({
+      ok: true,
+    })
+    await markTransferReady({ id: firstId })
+    expect(await validateTransfer({ id: firstId })).toMatchObject({ ok: true })
+    expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("6.0000")
+
+    // Retur kedua hanya bisa sisa 6.
+    const secondId = await newReturn(originId)
+    const second = await getTransfer(people.admin.id, secondId)
+    expect(second!.lines.map((row) => row.qty)).toEqual(["6.0000"])
+    expect(
+      await saveReturnQuantities({ id: secondId, quantities: { [second!.lines[0].id]: "7" } }),
+    ).toEqual({ ok: false, errors: ["Qty retur ZTP1 melebihi sisa yang bisa diretur: 6."] })
+
+    const after = await getTransfer(people.admin.id, originId)
+    expect(after!.returns.map((item) => [item.number, item.status])).toEqual([
+      [first!.number, "done"],
+      [second!.number, "draft"],
+    ])
+  })
+
+  test("retur pengiriman menambah stok kembali; semua sudah diretur tidak bisa dibuat lagi", async () => {
+    loginAs("admin")
+    await done(receipt([{ productId: ids.product, inputQty: "5", uomId: ids.pcs }]))
+    const deliveryId = await done(
+      delivery([{ productId: ids.product, inputQty: "5", uomId: ids.pcs }]),
+    )
+    expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("0.0000")
+
+    const returnId = await newReturn(deliveryId)
+    await markTransferReady({ id: returnId })
+    expect(await validateTransfer({ id: returnId })).toMatchObject({ ok: true })
+    expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("5.0000")
+
+    expect(await createReturn({ originId: deliveryId })).toEqual({
+      ok: false,
+      errors: ["Semua barang transfer ini sudah diretur."],
+    })
+  })
+
+  test("validasi menolak retur berlebih walau qty diubah langsung di database", async () => {
+    loginAs("admin")
+    const originId = await done(
+      receipt([{ productId: ids.product, inputQty: "3", uomId: ids.pcs }]),
+    )
+    const returnId = await newReturn(originId)
+    await db.update(stockMoves).set({ inputQty: "9" }).where(eq(stockMoves.transferId, returnId))
+    expect(await validateTransfer({ id: returnId })).toEqual({
+      ok: false,
+      errors: [
+        "Stok ZTP1 di ZTRAK tidak cukup: tersedia 3, dibutuhkan 9.",
+        "Qty retur ZTP1 melebihi sisa yang bisa diretur: 3.",
+      ],
+    })
+  })
+
+  test("retur hanya dari penerimaan/pengiriman Selesai", async () => {
+    loginAs("admin")
+    const draftId = await savedId(
+      await receipt([{ productId: ids.product, inputQty: "1", uomId: ids.pcs }]),
+    )
+    expect(await createReturn({ originId: draftId })).toEqual({
+      ok: false,
+      errors: ["Retur hanya bisa dibuat dari penerimaan atau pengiriman yang sudah Selesai."],
     })
   })
 })

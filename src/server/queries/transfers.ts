@@ -131,6 +131,7 @@ export type TransferLine = {
   stockUomId: string
   stockUomCode: string
   uomCategoryId: string
+  lotId: string | null
   lotName: string | null
 }
 
@@ -147,6 +148,9 @@ export async function getTransfer(userId: string, id: string) {
       backorderOfNumber: sql<
         string | null
       >`(select t.number from transfers t where t.id = ${transfers.backorderOfId})`,
+      returnOfNumber: sql<
+        string | null
+      >`(select t.number from transfers t where t.id = ${transfers.returnOfId})`,
       sourceWarehouseId: source.warehouseId,
       destinationWarehouseId: destination.warehouseId,
     })
@@ -171,6 +175,7 @@ export async function getTransfer(userId: string, id: string) {
       stockUomId: stockUom.id,
       stockUomCode: stockUom.code,
       uomCategoryId: stockUom.categoryId,
+      lotId: stockMoves.lotId,
       lotName: lots.name,
     })
     .from(stockMoves)
@@ -187,6 +192,12 @@ export async function getTransfer(userId: string, id: string) {
     sourcePath: header.sourcePath,
     destinationPath: header.destinationPath,
     backorderOfNumber: header.backorderOfNumber,
+    returnOfNumber: header.returnOfNumber,
+    returns: await db
+      .select({ id: transfers.id, number: transfers.number, status: transfers.status })
+      .from(transfers)
+      .where(and(eq(transfers.returnOfId, id), eq(transfers.type, "return")))
+      .orderBy(asc(transfers.createdAt)),
     lines,
   }
 }
@@ -335,4 +346,15 @@ export async function stockAvailability(
       .filter((row) => row.lotName && Number(row.qty) > 0)
       .map((row) => ({ name: row.lotName!, qty: row.qty })),
   }
+}
+
+// Sisa qty yang masih bisa diretur dari transfer asal, per produk × lot (satuan stok).
+// Kunci: "<produk>|<lot atau kosong>".
+export async function returnableQuantities(originId: string) {
+  const result = await db.execute<{ product_id: string; lot_id: string | null; qty: string }>(
+    sql`select product_id, lot_id, qty::text from returnable_lines(${originId})`,
+  )
+  return Object.fromEntries(
+    result.rows.map((row) => [`${row.product_id}|${row.lot_id ?? ""}`, row.qty]),
+  )
 }

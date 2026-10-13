@@ -82,7 +82,7 @@ export async function receiveStock(
 ) {
   const { db, pool } = createDb(TEST_DATABASE_URL)
   try {
-    await db.transaction(async (tx) => {
+    return await db.transaction(async (tx) => {
       const [vendor] = await tx
         .select({ id: locations.id })
         .from(locations)
@@ -106,6 +106,7 @@ export async function receiveStock(
         destinationLocationId: fixture.rack.id,
       })
       await tx.execute(sql`select validate_transfer(${transfer.id})`)
+      return transfer.id
     })
   } finally {
     await pool.end()

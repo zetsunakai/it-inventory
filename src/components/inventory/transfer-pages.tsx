@@ -24,9 +24,12 @@ import {
   listInternalLocations,
   listTransfers,
   listUomChoices,
+  returnableQuantities,
   type TransferRow,
 } from "@/server/queries/transfers"
 
+import { CreateReturnButton } from "./create-return-button"
+import { ReturnForm } from "./return-form"
 import { TransferActions } from "./transfer-actions"
 import { TransferForm } from "./transfer-form"
 import { TransferStatusBadge } from "./transfer-status"
@@ -141,7 +144,7 @@ async function TransferTable({
           }
         />
         <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
-        {canWrite && (
+        {canWrite && kind.creatable !== false && (
           <Link href={createHref} className={buttonVariants({ className: "sm:ml-auto" })}>
             <Plus />
             {createLabel}
@@ -158,7 +161,10 @@ async function TransferTable({
           searchParams: raw,
           basePath: kind.path,
           noun: kind.noun,
-          create: canWrite ? { href: createHref, label: createLabel } : undefined,
+          create:
+            canWrite && kind.creatable !== false
+              ? { href: createHref, label: createLabel }
+              : undefined,
         })}
       />
       <DataTablePagination
@@ -227,9 +233,20 @@ async function TransferDetail({
   if (!transfer || transfer.type !== kind.type) notFound()
   const canWrite = hasPermission(user.roles, "inventory:write")
   const editable = canWrite && transfer.status === "draft"
-  const [locations, uoms] = editable
-    ? await Promise.all([listInternalLocations(user.id), listUomChoices()])
-    : [[], []]
+  const isReturn = transfer.type === "return"
+  const [locations, uoms] =
+    editable && !isReturn
+      ? await Promise.all([listInternalLocations(user.id), listUomChoices()])
+      : [[], []]
+  // Retur Draft: batas qty per produk × lot dari transfer asal.
+  const returnable =
+    editable && isReturn && transfer.returnOfId
+      ? await returnableQuantities(transfer.returnOfId)
+      : {}
+  const canReturn =
+    canWrite &&
+    transfer.status === "done" &&
+    (transfer.type === "receipt" || transfer.type === "delivery")
 
   return (
     <div className="space-y-6">
@@ -239,6 +256,7 @@ async function TransferDetail({
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <TransferStatusBadge status={transfer.status} />
             {transfer.partner && <span>{transfer.partner.name}</span>}
+            {transfer.returnOfNumber && <span>Retur dari {transfer.returnOfNumber}</span>}
           </span>
         }
       />
@@ -259,7 +277,21 @@ async function TransferDetail({
           }))}
         />
       )}
-      {editable ? (
+      {canReturn && <CreateReturnButton originId={transfer.id} />}
+      {editable && isReturn ? (
+        <ReturnForm
+          id={transfer.id}
+          lines={transfer.lines.map((line) => ({
+            id: line.id,
+            sku: line.sku,
+            productName: line.productName,
+            lotName: line.lotName,
+            qty: line.qty,
+            uomCode: line.stockUomCode,
+            max: returnable[`${line.productId}|${line.lotId ?? ""}`] ?? "0",
+          }))}
+        />
+      ) : editable ? (
         <TransferForm
           kind={kind}
           locations={locations}

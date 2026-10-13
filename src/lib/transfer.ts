@@ -95,6 +95,8 @@ export type TransferKind = {
   locationLabel: string
   // Transfer internal: lokasi tujuan juga lokasi gudang yang dipilih user.
   secondLocationLabel?: string
+  // false = tidak dibuat dari halaman ini (retur dibuat dari transfer asalnya).
+  creatable?: boolean
 }
 
 export const TRANSFER_KINDS = {
@@ -123,5 +125,15 @@ export const TRANSFER_KINDS = {
     locationSide: "source",
     locationLabel: "Lokasi asal",
     secondLocationLabel: "Lokasi tujuan",
+  },
+  return: {
+    type: "return",
+    path: "/inventory/retur",
+    noun: "retur",
+    partnerLabel: "Partner",
+    locationSide: "source",
+    locationLabel: "Lokasi asal",
+    secondLocationLabel: "Lokasi tujuan",
+    creatable: false,
   },
 } satisfies Partial<Record<TransferType, TransferKind>>

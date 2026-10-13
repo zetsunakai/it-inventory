@@ -198,6 +198,10 @@ dimatikan: user baru dibuat oleh Administrator.
   (`pointer-coarse:`).
 - Transfer internal: kedua lokasi dipilih user (gudang yang boleh diakses), tanpa partner; total stok
   perusahaan tidak berubah.
+- Retur dibuat dari penerimaan/pengiriman Selesai (tombol "Buat retur"): arah terbalik, partner sama,
+  baris berisi sisa yang masih bisa diretur (`returnable_lines()`); hanya qty-nya yang bisa diubah.
+  Batasnya (qty asal dikurangi retur Selesai lain) dicek `return_errors()` saat simpan, Siap, dan
+  validasi; transfer asal dikunci saat validasi supaya dua retur tidak lolos bersamaan.
 - Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`. Isi pemilih
   berpencarian dengan `fillInteractive()` (`tests/e2e/interactive.ts`), yang menunggu hidrasi React
   dulu; label dicari dengan `exact: true` supaya tidak cocok dengan placeholder lain.

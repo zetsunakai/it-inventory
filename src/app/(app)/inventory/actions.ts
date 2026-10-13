@@ -247,6 +247,7 @@ export const markTransferReady = defineAction({
       sql`select transfer_stock_errors(${input.id}) as errors`,
     )
     errors.push(...(shortages.rows[0]?.errors ?? []))
+    errors.push(...(await returnErrors(tx, input.id)))
     if (errors.length) throw new AppError(errors)
     await tx.update(transfers).set({ status: "ready" }).where(eq(transfers.id, input.id))
   },
@@ -333,5 +334,134 @@ export const validateTransfer = defineAction({
     }
     await tx.execute(sql`select validate_transfer(${input.id}, ${effectiveAt}::timestamptz)`)
     return { backorder }
+  },
+})
+
+// Retur (M2-07): batas qty dicek database (return_errors); kosong untuk jenis lain.
+async function returnErrors(tx: Transaction, transferId: string) {
+  const result = await tx.execute<{ errors: string[] }>(
+    sql`select return_errors(${transferId}) as errors`,
+  )
+  return result.rows[0]?.errors ?? []
+}
+
+// Buat retur Draft dari penerimaan/pengiriman Selesai: arah terbalik, partner sama, baris berisi
+// sisa qty yang masih bisa diretur (dalam satuan stok).
+export const createReturn = defineAction({
+  name: "createReturn",
+  permission: "inventory:write",
+  schema: z.object({ originId: z.uuid("Transfer asal tidak valid.") }),
+  successMessage: "Retur dibuat sebagai Draft.",
+  handler: async ({ input, user, tx }) => {
+    const [origin] = await tx
+      .select({
+        type: transfers.type,
+        status: transfers.status,
+        number: transfers.number,
+        partnerId: transfers.partnerId,
+        sourceLocationId: transfers.sourceLocationId,
+        destinationLocationId: transfers.destinationLocationId,
+      })
+      .from(transfers)
+      .where(eq(transfers.id, input.originId))
+    if (!origin) throw new AppError("Transfer asal tidak ditemukan.")
+    if (origin.status !== "done" || (origin.type !== "receipt" && origin.type !== "delivery")) {
+      throw new AppError(
+        "Retur hanya bisa dibuat dari penerimaan atau pengiriman yang sudah Selesai.",
+      )
+    }
+    const warehouseSide =
+      origin.type === "receipt" ? origin.destinationLocationId : origin.sourceLocationId
+    const accessErrors = await warehouseLocationErrors(tx, user.id, warehouseSide, {
+      missing: "Lokasi gudang transfer asal tidak ditemukan.",
+      forbidden: "Anda tidak punya akses ke gudang transfer asal.",
+    })
+    if (accessErrors.length) throw new AppError(accessErrors)
+
+    const remaining = await tx.execute<{ product_id: string; lot_id: string | null; qty: string }>(
+      sql`select product_id, lot_id, qty::text from returnable_lines(${input.originId})`,
+    )
+    if (!remaining.rows.length) throw new AppError("Semua barang transfer ini sudah diretur.")
+
+    const header = {
+      sourceLocationId: origin.destinationLocationId,
+      destinationLocationId: origin.sourceLocationId,
+    }
+    const [row] = await tx
+      .insert(transfers)
+      .values({
+        type: "return",
+        returnOfId: input.originId,
+        partnerId: origin.partnerId,
+        reference: origin.number,
+        ...header,
+      })
+      .returning({ id: transfers.id })
+    const stockUoms = await tx
+      .select({ id: products.id, uomId: products.uomId })
+      .from(products)
+      .where(
+        inArray(
+          products.id,
+          remaining.rows.map((line) => line.product_id),
+        ),
+      )
+    const uomOf = new Map(stockUoms.map((product) => [product.id, product.uomId]))
+    await tx.insert(stockMoves).values(
+      remaining.rows.map((line, index) => ({
+        transferId: row.id,
+        position: index + 1,
+        productId: line.product_id,
+        lotId: line.lot_id,
+        inputQty: line.qty,
+        inputUomId: uomOf.get(line.product_id)!,
+        ...header,
+      })),
+    )
+    return { id: row.id }
+  },
+})
+
+// Qty retur per baris (dalam satuan stok). 0 = baris dihapus dari retur.
+export const saveReturnQuantities = defineAction({
+  name: "saveReturnQuantities",
+  permission: "inventory:write",
+  schema: idInput.extend({
+    quantities: z.record(z.uuid(), z.string()).transform((values, ctx) => {
+      const result: Record<string, string> = {}
+      for (const [moveId, raw] of Object.entries(values)) {
+        const value = raw.trim().replace(",", ".")
+        if (!/^\d+(\.\d{1,4})?$/.test(value)) {
+          ctx.addIssue({
+            code: "custom",
+            message: "Qty harus angka 0 atau lebih, maksimal 4 desimal.",
+          })
+          return z.NEVER
+        }
+        result[moveId] = value
+      }
+      return result
+    }),
+  }),
+  successMessage: "Qty retur disimpan.",
+  handler: async ({ input, tx }) => {
+    const [saved] = await tx
+      .select({ status: transfers.status, type: transfers.type })
+      .from(transfers)
+      .where(eq(transfers.id, input.id))
+    if (!saved || saved.type !== "return") throw new AppError("Retur tidak ditemukan.")
+    if (saved.status !== "draft") {
+      throw new AppError("Hanya retur Draft yang bisa diubah. Kembalikan ke Draft dulu.")
+    }
+    if (Object.values(input.quantities).every((qty) => Number(qty) === 0)) {
+      throw new AppError("Isi qty retur minimal satu baris. Untuk membatalkan, batalkan retur.")
+    }
+    for (const [moveId, qty] of Object.entries(input.quantities)) {
+      const where = and(eq(stockMoves.id, moveId), eq(stockMoves.transferId, input.id))
+      if (Number(qty) === 0) await tx.delete(stockMoves).where(where)
+      else await tx.update(stockMoves).set({ inputQty: qty }).where(where)
+    }
+    const errors = await returnErrors(tx, input.id)
+    if (errors.length) throw new AppError(errors)
   },
 })

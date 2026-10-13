@@ -1,3 +1,6 @@
+import Link from "next/link"
+import type { ReactNode } from "react"
+
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
@@ -36,13 +39,13 @@ const LINE_COLUMNS: DataTableColumn<TransferLine>[] = [
 
 // Tampilan baca transfer (Siap, Selesai, Batal, atau peran tanpa izin ubah).
 export function TransferView({ kind, transfer }: { kind: TransferKind; transfer: TransferDetail }) {
-  const rows: [string, string][] = [
+  const rows: [string, ReactNode][] = [
     ...(kind.partnerLabel
       ? [
           [
             kind.partnerLabel,
             transfer.partner ? `[${transfer.partner.code}] ${transfer.partner.name}` : "—",
-          ] as [string, string],
+          ] as [string, ReactNode],
         ]
       : []),
     ["Dari", transfer.sourcePath],
@@ -56,7 +59,28 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
     ["Tanggal efektif", transfer.doneAt ? formatDate(transfer.doneAt) : "—"],
     [kind.partnerRole ? "Referensi PO/SO" : "Referensi", transfer.reference ?? "—"],
     ...(transfer.backorderOfNumber
-      ? [["Lanjutan dari", transfer.backorderOfNumber] as [string, string]]
+      ? [["Lanjutan dari", transfer.backorderOfNumber] as [string, ReactNode]]
+      : []),
+    ...(transfer.returnOfNumber
+      ? [["Retur dari", transfer.returnOfNumber] as [string, ReactNode]]
+      : []),
+    ...(transfer.returns.length
+      ? [
+          [
+            "Retur",
+            <span key="returns" className="flex flex-wrap gap-x-3">
+              {transfer.returns.map((item) => (
+                <Link
+                  key={item.id}
+                  href={`/inventory/retur/${item.id}`}
+                  className="font-mono text-primary underline-offset-4 hover:underline"
+                >
+                  {item.number}
+                </Link>
+              ))}
+            </span>,
+          ] as [string, ReactNode],
+        ]
       : []),
     ["Catatan", transfer.notes ?? "—"],
   ]
