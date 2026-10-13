@@ -235,6 +235,13 @@ async function TransferDetail({
           noun={kind.noun}
           effect={effect}
           canBackdate={user.roles.includes("manajer")}
+          path={kind.path}
+          lines={transfer.lines.map((line) => ({
+            id: line.id,
+            sku: line.sku,
+            inputQty: line.inputQty,
+            uomCode: line.inputUomCode,
+          }))}
         />
       )}
       {editable ? (

@@ -247,12 +247,34 @@ export const cancelTransfer = defineAction({
   },
 })
 
-// Tanggal efektif mundur diisi sebagai tanggal (YYYY-MM-DD, WIB); disimpan pukul 12.00 WIB.
-// Kosong = sekarang.
+// Qty selesai per baris untuk penerimaan/pengiriman parsial (M2-05): boleh 0, koma atau titik.
+const doneQuantities = z
+  .record(z.string(), z.string())
+  .optional()
+  .transform((values, ctx) => {
+    if (!values) return null
+    const result: Record<string, string> = {}
+    for (const [moveId, raw] of Object.entries(values)) {
+      const value = raw.trim().replace(",", ".")
+      if (!z.uuid().safeParse(moveId).success || !/^\d+(\.\d{1,4})?$/.test(value)) {
+        ctx.addIssue({
+          code: "custom",
+          message: "Qty harus angka 0 atau lebih, maksimal 4 desimal.",
+        })
+        return z.NEVER
+      }
+      result[moveId] = value
+    }
+    return result
+  })
+
+// Validasi transfer. Tanggal efektif mundur diisi sebagai tanggal (YYYY-MM-DD, WIB) dan disimpan
+// pukul 12.00 WIB; kosong = sekarang. Bila qty selesai lebih kecil dari rencana, sisanya
+// dipindah ke transfer lanjutan dulu (split_backorder), dalam transaksi yang sama.
 export const validateTransfer = defineAction({
   name: "validateTransfer",
   permission: "inventory:write",
-  schema: idInput.extend({ effectiveDate: optionalDate }),
+  schema: idInput.extend({ effectiveDate: optionalDate, quantities: doneQuantities }),
   successMessage: "Transfer divalidasi. Stok sudah diperbarui.",
   handler: async ({ input, tx }) => {
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
@@ -260,6 +282,21 @@ export const validateTransfer = defineAction({
       input.effectiveDate && input.effectiveDate !== today
         ? `${input.effectiveDate}T12:00:00+07:00`
         : null
+    let backorder: { id: string; number: string } | null = null
+    if (input.quantities) {
+      const split = await tx.execute<{ id: string | null }>(
+        sql`select split_backorder(${input.id}, ${JSON.stringify(input.quantities)}::jsonb) as id`,
+      )
+      const backorderId = split.rows[0]?.id
+      if (backorderId) {
+        const [row] = await tx
+          .select({ id: transfers.id, number: transfers.number })
+          .from(transfers)
+          .where(eq(transfers.id, backorderId))
+        backorder = row
+      }
+    }
     await tx.execute(sql`select validate_transfer(${input.id}, ${effectiveAt}::timestamptz)`)
+    return { backorder }
   },
 })

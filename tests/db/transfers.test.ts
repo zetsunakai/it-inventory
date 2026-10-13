@@ -395,3 +395,78 @@ describe("pengiriman", () => {
     })
   })
 })
+
+describe("penerimaan parsial dan backorder", () => {
+  test("qty selesai lebih kecil: sisanya jadi transfer lanjutan Draft, stok hanya bertambah yang selesai", async () => {
+    loginAs("admin")
+    const id = await savedId(
+      await receipt([
+        { productId: ids.product, inputQty: "10", uomId: ids.pcs },
+        { productId: ids.lotProduct, inputQty: "5", uomId: ids.pcs, lotName: "B-07" },
+      ]),
+    )
+    await markTransferReady({ id })
+    const lines = (await getTransfer(people.admin.id, id))!.lines
+    const result = await validateTransfer({
+      id,
+      quantities: { [lines[0].id]: "6", [lines[1].id]: "0" },
+    })
+    if (!result.ok) throw new Error(result.errors.join(" | "))
+    const backorder = (result.data as { backorder: { id: string; number: string } }).backorder
+    expect(backorder.number).toMatch(/^PNR\//)
+
+    const original = await getTransfer(people.admin.id, id)
+    expect([original!.status, original!.lines.map((line) => [line.sku, line.qty])]).toEqual([
+      "done",
+      [["ZTP1", "6.0000"]],
+    ])
+    const rest = await getTransfer(people.admin.id, backorder.id)
+    expect(rest).toMatchObject({
+      status: "draft",
+      backorderOfId: id,
+      backorderOfNumber: original!.number,
+      reference: "PO-001",
+    })
+    expect(rest!.lines.map((line) => [line.sku, line.qty, line.lotName])).toEqual([
+      ["ZTP1", "4.0000", null],
+      ["ZTLOT", "5.0000", "B-07"],
+    ])
+    expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("6.0000")
+    expect((await stockAvailability(ids.lotProduct, ids.rack)).qty).toBe("0.0000")
+  })
+
+  test("qty selesai di luar 0..rencana atau semuanya 0 ditolak tanpa perubahan", async () => {
+    loginAs("admin")
+    const id = await savedId(
+      await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
+    )
+    await markTransferReady({ id })
+    const [line] = (await getTransfer(people.admin.id, id))!.lines
+    expect(await validateTransfer({ id, quantities: { [line.id]: "11" } })).toEqual({
+      ok: false,
+      errors: ["Qty ZTP1 harus antara 0 dan 10."],
+    })
+    expect(await validateTransfer({ id, quantities: { [line.id]: "0" } })).toEqual({
+      ok: false,
+      errors: ["Isi qty minimal satu baris. Untuk membatalkan semuanya, batalkan transfer."],
+    })
+    const transfer = await getTransfer(people.admin.id, id)
+    expect([transfer!.status, transfer!.lines.map((row) => row.qty)]).toEqual([
+      "ready",
+      ["10.0000"],
+    ])
+  })
+
+  test("qty selesai sama dengan rencana: tanpa transfer lanjutan", async () => {
+    loginAs("admin")
+    const id = await savedId(
+      await receipt([{ productId: ids.product, inputQty: "3", uomId: ids.pcs }]),
+    )
+    await markTransferReady({ id })
+    const [line] = (await getTransfer(people.admin.id, id))!.lines
+    expect(await validateTransfer({ id, quantities: { [line.id]: "3,0" } })).toMatchObject({
+      ok: true,
+      data: { backorder: null },
+    })
+  })
+})

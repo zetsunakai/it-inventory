@@ -144,6 +144,9 @@ export async function getTransfer(userId: string, id: string) {
       partner: { id: partners.id, code: partners.code, name: partners.name },
       sourcePath: pathOf(source),
       destinationPath: pathOf(destination),
+      backorderOfNumber: sql<
+        string | null
+      >`(select t.number from transfers t where t.id = ${transfers.backorderOfId})`,
       sourceWarehouseId: source.warehouseId,
       destinationWarehouseId: destination.warehouseId,
     })
@@ -183,6 +186,7 @@ export async function getTransfer(userId: string, id: string) {
     partner: header.partner?.id ? header.partner : null,
     sourcePath: header.sourcePath,
     destinationPath: header.destinationPath,
+    backorderOfNumber: header.backorderOfNumber,
     lines,
   }
 }

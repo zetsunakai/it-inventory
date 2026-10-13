@@ -190,6 +190,9 @@ dimatikan: user baru dibuat oleh Administrator.
   Siap dengan fungsi yang sama seperti validasi (`transfer_stock_errors()`), lot dipilih dari lot
   yang masih ada stoknya di lokasi asal (`/api/stock-availability`, juga menampilkan jumlah
   tersedia), dan lot yang tidak ada ditolak. Barang masuk boleh membawa lot baru.
+- Parsial (backorder): di dialog Validasi qty selesai per baris bisa dikurangi. Fungsi database
+  `split_backorder(transfer, {baris: qty})` memindah sisanya ke transfer lanjutan (Draft,
+  `backorder_of_id` = transfer asal) sebelum `validate_transfer`, dalam transaksi yang sama.
 - Produk dan partner dicari lewat `/api/products` dan `/api/partners` dengan komponen
   `SearchSelect`. Input baris barang punya target sentuh 44px di perangkat sentuh
   (`pointer-coarse:`).

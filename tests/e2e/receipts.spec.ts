@@ -1,36 +1,38 @@
-import { expect, test } from "@playwright/test"
+import { expect, test, type Page } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, stockAt } from "./fixtures"
 
-// Penerimaan (backlog M2-03): Draft → Siap → Selesai menambah saldo di lokasi tujuan.
+// Penerimaan (backlog M2-03, M2-05): Draft → Siap → Selesai menambah saldo di lokasi tujuan;
+// qty yang belum datang menjadi penerimaan lanjutan.
 
 test.use({ storageState: ADMIN_STATE_FILE })
 
-test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => {
-  const fixture = await createInventoryFixture("RCV")
+type Fixture = Awaited<ReturnType<typeof createInventoryFixture>>
 
+async function createReadyReceipt(page: Page, fixture: Fixture, qty: string) {
   await page.goto("/inventory/penerimaan")
   await page.getByRole("link", { name: "Buat penerimaan" }).first().click()
-
   await page.getByLabel("Vendor").fill(fixture.partner.code)
   await page.getByRole("option", { name: new RegExp(fixture.partner.code) }).click()
   await page.getByLabel("Lokasi tujuan").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
   await page.getByLabel("Referensi PO/SO").fill("PO-E2E-1")
-
   await page.getByLabel("Produk baris 1").fill(fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
-  await page.getByLabel("Qty baris 1").fill("12,5")
+  await page.getByLabel("Qty baris 1").fill(qty)
   await page.getByRole("button", { name: "Simpan penerimaan" }).click()
-
   await expect(page).toHaveURL(/\/inventory\/penerimaan\/[0-9a-f-]{36}$/)
   await expect(page.getByRole("heading", { name: /^Penerimaan PNR\// })).toBeVisible()
-
   await page.getByRole("button", { name: "Tandai siap" }).click()
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer ditandai Siap." }),
   ).toBeVisible()
+}
+
+test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => {
+  const fixture = await createInventoryFixture("RCV")
+  await createReadyReceipt(page, fixture, "12,5")
 
   await page.getByRole("button", { name: "Validasi" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
@@ -46,4 +48,23 @@ test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => 
   await expect(page.getByRole("row").filter({ hasText: fixture.partner.name })).toContainText(
     "Selesai",
   )
+})
+
+test("penerimaan parsial: sisa qty menjadi penerimaan lanjutan", async ({ page }) => {
+  const fixture = await createInventoryFixture("BCK")
+  await createReadyReceipt(page, fixture, "10")
+
+  await page.getByRole("button", { name: "Validasi" }).click()
+  const dialog = page.getByRole("alertdialog")
+  await dialog.getByLabel(fixture.product.sku).fill("6")
+  await expect(dialog.getByText("Sisa qty dibuat sebagai penerimaan lanjutan")).toBeVisible()
+  await dialog.getByRole("button", { name: "Validasi" }).click()
+
+  const link = page.getByRole("link", { name: /^penerimaan lanjutan PNR\// })
+  await expect(link).toBeVisible()
+  expect(await stockAt(fixture.product.id, fixture.rack.id)).toBe(6)
+
+  await link.click()
+  await expect(page.getByText("Draft", { exact: true }).filter({ visible: true })).toBeVisible()
+  await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("4")
 })
