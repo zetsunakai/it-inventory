@@ -152,6 +152,8 @@ export const stockMoves = pgTable(
       .notNull()
       .references(() => products.id, { onDelete: "restrict" }),
     lotId: uuid().references(() => lots.id, { onDelete: "restrict" }),
+    // Urutan baris di transfer, sesuai urutan input user.
+    position: integer().notNull().default(0),
     status: stockMoveStatus().notNull().default("draft"),
     inputQty: qty().notNull(),
     inputUomId: uuid()

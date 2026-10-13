@@ -186,6 +186,10 @@ dimatikan: user baru dibuat oleh Administrator.
 - Server action di `src/app/(app)/inventory/actions.ts`: simpan Draft (baris dikirim sebagai JSON,
   lot dibuat otomatis per produk), tandai Siap, kembali ke Draft, validasi (memanggil
   `validate_transfer`, tanggal efektif mundur hanya untuk Manajer), dan batal.
+- Barang keluar (pengiriman, nanti juga transfer internal dan scrap): stok dicek saat ditandai
+  Siap dengan fungsi yang sama seperti validasi (`transfer_stock_errors()`), lot dipilih dari lot
+  yang masih ada stoknya di lokasi asal (`/api/stock-availability`, juga menampilkan jumlah
+  tersedia), dan lot yang tidak ada ditolak. Barang masuk boleh membawa lot baru.
 - Produk dan partner dicari lewat `/api/products` dan `/api/partners` dengan komponen
   `SearchSelect`. Input baris barang punya target sentuh 44px di perangkat sentuh
   (`pointer-coarse:`).

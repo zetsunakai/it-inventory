@@ -169,6 +169,20 @@
       "when": 1791898296271,
       "tag": "0023_validate_transfer",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1791899119132,
+      "tag": "0024_transfer_stock_check",
+      "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1791899165404,
+      "tag": "0025_stock_moves_position",
+      "breakpoints": true
     }
   ]
 }

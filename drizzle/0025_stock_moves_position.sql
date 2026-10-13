@@ -1,0 +1,1 @@
+ALTER TABLE "stock_moves" ADD COLUMN "position" integer DEFAULT 0 NOT NULL;

@@ -23,11 +23,11 @@ import {
   uoms,
   warehouses,
 } from "@/server/db/schema"
-import { getTransfer, listTransfers } from "@/server/queries/transfers"
+import { getTransfer, listTransfers, stockAvailability } from "@/server/queries/transfers"
 
 import { purgeInventory } from "./helpers"
 
-// Penerimaan lewat server action (backlog M2-03). Semua data uji berawalan ZT.
+// Penerimaan dan pengiriman lewat server action (backlog M2-03, M2-04). Data uji berawalan ZT.
 
 const session = vi.hoisted(() => ({ user: null as CurrentUser | null }))
 vi.mock("@/server/auth/session", () => ({ requireUser: async () => session.user }))
@@ -57,6 +57,19 @@ function receipt(lines: object[], values: Record<string, string> = {}) {
       partnerId: ids.partner,
       locationId: ids.rack,
       reference: "PO-001",
+      lines: JSON.stringify(lines),
+      ...values,
+    }),
+  )
+}
+
+function delivery(lines: object[], values: Record<string, string> = {}) {
+  return saveTransfer(
+    null,
+    form({
+      type: "delivery",
+      partnerId: ids.partner,
+      locationId: ids.rack,
       lines: JSON.stringify(lines),
       ...values,
     }),
@@ -98,6 +111,7 @@ beforeAll(async () => {
     .values([
       { code: "ZTVENDOR", name: "Vendor", type: "vendor" as const },
       { code: "ZTRAK", name: "Rak", type: "internal" as const, warehouseId: warehouse.id },
+      { code: "ZTCUST", name: "Customer", type: "customer" as const },
     ])
     .returning({ id: locations.id })
   ids.vendor = vendor.id
@@ -110,7 +124,7 @@ beforeAll(async () => {
       address: "Bekasi",
       countryCode: "ID",
       isVendor: true,
-      isCustomer: false,
+      isCustomer: true,
       identityType: "other",
       identityNumber: "ZTV",
     })
@@ -317,4 +331,67 @@ test("daftar penerimaan hanya berisi gudang yang boleh dilihat user", async () =
   const forGudang = await listTransfers({ ...page, userId: people.gudang.id, type: "receipt" })
   expect([forAdmin.total, forGudang.total]).toEqual([1, 0])
   expect(forAdmin.rows[0]).toMatchObject({ partnerName: "PT Pemasok Uji", lineCount: 1 })
+})
+
+describe("pengiriman", () => {
+  async function receive(lines: object[]) {
+    const id = await savedId(await receipt(lines))
+    await markTransferReady({ id })
+    const result = await validateTransfer({ id })
+    if (!result.ok) throw new Error(result.errors.join(" | "))
+  }
+
+  test("pengiriman melebihi stok gudang berikat ditolak dengan pesan per produk", async () => {
+    loginAs("admin")
+    await receive([
+      { productId: ids.product, inputQty: "5", uomId: ids.pcs },
+      { productId: ids.lotProduct, inputQty: "2", uomId: ids.pcs, lotName: "B-07" },
+    ])
+    const id = await savedId(
+      await delivery([
+        { productId: ids.product, inputQty: "1", uomId: ids.dozen },
+        { productId: ids.lotProduct, inputQty: "3", uomId: ids.pcs, lotName: "B-07" },
+      ]),
+    )
+    const expected = [
+      "Stok ZTLOT lot B-07 di ZTRAK tidak cukup: tersedia 2, dibutuhkan 3.",
+      "Stok ZTP1 di ZTRAK tidak cukup: tersedia 5, dibutuhkan 12.",
+    ]
+    // Dicek saat Siap dan sekali lagi saat validasi.
+    expect(await markTransferReady({ id })).toEqual({ ok: false, errors: expected })
+    expect(await validateTransfer({ id })).toEqual({ ok: false, errors: expected })
+  })
+
+  test("pengiriman mengurangi stok lot yang dipilih", async () => {
+    loginAs("admin")
+    await receive([{ productId: ids.lotProduct, inputQty: "10", uomId: ids.pcs, lotName: "B-07" }])
+    expect(await stockAvailability(ids.lotProduct, ids.rack)).toEqual({
+      qty: "10.0000",
+      uomCode: "ZTPCS",
+      lots: [{ name: "B-07", qty: "10.0000" }],
+    })
+
+    const id = await savedId(
+      await delivery([
+        { productId: ids.lotProduct, inputQty: "4", uomId: ids.pcs, lotName: "B-07" },
+      ]),
+    )
+    expect(await markTransferReady({ id })).toMatchObject({ ok: true })
+    expect(await validateTransfer({ id })).toMatchObject({ ok: true })
+    expect((await stockAvailability(ids.lotProduct, ids.rack)).qty).toBe("6.0000")
+    const transfer = await getTransfer(people.admin.id, id)
+    expect([transfer!.number.slice(0, 4), transfer!.sourceLocationId]).toEqual(["PGR/", ids.rack])
+  })
+
+  test("lot barang keluar harus lot yang sudah ada", async () => {
+    loginAs("admin")
+    expect(
+      await delivery([
+        { productId: ids.lotProduct, inputQty: "1", uomId: ids.pcs, lotName: "X-99" },
+      ]),
+    ).toMatchObject({
+      ok: false,
+      errors: ["Baris 1: lot X-99 tidak ada untuk produk ini."],
+    })
+  })
 })

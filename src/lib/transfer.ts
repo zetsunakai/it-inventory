@@ -105,4 +105,13 @@ export const TRANSFER_KINDS = {
     locationSide: "destination",
     locationLabel: "Lokasi tujuan",
   },
+  delivery: {
+    type: "delivery",
+    path: "/inventory/pengiriman",
+    noun: "pengiriman",
+    partnerRole: "customer",
+    partnerLabel: "Customer",
+    locationSide: "source",
+    locationLabel: "Lokasi asal",
+  },
 } satisfies Partial<Record<TransferType, TransferKind>>

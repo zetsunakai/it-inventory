@@ -1,7 +1,15 @@
 import { eq, sql } from "drizzle-orm"
 
 import { createDb } from "@/server/db/client"
-import { locations, partners, products, uoms, warehouses } from "@/server/db/schema"
+import {
+  locations,
+  partners,
+  products,
+  stockMoves,
+  transfers,
+  uoms,
+  warehouses,
+} from "@/server/db/schema"
 
 import { TEST_DATABASE_URL } from "../test-env"
 
@@ -59,6 +67,43 @@ export async function stockAt(productId: string, locationId: string) {
           where product_id = ${productId} and location_id = ${locationId}`,
     )
     return Number(result.rows[0]?.qty ?? 0)
+  } finally {
+    await pool.end()
+  }
+}
+
+// Stok awal lewat penerimaan yang langsung divalidasi (dari lokasi VENDOR hasil seed).
+export async function receiveStock(
+  fixture: Awaited<ReturnType<typeof createInventoryFixture>>,
+  qty: string,
+) {
+  const { db, pool } = createDb(TEST_DATABASE_URL)
+  try {
+    await db.transaction(async (tx) => {
+      const [vendor] = await tx
+        .select({ id: locations.id })
+        .from(locations)
+        .where(eq(locations.code, "VENDOR"))
+      const [pcs] = await tx.select({ id: uoms.id }).from(uoms).where(eq(uoms.code, "PCS"))
+      const [transfer] = await tx
+        .insert(transfers)
+        .values({
+          type: "receipt",
+          sourceLocationId: vendor.id,
+          destinationLocationId: fixture.rack.id,
+          partnerId: fixture.partner.id,
+        })
+        .returning({ id: transfers.id })
+      await tx.insert(stockMoves).values({
+        transferId: transfer.id,
+        productId: fixture.product.id,
+        inputQty: qty,
+        inputUomId: pcs.id,
+        sourceLocationId: vendor.id,
+        destinationLocationId: fixture.rack.id,
+      })
+      await tx.execute(sql`select validate_transfer(${transfer.id})`)
+    })
   } finally {
     await pool.end()
   }

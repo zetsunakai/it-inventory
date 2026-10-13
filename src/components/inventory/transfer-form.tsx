@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useRef, useState } from "react"
+import { useActionState, useEffect, useId, useRef, useState } from "react"
 
 import { saveTransfer } from "@/app/(app)/inventory/actions"
 import { FormErrors } from "@/components/form-errors"
@@ -19,12 +19,13 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { toDecimalInput } from "@/lib/decimal"
+import { formatDecimal, toDecimalInput } from "@/lib/decimal"
 import type { TransferKind, TransferLineDraft } from "@/lib/transfer"
 import type {
   LocationOption,
   PartnerChoice,
   ProductChoice,
+  StockAvailability,
   UomChoice,
 } from "@/server/queries/transfers"
 
@@ -71,12 +72,18 @@ export function TransferForm({
   transfer?: TransferFormValues
 }) {
   const router = useRouter()
+  // Id unik per form: router menyimpan halaman sebelumnya tersembunyi di DOM, jadi id tetap
+  // bisa kembar dan label menunjuk ke input yang salah.
+  const uid = useId()
+  const fieldId = (name: string) => `${uid}-${name}`
   const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
     saveTransfer,
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
   const [partner, setPartner] = useState(transfer?.partner ?? null)
+  const [locationId, setLocationId] = useState<string | null>(transfer?.locationId ?? null)
+  const outbound = kind.locationSide === "source"
   const nextKey = useRef(transfer?.lines.length || 1)
   const [lines, setLines] = useState<Line[]>(() =>
     transfer?.lines.length
@@ -121,9 +128,9 @@ export function TransferForm({
       <FormSection title={`Data ${kind.noun}`}>
         <div className="grid gap-4 sm:grid-cols-2">
           {kind.partnerRole && (
-            <FormField label={kind.partnerLabel ?? "Partner"} htmlFor="transfer-partner">
+            <FormField label={kind.partnerLabel ?? "Partner"} htmlFor={fieldId("transfer-partner")}>
               <SearchSelect<PartnerChoice>
-                id="transfer-partner"
+                id={fieldId("transfer-partner")}
                 endpoint="/api/partners"
                 params={{ role: kind.partnerRole }}
                 value={partner}
@@ -136,15 +143,16 @@ export function TransferForm({
           )}
           <FormField
             label={kind.locationLabel}
-            htmlFor="transfer-location"
+            htmlFor={fieldId("transfer-location")}
             errors={fieldErrors?.locationId}
           >
             <Select
               name="locationId"
               items={locationItems}
-              defaultValue={fieldValue(state, "locationId", transfer?.locationId) ?? null}
+              value={locationId}
+              onValueChange={setLocationId}
             >
-              <SelectTrigger id="transfer-location" className="w-full">
+              <SelectTrigger id={fieldId("transfer-location")} className="w-full">
                 <SelectValue placeholder="Pilih lokasi gudang" />
               </SelectTrigger>
               <SelectContent>
@@ -158,11 +166,11 @@ export function TransferForm({
           </FormField>
           <FormField
             label="Tanggal rencana"
-            htmlFor="transfer-date"
+            htmlFor={fieldId("transfer-date")}
             errors={fieldErrors?.scheduledDate}
           >
             <Input
-              id="transfer-date"
+              id={fieldId("transfer-date")}
               name="scheduledDate"
               type="date"
               defaultValue={fieldValue(state, "scheduledDate", transfer?.scheduledDate)}
@@ -170,19 +178,19 @@ export function TransferForm({
           </FormField>
           <FormField
             label="Referensi PO/SO"
-            htmlFor="transfer-reference"
+            htmlFor={fieldId("transfer-reference")}
             errors={fieldErrors?.reference}
           >
             <Input
-              id="transfer-reference"
+              id={fieldId("transfer-reference")}
               name="reference"
               defaultValue={fieldValue(state, "reference", transfer?.reference)}
             />
           </FormField>
         </div>
-        <FormField label="Catatan" htmlFor="transfer-notes" errors={fieldErrors?.notes}>
+        <FormField label="Catatan" htmlFor={fieldId("transfer-notes")} errors={fieldErrors?.notes}>
           <Textarea
-            id="transfer-notes"
+            id={fieldId("transfer-notes")}
             name="notes"
             rows={2}
             defaultValue={fieldValue(state, "notes", transfer?.notes)}
@@ -216,7 +224,7 @@ export function TransferForm({
               >
                 <div className="col-span-2 md:col-span-1">
                   <SearchSelect<ProductChoice>
-                    id={`line-product-${line.key}`}
+                    id={fieldId(`product-${line.key}`)}
                     endpoint="/api/products"
                     value={line.product}
                     onValueChange={(product) =>
@@ -226,7 +234,7 @@ export function TransferForm({
                     getLabel={(item) => `[${item.sku}] ${item.name}`}
                     placeholder="Cari SKU atau nama produk"
                   />
-                  <label htmlFor={`line-product-${line.key}`} className="sr-only">
+                  <label htmlFor={fieldId(`product-${line.key}`)} className="sr-only">
                     Produk {label}
                   </label>
                 </div>
@@ -255,13 +263,23 @@ export function TransferForm({
                     ))}
                   </SelectContent>
                 </Select>
-                <Input
-                  aria-label={`Nomor lot ${label}`}
-                  placeholder={line.product?.lotRequired ? "Lot (wajib)" : "Lot"}
-                  value={line.lotName}
-                  onChange={(event) => update(line.key, { lotName: event.target.value })}
-                  className={`font-mono ${TOUCH}`}
-                />
+                {outbound ? (
+                  <OutboundLot
+                    label={label}
+                    product={line.product}
+                    locationId={locationId}
+                    value={line.lotName}
+                    onChange={(lotName) => update(line.key, { lotName })}
+                  />
+                ) : (
+                  <Input
+                    aria-label={`Nomor lot ${label}`}
+                    placeholder={line.product?.lotRequired ? "Lot (wajib)" : "Lot"}
+                    value={line.lotName}
+                    onChange={(event) => update(line.key, { lotName: event.target.value })}
+                    className={`font-mono ${TOUCH}`}
+                  />
+                )}
                 <Button
                   type="button"
                   variant="ghost"
@@ -303,5 +321,78 @@ export function TransferForm({
         )}
       </div>
     </form>
+  )
+}
+
+const NO_LOT = "__tanpa_lot__"
+
+// Lot barang keluar dipilih dari lot yang masih ada stoknya di lokasi asal, dengan petunjuk
+// jumlah tersedia (PRD bagian 6: cek ketersediaan stok). Pengecekan yang menentukan tetap di
+// database saat Siap dan validasi.
+function OutboundLot({
+  label,
+  product,
+  locationId,
+  value,
+  onChange,
+}: {
+  label: string
+  product: ProductChoice | null
+  locationId: string | null
+  value: string
+  onChange: (lotName: string) => void
+}) {
+  const [stock, setStock] = useState<StockAvailability | null>(null)
+  const productId = product?.id
+
+  useEffect(() => {
+    if (!productId || !locationId) return
+    const controller = new AbortController()
+    fetch(
+      `/api/stock-availability?${new URLSearchParams({ product: productId, location: locationId })}`,
+      {
+        signal: controller.signal,
+      },
+    )
+      .then((response) => (response.ok ? response.json() : null))
+      .then((body: StockAvailability | null) => setStock(body))
+      .catch(() => {})
+    return () => controller.abort()
+  }, [productId, locationId])
+
+  const current = productId && locationId ? stock : null
+  const lots = current?.lots ?? []
+  // Lot yang sudah tersimpan tetap bisa dipilih walau stoknya sudah habis.
+  const items = [
+    { value: NO_LOT, label: "Tanpa lot" },
+    ...lots.map((lot) => ({ value: lot.name, label: `${lot.name} (${formatDecimal(lot.qty)})` })),
+    ...(value && !lots.some((lot) => lot.name === value) ? [{ value, label: value }] : []),
+  ]
+
+  return (
+    <div className="space-y-1">
+      <Select
+        items={items}
+        value={value || NO_LOT}
+        onValueChange={(next) => onChange(next && next !== NO_LOT ? next : "")}
+        disabled={!product || !locationId}
+      >
+        <SelectTrigger aria-label={`Nomor lot ${label}`} className={`w-full font-mono ${TOUCH}`}>
+          <SelectValue placeholder="Lot" />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((item) => (
+            <SelectItem key={item.value} value={item.value}>
+              {item.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      {current && (
+        <p className="text-xs text-muted-foreground">
+          Tersedia {formatDecimal(current.qty)} {current.uomCode}
+        </p>
+      )}
+    </div>
   )
 }

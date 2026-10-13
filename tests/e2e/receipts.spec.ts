@@ -37,7 +37,7 @@ test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => 
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),
   ).toBeVisible()
-  await expect(page.getByText("Selesai", { exact: true })).toBeVisible()
+  await expect(page.getByText("Selesai", { exact: true }).filter({ visible: true })).toBeVisible()
   await expect(page.getByRole("button", { name: "Batalkan penerimaan" })).toHaveCount(0)
 
   expect(await stockAt(fixture.product.id, fixture.rack.id)).toBe(12.5)

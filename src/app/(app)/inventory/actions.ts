@@ -113,7 +113,7 @@ export const saveTransfer = defineFormAction({
       id = row.id
     }
 
-    await insertLines(tx, id, header, input.lines)
+    await insertLines(tx, id, header, input.lines, inbound)
     return { id }
   },
 })
@@ -124,6 +124,8 @@ async function insertLines(
   transferId: string,
   header: { sourceLocationId: string; destinationLocationId: string },
   lines: TransferLineInput[],
+  // Barang masuk boleh membawa lot baru; barang keluar hanya lot yang sudah ada.
+  createLots: boolean,
 ) {
   const lotIds = new Map<string, string>()
   const lotKey = (productId: string, name: string) => `${productId}|${name}`
@@ -139,6 +141,14 @@ async function insertLines(
         ),
       )
     for (const lot of existing) lotIds.set(lotKey(lot.productId, lot.name), lot.id)
+    if (!createLots) {
+      const missing = lines.flatMap((line, index) =>
+        line.lotName && !lotIds.has(lotKey(line.productId, line.lotName))
+          ? [`Baris ${index + 1}: lot ${line.lotName} tidak ada untuk produk ini.`]
+          : [],
+      )
+      if (missing.length) throw new AppError(missing)
+    }
     for (const line of wanted) {
       const key = lotKey(line.productId, line.lotName!)
       if (lotIds.has(key)) continue
@@ -151,8 +161,9 @@ async function insertLines(
   }
 
   await tx.insert(stockMoves).values(
-    lines.map((line) => ({
+    lines.map((line, index) => ({
       transferId,
+      position: index + 1,
       productId: line.productId,
       lotId: line.lotName ? lotIds.get(lotKey(line.productId, line.lotName)) : null,
       inputQty: line.inputQty,
@@ -195,9 +206,13 @@ export const markTransferReady = defineAction({
           isNull(stockMoves.lotId),
         ),
       )
-    if (missingLots.length) {
-      throw new AppError(missingLots.map((row) => `Produk ${row.sku} wajib diisi nomor lot.`))
-    }
+    const errors = missingLots.map((row) => `Produk ${row.sku} wajib diisi nomor lot.`)
+    // Barang keluar: stok dicek saat Siap dengan aturan yang sama seperti validasi (PRD 6.3).
+    const shortages = await tx.execute<{ errors: string[] }>(
+      sql`select transfer_stock_errors(${input.id}) as errors`,
+    )
+    errors.push(...(shortages.rows[0]?.errors ?? []))
+    if (errors.length) throw new AppError(errors)
     await tx.update(transfers).set({ status: "ready" }).where(eq(transfers.id, input.id))
   },
 })

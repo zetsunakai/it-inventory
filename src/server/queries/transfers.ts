@@ -11,6 +11,7 @@ import {
   lots,
   partners,
   products,
+  stockBalances,
   stockMoves,
   transfers,
   uomCategories,
@@ -175,7 +176,7 @@ export async function getTransfer(userId: string, id: string) {
     .innerJoin(stockUom, eq(stockUom.id, products.uomId))
     .leftJoin(lots, eq(lots.id, stockMoves.lotId))
     .where(eq(stockMoves.transferId, id))
-    .orderBy(asc(stockMoves.createdAt), asc(stockMoves.id))
+    .orderBy(asc(stockMoves.position), asc(stockMoves.createdAt))
 
   return {
     ...header.transfer,
@@ -289,4 +290,45 @@ export async function searchPartners(
     )
     .orderBy(asc(partners.name))
     .limit(PRODUCT_SEARCH_LIMIT)
+}
+
+export type StockAvailability = {
+  // Total saldo produk di lokasi, dalam satuan stok.
+  qty: string
+  uomCode: string
+  lots: { name: string; qty: string }[]
+}
+
+// Saldo satu produk di satu lokasi beserta lot yang masih ada stoknya (/api/stock-availability),
+// untuk pilihan lot dan petunjuk "tersedia" di form barang keluar.
+export async function stockAvailability(
+  productId: string,
+  locationId: string,
+): Promise<StockAvailability> {
+  const rows = await db
+    .select({ lotName: lots.name, qty: stockBalances.qty, uomCode: uoms.code })
+    .from(stockBalances)
+    .innerJoin(products, eq(products.id, stockBalances.productId))
+    .innerJoin(uoms, eq(uoms.id, products.uomId))
+    .leftJoin(lots, eq(lots.id, stockBalances.lotId))
+    .where(and(eq(stockBalances.productId, productId), eq(stockBalances.locationId, locationId)))
+    .orderBy(asc(lots.name))
+  const [unit] = rows.length
+    ? [rows[0].uomCode]
+    : (
+        await db
+          .select({ code: uoms.code })
+          .from(products)
+          .innerJoin(uoms, eq(uoms.id, products.uomId))
+          .where(eq(products.id, productId))
+      ).map((row) => row.code)
+  const total = rows.reduce((sum, row) => sum + Number(row.qty), 0)
+  return {
+    // Jumlah untuk tampilan saja; validasi stok tetap di database.
+    qty: total.toFixed(4),
+    uomCode: unit ?? "",
+    lots: rows
+      .filter((row) => row.lotName && Number(row.qty) > 0)
+      .map((row) => ({ name: row.lotName!, qty: row.qty })),
+  }
 }
