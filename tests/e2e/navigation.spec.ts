@@ -51,16 +51,16 @@ test("klik menu membuka modul dan menandai menu yang aktif", async ({ page }) =>
   await login(page, ACCOUNTS.gudang)
 
   // Modul yang masih berupa placeholder.
-  await sidebar(page).getByRole("link", { name: "Stock opname" }).click()
+  await sidebar(page).getByRole("link", { name: "Stok", exact: true }).click()
 
-  await expect(page).toHaveURL(/\/inventory\/opname$/)
-  await expect(page.getByRole("heading", { name: "Stock opname", level: 1 })).toBeVisible()
-  await expect(page.getByText("Dijadwalkan di M2-09.")).toBeVisible()
-  await expect(sidebar(page).getByRole("link", { name: "Stock opname" })).toHaveAttribute(
+  await expect(page).toHaveURL(/\/inventory\/stok$/)
+  await expect(page.getByRole("heading", { name: "Stok", level: 1 })).toBeVisible()
+  await expect(page.getByText("Dijadwalkan di M2-11.")).toBeVisible()
+  await expect(sidebar(page).getByRole("link", { name: "Stok", exact: true })).toHaveAttribute(
     "title",
-    "Belum tersedia, dijadwalkan di M2-09",
+    "Belum tersedia, dijadwalkan di M2-11",
   )
-  await expect(sidebar(page).getByRole("link", { name: "Stock opname" })).toHaveAttribute(
+  await expect(sidebar(page).getByRole("link", { name: "Stok", exact: true })).toHaveAttribute(
     "aria-current",
     "page",
   )

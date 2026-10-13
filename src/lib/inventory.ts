@@ -95,3 +95,14 @@ export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
 // Status baris pergerakan: mengikuti transfernya, tanpa tahap Siap.
 export const STOCK_MOVE_STATUSES = ["draft", "done", "cancelled"] as const
 export type StockMoveStatus = (typeof STOCK_MOVE_STATUSES)[number]
+
+// Sesi stock opname (PRD bagian 6.5): dihitung → menunggu persetujuan → disetujui, atau batal.
+export const STOCK_COUNT_STATUSES = ["counting", "review", "approved", "cancelled"] as const
+export type StockCountStatus = (typeof STOCK_COUNT_STATUSES)[number]
+
+export const STOCK_COUNT_STATUS_LABELS: Record<StockCountStatus, string> = {
+  counting: "Dihitung",
+  review: "Menunggu persetujuan",
+  approved: "Disetujui",
+  cancelled: "Batal",
+}

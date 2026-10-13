@@ -213,6 +213,7 @@ export type TransferDetail = NonNullable<Awaited<ReturnType<typeof getTransfer>>
 export type LocationOption = {
   id: string
   path: string
+  warehouseId: string
   warehouseCode: string
   warehouseName: string
   isBonded: boolean
@@ -224,6 +225,7 @@ export async function listInternalLocations(userId: string): Promise<LocationOpt
     .select({
       id: locations.id,
       path: locationPaths.path,
+      warehouseId: warehouses.id,
       warehouseCode: warehouses.code,
       warehouseName: warehouses.name,
       isBonded: warehouses.isBonded,

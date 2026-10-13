@@ -16,7 +16,12 @@ import {
 } from "drizzle-orm/pg-core"
 
 // Path relatif (bukan alias @/) karena schema juga dibaca oleh drizzle-kit dan script CLI.
-import { STOCK_MOVE_STATUSES, TRANSFER_STATUSES, TRANSFER_TYPES } from "../../../lib/inventory"
+import {
+  STOCK_COUNT_STATUSES,
+  STOCK_MOVE_STATUSES,
+  TRANSFER_STATUSES,
+  TRANSFER_TYPES,
+} from "../../../lib/inventory"
 
 import { timestamps } from "./_columns"
 import { partners } from "./partners"
@@ -40,6 +45,7 @@ const qty = () => numeric({ precision: 18, scale: 4 })
 export const transferType = pgEnum("transfer_type", TRANSFER_TYPES)
 export const transferStatus = pgEnum("transfer_status", TRANSFER_STATUSES)
 export const stockMoveStatus = pgEnum("stock_move_status", STOCK_MOVE_STATUSES)
+export const stockCountStatus = pgEnum("stock_count_status", STOCK_COUNT_STATUSES)
 
 // Penghitung nomor per lingkup dan periode, mis. ("transfer:receipt", "2026"). Dipakai fungsi
 // next_number() supaya nomor unik walaupun dibuat bersamaan; nanti juga untuk nomor aju (M3).
@@ -97,6 +103,8 @@ export const transfers = pgTable(
     // Alasan scrap dan penyesuaian (wajib untuk keduanya, dicek saat validasi).
     reason: text(),
     returnOfId: uuid().references((): AnyPgColumn => transfers.id, { onDelete: "restrict" }),
+    // Penyesuaian hasil stock opname (M2-09).
+    stockCountId: uuid().references((): AnyPgColumn => stockCounts.id, { onDelete: "restrict" }),
     backorderOfId: uuid().references((): AnyPgColumn => transfers.id, { onDelete: "restrict" }),
     doneAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
@@ -113,6 +121,7 @@ export const transfers = pgTable(
     index("transfers_partner_idx").on(table.partnerId),
     index("transfers_return_of_idx").on(table.returnOfId),
     index("transfers_backorder_of_idx").on(table.backorderOfId),
+    index("transfers_stock_count_idx").on(table.stockCountId),
     index("transfers_done_at_idx").on(table.doneAt),
     check(
       "transfers_locations_differ",
@@ -220,5 +229,67 @@ export const stockBalances = pgTable(
       .nullsNotDistinct(),
     index("stock_balances_location_idx").on(table.locationId),
     index("stock_balances_warehouse_idx").on(table.warehouseId),
+  ],
+)
+
+// Sesi stock opname (PRD bagian 6.5): satu gudang, atau satu lokasi beserta sub-lokasinya.
+// Qty sistem dihitung dari ledger per cut_off_at saat sesi diajukan, lalu disimpan di baris supaya
+// laporan opname tidak berubah. Aturan dan fungsi di migrasi stock_count_rules.
+export const stockCounts = pgTable(
+  "stock_counts",
+  {
+    id: id(),
+    number: text().notNull().unique().default(""),
+    warehouseId: uuid()
+      .notNull()
+      .references(() => warehouses.id, { onDelete: "restrict" }),
+    // Kosong = seluruh lokasi internal di gudang.
+    locationId: uuid().references(() => locations.id, { onDelete: "restrict" }),
+    cutOffAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+    status: stockCountStatus().notNull().default("counting"),
+    notes: text(),
+    createdBy: uuid(),
+    submittedAt: timestamp({ withTimezone: true }),
+    approvedAt: timestamp({ withTimezone: true }),
+    approvedBy: uuid(),
+    cancelledAt: timestamp({ withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    index("stock_counts_warehouse_idx").on(table.warehouseId),
+    index("stock_counts_status_idx").on(table.status),
+  ],
+)
+
+// Baris hitung per produk × lokasi × lot. counted_qty kosong = belum dihitung.
+export const stockCountLines = pgTable(
+  "stock_count_lines",
+  {
+    id: id(),
+    stockCountId: uuid()
+      .notNull()
+      .references(() => stockCounts.id, { onDelete: "cascade" }),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    locationId: uuid()
+      .notNull()
+      .references(() => locations.id, { onDelete: "restrict" }),
+    lotId: uuid().references(() => lots.id, { onDelete: "restrict" }),
+    systemQty: qty(),
+    countedQty: qty(),
+    countedBy: uuid(),
+    countedAt: timestamp({ withTimezone: true }),
+    ...timestamps,
+  },
+  (table) => [
+    unique("stock_count_lines_item_unique")
+      .on(table.stockCountId, table.productId, table.locationId, table.lotId)
+      .nullsNotDistinct(),
+    index("stock_count_lines_count_idx").on(table.stockCountId),
+    check(
+      "stock_count_lines_qty_not_negative",
+      sql`(${table.countedQty} is null or ${table.countedQty} >= 0)`,
+    ),
   ],
 )

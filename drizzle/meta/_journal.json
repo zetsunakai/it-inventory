@@ -204,6 +204,20 @@
       "when": 1791900791442,
       "tag": "0028_approval_check",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "7",
+      "when": 1791901172192,
+      "tag": "0029_stock_counts",
+      "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "7",
+      "when": 1791901241420,
+      "tag": "0030_stock_count_rules",
+      "breakpoints": true
     }
   ]
 }

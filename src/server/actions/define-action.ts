@@ -37,6 +37,9 @@ type ActionDefinition<Schema extends z.ZodType, Output> = {
   handler: (ctx: HandlerContext<z.infer<Schema>>) => Promise<Output>
   // Pesan sukses opsional untuk ditampilkan di UI.
   successMessage?: string
+  // false = halaman tidak di-render ulang setelah berhasil (mis. simpan qty per baris saat
+  // menghitung opname, yang state-nya sudah dipegang client).
+  refresh?: boolean
 }
 
 async function execute<Schema extends z.ZodType, Output>(
@@ -61,7 +64,7 @@ async function execute<Schema extends z.ZodType, Output>(
     const data = await withAuditUser(user.id, (tx) =>
       definition.handler({ input: parsed.data, user, tx }),
     )
-    refresh()
+    if (definition.refresh !== false) refresh()
     return { ok: true, data, message: definition.successMessage }
   } catch (error) {
     // redirect(), notFound(), forbidden() dari handler harus diteruskan ke Next.js.

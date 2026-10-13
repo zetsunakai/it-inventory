@@ -206,6 +206,10 @@ dimatikan: user baru dibuat oleh Administrator.
   Manajer menekan "Setujui dan validasi" (`approveTransfer`, izin `inventory:approve`) sehingga
   pergerakan baru tercatat setelah disetujui. `validate_transfer` hanya menerima persetujuan dari
   user berperan Manajer atau Administrator; bila validasi gagal, persetujuan ikut batal.
+- Stock opname (`/inventory/opname`): Manajer membuat sesi per gudang/lokasi (cut-off = saat dibuat),
+  admin gudang menghitung di HP lewat scan SKU tanpa melihat qty sistem (disimpan per baris),
+  `submit_stock_count()` menyimpan qty sistem per cut-off (`stock_qty_at()`), dan
+  `approve_stock_count()` membuat penyesuaian dari selisihnya (`transfers.stock_count_id`).
 - Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`. Isi pemilih
   berpencarian dengan `fillInteractive()` (`tests/e2e/interactive.ts`), yang menunggu hidrasi React
   dulu; label dicari dengan `exact: true` supaya tidak cocok dengan placeholder lain.

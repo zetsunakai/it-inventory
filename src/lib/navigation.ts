@@ -80,7 +80,6 @@ export const NAVIGATION: NavGroup[] = [
         title: "Stock opname",
         href: "/inventory/opname",
         permission: "inventory:read",
-        plannedIn: "M2-09",
       },
       {
         title: "Tutup periode",
