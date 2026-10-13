@@ -177,6 +177,20 @@ dimatikan: user baru dibuat oleh Administrator.
 - Tes yang butuh data Selesai memakai `enableLedgerWrite()`, dan membersihkannya dengan
   `purgeInventory()` (`tests/db/helpers.ts`).
 
+## Layar transaksi inventory
+
+- Halaman daftar, buat, dan detail sama untuk semua jenis transfer: `src/components/inventory/`
+  (`transfer-pages.tsx`, `transfer-form.tsx`, `transfer-actions.tsx`). Halaman di
+  `src/app/(app)/inventory/<jenis>/` hanya meneruskan konfigurasi jenisnya dari `TRANSFER_KINDS`
+  (`src/lib/transfer.ts`): sisi gudang yang dipilih user, label partner, dan lokasi virtual lawannya.
+- Server action di `src/app/(app)/inventory/actions.ts`: simpan Draft (baris dikirim sebagai JSON,
+  lot dibuat otomatis per produk), tandai Siap, kembali ke Draft, validasi (memanggil
+  `validate_transfer`, tanggal efektif mundur hanya untuk Manajer), dan batal.
+- Produk dan partner dicari lewat `/api/products` dan `/api/partners` dengan komponen
+  `SearchSelect`. Input baris barang punya target sentuh 44px di perangkat sentuh
+  (`pointer-coarse:`).
+- Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`.
+
 ## Arsip dan hapus
 
 - Data master yang sudah dipakai tidak dihapus, tapi diarsipkan (kolom `active`, centang Aktif di

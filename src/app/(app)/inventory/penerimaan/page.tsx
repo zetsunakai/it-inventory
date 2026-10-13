@@ -1,7 +1,17 @@
-import { ModulePlaceholder, moduleMetadata } from "@/components/module-placeholder"
+import type { Metadata } from "next"
 
-export const metadata = moduleMetadata("/inventory/penerimaan")
+import { TransferListPage } from "@/components/inventory/transfer-pages"
+import { TRANSFER_KINDS } from "@/lib/transfer"
 
-export default function Page() {
-  return <ModulePlaceholder href="/inventory/penerimaan" />
+export const metadata: Metadata = { title: "Penerimaan · IT Inventory" }
+
+export default function ReceiptsPage({ searchParams }: PageProps<"/inventory/penerimaan">) {
+  return (
+    <TransferListPage
+      kind={TRANSFER_KINDS.receipt}
+      title="Penerimaan"
+      description="Barang masuk dari vendor. Stok bertambah saat penerimaan divalidasi."
+      searchParams={searchParams}
+    />
+  )
 }

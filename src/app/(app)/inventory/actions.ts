@@ -1,0 +1,250 @@
+"use server"
+
+import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm"
+import { z } from "zod"
+
+import { optionalText } from "@/lib/form-fields"
+import { TRANSFER_TYPES, type TransferType } from "@/lib/inventory"
+import { transferLinesField, type TransferLineInput } from "@/lib/transfer"
+import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
+import type { Transaction } from "@/server/db/audit"
+import { locations, lots, products, stockMoves, transfers } from "@/server/db/schema"
+
+// Transfer inventory (PRD bagian 6, backlog M2-03 dst.): simpan draft, tandai siap, validasi,
+// batal. Aturan stok, lokasi, dan penguncian dipaksakan database (validate_transfer dan trigger
+// di migrasi inventory_rules/validate_transfer); di sini hanya menyusun data dan meneruskan
+// pesan kesalahannya.
+
+// Lokasi virtual di sisi luar transfer, dibuat seed.
+const VIRTUAL_SIDE: Partial<Record<TransferType, "vendor" | "customer">> = {
+  receipt: "vendor",
+  delivery: "customer",
+}
+
+// Barang masuk ke gudang: lokasi yang dipilih user adalah tujuan.
+const INBOUND: TransferType[] = ["receipt"]
+
+const optionalDate = z
+  .string()
+  .optional()
+  .transform((value) => value || null)
+  .refine((value) => value === null || /^\d{4}-\d{2}-\d{2}$/.test(value), "Tanggal tidak valid.")
+
+const optionalUuid = (label: string) =>
+  z
+    .union([z.uuid(`${label} tidak valid.`), z.literal("")])
+    .optional()
+    .transform((value) => value || null)
+
+export const saveTransfer = defineFormAction({
+  name: "saveTransfer",
+  permission: "inventory:write",
+  schema: z.object({
+    id: optionalUuid("Transfer"),
+    type: z.enum(TRANSFER_TYPES),
+    partnerId: optionalUuid("Partner"),
+    locationId: z.uuid("Pilih lokasi gudang."),
+    scheduledDate: optionalDate,
+    reference: optionalText("Referensi", 100),
+    notes: optionalText("Catatan", 2000),
+    lines: transferLinesField,
+  }),
+  successMessage: "Transfer disimpan.",
+  handler: async ({ input, user, tx }) => {
+    const errors: string[] = []
+    const virtualType = VIRTUAL_SIDE[input.type]
+    if (!virtualType) throw new AppError("Jenis transfer ini belum didukung.")
+    if (!input.partnerId) {
+      errors.push(`Pilih ${virtualType === "vendor" ? "vendor" : "customer"}.`)
+    }
+
+    const [location] = await tx
+      .select({
+        warehouseId: locations.warehouseId,
+        allowed: sql<boolean>`can_access_warehouse(${user.id}, ${locations.warehouseId})`,
+      })
+      .from(locations)
+      .where(eq(locations.id, input.locationId))
+    if (!location?.warehouseId) errors.push("Lokasi gudang tidak ditemukan.")
+    else if (!location.allowed) errors.push("Anda tidak punya akses ke gudang lokasi ini.")
+
+    const [outside] = await tx
+      .select({ id: locations.id })
+      .from(locations)
+      .where(
+        and(
+          eq(locations.type, virtualType),
+          isNull(locations.warehouseId),
+          eq(locations.active, true),
+        ),
+      )
+      .orderBy(asc(locations.code))
+      .limit(1)
+    if (!outside) errors.push(`Lokasi virtual ${virtualType} belum ada. Hubungi Administrator.`)
+    if (errors.length) throw new AppError(errors)
+
+    const inbound = INBOUND.includes(input.type)
+    const header = {
+      partnerId: input.partnerId,
+      sourceLocationId: inbound ? outside.id : input.locationId,
+      destinationLocationId: inbound ? input.locationId : outside.id,
+      scheduledDate: input.scheduledDate,
+      reference: input.reference,
+      notes: input.notes,
+    }
+
+    let id = input.id
+    if (id) {
+      const [saved] = await tx
+        .select({ status: transfers.status, type: transfers.type })
+        .from(transfers)
+        .where(eq(transfers.id, id))
+      if (!saved || saved.type !== input.type) throw new AppError("Transfer tidak ditemukan.")
+      if (saved.status !== "draft") {
+        throw new AppError("Hanya transfer Draft yang bisa diubah. Kembalikan ke Draft dulu.")
+      }
+      await tx.update(transfers).set(header).where(eq(transfers.id, id))
+      await tx.delete(stockMoves).where(eq(stockMoves.transferId, id))
+    } else {
+      const [row] = await tx
+        .insert(transfers)
+        .values({ type: input.type, ...header })
+        .returning({ id: transfers.id })
+      id = row.id
+    }
+
+    await insertLines(tx, id, header, input.lines)
+    return { id }
+  },
+})
+
+// Baris barang: lot dicari atau dibuat per produk. Qty dalam satuan stok dihitung database.
+async function insertLines(
+  tx: Transaction,
+  transferId: string,
+  header: { sourceLocationId: string; destinationLocationId: string },
+  lines: TransferLineInput[],
+) {
+  const lotIds = new Map<string, string>()
+  const lotKey = (productId: string, name: string) => `${productId}|${name}`
+  const wanted = lines.filter((line) => line.lotName)
+  if (wanted.length) {
+    const existing = await tx
+      .select({ id: lots.id, productId: lots.productId, name: lots.name })
+      .from(lots)
+      .where(
+        inArray(
+          lots.productId,
+          wanted.map((line) => line.productId),
+        ),
+      )
+    for (const lot of existing) lotIds.set(lotKey(lot.productId, lot.name), lot.id)
+    for (const line of wanted) {
+      const key = lotKey(line.productId, line.lotName!)
+      if (lotIds.has(key)) continue
+      const [lot] = await tx
+        .insert(lots)
+        .values({ productId: line.productId, name: line.lotName! })
+        .returning({ id: lots.id })
+      lotIds.set(key, lot.id)
+    }
+  }
+
+  await tx.insert(stockMoves).values(
+    lines.map((line) => ({
+      transferId,
+      productId: line.productId,
+      lotId: line.lotName ? lotIds.get(lotKey(line.productId, line.lotName)) : null,
+      inputQty: line.inputQty,
+      inputUomId: line.uomId,
+      sourceLocationId: header.sourceLocationId,
+      destinationLocationId: header.destinationLocationId,
+    })),
+  )
+}
+
+const idInput = z.object({ id: z.uuid("Transfer tidak valid.") })
+
+async function transferStatus(tx: Transaction, id: string) {
+  const [row] = await tx
+    .select({ status: transfers.status })
+    .from(transfers)
+    .where(eq(transfers.id, id))
+  if (!row) throw new AppError("Transfer tidak ditemukan.")
+  return row.status
+}
+
+// Siap: data lengkap (PRD bagian 6.3). Ketersediaan stok dan syarat lain dicek lagi saat validasi.
+export const markTransferReady = defineAction({
+  name: "markTransferReady",
+  permission: "inventory:write",
+  schema: idInput,
+  successMessage: "Transfer ditandai Siap.",
+  handler: async ({ input, tx }) => {
+    if ((await transferStatus(tx, input.id)) !== "draft") {
+      throw new AppError("Hanya transfer Draft yang bisa ditandai Siap.")
+    }
+    const missingLots = await tx
+      .select({ sku: products.sku })
+      .from(stockMoves)
+      .innerJoin(products, eq(products.id, stockMoves.productId))
+      .where(
+        and(
+          eq(stockMoves.transferId, input.id),
+          eq(products.lotRequired, true),
+          isNull(stockMoves.lotId),
+        ),
+      )
+    if (missingLots.length) {
+      throw new AppError(missingLots.map((row) => `Produk ${row.sku} wajib diisi nomor lot.`))
+    }
+    await tx.update(transfers).set({ status: "ready" }).where(eq(transfers.id, input.id))
+  },
+})
+
+export const reopenTransfer = defineAction({
+  name: "reopenTransfer",
+  permission: "inventory:write",
+  schema: idInput,
+  successMessage: "Transfer dikembalikan ke Draft.",
+  handler: async ({ input, tx }) => {
+    if ((await transferStatus(tx, input.id)) !== "ready") {
+      throw new AppError("Hanya transfer Siap yang bisa dikembalikan ke Draft.")
+    }
+    await tx.update(transfers).set({ status: "draft" }).where(eq(transfers.id, input.id))
+  },
+})
+
+export const cancelTransfer = defineAction({
+  name: "cancelTransfer",
+  permission: "inventory:write",
+  schema: idInput,
+  successMessage: "Transfer dibatalkan.",
+  handler: async ({ input, tx }) => {
+    const status = await transferStatus(tx, input.id)
+    if (status !== "draft" && status !== "ready") {
+      throw new AppError("Hanya transfer Draft atau Siap yang bisa dibatalkan.")
+    }
+    await tx
+      .update(transfers)
+      .set({ status: "cancelled", cancelledAt: new Date() })
+      .where(eq(transfers.id, input.id))
+  },
+})
+
+// Tanggal efektif mundur diisi sebagai tanggal (YYYY-MM-DD, WIB); disimpan pukul 12.00 WIB.
+// Kosong = sekarang.
+export const validateTransfer = defineAction({
+  name: "validateTransfer",
+  permission: "inventory:write",
+  schema: idInput.extend({ effectiveDate: optionalDate }),
+  successMessage: "Transfer divalidasi. Stok sudah diperbarui.",
+  handler: async ({ input, tx }) => {
+    const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
+    const effectiveAt =
+      input.effectiveDate && input.effectiveDate !== today
+        ? `${input.effectiveDate}T12:00:00+07:00`
+        : null
+    await tx.execute(sql`select validate_transfer(${input.id}, ${effectiveAt}::timestamptz)`)
+  },
+})
