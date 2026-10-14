@@ -1,10 +1,10 @@
 import "server-only"
 
-import { aliasedTable, and, asc, count, desc, eq, ilike, or, type SQL } from "drizzle-orm"
+import { aliasedTable, and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm"
 
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
-import { uomCategories, uoms } from "@/server/db/schema"
+import { products, uomCategories, uoms } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
 
 const reference = aliasedTable(uoms, "reference_uom")
@@ -21,6 +21,9 @@ const uomWithCategory = {
   categoryCode: uomCategories.code,
   categoryName: uomCategories.name,
   referenceCode: reference.code,
+  rounding: uoms.rounding,
+  productId: uoms.productId,
+  productSku: products.sku,
 }
 
 export type UomRow = {
@@ -34,6 +37,10 @@ export type UomRow = {
   categoryCode: string
   categoryName: string
   referenceCode: string | null
+  rounding: string
+  // Satuan khusus produk (R-03); kosong = satuan umum.
+  productId: string | null
+  productSku: string | null
 }
 
 function withCategory() {
@@ -45,6 +52,7 @@ function withCategory() {
       reference,
       and(eq(reference.categoryId, uoms.categoryId), eq(reference.isReference, true)),
     )
+    .leftJoin(products, eq(products.id, uoms.productId))
 }
 
 // Halaman Satuan: cari kode/nama, filter kategori, pagination. Urut per kategori, acuan dulu.
@@ -60,18 +68,30 @@ export async function listUoms({
   if (categoryId) conditions.push(eq(uoms.categoryId, categoryId))
   if (search) {
     const pattern = containsPattern(search)
-    conditions.push(or(ilike(uoms.code, pattern), ilike(uoms.name, pattern))!)
+    conditions.push(
+      or(ilike(uoms.code, pattern), ilike(uoms.name, pattern), ilike(products.sku, pattern))!,
+    )
   }
   const where = and(...conditions)
 
   const [rows, [{ total }]] = await Promise.all([
     withCategory()
       .where(where)
-      // Per kategori: acuan dulu, lalu dari satuan terkecil.
-      .orderBy(asc(uomCategories.name), desc(uoms.isReference), asc(uoms.factor), asc(uoms.code))
+      // Per kategori: acuan dulu, satuan umum dari yang terkecil, lalu satuan khusus produk.
+      .orderBy(
+        asc(uomCategories.name),
+        desc(uoms.isReference),
+        sql`${uoms.productId} is not null`,
+        asc(uoms.factor),
+        asc(uoms.code),
+      )
       .limit(pageSize)
       .offset(offset),
-    db.select({ total: count() }).from(uoms).where(where),
+    db
+      .select({ total: count() })
+      .from(uoms)
+      .leftJoin(products, eq(products.id, uoms.productId))
+      .where(where),
   ])
   return { rows, total }
 }

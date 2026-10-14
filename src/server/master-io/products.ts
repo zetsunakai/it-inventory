@@ -1,6 +1,6 @@
 import "server-only"
 
-import { asc, eq, inArray, sql } from "drizzle-orm"
+import { asc, eq, inArray, isNull, sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { sameDecimal, toDecimalInput } from "@/lib/decimal"
@@ -358,6 +358,8 @@ async function loadLookups(tx: Transaction, rows: ImportRow<ProductKey>[]) {
     })
     .from(uoms)
     .innerJoin(uomCategories, eq(uomCategories.id, uoms.categoryId))
+    // Satuan stok selalu satuan umum.
+    .where(isNull(uoms.productId))
   const hsCodes = await refCodeStates(
     tx,
     "hs_code",

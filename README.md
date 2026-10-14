@@ -115,10 +115,16 @@ dimatikan: user baru dibuat oleh Administrator.
 
 - `uom_categories` dan `uoms`. `factor` = berapa satuan acuan dalam 1 satuan (acuan selalu 1, tepat
   satu per kategori), misalnya kategori Berat dengan acuan KG: G = 0,001, TON = 1000.
-- Konversi qty hanya lewat fungsi database `convert_qty(qty, dari, ke)`: menolak kategori berbeda
-  dan membulatkan ke 4 desimal. Angka desimal tidak pernah dihitung sebagai float di aplikasi
+- Konversi qty hanya lewat fungsi database `convert_qty(qty, dari, ke)`: menolak kategori berbeda,
+  membulatkan ke kelipatan `rounding` satuan tujuan (default 0,0001; mis. 1 untuk PCS supaya qty
+  selalu utuh), lalu ke 4 desimal. Angka desimal tidak pernah dihitung sebagai float di aplikasi
   (`src/lib/decimal.ts` hanya mengurai input dan memformat tampilan).
-- Kode, kategori, dan status acuan satuan tidak bisa diubah. Satuan dasar (PCS, KG, L, M, M2, dan
+- Satuan khusus produk (`uoms.product_id`, backlog R-03), mis. 1 BOX = 24 PCS hanya untuk satu
+  produk: harus sekategori dengan satuan stok produknya dan hanya bisa dipakai di baris transfer
+  produk itu (trigger `stock_moves_before_write`). Kode unik per lingkup: kode satuan umum tidak
+  boleh sama dengan kode satuan khusus mana pun, dua produk boleh punya satuan khusus berkode sama.
+  Satuan stok produk selalu satuan umum.
+- Kode, kategori, status acuan, dan produk satuan tidak bisa diubah. Satuan dasar (PCS, KG, L, M, M2, dan
   turunannya) dibuat oleh seed. Satuan CEISA (kode resmi, faktornya per produk) ada di referensi kepabeanan.
 
 ## Produk

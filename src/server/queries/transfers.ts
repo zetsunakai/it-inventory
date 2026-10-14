@@ -247,12 +247,26 @@ export async function listInternalLocations(userId: string): Promise<LocationOpt
     .orderBy(asc(locationPaths.path))
 }
 
-export type UomChoice = { id: string; code: string; name: string; categoryId: string }
+export type UomChoice = {
+  id: string
+  code: string
+  name: string
+  categoryId: string
+  // Satuan khusus produk (R-03); kosong = untuk semua produk.
+  productId: string | null
+}
 
-// Satuan aktif untuk pilihan satuan input; form menyaring ke kategori satuan stok produk.
+// Satuan aktif untuk pilihan satuan input; form menyaring ke kategori satuan stok produk dan ke
+// satuan umum atau satuan khusus produk itu.
 export async function listUomChoices(): Promise<UomChoice[]> {
   return db
-    .select({ id: uoms.id, code: uoms.code, name: uoms.name, categoryId: uoms.categoryId })
+    .select({
+      id: uoms.id,
+      code: uoms.code,
+      name: uoms.name,
+      categoryId: uoms.categoryId,
+      productId: uoms.productId,
+    })
     .from(uoms)
     .innerJoin(uomCategories, eq(uomCategories.id, uoms.categoryId))
     .where(and(eq(uoms.active, true), eq(uomCategories.active, true)))

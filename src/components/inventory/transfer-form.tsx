@@ -294,7 +294,11 @@ export function TransferForm({
           {lines.map((line, index) => {
             const label = `baris ${index + 1}`
             const uomItems = uoms
-              .filter((uom) => uom.categoryId === line.product?.uomCategoryId)
+              .filter(
+                (uom) =>
+                  uom.categoryId === line.product?.uomCategoryId &&
+                  (!uom.productId || uom.productId === line.product.id),
+              )
               .map((uom) => ({ value: uom.id, label: uom.code }))
             return (
               <div

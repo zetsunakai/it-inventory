@@ -101,15 +101,18 @@ export type UomOption = { id: string; code: string; name: string; categoryName: 
 
 // Satuan aktif untuk pilihan satuan stok.
 export async function listActiveUoms(): Promise<UomOption[]> {
-  return db
-    .select({
-      id: uoms.id,
-      code: uoms.code,
-      name: uoms.name,
-      categoryName: uomCategories.name,
-    })
-    .from(uoms)
-    .innerJoin(uomCategories, eq(uomCategories.id, uoms.categoryId))
-    .where(and(eq(uoms.active, true), eq(uomCategories.active, true)))
-    .orderBy(asc(uomCategories.name), asc(uoms.code))
+  return (
+    db
+      .select({
+        id: uoms.id,
+        code: uoms.code,
+        name: uoms.name,
+        categoryName: uomCategories.name,
+      })
+      .from(uoms)
+      .innerJoin(uomCategories, eq(uomCategories.id, uoms.categoryId))
+      // Satuan stok selalu satuan umum (satuan khusus produk tidak bisa jadi satuan stok).
+      .where(and(eq(uoms.active, true), eq(uomCategories.active, true), isNull(uoms.productId)))
+      .orderBy(asc(uomCategories.name), asc(uoms.code))
+  )
 }

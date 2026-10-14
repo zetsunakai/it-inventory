@@ -1,21 +1,38 @@
 "use server"
 
-import { eq, inArray } from "drizzle-orm"
+import { and, eq, inArray, isNull, or } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox, decimal, requiredText } from "@/lib/form-fields"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
-import { uomCategories, uoms } from "@/server/db/schema"
+import { products, uomCategories, uoms } from "@/server/db/schema"
 
 // Satuan dan konversi (PRD bagian 5.1): hanya Administrator (izin master:write).
 // Kode, kategori, dan status acuan sebuah satuan tidak bisa diubah (trigger uoms_guard).
 
 const factor = decimal("Faktor", 10)
+// Kelipatan hasil konversi ke satuan ini (R-03); kosong = 0,0001 (presisi qty).
+const rounding = z
+  .string()
+  .optional()
+  .transform((value) => value?.trim() || "0,0001")
+  .pipe(decimal("Pembulatan", 4))
 
-async function takenUomCodes(tx: Transaction, codes: string[]) {
-  const rows = await tx.select({ code: uoms.code }).from(uoms).where(inArray(uoms.code, codes))
+// Kode satuan umum tidak boleh sama dengan satuan mana pun; kode satuan khusus produk tidak boleh
+// sama dengan satuan umum atau satuan khusus lain milik produk yang sama (dipaksakan juga di
+// database).
+async function takenUomCodes(tx: Transaction, codes: string[], productId: string | null = null) {
+  const rows = await tx
+    .select({ code: uoms.code })
+    .from(uoms)
+    .where(
+      and(
+        inArray(uoms.code, codes),
+        productId ? or(isNull(uoms.productId), eq(uoms.productId, productId)) : undefined,
+      ),
+    )
   return rows.map((row) => `Kode satuan ${row.code} sudah dipakai.`)
 }
 
@@ -62,10 +79,27 @@ export const createUom = defineFormAction({
     code: requiredText("Kode satuan", 20),
     name: requiredText("Nama satuan", 100),
     factor,
+    rounding,
+    // Kosong = satuan umum untuk semua produk.
+    productId: z
+      .union([z.uuid("Produk tidak valid."), z.literal("")])
+      .optional()
+      .transform((value) => value || null),
   }),
   successMessage: "Satuan ditambahkan.",
   handler: async ({ input, tx }) => {
-    const errors = await takenUomCodes(tx, [input.code])
+    const errors = await takenUomCodes(tx, [input.code], input.productId)
+    if (input.productId) {
+      const [product] = await tx
+        .select({ active: products.active, categoryId: uoms.categoryId })
+        .from(products)
+        .innerJoin(uoms, eq(uoms.id, products.uomId))
+        .where(eq(products.id, input.productId))
+      if (!product?.active) errors.push("Produk tidak ditemukan atau sudah diarsipkan.")
+      else if (product.categoryId !== input.categoryId) {
+        errors.push("Satuan khusus harus sekategori dengan satuan stok produknya.")
+      }
+    }
     const [category] = await tx
       .select({ active: uomCategories.active })
       .from(uomCategories)
@@ -85,6 +119,7 @@ export const updateUom = defineFormAction({
     id: z.uuid("Satuan tidak valid."),
     name: requiredText("Nama satuan", 100),
     factor,
+    rounding,
     active: checkbox,
   }),
   successMessage: "Perubahan disimpan.",

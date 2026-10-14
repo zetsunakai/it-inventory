@@ -6,6 +6,7 @@ import { useActionState, useEffect, useState } from "react"
 import { CheckboxField } from "@/components/checkbox-field"
 import { FormErrors } from "@/components/form-errors"
 import { FormField } from "@/components/form-field"
+import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -17,6 +18,7 @@ import {
 } from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
 import { toDecimalInput } from "@/lib/decimal"
+import type { ProductChoice } from "@/server/queries/transfers"
 
 import { createUom, createUomCategory, updateUom } from "./actions"
 
@@ -26,6 +28,7 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
   const router = useRouter()
   const [categoryId, setCategoryId] = useState<string | null>(null)
   const [code, setCode] = useState("")
+  const [product, setProduct] = useState<ProductChoice | null>(null)
   const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
     createUom,
     null,
@@ -42,8 +45,37 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
   return (
     <form action={formAction} className="max-w-xl space-y-4">
       {state?.ok === false && <FormErrors errors={state.errors} />}
+      <input type="hidden" name="productId" value={product?.id ?? ""} />
+      {/* Pilihan kategori dikunci ke kategori satuan stok produk; select yang disabled tidak
+          ikut terkirim, jadi nilainya lewat sini. */}
+      {product && <input type="hidden" name="categoryId" value={categoryId ?? ""} />}
+      <FormField
+        label="Khusus produk"
+        htmlFor="productId"
+        errors={fieldErrors?.productId}
+        hint="Kosongkan untuk satuan umum. Satuan khusus hanya bisa dipakai produk ini, mis. 1 BOX = 24 PCS untuk satu produk saja."
+      >
+        <SearchSelect<ProductChoice>
+          id="productId"
+          endpoint="/api/products"
+          value={product}
+          onValueChange={(next) => {
+            setProduct(next)
+            if (next) setCategoryId(next.uomCategoryId)
+          }}
+          getKey={(item) => item.id}
+          getLabel={(item) => `[${item.sku}] ${item.name}`}
+          placeholder="Cari SKU atau nama produk"
+        />
+      </FormField>
       <FormField label="Kategori" htmlFor="categoryId" errors={fieldErrors?.categoryId}>
-        <Select name="categoryId" items={items} value={categoryId} onValueChange={setCategoryId}>
+        <Select
+          name="categoryId"
+          items={items}
+          value={categoryId}
+          onValueChange={setCategoryId}
+          disabled={Boolean(product)}
+        >
           <SelectTrigger id="categoryId" className="w-full">
             <SelectValue placeholder="Pilih kategori" />
           </SelectTrigger>
@@ -80,6 +112,7 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
             : "Pilih kategori dulu untuk melihat satuan acuannya."
         }
       />
+      <RoundingField errors={fieldErrors?.rounding} defaultValue={fieldValue(state, "rounding")} />
       <Button type="submit" disabled={pending}>
         {pending ? "Menyimpan…" : "Simpan"}
       </Button>
@@ -98,6 +131,7 @@ export function UomEditForm({
     isReference: boolean
     active: boolean
     referenceCode: string | null
+    rounding: string
   }
 }) {
   const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
@@ -131,6 +165,10 @@ export function UomEditForm({
           hint={`1 ${uom.code} = berapa ${uom.referenceCode}? Mengubah faktor hanya berlaku untuk input berikutnya.`}
         />
       )}
+      <RoundingField
+        errors={fieldErrors?.rounding}
+        defaultValue={fieldValue(state, "rounding", toDecimalInput(uom.rounding))}
+      />
       <CheckboxField
         name="active"
         label="Aktif"
@@ -163,6 +201,27 @@ function FactorField({
       <Input
         id="factor"
         name="factor"
+        defaultValue={defaultValue}
+        inputMode="decimal"
+        autoComplete="off"
+        className="sm:w-48"
+      />
+    </FormField>
+  )
+}
+
+// Pembulatan hasil konversi ke satuan ini (R-03), mis. 1 untuk PCS supaya qty selalu utuh.
+function RoundingField({ errors, defaultValue }: { errors?: string[]; defaultValue?: string }) {
+  return (
+    <FormField
+      label="Pembulatan"
+      htmlFor="rounding"
+      errors={errors}
+      hint="Qty hasil konversi ke satuan ini dibulatkan ke kelipatan angka ini. Kosong = 0,0001; isi 1 supaya selalu bilangan bulat."
+    >
+      <Input
+        id="rounding"
+        name="rounding"
         defaultValue={defaultValue}
         inputMode="decimal"
         autoComplete="off"

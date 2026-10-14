@@ -42,6 +42,15 @@ const COLUMNS: DataTableColumn<UomRow>[] = [
   },
   { header: "Kategori", cell: (row) => row.categoryName },
   {
+    header: "Berlaku untuk",
+    cell: (row) =>
+      row.productSku ? (
+        <span className="font-mono">{row.productSku}</span>
+      ) : (
+        <span className="text-muted-foreground">Semua produk</span>
+      ),
+  },
+  {
     header: "Konversi",
     cell: (row) =>
       row.isReference ? (
@@ -95,7 +104,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-2 sm:flex-row">
-        <DataTableSearch placeholder="Cari kode atau nama satuan" />
+        <DataTableSearch placeholder="Cari kode, nama satuan, atau SKU" />
         <DataTableFilter
           name={CATEGORY_FILTER}
           label="Kategori"
