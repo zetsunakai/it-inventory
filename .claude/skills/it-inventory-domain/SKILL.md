@@ -10,6 +10,10 @@ Inventory Kepabeanan", tab PRD dan Backlog). Dua sistem lama dipakai sebagai ruj
 untuk disalin: ambil aturan bisnis, kode resmi, dan format CEISA-nya; tetap ikuti arsitektur dan
 aturan repo ini (README, migrasi `drizzle/`, skill `ui-it-inventory` untuk UI).
 
+Alur inventory (transfer, stok, retur, opname) dan master produk mengikuti hmx-002
+`core_inventory`/`core_product`, bukan Equip3: lihat skill `inventory-alur-hmx` dan `produk-hmx`.
+Skill ini untuk dokumen BC, gerbang dokumen, laporan, dan CEISA.
+
 ## Sistem lama sebagai rujukan
 
 |                    | Equip3-moduleboard                                                                                                                                   | hmx-002                                                                                                                                                                                          |
