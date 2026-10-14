@@ -44,7 +44,6 @@ export const NAVIGATION: NavGroup[] = [
         title: "Stok",
         href: "/inventory/stok",
         permission: "inventory:read",
-        plannedIn: "M2-11",
       },
       {
         title: "Penerimaan",

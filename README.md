@@ -186,6 +186,11 @@ dimatikan: user baru dibuat oleh Administrator.
   (`warehouse_movements`). Batas bulan selalu WIB lewat `period_start`/`period_end`; jangan pakai
   `+ interval '1 month'` pada timestamptz.
 
+- Tampilan stok (`/inventory/stok`): saldo sekarang dari `stock_balances`; filter "Saldo per"
+  tanggal menghitung dari ledger lewat `stock_on_hand(end_of_day(tanggal))`, dan untuk hari ini
+  hasil keduanya sama. Kartu stok (`/inventory/stok/[produk]`) per gudang dan rentang tanggal:
+  saldo awal, masuk, keluar, saldo berjalan, dengan tautan ke transfernya.
+
 ## Layar transaksi inventory
 
 - Halaman daftar, buat, dan detail sama untuk semua jenis transfer: `src/components/inventory/`

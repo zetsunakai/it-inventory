@@ -48,19 +48,19 @@ test("menu Admin gudang: tanpa Dokumen BC; membuka URL-nya langsung ditolak", as
 
 test("klik menu membuka modul dan menandai menu yang aktif", async ({ page }) => {
   await page.goto("/login")
-  await login(page, ACCOUNTS.gudang)
+  await login(page, ACCOUNTS.auditor)
 
   // Modul yang masih berupa placeholder.
-  await sidebar(page).getByRole("link", { name: "Stok", exact: true }).click()
+  await sidebar(page).getByRole("link", { name: "Dokumen BC" }).click()
 
-  await expect(page).toHaveURL(/\/inventory\/stok$/)
-  await expect(page.getByRole("heading", { name: "Stok", level: 1 })).toBeVisible()
-  await expect(page.getByText("Dijadwalkan di M2-11.")).toBeVisible()
-  await expect(sidebar(page).getByRole("link", { name: "Stok", exact: true })).toHaveAttribute(
+  await expect(page).toHaveURL(/\/dokumen-bc$/)
+  await expect(page.getByRole("heading", { name: "Dokumen BC", level: 1 })).toBeVisible()
+  await expect(page.getByText("Dijadwalkan di M3.")).toBeVisible()
+  await expect(sidebar(page).getByRole("link", { name: "Dokumen BC" })).toHaveAttribute(
     "title",
-    "Belum tersedia, dijadwalkan di M2-11",
+    "Belum tersedia, dijadwalkan di M3",
   )
-  await expect(sidebar(page).getByRole("link", { name: "Stok", exact: true })).toHaveAttribute(
+  await expect(sidebar(page).getByRole("link", { name: "Dokumen BC" })).toHaveAttribute(
     "aria-current",
     "page",
   )
