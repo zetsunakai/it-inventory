@@ -7,7 +7,8 @@ description: Aturan desain UI khusus aplikasi IT Inventory Kawasan Berikat (Next
 
 Aplikasi ini alat kerja harian untuk gudang berikat, bukan landing page. Desain yang baik di sini
 terasa seperti instrumen: padat, tenang, cepat dipindai, dan setiap warna atau ikon punya arti.
-Pakai bersama skill `anti-ui-slop`; skill ini memberi konteks dan aturan yang spesifik.
+Pakai bersama skill `anti-ui-slop`; skill ini memberi konteks dan aturan yang spesifik. Aturan
+domain (dokumen BC, CEISA, laporan, rujukan sistem lama) ada di skill `it-inventory-domain`.
 
 ## Siapa yang memakai dan untuk apa
 
