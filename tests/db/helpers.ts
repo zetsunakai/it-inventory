@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import { DrizzleQueryError, TransactionRollbackError } from "drizzle-orm/errors"
 
 import type { Db } from "@/server/db/client"
+import { transferLines } from "@/server/db/schema"
 
 type Transaction = Parameters<Parameters<Db["transaction"]>[0]>[0]
 
@@ -67,9 +68,14 @@ export async function purgeInventory(db: Db, productIds: string[]) {
     await tx.execute(sql`delete from stock_balances where product_id in (${ids})`)
     await tx.execute(sql`
       create temporary table purged_transfers on commit drop as
-      select distinct transfer_id as id from stock_moves where product_id in (${ids})`)
+      select transfer_id as id from stock_moves where product_id in (${ids})
+      union
+      select transfer_id from transfer_lines where product_id in (${ids})`)
     await tx.execute(
       sql`delete from stock_moves where transfer_id in (select id from purged_transfers)`,
+    )
+    await tx.execute(
+      sql`delete from transfer_lines where transfer_id in (select id from purged_transfers)`,
     )
     await tx.execute(sql`delete from transfers where id in (select id from purged_transfers)`)
     await tx.execute(sql`delete from lots where product_id in (${ids})`)
@@ -77,4 +83,28 @@ export async function purgeInventory(db: Db, productIds: string[]) {
       delete from number_sequences
       where scope in (select 'lot:' || id from unnest(array[${ids}]) as id)`)
   })
+}
+
+// Baris pergerakan untuk tes yang menulis stock_moves langsung: buat dulu baris permintaannya
+// (R-05) dengan produk, qty, dan satuan yang sama, lalu kembalikan nilai move beserta line_id.
+export async function withLine<
+  T extends {
+    transferId: string
+    productId: string
+    inputQty: string
+    inputUomId: string
+    position?: number
+  },
+>(tx: Pick<Transaction, "insert">, move: T): Promise<T & { lineId: string }> {
+  const [line] = await tx
+    .insert(transferLines)
+    .values({
+      transferId: move.transferId,
+      productId: move.productId,
+      inputQty: move.inputQty,
+      inputUomId: move.inputUomId,
+      position: move.position ?? 0,
+    })
+    .returning({ id: transferLines.id })
+  return { ...move, lineId: line.id }
 }

@@ -8,6 +8,8 @@ import { MOVEMENT_CODE_LABELS } from "@/lib/inventory"
 import type { TransferKind } from "@/lib/transfer"
 import type { TransferDetail, TransferLine } from "@/server/queries/transfers"
 
+// Baris permintaan (R-05): qty diminta, qty selesai (setelah validasi), dan lot/nomor seri
+// pergerakannya. Nomor seri bisa banyak per baris, jadi ditampilkan satu per baris.
 const LINE_COLUMNS: DataTableColumn<TransferLine>[] = [
   {
     header: "Produk",
@@ -20,21 +22,30 @@ const LINE_COLUMNS: DataTableColumn<TransferLine>[] = [
     ),
   },
   {
-    header: "Lot",
-    cell: (line) => (line.lotName ? <span className="font-mono">{line.lotName}</span> : "—"),
+    header: "Lot/seri",
+    cell: (line) => {
+      const names = line.moves.flatMap((move) => (move.lotName ? [move.lotName] : []))
+      return names.length ? (
+        <span className="flex flex-col font-mono">
+          {names.map((name) => (
+            <span key={name}>{name}</span>
+          ))}
+        </span>
+      ) : (
+        "—"
+      )
+    },
   },
   {
-    header: "Qty",
+    header: "Qty diminta",
     align: "right",
     cell: (line) => `${formatDecimal(line.inputQty)} ${line.inputUomCode}`,
   },
   {
-    header: "Qty satuan stok",
+    header: "Qty selesai",
     align: "right",
     cell: (line) =>
-      line.inputUomCode === line.stockUomCode
-        ? "—"
-        : `${formatDecimal(line.qty)} ${line.stockUomCode}`,
+      line.doneQty === null ? "—" : `${formatDecimal(line.doneQty)} ${line.stockUomCode}`,
   },
 ]
 

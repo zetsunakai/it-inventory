@@ -302,6 +302,20 @@
       "when": 1791955131531,
       "tag": "0042_movement_code_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "7",
+      "when": 1791955380288,
+      "tag": "0043_transfer_lines",
+      "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "7",
+      "when": 1791955390005,
+      "tag": "0044_transfer_lines_rules",
+      "breakpoints": true
     }
   ]
 }

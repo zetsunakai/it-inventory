@@ -13,7 +13,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback } from "./helpers"
+import { inRollback, withLine } from "./helpers"
 
 // Kode pergerakan (backlog R-04). Semua data uji berawalan ZC.
 
@@ -129,14 +129,16 @@ async function transfer(tx: Tx, type: Type, from: string, to: string, returnOfId
       returnOfId,
     })
     .returning({ id: transfers.id, code: transfers.movementCode, direction: transfers.direction })
-  await tx.insert(stockMoves).values({
-    transferId: row.id,
-    productId: ids.product,
-    inputQty: "1",
-    inputUomId: ids.pcs,
-    sourceLocationId: from,
-    destinationLocationId: to,
-  })
+  await tx.insert(stockMoves).values(
+    await withLine(tx, {
+      transferId: row.id,
+      productId: ids.product,
+      inputQty: "1",
+      inputUomId: ids.pcs,
+      sourceLocationId: from,
+      destinationLocationId: to,
+    }),
+  )
   return row
 }
 

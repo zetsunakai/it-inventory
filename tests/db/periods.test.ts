@@ -18,7 +18,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { pgErrorMessage, purgeInventory } from "./helpers"
+import { pgErrorMessage, purgeInventory, withLine } from "./helpers"
 
 // Tutup periode bulanan (backlog M2-10). Data uji berawalan ZP dan memakai tahun 2019 supaya
 // periode yang ditutup di sini tidak mengganggu tes lain yang bertanggal sekarang.
@@ -155,14 +155,16 @@ async function move(type: Kind, from: string, to: string, qty: string, at: strin
         approvedBy: type === "adjustment" ? manajer.id : null,
       })
       .returning({ id: transfers.id })
-    await tx.insert(stockMoves).values({
-      transferId: transfer.id,
-      productId: ids.product,
-      inputQty: qty,
-      inputUomId: ids.pcs,
-      sourceLocationId: from,
-      destinationLocationId: to,
-    })
+    await tx.insert(stockMoves).values(
+      await withLine(tx, {
+        transferId: transfer.id,
+        productId: ids.product,
+        inputQty: qty,
+        inputUomId: ids.pcs,
+        sourceLocationId: from,
+        destinationLocationId: to,
+      }),
+    )
     await tx.execute(sql`select validate_transfer(${transfer.id}, ${at}::timestamptz)`)
     return transfer.id
   })

@@ -14,7 +14,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, pgErrorMessage, purgeInventory } from "./helpers"
+import { inRollback, pgErrorInSavepoint, pgErrorMessage, purgeInventory, withLine } from "./helpers"
 
 // Pelacakan per lot/nomor seri dan nomor otomatis (backlog R-02). Semua data uji berawalan ZR.
 
@@ -149,16 +149,18 @@ async function draft(
     .returning({ id: transfers.id })
   let position = 1
   for (const line of lines) {
-    await tx.insert(stockMoves).values({
-      transferId: transfer.id,
-      position: position++,
-      productId: line.product,
-      lotId: line.lot ? await lotId(tx, line.product, line.lot) : null,
-      inputQty: line.qty,
-      inputUomId: line.uom ?? ids.pcs,
-      sourceLocationId: from,
-      destinationLocationId: to,
-    })
+    await tx.insert(stockMoves).values(
+      await withLine(tx, {
+        transferId: transfer.id,
+        position: position++,
+        productId: line.product,
+        lotId: line.lot ? await lotId(tx, line.product, line.lot) : null,
+        inputQty: line.qty,
+        inputUomId: line.uom ?? ids.pcs,
+        sourceLocationId: from,
+        destinationLocationId: to,
+      }),
+    )
   }
   return transfer.id
 }

@@ -25,6 +25,7 @@ import {
   pgErrorMessage,
   purgeInventory,
   setAuditUser,
+  withLine,
 } from "./helpers"
 
 // validate_transfer() dan penguncian ledger (backlog M2-02). Semua data uji berawalan ZV.
@@ -174,15 +175,17 @@ async function transfer(
     })
     .returning()
   for (const line of lines) {
-    await tx.insert(stockMoves).values({
-      transferId: row.id,
-      productId: line.product ?? ids.product,
-      lotId: line.lot,
-      inputQty: line.qty,
-      inputUomId: ids.pcs,
-      sourceLocationId: ids[from],
-      destinationLocationId: ids[to],
-    })
+    await tx.insert(stockMoves).values(
+      await withLine(tx, {
+        transferId: row.id,
+        productId: line.product ?? ids.product,
+        lotId: line.lot,
+        inputQty: line.qty,
+        inputUomId: ids.pcs,
+        sourceLocationId: ids[from],
+        destinationLocationId: ids[to],
+      }),
+    )
   }
   return row
 }
@@ -407,15 +410,17 @@ describe("data Selesai terkunci", () => {
           "Baris pergerakan yang sudah Selesai tidak bisa diubah atau dihapus.",
         ],
         [
-          (sp: Tx) =>
-            sp.insert(stockMoves).values({
-              transferId: row.id,
-              productId: ids.product,
-              inputQty: "1",
-              inputUomId: ids.pcs,
-              sourceLocationId: ids.vendor,
-              destinationLocationId: ids.bondedRack,
-            }),
+          async (sp: Tx) =>
+            sp.insert(stockMoves).values(
+              await withLine(sp, {
+                transferId: row.id,
+                productId: ids.product,
+                inputQty: "1",
+                inputUomId: ids.pcs,
+                sourceLocationId: ids.vendor,
+                destinationLocationId: ids.bondedRack,
+              }),
+            ),
           "Baris barang transfer yang sudah Selesai tidak bisa diubah.",
         ],
       ] as const) {

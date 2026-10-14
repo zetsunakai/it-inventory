@@ -6,6 +6,7 @@ import {
   partners,
   products,
   stockMoves,
+  transferLines,
   transfers,
   uoms,
   warehouses,
@@ -99,8 +100,18 @@ export async function receiveStock(
           partnerId: fixture.partner.id,
         })
         .returning({ id: transfers.id })
+      const [line] = await tx
+        .insert(transferLines)
+        .values({
+          transferId: transfer.id,
+          productId: fixture.product.id,
+          inputQty: qty,
+          inputUomId: pcs.id,
+        })
+        .returning({ id: transferLines.id })
       await tx.insert(stockMoves).values({
         transferId: transfer.id,
+        lineId: line.id,
         productId: fixture.product.id,
         inputQty: qty,
         inputUomId: pcs.id,

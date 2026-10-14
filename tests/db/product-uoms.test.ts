@@ -15,7 +15,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint } from "./helpers"
+import { inRollback, pgErrorInSavepoint, withLine } from "./helpers"
 
 // Satuan khusus produk dan pembulatan (backlog R-03). Data uji berawalan ZU.
 
@@ -115,14 +115,16 @@ async function moveQty(tx: Tx, productId: string, inputQty: string, uomId: strin
     .returning({ id: transfers.id })
   const [move] = await tx
     .insert(stockMoves)
-    .values({
-      transferId: transfer.id,
-      productId,
-      inputQty,
-      inputUomId: uomId,
-      sourceLocationId: ids.adjustment,
-      destinationLocationId: ids.rack,
-    })
+    .values(
+      await withLine(tx, {
+        transferId: transfer.id,
+        productId,
+        inputQty,
+        inputUomId: uomId,
+        sourceLocationId: ids.adjustment,
+        destinationLocationId: ids.rack,
+      }),
+    )
     .returning({ qty: stockMoves.qty })
   return move.qty
 }

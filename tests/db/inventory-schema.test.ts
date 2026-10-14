@@ -21,6 +21,7 @@ import {
   pgErrorInSavepoint,
   pgErrorMessage,
   setAuditUser,
+  withLine,
 } from "./helpers"
 
 // Skema inventory (backlog M2-01): transfer, ledger pergerakan, lot, dan saldo, dengan aturan
@@ -173,18 +174,23 @@ function receipt(tx: Tx, values: Partial<typeof transfers.$inferInsert> = {}) {
     .returning()
 }
 
-function move(tx: Tx, transferId: string, values: Partial<typeof stockMoves.$inferInsert> = {}) {
+async function move(
+  tx: Tx,
+  transferId: string,
+  values: Partial<typeof stockMoves.$inferInsert> = {},
+) {
+  const row = {
+    transferId,
+    productId: ids.product,
+    inputQty: "1",
+    inputUomId: ids.pcs,
+    sourceLocationId: ids.vendor,
+    destinationLocationId: ids.rack,
+    ...values,
+  }
   return tx
     .insert(stockMoves)
-    .values({
-      transferId,
-      productId: ids.product,
-      inputQty: "1",
-      inputUomId: ids.pcs,
-      sourceLocationId: ids.vendor,
-      destinationLocationId: ids.rack,
-      ...values,
-    })
+    .values(await withLine(tx, row))
     .returning()
 }
 

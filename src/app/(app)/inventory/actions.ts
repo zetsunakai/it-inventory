@@ -8,7 +8,7 @@ import { TRANSFER_TYPES, type TransferType } from "@/lib/inventory"
 import { transferLinesField, type TransferLineInput } from "@/lib/transfer"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
-import { locations, lots, products, stockMoves, transfers } from "@/server/db/schema"
+import { locations, lots, products, stockMoves, transferLines, transfers } from "@/server/db/schema"
 
 // Transfer inventory (PRD bagian 6, backlog M2-03 dst.): simpan draft, tandai siap, validasi,
 // batal. Aturan stok, lokasi, dan penguncian dipaksakan database (validate_transfer dan trigger
@@ -154,7 +154,8 @@ export const saveTransfer = defineFormAction({
         throw new AppError("Hanya transfer Draft yang bisa diubah. Kembalikan ke Draft dulu.")
       }
       await tx.update(transfers).set(header).where(eq(transfers.id, id))
-      await tx.delete(stockMoves).where(eq(stockMoves.transferId, id))
+      // Baris permintaan dihapus beserta pergerakannya (cascade), lalu ditulis ulang.
+      await tx.delete(transferLines).where(eq(transferLines.transferId, id))
     } else {
       const [row] = await tx
         .insert(transfers)
@@ -210,9 +211,25 @@ async function insertLines(
     }
   }
 
+  // Satu baris permintaan per baris form, masing-masing dengan satu pergerakan sebesar qty diminta
+  // (R-05). Qty selesai yang lebih kecil diisi saat validasi (split_backorder).
+  const saved = await tx
+    .insert(transferLines)
+    .values(
+      lines.map((line, index) => ({
+        transferId,
+        position: index + 1,
+        productId: line.productId,
+        inputQty: line.inputQty,
+        inputUomId: line.uomId,
+      })),
+    )
+    .returning({ id: transferLines.id, position: transferLines.position })
+  const lineIdAt = new Map(saved.map((line) => [line.position, line.id]))
   await tx.insert(stockMoves).values(
     lines.map((line, index) => ({
       transferId,
+      lineId: lineIdAt.get(index + 1)!,
       position: index + 1,
       productId: line.productId,
       lotId: line.lotName ? lotIds.get(lotKey(line.productId, line.lotName)) : null,
@@ -304,23 +321,24 @@ function effectiveTimestamp(date: string | null) {
   return date && date !== today ? `${date}T12:00:00+07:00` : null
 }
 
-// Qty selesai per baris untuk penerimaan/pengiriman parsial (M2-05): boleh 0, koma atau titik.
+// Qty selesai per baris permintaan untuk penerimaan/pengiriman parsial (M2-05, R-05): boleh 0,
+// koma atau titik.
 const doneQuantities = z
   .record(z.string(), z.string())
   .optional()
   .transform((values, ctx) => {
     if (!values) return null
     const result: Record<string, string> = {}
-    for (const [moveId, raw] of Object.entries(values)) {
+    for (const [lineId, raw] of Object.entries(values)) {
       const value = raw.trim().replace(",", ".")
-      if (!z.uuid().safeParse(moveId).success || !/^\d+(\.\d{1,4})?$/.test(value)) {
+      if (!z.uuid().safeParse(lineId).success || !/^\d+(\.\d{1,4})?$/.test(value)) {
         ctx.addIssue({
           code: "custom",
           message: "Qty harus angka 0 atau lebih, maksimal 4 desimal.",
         })
         return z.NEVER
       }
-      result[moveId] = value
+      result[lineId] = value
     }
     return result
   })
@@ -336,18 +354,18 @@ export const validateTransfer = defineAction({
   handler: async ({ input, tx }) => {
     const effectiveAt = effectiveTimestamp(input.effectiveDate)
     let backorder: { id: string; number: string } | null = null
-    if (input.quantities) {
-      const split = await tx.execute<{ id: string | null }>(
-        sql`select split_backorder(${input.id}, ${JSON.stringify(input.quantities)}::jsonb) as id`,
-      )
-      const backorderId = split.rows[0]?.id
-      if (backorderId) {
-        const [row] = await tx
-          .select({ id: transfers.id, number: transfers.number })
-          .from(transfers)
-          .where(eq(transfers.id, backorderId))
-        backorder = row
-      }
+    // Selalu dipanggil: baris yang qty selesainya kurang dari qty diminta (juga yang tidak disebut
+    // di quantities) menyisakan qty untuk transfer lanjutan.
+    const split = await tx.execute<{ id: string | null }>(
+      sql`select split_backorder(${input.id}, ${JSON.stringify(input.quantities ?? {})}::jsonb) as id`,
+    )
+    const backorderId = split.rows[0]?.id
+    if (backorderId) {
+      const [row] = await tx
+        .select({ id: transfers.id, number: transfers.number })
+        .from(transfers)
+        .where(eq(transfers.id, backorderId))
+      backorder = row
     }
     await tx.execute(sql`select validate_transfer(${input.id}, ${effectiveAt}::timestamptz)`)
     return { backorder }
@@ -424,9 +442,24 @@ export const createReturn = defineAction({
         ),
       )
     const uomOf = new Map(stockUoms.map((product) => [product.id, product.uomId]))
+    // Satu baris permintaan per produk × lot, dengan satu pergerakan (R-05).
+    const saved = await tx
+      .insert(transferLines)
+      .values(
+        remaining.rows.map((line, index) => ({
+          transferId: row.id,
+          position: index + 1,
+          productId: line.product_id,
+          inputQty: line.qty,
+          inputUomId: uomOf.get(line.product_id)!,
+        })),
+      )
+      .returning({ id: transferLines.id, position: transferLines.position })
+    const lineIdAt = new Map(saved.map((line) => [line.position, line.id]))
     await tx.insert(stockMoves).values(
       remaining.rows.map((line, index) => ({
         transferId: row.id,
+        lineId: lineIdAt.get(index + 1)!,
         position: index + 1,
         productId: line.product_id,
         lotId: line.lot_id,
@@ -439,7 +472,7 @@ export const createReturn = defineAction({
   },
 })
 
-// Qty retur per baris (dalam satuan stok). 0 = baris dihapus dari retur.
+// Qty retur per baris permintaan (dalam satuan stok). 0 = baris dihapus dari retur.
 export const saveReturnQuantities = defineAction({
   name: "saveReturnQuantities",
   permission: "inventory:write",
@@ -473,10 +506,18 @@ export const saveReturnQuantities = defineAction({
     if (Object.values(input.quantities).every((qty) => Number(qty) === 0)) {
       throw new AppError("Isi qty retur minimal satu baris. Untuk membatalkan, batalkan retur.")
     }
-    for (const [moveId, qty] of Object.entries(input.quantities)) {
-      const where = and(eq(stockMoves.id, moveId), eq(stockMoves.transferId, input.id))
-      if (Number(qty) === 0) await tx.delete(stockMoves).where(where)
-      else await tx.update(stockMoves).set({ inputQty: qty }).where(where)
+    // Kunci = id baris permintaan; baris retur selalu punya satu pergerakan bersatuan stok.
+    for (const [lineId, qty] of Object.entries(input.quantities)) {
+      const where = and(eq(transferLines.id, lineId), eq(transferLines.transferId, input.id))
+      if (Number(qty) === 0) {
+        await tx.delete(transferLines).where(where)
+      } else {
+        await tx.update(transferLines).set({ inputQty: qty }).where(where)
+        await tx
+          .update(stockMoves)
+          .set({ inputQty: qty })
+          .where(and(eq(stockMoves.lineId, lineId), eq(stockMoves.transferId, input.id)))
+      }
     }
     const errors = await returnErrors(tx, input.id)
     if (errors.length) throw new AppError(errors)

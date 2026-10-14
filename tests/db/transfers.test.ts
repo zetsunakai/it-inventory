@@ -20,6 +20,7 @@ import {
   products,
   stockBalances,
   stockMoves,
+  transferLines,
   transfers,
   uomCategories,
   userRoles,
@@ -444,9 +445,16 @@ describe("penerimaan parsial dan backorder", () => {
     expect(backorder.number).toMatch(/^PNR\//)
 
     const original = await getTransfer(people.admin.id, id)
-    expect([original!.status, original!.lines.map((line) => [line.sku, line.qty])]).toEqual([
+    // Qty diminta di baris asal tetap; qty selesai terpisah (R-05).
+    expect([
+      original!.status,
+      original!.lines.map((line) => [line.sku, line.qty, line.doneQty]),
+    ]).toEqual([
       "done",
-      [["ZTP1", "6.0000"]],
+      [
+        ["ZTP1", "10.0000", "6.0000"],
+        ["ZTLOT", "5.0000", "0.0000"],
+      ],
     ])
     const rest = await getTransfer(people.admin.id, backorder.id)
     expect(rest).toMatchObject({
@@ -646,6 +654,10 @@ describe("retur", () => {
       receipt([{ productId: ids.product, inputQty: "3", uomId: ids.pcs }]),
     )
     const returnId = await newReturn(originId)
+    await db
+      .update(transferLines)
+      .set({ inputQty: "9" })
+      .where(eq(transferLines.transferId, returnId))
     await db.update(stockMoves).set({ inputQty: "9" }).where(eq(stockMoves.transferId, returnId))
     expect(await validateTransfer({ id: returnId })).toEqual({
       ok: false,

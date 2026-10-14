@@ -16,7 +16,7 @@ import {
 } from "@/server/db/schema"
 import { listStock, stockCard } from "@/server/queries/stock"
 
-import { purgeInventory } from "./helpers"
+import { purgeInventory, withLine } from "./helpers"
 
 // Tampilan stok dan kartu stok (backlog M2-11). Data uji berawalan ZS, bertanggal Maret 2021.
 
@@ -143,14 +143,16 @@ async function move(
         partnerId: type === "internal" ? null : ids.partner,
       })
       .returning({ id: transfers.id })
-    await tx.insert(stockMoves).values({
-      transferId: transfer.id,
-      productId: ids.product,
-      inputQty: qty,
-      inputUomId: ids.pcs,
-      sourceLocationId: from,
-      destinationLocationId: to,
-    })
+    await tx.insert(stockMoves).values(
+      await withLine(tx, {
+        transferId: transfer.id,
+        productId: ids.product,
+        inputQty: qty,
+        inputUomId: ids.pcs,
+        sourceLocationId: from,
+        destinationLocationId: to,
+      }),
+    )
     await tx.execute(sql`select validate_transfer(${transfer.id}, ${at}::timestamptz)`)
   })
 }

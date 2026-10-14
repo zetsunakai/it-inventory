@@ -157,6 +157,36 @@ export const transfers = pgTable(
   ],
 )
 
+// Baris permintaan transfer (backlog R-05, mengikuti stock_demand hmx-002): produk dan qty yang
+// diminta. Qty yang benar-benar bergerak ada di stock_moves milik baris ini (bisa beberapa, mis.
+// per lot); totalnya tidak boleh melebihi qty diminta. qty dihitung database dari input_qty +
+// input_uom_id; done_qty diisi validate_transfer() (jumlah move Selesai, satuan stok).
+export const transferLines = pgTable(
+  "transfer_lines",
+  {
+    id: id(),
+    transferId: uuid()
+      .notNull()
+      .references(() => transfers.id, { onDelete: "cascade" }),
+    position: integer().notNull().default(0),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    inputQty: qty().notNull(),
+    inputUomId: uuid()
+      .notNull()
+      .references(() => uoms.id, { onDelete: "restrict" }),
+    qty: qty().notNull().default("0"),
+    doneQty: qty(),
+    ...timestamps,
+  },
+  (table) => [
+    index("transfer_lines_transfer_idx").on(table.transferId),
+    index("transfer_lines_product_idx").on(table.productId),
+    check("transfer_lines_qty_positive", sql`${table.inputQty} > 0 and ${table.qty} > 0`),
+  ],
+)
+
 // Ledger pergerakan stok: satu baris = satu produk/lot dari satu lokasi ke lokasi lain.
 // qty dalam satuan stok produk, dihitung database dari input_qty + input_uom_id (convert_qty).
 // Kategori produk dan gudang disalin saat validasi supaya laporan periode lama tidak berubah
@@ -168,6 +198,10 @@ export const stockMoves = pgTable(
     transferId: uuid()
       .notNull()
       .references(() => transfers.id, { onDelete: "cascade" }),
+    // Baris permintaan yang dipenuhi pergerakan ini (backlog R-05).
+    lineId: uuid()
+      .notNull()
+      .references(() => transferLines.id, { onDelete: "cascade" }),
     productId: uuid()
       .notNull()
       .references(() => products.id, { onDelete: "restrict" }),
@@ -197,6 +231,7 @@ export const stockMoves = pgTable(
   },
   (table) => [
     index("stock_moves_transfer_idx").on(table.transferId),
+    index("stock_moves_line_idx").on(table.lineId),
     index("stock_moves_product_done_at_idx").on(table.productId, table.doneAt),
     index("stock_moves_lot_idx").on(table.lotId),
     index("stock_moves_source_location_idx").on(table.sourceLocationId),

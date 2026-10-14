@@ -202,6 +202,14 @@ dimatikan: user baru dibuat oleh Administrator.
   baris harus sesuai lokasi transfernya (sub-lokasi di gudang yang sama boleh).
 - Qty baris diinput dalam satuan apa pun (`input_qty`, `input_uom_id`); database menghitung `qty`
   dalam satuan stok produk lewat `convert_qty`. Gudang asal/tujuan disalin ke baris untuk laporan.
+- Baris permintaan (backlog R-05, mengikuti `stock_demand` hmx-002): `transfer_lines` menyimpan
+  produk dan qty diminta; `stock_moves.line_id` wajib, dan pergerakan adalah rincian yang benar-benar
+  bergerak (per lot/lokasi, bisa beberapa per baris). Total pergerakan per baris tidak boleh
+  melebihi qty diminta (`transfer_line_errors()`); `done_qty` diisi `validate_transfer()`. Form
+  membuat satu pergerakan per baris sebesar qty diminta. `split_backorder(transfer, {id baris:
+qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisanya menjadi baris
+  transfer lanjutan beserta lot dan lokasinya. Baris transfer Selesai/Batal terkunci
+  (`transfer_lines_lock`). Data lama: setiap pergerakan mendapat satu baris dengan id yang sama.
 - Kode pergerakan (backlog R-04, mengikuti hmx-002): `transfers.movement_code` diisi trigger dari
   jenis dan lokasi transfer (`transfer_movement_code()`): `gr` penerimaan, `gi` pengiriman, `ilt`
   pindah lokasi di dalam gudang, `itw_out`/`itw_in` keluar ke/masuk dari transit atau ke gudang

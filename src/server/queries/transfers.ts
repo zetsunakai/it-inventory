@@ -13,6 +13,7 @@ import {
   products,
   stockBalances,
   stockMoves,
+  transferLines,
   transfers,
   uomCategories,
   uoms,
@@ -71,9 +72,9 @@ export async function listTransfers({
   }
   const where = and(...conditions)
   const lineCounts = db
-    .select({ transferId: stockMoves.transferId, total: count().as("line_total") })
-    .from(stockMoves)
-    .groupBy(stockMoves.transferId)
+    .select({ transferId: transferLines.transferId, total: count().as("line_total") })
+    .from(transferLines)
+    .groupBy(transferLines.transferId)
     .as("line_counts")
 
   const base = () =>
@@ -118,6 +119,16 @@ export async function listTransfers({
   return { rows: rows as TransferRow[], total }
 }
 
+// Rincian pergerakan satu baris permintaan (per lot/lokasi).
+export type TransferMove = {
+  id: string
+  lotId: string | null
+  lotName: string | null
+  // Satuan stok.
+  qty: string
+}
+
+// Baris permintaan transfer (R-05) beserta pergerakannya.
 export type TransferLine = {
   id: string
   productId: string
@@ -126,13 +137,18 @@ export type TransferLine = {
   tracking: ProductTracking
   // Lot/seri boleh dikosongkan untuk barang masuk: diisi otomatis saat validasi.
   lotAuto: boolean
+  // Qty diminta.
   inputQty: string
   inputUomId: string
   inputUomCode: string
   qty: string
+  // Qty selesai (satuan stok), diisi saat validasi.
+  doneQty: string | null
   stockUomId: string
   stockUomCode: string
   uomCategoryId: string
+  moves: TransferMove[]
+  // Lot pergerakan pertama, untuk form Draft (satu pergerakan per baris).
   lotId: string | null
   lotName: string | null
 }
@@ -166,31 +182,52 @@ export async function getTransfer(userId: string, id: string) {
     .where(and(eq(transfers.id, id), accessibleBy(userId)))
   if (!header) return undefined
 
-  const lines: TransferLine[] = await db
+  const lineRows = await db
     .select({
-      id: stockMoves.id,
+      id: transferLines.id,
       productId: products.id,
       sku: products.sku,
       productName: products.name,
       tracking: products.tracking,
       lotAuto: sql<boolean>`${products.lotPrefix} is not null`,
-      inputQty: stockMoves.inputQty,
-      inputUomId: stockMoves.inputUomId,
+      inputQty: transferLines.inputQty,
+      inputUomId: transferLines.inputUomId,
       inputUomCode: uoms.code,
-      qty: stockMoves.qty,
+      qty: transferLines.qty,
+      doneQty: transferLines.doneQty,
       stockUomId: stockUom.id,
       stockUomCode: stockUom.code,
       uomCategoryId: stockUom.categoryId,
+    })
+    .from(transferLines)
+    .innerJoin(products, eq(products.id, transferLines.productId))
+    .innerJoin(uoms, eq(uoms.id, transferLines.inputUomId))
+    .innerJoin(stockUom, eq(stockUom.id, products.uomId))
+    .where(eq(transferLines.transferId, id))
+    .orderBy(asc(transferLines.position), asc(transferLines.createdAt))
+  const moveRows = await db
+    .select({
+      id: stockMoves.id,
+      lineId: stockMoves.lineId,
       lotId: stockMoves.lotId,
       lotName: lots.name,
+      qty: stockMoves.qty,
     })
     .from(stockMoves)
-    .innerJoin(products, eq(products.id, stockMoves.productId))
-    .innerJoin(uoms, eq(uoms.id, stockMoves.inputUomId))
-    .innerJoin(stockUom, eq(stockUom.id, products.uomId))
     .leftJoin(lots, eq(lots.id, stockMoves.lotId))
     .where(eq(stockMoves.transferId, id))
-    .orderBy(asc(stockMoves.position), asc(stockMoves.createdAt))
+    .orderBy(asc(stockMoves.createdAt), asc(lots.name))
+  const lines: TransferLine[] = lineRows.map((line) => {
+    const moves = moveRows
+      .filter((move) => move.lineId === line.id)
+      .map(({ id: moveId, lotId, lotName, qty }) => ({ id: moveId, lotId, lotName, qty }))
+    return {
+      ...line,
+      moves,
+      lotId: moves[0]?.lotId ?? null,
+      lotName: moves[0]?.lotName ?? null,
+    }
+  })
 
   return {
     ...header.transfer,

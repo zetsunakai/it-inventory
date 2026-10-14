@@ -30,7 +30,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { purgeInventory } from "./helpers"
+import { purgeInventory, withLine } from "./helpers"
 
 // Stock opname (backlog M2-09). Semua data uji berawalan ZO.
 
@@ -183,14 +183,16 @@ async function receive(productId: string, locationId: string, qty: string) {
         partnerId: ids.partner,
       })
       .returning({ id: transfers.id })
-    await tx.insert(stockMoves).values({
-      transferId: transfer.id,
-      productId,
-      inputQty: qty,
-      inputUomId: ids.pcs,
-      sourceLocationId: ids.vendor,
-      destinationLocationId: locationId,
-    })
+    await tx.insert(stockMoves).values(
+      await withLine(tx, {
+        transferId: transfer.id,
+        productId,
+        inputQty: qty,
+        inputUomId: ids.pcs,
+        sourceLocationId: ids.vendor,
+        destinationLocationId: locationId,
+      }),
+    )
     await tx.execute(sql`select validate_transfer(${transfer.id})`)
   })
 }

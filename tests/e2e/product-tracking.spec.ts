@@ -52,8 +52,10 @@ test("barang masuk berpelacakan nomor seri diberi nomor otomatis per unit", asyn
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),
   ).toBeVisible()
 
-  const rows = page.getByRole("row").filter({ hasText: sku })
-  await expect(rows).toHaveCount(2)
-  await expect(rows.nth(0)).toContainText(`${prefix}001`)
-  await expect(rows.nth(1)).toContainText(`${prefix}002`)
+  // Satu baris permintaan (qty 2) dengan dua nomor seri, masing-masing ber-qty 1.
+  const row = page.getByRole("row").filter({ hasText: sku })
+  await expect(row).toHaveCount(1)
+  await expect(row).toContainText(`${prefix}001`)
+  await expect(row).toContainText(`${prefix}002`)
+  await expect(row).toContainText("2 PCS")
 })
