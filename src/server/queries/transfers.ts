@@ -2,7 +2,7 @@ import "server-only"
 
 import { aliasedTable, and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm"
 
-import type { TransferStatus, TransferType } from "@/lib/inventory"
+import type { ProductTracking, TransferStatus, TransferType } from "@/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import {
@@ -123,7 +123,9 @@ export type TransferLine = {
   productId: string
   sku: string
   productName: string
-  lotRequired: boolean
+  tracking: ProductTracking
+  // Lot/seri boleh dikosongkan untuk barang masuk: diisi otomatis saat validasi.
+  lotAuto: boolean
   inputQty: string
   inputUomId: string
   inputUomCode: string
@@ -170,7 +172,8 @@ export async function getTransfer(userId: string, id: string) {
       productId: products.id,
       sku: products.sku,
       productName: products.name,
-      lotRequired: products.lotRequired,
+      tracking: products.tracking,
+      lotAuto: sql<boolean>`${products.lotPrefix} is not null`,
       inputQty: stockMoves.inputQty,
       inputUomId: stockMoves.inputUomId,
       inputUomCode: uoms.code,
@@ -263,7 +266,8 @@ export type ProductChoice = {
   uomId: string
   uomCode: string
   uomCategoryId: string
-  lotRequired: boolean
+  tracking: ProductTracking
+  lotAuto: boolean
 }
 
 export const PRODUCT_SEARCH_LIMIT = 20
@@ -279,7 +283,8 @@ export async function searchProducts(search: string): Promise<ProductChoice[]> {
       uomId: products.uomId,
       uomCode: uoms.code,
       uomCategoryId: uoms.categoryId,
-      lotRequired: products.lotRequired,
+      tracking: products.tracking,
+      lotAuto: sql<boolean>`${products.lotPrefix} is not null`,
     })
     .from(products)
     .innerJoin(uoms, eq(uoms.id, products.uomId))

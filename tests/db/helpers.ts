@@ -73,5 +73,8 @@ export async function purgeInventory(db: Db, productIds: string[]) {
     )
     await tx.execute(sql`delete from transfers where id in (select id from purged_transfers)`)
     await tx.execute(sql`delete from lots where product_id in (${ids})`)
+    await tx.execute(sql`
+      delete from number_sequences
+      where scope in (select 'lot:' || id from unnest(array[${ids}]) as id)`)
   })
 }

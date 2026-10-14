@@ -7,7 +7,8 @@ import { DeleteRecord } from "@/components/delete-record"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
-import { INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
+import { INVENTORY_CATEGORY_LABELS, PRODUCT_TRACKING_LABELS } from "@/lib/inventory"
+import { skuExample } from "@/lib/product-category"
 import { hasPermission } from "@/lib/permissions"
 import { formatRefCode } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
@@ -49,7 +50,10 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
       "Berat netto",
       product.netWeight ? `${formatDecimal(product.netWeight)} kg per ${product.uom.code}` : "—",
     ],
-    ["Wajib lot", product.lotRequired ? "Ya" : "Tidak"],
+    [
+      "Pelacakan",
+      `${PRODUCT_TRACKING_LABELS[product.tracking]}${product.lotPrefix ? ` · nomor otomatis ${skuExample(product.lotPrefix, product.lotDigits)}` : ""}`,
+    ],
     ["Kode HS", product.hs ? formatRefCode(product.hs) : (product.hsCode ?? "—")],
     [
       "Satuan CEISA",

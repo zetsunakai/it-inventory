@@ -353,7 +353,7 @@ export function TransferForm({
                 ) : (
                   <Input
                     aria-label={`Nomor lot ${label}`}
-                    placeholder={line.product?.lotRequired ? "Lot (wajib)" : "Lot"}
+                    placeholder={lotPlaceholder(line.product)}
                     value={line.lotName}
                     onChange={(event) => update(line.key, { lotName: event.target.value })}
                     className={`font-mono ${TOUCH}`}
@@ -401,6 +401,13 @@ export function TransferForm({
       </div>
     </form>
   )
+}
+
+// Petunjuk isi lot barang masuk sesuai pelacakan produk.
+function lotPlaceholder(product: ProductChoice | null) {
+  if (!product || product.tracking === "none") return "Lot"
+  const noun = product.tracking === "serial" ? "No. seri" : "Lot"
+  return product.lotAuto ? `${noun} (otomatis)` : `${noun} (wajib)`
 }
 
 const NO_LOT = "__tanpa_lot__"

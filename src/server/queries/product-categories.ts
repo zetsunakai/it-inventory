@@ -73,7 +73,9 @@ export async function listProductCategories({
     where ${sql.join(conditions, sql` and `)}`
 
   const [rows, totals] = await Promise.all([
-    db.execute<RawRow>(sql`select ${columns} ${from} order by p.path limit ${pageSize} offset ${offset}`),
+    db.execute<RawRow>(
+      sql`select ${columns} ${from} order by p.path limit ${pageSize} offset ${offset}`,
+    ),
     db.execute<{ total: number }>(sql`select count(*)::int as total ${from}`),
   ])
   return { rows: rows.rows.map(toRow), total: totals.rows[0]?.total ?? 0 }
@@ -108,12 +110,10 @@ export async function listProductCategoryOptions(includeId?: string | null) {
     from product_categories c join product_category_paths p on p.id = c.id
     where c.active or c.id = ${includeId ?? null}
     order by p.path`)
-  return result.rows.map(
-    (row): ProductCategoryOption => ({
-      id: row.id,
-      path: row.path,
-      codePrefix: row.code_prefix,
-      codeDigits: row.code_digits,
-    }),
-  )
+  return result.rows.map((row): ProductCategoryOption => ({
+    id: row.id,
+    path: row.path,
+    codePrefix: row.code_prefix,
+    codeDigits: row.code_digits,
+  }))
 }

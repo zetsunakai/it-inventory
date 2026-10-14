@@ -133,6 +133,23 @@ dimatikan: user baru dibuat oleh Administrator.
 - Helper zod untuk field form ada di `src/lib/form-fields.ts`; pengecekan kode referensi di
   `src/server/db/ref-code-checks.ts`.
 
+## Pelacakan lot dan nomor seri
+
+- `products.tracking` (backlog R-02): `none`, `lot`, atau `serial`; menggantikan `lot_required`
+  (data lama: wajib lot = `lot`). Tidak bisa diubah selama produk punya stok di lokasi gudang atau
+  transaksi Draft/Siap (trigger `products_tracking_guard`).
+- Aturan di `transfer_tracking_errors()`, dipakai "Tandai siap" dan validasi: produk berpelacakan
+  wajib punya lot/nomor seri; nomor seri ber-qty 1 dalam satuan stok dan hanya boleh ada satu di
+  seluruh lokasi gudang (boleh masuk lagi setelah keluar).
+- Nomor otomatis: produk dengan `lot_prefix` (+ `lot_digits`) yang diterima dari luar gudang
+  (penerimaan, penyesuaian tambah) dengan lot kosong diberi nomor saat validasi oleh
+  `assign_auto_lots()`: per lot satu lot baru per baris, per nomor seri baris qty n dipecah jadi n
+  baris ber-qty 1. Nomor urut `next_number('lot:<id produk>', '')` ikut batal bila validasi gagal.
+- `validate_transfer()` sekarang memanggil `transfer_validation_errors()` untuk semua syarat
+  (akses, tanggal, periode, persetujuan, pelacakan, stok, retur, gerbang dokumen BC).
+- Import/export produk: kolom Pelacakan (judul lama "Wajib lot" dengan Ya/Tidak tetap diterima),
+  Prefix nomor lot/seri, Digit nomor lot/seri.
+
 ## Kategori produk dan SKU otomatis
 
 - Tabel `product_categories` (backlog R-01): bertingkat lewat `parent_id`, jalur lengkap

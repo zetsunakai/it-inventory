@@ -4,7 +4,13 @@ import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox } from "@/lib/form-fields"
-import { ALWAYS, newSkuField, pairCeisaUnit, productFields } from "@/lib/product"
+import {
+  ALWAYS,
+  newSkuField,
+  pairCeisaUnit,
+  prefixNeedsTracking,
+  productFields,
+} from "@/lib/product"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
@@ -80,7 +86,8 @@ export const createProduct = defineFormAction({
       uomId: z.uuid("Satuan stok wajib dipilih."),
       ...productFields,
     })
-    .superRefine(pairCeisaUnit, ALWAYS),
+    .superRefine(pairCeisaUnit, ALWAYS)
+    .superRefine(prefixNeedsTracking, ALWAYS),
   successMessage: "Produk ditambahkan.",
   handler: async ({ input, tx }) => {
     const errors = await categoryErrors(tx, input.categoryId, { needsPrefix: !input.sku })
@@ -113,7 +120,8 @@ export const updateProduct = defineFormAction({
   permission: "master:write",
   schema: z
     .object({ id: z.uuid("Produk tidak valid."), ...productFields, active: checkbox })
-    .superRefine(pairCeisaUnit, ALWAYS),
+    .superRefine(pairCeisaUnit, ALWAYS)
+    .superRefine(prefixNeedsTracking, ALWAYS),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {
     const [saved] = await tx

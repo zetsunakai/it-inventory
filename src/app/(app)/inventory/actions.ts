@@ -245,18 +245,11 @@ export const markTransferReady = defineAction({
     if ((await transferStatus(tx, input.id)) !== "draft") {
       throw new AppError("Hanya transfer Draft yang bisa ditandai Siap.")
     }
-    const missingLots = await tx
-      .select({ sku: products.sku })
-      .from(stockMoves)
-      .innerJoin(products, eq(products.id, stockMoves.productId))
-      .where(
-        and(
-          eq(stockMoves.transferId, input.id),
-          eq(products.lotRequired, true),
-          isNull(stockMoves.lotId),
-        ),
-      )
-    const errors = missingLots.map((row) => `Produk ${row.sku} wajib diisi nomor lot.`)
+    // Lot/seri wajib dan aturan nomor seri, sama dengan saat validasi.
+    const tracking = await tx.execute<{ errors: string[] }>(
+      sql`select transfer_tracking_errors(${input.id}) as errors`,
+    )
+    const errors = tracking.rows[0]?.errors ?? []
     const [header] = await tx
       .select({ type: transfers.type, reason: transfers.reason })
       .from(transfers)

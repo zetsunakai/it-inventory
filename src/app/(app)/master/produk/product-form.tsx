@@ -23,14 +23,22 @@ import { toDecimalInput } from "@/lib/decimal"
 import {
   INVENTORY_CATEGORIES,
   INVENTORY_CATEGORY_LABELS,
+  PRODUCT_TRACKING_LABELS,
+  PRODUCT_TRACKINGS,
+  type ProductTracking,
   type InventoryCategory,
 } from "@/lib/inventory"
-import { skuExample } from "@/lib/product-category"
+import { CODE_PREFIX_PATTERN, DEFAULT_CODE_DIGITS, skuExample } from "@/lib/product-category"
 import type { RefCodeOption } from "@/lib/ref-codes"
 import type { ProductCategoryOption } from "@/server/queries/product-categories"
 import type { UomOption } from "@/server/queries/products"
 
 import { createProduct, updateProduct } from "./actions"
+
+const TRACKING_ITEMS = PRODUCT_TRACKINGS.map((tracking) => ({
+  value: tracking,
+  label: PRODUCT_TRACKING_LABELS[tracking],
+}))
 
 const CATEGORY_ITEMS = INVENTORY_CATEGORIES.map((category) => ({
   value: category,
@@ -52,7 +60,11 @@ export type ProductFormValues = {
   brand: string | null
   model: string | null
   size: string | null
-  lotRequired: boolean
+  tracking: ProductTracking
+  lotPrefix: string | null
+  lotDigits: number
+  // Pelacakan terkunci selama produk punya stok atau transaksi belum selesai.
+  trackingLocked: boolean
   active: boolean
 }
 
@@ -75,6 +87,15 @@ export function ProductForm({
   const [uomId, setUomId] = useState<string | null>(null)
   const [ceisaUnit, setCeisaUnit] = useState(product?.ceisaUnit ?? null)
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "")
+  const [tracking, setTracking] = useState<ProductTracking>(product?.tracking ?? "none")
+  const [lotPrefix, setLotPrefix] = useState(product?.lotPrefix ?? "")
+  const [lotDigits, setLotDigits] = useState(String(product?.lotDigits ?? DEFAULT_CODE_DIGITS))
+  const cleanLotPrefix = lotPrefix.trim().toUpperCase()
+  const lotExample =
+    CODE_PREFIX_PATTERN.test(cleanLotPrefix) && Number(lotDigits) >= 3 && Number(lotDigits) <= 10
+      ? skuExample(cleanLotPrefix, Number(lotDigits))
+      : null
+  const trackingNoun = tracking === "serial" ? "nomor seri" : "nomor lot"
   const skuCategory = categories.find((category) => category.id === categoryId)
   const nextSku = skuCategory?.codePrefix
     ? skuExample(skuCategory.codePrefix, skuCategory.codeDigits)
@@ -226,12 +247,83 @@ export function ProductForm({
             className="sm:w-48"
           />
         </FormField>
-        <CheckboxField
-          name="lotRequired"
-          label="Wajib lot"
-          description="Setiap penerimaan dan pengeluaran produk ini harus mencantumkan nomor lot/batch."
-          defaultChecked={checked("lotRequired", product?.lotRequired ?? false)}
-        />
+      </FormSection>
+
+      <FormSection
+        title="Lot dan nomor seri"
+        description="Produk yang dilacak wajib mencantumkan nomor lot atau nomor seri di setiap barang masuk dan keluar."
+      >
+        <div className="grid gap-4 sm:grid-cols-[1fr_12rem_8rem]">
+          {product?.trackingLocked ? (
+            <>
+              <StaticField
+                label="Pelacakan"
+                value={PRODUCT_TRACKING_LABELS[product.tracking]}
+                reason="Tidak bisa diubah selama produk punya stok atau transaksi yang belum selesai."
+              />
+              <input type="hidden" name="tracking" value={product.tracking} />
+            </>
+          ) : (
+            <FormField label="Pelacakan" htmlFor="tracking" errors={fieldErrors?.tracking}>
+              <Select
+                name="tracking"
+                items={TRACKING_ITEMS}
+                value={tracking}
+                onValueChange={(value) => setTracking((value as ProductTracking | null) ?? "none")}
+              >
+                <SelectTrigger id="tracking" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TRACKING_ITEMS.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
+          {tracking !== "none" ? (
+            <>
+              <FormField
+                label="Prefix nomor otomatis"
+                htmlFor="lotPrefix"
+                errors={fieldErrors?.lotPrefix}
+              >
+                <Input
+                  id="lotPrefix"
+                  name="lotPrefix"
+                  value={lotPrefix}
+                  onChange={(event) => setLotPrefix(event.target.value)}
+                  maxLength={10}
+                  autoComplete="off"
+                  className="font-mono uppercase"
+                />
+              </FormField>
+              <FormField label="Jumlah digit" htmlFor="lotDigits" errors={fieldErrors?.lotDigits}>
+                <Input
+                  id="lotDigits"
+                  name="lotDigits"
+                  value={lotDigits}
+                  onChange={(event) => setLotDigits(event.target.value)}
+                  inputMode="numeric"
+                  autoComplete="off"
+                />
+              </FormField>
+            </>
+          ) : (
+            <input type="hidden" name="lotDigits" value={lotDigits} />
+          )}
+        </div>
+        {tracking !== "none" && (
+          <p className="text-xs text-muted-foreground">
+            {lotExample
+              ? `Barang masuk yang ${trackingNoun}nya dikosongkan diberi nomor otomatis saat validasi, mis. ${lotExample}.`
+              : `Kosongkan prefix bila ${trackingNoun} selalu diisi manual.`}
+            {tracking === "serial" && " Setiap nomor seri ber-qty 1."}
+          </p>
+        )}
       </FormSection>
 
       <FormSection

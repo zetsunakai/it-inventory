@@ -19,6 +19,17 @@ export const INVENTORY_CATEGORY_LABELS: Record<InventoryCategory, string> = {
   scrap: "Scrap & reject",
 }
 
+// Pelacakan produk (PRD bagian 5.1 dan 6.4, backlog R-02): tanpa, per lot/batch, atau per nomor
+// seri (qty 1 per nomor, unik per produk).
+export const PRODUCT_TRACKINGS = ["none", "lot", "serial"] as const
+export type ProductTracking = (typeof PRODUCT_TRACKINGS)[number]
+
+export const PRODUCT_TRACKING_LABELS: Record<ProductTracking, string> = {
+  none: "Tanpa pelacakan",
+  lot: "Per lot",
+  serial: "Per nomor seri",
+}
+
 export const LOCATION_TYPES = [
   "internal",
   "transit",

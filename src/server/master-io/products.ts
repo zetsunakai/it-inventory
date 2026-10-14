@@ -13,8 +13,8 @@ import {
   type ImportColumn,
   type ImportResult,
 } from "@/lib/import"
-import { INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
-import { ALWAYS, pairCeisaUnit, productFields, skuField } from "@/lib/product"
+import { INVENTORY_CATEGORY_LABELS, PRODUCT_TRACKING_LABELS } from "@/lib/inventory"
+import { ALWAYS, pairCeisaUnit, prefixNeedsTracking, productFields, skuField } from "@/lib/product"
 import type { Transaction } from "@/server/db/audit"
 import { db } from "@/server/db"
 import { refCodeStates } from "@/server/db/ref-code-checks"
@@ -94,10 +94,24 @@ export const PRODUCT_COLUMNS = [
   { key: "model", header: "Tipe", width: 16, description: "Boleh kosong." },
   { key: "size", header: "Ukuran", width: 16, description: "Boleh kosong." },
   {
-    key: "lotRequired",
-    header: "Wajib lot",
-    width: 10,
-    description: "Ya atau Tidak. Kosong berarti Tidak.",
+    key: "tracking",
+    header: "Pelacakan",
+    // File export sebelum R-02 berisi kolom Wajib lot (Ya = per lot, Tidak = tanpa pelacakan).
+    aliases: ["Wajib lot"],
+    width: 16,
+    description: `${optionList(PRODUCT_TRACKING_LABELS)}. Kosong berarti Tanpa pelacakan. Tidak bisa diubah selama produk punya stok atau transaksi yang belum selesai.`,
+  },
+  {
+    key: "lotPrefix",
+    header: "Prefix nomor lot/seri",
+    width: 18,
+    description: "Prefix nomor lot/seri otomatis untuk barang masuk, mis. LOT-. Boleh kosong.",
+  },
+  {
+    key: "lotDigits",
+    header: "Digit nomor lot/seri",
+    width: 12,
+    description: "Jumlah digit nomor urut, 3 sampai 10. Kosong berarti 6.",
   },
   {
     key: "active",
@@ -126,7 +140,9 @@ function sheetValues(product: SavedProduct): Record<ProductKey, string> {
     brand: product.brand ?? "",
     model: product.model ?? "",
     size: product.size ?? "",
-    lotRequired: flagText(product.lotRequired),
+    tracking: PRODUCT_TRACKING_LABELS[product.tracking],
+    lotPrefix: product.lotPrefix ?? "",
+    lotDigits: String(product.lotDigits),
     active: flagText(product.active),
   }
 }
@@ -155,6 +171,7 @@ export async function exportProducts(format: SpreadsheetFormat) {
 const rowSchema = z
   .object({ sku: skuField, ...productFields, active: checkbox })
   .superRefine(pairCeisaUnit, ALWAYS)
+  .superRefine(prefixNeedsTracking, ALWAYS)
 
 type ProductInput = z.output<typeof rowSchema>
 
@@ -163,6 +180,14 @@ type ProductInput = z.output<typeof rowSchema>
 function hsCodeValue(value: string | undefined) {
   const digits = (value ?? "").replace(/[.\s]/g, "")
   return /^\d{7}$/.test(digits) ? `0${digits}` : digits
+}
+
+// Pelacakan: label, kode, atau nilai kolom lama Wajib lot (Ya/Tidak). Kosong = tanpa pelacakan.
+function trackingValue(value: string) {
+  if (!value.trim()) return "none" as const
+  const flag = parseFlag(value, false)
+  if (flag !== undefined) return flag ? ("lot" as const) : ("none" as const)
+  return matchOption(value, PRODUCT_TRACKING_LABELS)
 }
 
 // Jalur kategori dibandingkan tanpa membedakan huruf besar/kecil dan spasi di sekitar "/".
@@ -212,8 +237,13 @@ export async function importProductRows(
     ) {
       messages.push(`Kategori produk "${categoryPath}" tidak ditemukan atau sudah diarsipkan.`)
     }
-    const lotRequired = parseFlag(sheet.lotRequired ?? "", false)
-    if (lotRequired === undefined) messages.push("Wajib lot harus Ya atau Tidak.")
+    const tracking = trackingValue(sheet.tracking ?? "")
+    if (tracking === undefined) {
+      reported.add("tracking")
+      messages.push(
+        `Pelacakan "${sheet.tracking}" tidak dikenal. Pilih ${optionList(PRODUCT_TRACKING_LABELS)}.`,
+      )
+    }
     const active = parseFlag(sheet.active ?? "", true)
     if (active === undefined) messages.push("Aktif harus Ya atau Tidak.")
 
@@ -223,7 +253,9 @@ export async function importProductRows(
       category: category || undefined,
       hsCode: hsCodeValue(sheet.hsCode),
       ceisaUnitCode: sheet.ceisaUnitCode?.toUpperCase(),
-      lotRequired: lotRequired ? "on" : undefined,
+      tracking,
+      lotPrefix: sheet.lotPrefix?.toUpperCase(),
+      lotDigits: sheet.lotDigits?.trim() || "6",
       active: active === false ? undefined : "on",
     })
     if (!parsed.success) {
@@ -297,7 +329,9 @@ function changed(saved: SavedProduct, values: ProductInput) {
     saved.brand !== values.brand ||
     saved.model !== values.model ||
     saved.size !== values.size ||
-    saved.lotRequired !== values.lotRequired ||
+    saved.tracking !== values.tracking ||
+    saved.lotPrefix !== values.lotPrefix ||
+    saved.lotDigits !== values.lotDigits ||
     saved.active !== values.active
   )
 }

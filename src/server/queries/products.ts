@@ -61,6 +61,15 @@ export async function getProduct(id: string) {
       categoryPath: sql<
         string | null
       >`(select path from product_category_paths where id = ${products.categoryId})`,
+      // Sama dengan syarat trigger products_tracking_guard.
+      trackingLocked: sql<boolean>`(
+        exists (select 1 from stock_balances b
+          where b.product_id = ${products.id} and b.warehouse_id is not null and b.qty <> 0)
+        or exists (
+          select 1 from stock_moves m join transfers t on t.id = m.transfer_id
+          where m.product_id = ${products.id} and t.status in ('draft', 'ready')
+        )
+      )`,
       uom: { code: uoms.code, name: uoms.name },
       hs: { code: hs.code, name: hs.name, parentCode: hs.parentCode },
       ceisaUnit: { code: ceisaUnit.code, name: ceisaUnit.name, parentCode: ceisaUnit.parentCode },
@@ -81,6 +90,7 @@ export async function getProduct(id: string) {
   return {
     ...row.product,
     categoryPath: row.categoryPath,
+    trackingLocked: row.trackingLocked,
     uom: row.uom,
     hs: row.hs as RefCodeOption | null,
     ceisaUnit: row.ceisaUnit as RefCodeOption | null,

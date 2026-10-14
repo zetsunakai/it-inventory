@@ -153,7 +153,7 @@ describe("aksi produk", () => {
         ceisaUnitCode: "ZQU",
         ceisaFactor: "1",
         netWeight: "0,25",
-        lotRequired: "on",
+        tracking: "lot",
       }),
     )
     expect(ready).toMatchObject({ ok: true, data: { sku: "ZQP1" } })
@@ -167,7 +167,7 @@ describe("aksi produk", () => {
     })
     expect(rows.find((row) => row.sku === "ZQP1")).toMatchObject({
       netWeight: "0.250000",
-      lotRequired: true,
+      tracking: "lot",
     })
 
     const [log] = await db

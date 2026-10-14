@@ -253,6 +253,27 @@
       "when": 1791952014005,
       "tag": "0035_product_categories_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 36,
+      "version": "7",
+      "when": 1791954087318,
+      "tag": "0036_product_tracking",
+      "breakpoints": true
+    },
+    {
+      "idx": 37,
+      "version": "7",
+      "when": 1791954087980,
+      "tag": "0037_product_tracking_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 38,
+      "version": "7",
+      "when": 1791954147407,
+      "tag": "0038_drop_lot_required",
+      "breakpoints": true
     }
   ]
 }

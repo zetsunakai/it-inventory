@@ -1,7 +1,8 @@
 import { z } from "zod"
 
-import { checkbox, optionalDecimal, optionalText, requiredText } from "./form-fields"
-import { INVENTORY_CATEGORIES } from "./inventory"
+import { optionalDecimal, optionalText, requiredText } from "./form-fields"
+import { INVENTORY_CATEGORIES, PRODUCT_TRACKINGS } from "./inventory"
+import { CODE_PREFIX_PATTERN, DEFAULT_CODE_DIGITS } from "./product-category"
 
 // Field produk (PRD bagian 5.1) yang dipakai bersama oleh form produk dan import (M1-07),
 // supaya aturan validasinya hanya ada di satu tempat.
@@ -27,7 +28,32 @@ export const productFields = {
   brand: optionalText("Merk", 100),
   model: optionalText("Tipe", 100),
   size: optionalText("Ukuran", 100),
-  lotRequired: checkbox,
+  // Kosong = tanpa pelacakan.
+  tracking: z.enum(PRODUCT_TRACKINGS, "Pilih pelacakan produk.").default("none"),
+  // Nomor lot/seri otomatis untuk barang masuk; kosong = selalu diisi manual.
+  lotPrefix: z
+    .string()
+    .trim()
+    .toUpperCase()
+    .optional()
+    .transform((value) => value || null)
+    .refine(
+      (value) => value === null || CODE_PREFIX_PATTERN.test(value),
+      "Prefix nomor lot/seri maksimal 10 karakter: huruf, angka, - atau /, diawali huruf atau angka.",
+    ),
+  // Kosong = 6 digit.
+  lotDigits: z
+    .string()
+    .optional()
+    .transform((value) => value?.trim() || String(DEFAULT_CODE_DIGITS))
+    .pipe(z.coerce.number("Jumlah digit nomor lot/seri harus angka."))
+    .pipe(
+      z
+        .number()
+        .int("Jumlah digit nomor lot/seri harus bilangan bulat.")
+        .min(3, "Jumlah digit nomor lot/seri minimal 3.")
+        .max(10, "Jumlah digit nomor lot/seri maksimal 10."),
+    ),
 }
 
 export const skuField = requiredText("SKU", 50)
@@ -35,6 +61,20 @@ export const skuField = requiredText("SKU", 50)
 // Produk baru: SKU boleh dikosongkan bila kategori produknya punya prefix kode; database yang
 // membuatnya (next_product_sku).
 export const newSkuField = z.string().trim().max(50, "SKU maksimal 50 karakter.")
+
+// Prefix nomor otomatis hanya untuk produk yang dilacak (dipaksakan juga di database).
+export function prefixNeedsTracking(
+  input: { tracking?: string; lotPrefix: string | null },
+  ctx: z.RefinementCtx,
+) {
+  if (input.lotPrefix && input.tracking === "none") {
+    ctx.addIssue({
+      code: "custom",
+      path: ["lotPrefix"],
+      message: "Prefix nomor lot/seri hanya untuk produk yang dilacak per lot atau nomor seri.",
+    })
+  }
+}
 
 type CeisaUnitFields = { ceisaUnitCode: string | null; ceisaFactor: string | null }
 

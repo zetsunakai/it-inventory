@@ -68,7 +68,13 @@ beforeAll(async () => {
     .insert(products)
     .values([
       { sku: "ZVP1", name: "Baut", category: "raw_material", uomId: pcs.id },
-      { sku: "ZVLOT", name: "Cat", category: "finished_good", uomId: pcs.id, lotRequired: true },
+      {
+        sku: "ZVLOT",
+        name: "Cat",
+        category: "finished_good",
+        uomId: pcs.id,
+        tracking: "lot" as const,
+      },
     ])
     .returning({ id: products.id })
   ;[ids.product, ids.lotProduct] = productRows.map((row) => row.id)

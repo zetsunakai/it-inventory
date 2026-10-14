@@ -170,9 +170,10 @@ describe("import produk", () => {
       ["ZMP1", "raw_material", "99990201", "ZMU"],
       ["ZMP2", "finished_good", null, null],
     ])
-    expect(rows.map((row) => [row.lotRequired, row.active, row.customsReady])).toEqual([
-      [true, true, true],
-      [false, true, false],
+    // Kolom lama "Wajib lot" tetap terbaca: Ya = per lot, kosong = tanpa pelacakan.
+    expect(rows.map((row) => [row.tracking, row.active, row.customsReady])).toEqual([
+      ["lot", true, true],
+      ["none", true, false],
     ])
 
     const audit = await db
@@ -222,7 +223,7 @@ describe("import produk", () => {
         line: 5,
         key: "ZMP4",
         messages: [
-          "Wajib lot harus Ya atau Tidak.",
+          'Pelacakan "mungkin" tidak dikenal. Pilih Tanpa pelacakan, Per lot, atau Per nomor seri.',
           "Nama produk wajib diisi.",
           "Faktor satuan CEISA wajib diisi bila satuan CEISA dipilih.",
           "Satuan stok ZMOLD tidak ditemukan atau sudah diarsipkan.",

@@ -2,6 +2,7 @@ import { sql } from "drizzle-orm"
 import {
   boolean,
   index,
+  pgEnum,
   numeric,
   pgTable,
   smallint,
@@ -9,6 +10,9 @@ import {
   uuid,
   type AnyPgColumn,
 } from "drizzle-orm/pg-core"
+
+// Path relatif (bukan alias @/) karena schema juga dibaca oleh drizzle-kit dan script CLI.
+import { PRODUCT_TRACKINGS } from "../../../lib/inventory"
 
 import { timestamps } from "./_columns"
 import { uoms } from "./uoms"
@@ -37,6 +41,8 @@ export const productCategories = pgTable(
   (table) => [index("product_categories_parent_idx").on(table.parentId)],
 )
 
+export const productTracking = pgEnum("product_tracking", PRODUCT_TRACKINGS)
+
 // Produk (PRD bagian 5.1). Qty selalu disimpan dalam satuan stok (uom_id). Untuk dokumen BC
 // produk butuh kode HS dan satuan CEISA beserta faktornya: 1 satuan stok = ceisa_factor
 // satuan CEISA. customs_ready dihitung database dari ketiganya (PRD bagian 5.3).
@@ -64,7 +70,13 @@ export const products = pgTable(
     brand: text(),
     model: text(),
     size: text(),
-    lotRequired: boolean().notNull().default(false),
+    // Pelacakan lot/nomor seri (backlog R-02). Tidak bisa diubah selama produk punya stok atau
+    // transaksi belum selesai (trigger products_tracking_guard).
+    tracking: productTracking().notNull().default("none"),
+    // Nomor lot/seri otomatis untuk barang masuk yang nomornya dikosongkan: prefix + nomor urut
+    // produk, dibuat saat validasi (assign_auto_lots). Kosong = selalu diisi manual.
+    lotPrefix: text(),
+    lotDigits: smallint().notNull().default(6),
     customsReady: boolean()
       .notNull()
       .generatedAlwaysAs(
