@@ -4,6 +4,7 @@ import { Suspense } from "react"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
+import { listProductCategoryOptions } from "@/server/queries/product-categories"
 import { listActiveUoms } from "@/server/queries/products"
 
 import { ProductForm } from "../product-form"
@@ -15,7 +16,7 @@ export default function NewProductPage() {
     <>
       <PageHeader
         title="Tambah produk"
-        description="SKU dan satuan stok tidak bisa diubah setelah disimpan."
+        description="SKU dan satuan stok tidak bisa diubah setelah disimpan. SKU boleh dikosongkan bila kategori produknya punya prefix kode."
       />
       <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-3xl" />}>
         <Guarded />
@@ -26,5 +27,6 @@ export default function NewProductPage() {
 
 async function Guarded() {
   await requirePermission("master:write")
-  return <ProductForm uoms={await listActiveUoms()} />
+  const [uoms, categories] = await Promise.all([listActiveUoms(), listProductCategoryOptions()])
+  return <ProductForm uoms={uoms} categories={categories} />
 }

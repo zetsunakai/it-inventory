@@ -239,6 +239,20 @@
       "when": 1791935779267,
       "tag": "0033_stock_on_hand",
       "breakpoints": true
+    },
+    {
+      "idx": 34,
+      "version": "7",
+      "when": 1791952010331,
+      "tag": "0034_product_categories",
+      "breakpoints": true
+    },
+    {
+      "idx": 35,
+      "version": "7",
+      "when": 1791952014005,
+      "tag": "0035_product_categories_rules",
+      "breakpoints": true
     }
   ]
 }

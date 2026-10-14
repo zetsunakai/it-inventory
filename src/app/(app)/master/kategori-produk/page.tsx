@@ -1,0 +1,114 @@
+import { Plus } from "lucide-react"
+import type { Metadata } from "next"
+import Link from "next/link"
+import { Suspense } from "react"
+
+import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
+import { DataTableFilter } from "@/components/data-table/data-table-filter"
+import { DataTablePagination } from "@/components/data-table/data-table-pagination"
+import { DataTableSearch } from "@/components/data-table/data-table-search"
+import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
+import { listEmptyState } from "@/components/data-table/empty-state"
+import { PageHeader } from "@/components/page-header"
+import { NameCell } from "@/components/status-badge"
+import { buttonVariants } from "@/components/ui/button"
+import { formatNumber } from "@/lib/format"
+import {
+  parseListParams,
+  pickActive,
+  type RawSearchParams,
+  STATUS_FILTER,
+  STATUS_OPTIONS,
+} from "@/lib/list-params"
+import { hasPermission } from "@/lib/permissions"
+import { skuExample } from "@/lib/product-category"
+import { requirePermission } from "@/server/auth/session"
+import { listProductCategories, type ProductCategoryRow } from "@/server/queries/product-categories"
+
+export const metadata: Metadata = { title: "Kategori produk · IT Inventory" }
+
+const COLUMNS: DataTableColumn<ProductCategoryRow>[] = [
+  {
+    header: "Kategori",
+    cell: (row) => (
+      // Sub-kategori menjorok di bawah induknya; jalur lengkap tetap terbaca lewat title.
+      <span title={row.path} style={{ paddingLeft: `${row.depth * 1.25}rem` }} className="block">
+        <NameCell archived={!row.active}>{row.name}</NameCell>
+      </span>
+    ),
+    className: "w-full whitespace-normal",
+  },
+  {
+    header: "Format SKU",
+    cell: (row) =>
+      row.codePrefix ? (
+        <span className="font-mono">{skuExample(row.codePrefix, row.codeDigits)}</span>
+      ) : (
+        <span className="text-muted-foreground">Manual</span>
+      ),
+  },
+  { header: "Produk", cell: (row) => formatNumber(row.productCount), align: "right" },
+]
+
+export default function ProductCategoriesPage({
+  searchParams,
+}: PageProps<"/master/kategori-produk">) {
+  return (
+    <>
+      <PageHeader
+        title="Kategori produk"
+        description="Kategori dengan prefix kode membuat SKU otomatis untuk produk baru yang SKU-nya dikosongkan."
+      />
+      <Suspense fallback={<DataTableSkeleton />}>
+        <CategoryTable searchParams={searchParams} />
+      </Suspense>
+    </>
+  )
+}
+
+async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearchParams> }) {
+  const user = await requirePermission("master:read")
+  const canEdit = hasPermission(user.roles, "master:write")
+  const raw = await searchParams
+  const params = parseListParams(raw)
+  const { rows, total } = await listProductCategories({ ...params, active: pickActive(raw) })
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col gap-2 sm:flex-row">
+        <DataTableSearch placeholder="Cari nama atau prefix kode" />
+        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
+        {canEdit && (
+          <Link
+            href="/master/kategori-produk/baru"
+            className={buttonVariants({ className: "sm:ml-auto" })}
+          >
+            <Plus />
+            Tambah kategori
+          </Link>
+        )}
+      </div>
+      <DataTable
+        columns={COLUMNS}
+        rows={rows}
+        rowKey={(row) => row.id}
+        rowHref={canEdit ? (row) => `/master/kategori-produk/${row.id}` : undefined}
+        rowMuted={(row) => !row.active}
+        empty={listEmptyState({
+          searchParams: raw,
+          basePath: "/master/kategori-produk",
+          noun: "kategori produk",
+          create: canEdit
+            ? { href: "/master/kategori-produk/baru", label: "Tambah kategori" }
+            : undefined,
+        })}
+      />
+      <DataTablePagination
+        searchParams={raw}
+        page={params.page}
+        pageSize={params.pageSize}
+        total={total}
+      />
+    </div>
+  )
+}

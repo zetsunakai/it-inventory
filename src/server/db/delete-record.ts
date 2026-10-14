@@ -16,6 +16,7 @@ import type { Transaction } from "./audit"
 // baru di sini saat dibuat; yang belum terdaftar tampil sebagai "data lain".
 const REFERENCING_TABLES: Record<string, string> = {
   products: "produk",
+  product_categories: "kategori produk",
   uoms: "satuan",
   locations: "lokasi",
 }

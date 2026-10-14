@@ -29,6 +29,8 @@ export type ImportColumn<Key extends string = string> = {
   description: string
   // "always" = wajib di setiap baris, "new" = wajib untuk data baru saja.
   required?: "always" | "new"
+  // Judul lama yang masih diterima, supaya file export versi sebelumnya tetap bisa diimpor.
+  aliases?: readonly string[]
 }
 
 export const FLAG_TRUE = "Ya"

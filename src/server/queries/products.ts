@@ -1,6 +1,6 @@
 import "server-only"
 
-import { aliasedTable, and, asc, count, eq, ilike, isNull, or, type SQL } from "drizzle-orm"
+import { aliasedTable, and, asc, count, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm"
 
 import type { InventoryCategory } from "@/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
@@ -58,6 +58,9 @@ export async function getProduct(id: string) {
   const [row] = await db
     .select({
       product: products,
+      categoryPath: sql<
+        string | null
+      >`(select path from product_category_paths where id = ${products.categoryId})`,
       uom: { code: uoms.code, name: uoms.name },
       hs: { code: hs.code, name: hs.name, parentCode: hs.parentCode },
       ceisaUnit: { code: ceisaUnit.code, name: ceisaUnit.name, parentCode: ceisaUnit.parentCode },
@@ -77,6 +80,7 @@ export async function getProduct(id: string) {
   if (!row) return undefined
   return {
     ...row.product,
+    categoryPath: row.categoryPath,
     uom: row.uom,
     hs: row.hs as RefCodeOption | null,
     ceisaUnit: row.ceisaUnit as RefCodeOption | null,

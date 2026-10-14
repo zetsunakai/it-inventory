@@ -6,6 +6,7 @@ import { useActionState, useEffect, useState } from "react"
 import { CheckboxField } from "@/components/checkbox-field"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection, StaticField } from "@/components/form-field"
+import { ProductCategorySelect } from "@/components/product-category-select"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -24,7 +25,9 @@ import {
   INVENTORY_CATEGORY_LABELS,
   type InventoryCategory,
 } from "@/lib/inventory"
+import { skuExample } from "@/lib/product-category"
 import type { RefCodeOption } from "@/lib/ref-codes"
+import type { ProductCategoryOption } from "@/server/queries/product-categories"
 import type { UomOption } from "@/server/queries/products"
 
 import { createProduct, updateProduct } from "./actions"
@@ -39,6 +42,7 @@ export type ProductFormValues = {
   sku: string
   name: string
   description: string | null
+  categoryId: string | null
   category: InventoryCategory
   uom: { code: string; name: string }
   hs: RefCodeOption | null
@@ -53,7 +57,15 @@ export type ProductFormValues = {
 }
 
 // Form tambah (tanpa product) dan ubah produk.
-export function ProductForm({ product, uoms }: { product?: ProductFormValues; uoms: UomOption[] }) {
+export function ProductForm({
+  product,
+  uoms,
+  categories,
+}: {
+  product?: ProductFormValues
+  uoms: UomOption[]
+  categories: ProductCategoryOption[]
+}) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState<
     FormState<{ id: string; sku: string }>,
@@ -62,6 +74,11 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
   const [uomId, setUomId] = useState<string | null>(null)
   const [ceisaUnit, setCeisaUnit] = useState(product?.ceisaUnit ?? null)
+  const [categoryId, setCategoryId] = useState(product?.categoryId ?? "")
+  const skuCategory = categories.find((category) => category.id === categoryId)
+  const nextSku = skuCategory?.codePrefix
+    ? skuExample(skuCategory.codePrefix, skuCategory.codeDigits)
+    : null
   const stockUom = product?.uom.code ?? uoms.find((uom) => uom.id === uomId)?.code
   const checked = (name: string, saved: boolean) =>
     state?.ok === false ? state.values?.[name] === "on" : saved
@@ -83,11 +100,26 @@ export function ProductForm({ product, uoms }: { product?: ProductFormValues; uo
       {product && <input type="hidden" name="id" value={product.id} />}
 
       <FormSection title="Data produk">
+        <FormField label="Kategori produk" htmlFor="categoryId" errors={fieldErrors?.categoryId}>
+          <ProductCategorySelect
+            id="categoryId"
+            name="categoryId"
+            options={categories}
+            value={categoryId}
+            onValueChange={setCategoryId}
+            emptyLabel="Tanpa kategori produk"
+          />
+        </FormField>
         <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
           {product ? (
             <StaticField label="SKU" value={product.sku} mono reason="Tidak bisa diubah." />
           ) : (
-            <FormField label="SKU" htmlFor="sku" errors={fieldErrors?.sku}>
+            <FormField
+              label="SKU"
+              htmlFor="sku"
+              errors={fieldErrors?.sku}
+              hint={nextSku ? `Kosongkan untuk dibuat otomatis, mis. ${nextSku}.` : undefined}
+            >
               <Input
                 id="sku"
                 name="sku"

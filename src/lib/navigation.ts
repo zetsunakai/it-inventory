@@ -121,6 +121,11 @@ export const NAVIGATION: NavGroup[] = [
         permission: "master:read",
       },
       {
+        title: "Kategori produk",
+        href: "/master/kategori-produk",
+        permission: "master:read",
+      },
+      {
         title: "Satuan",
         href: "/master/satuan",
         permission: "master:read",

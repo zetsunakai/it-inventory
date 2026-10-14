@@ -1,9 +1,41 @@
 import { sql } from "drizzle-orm"
-import { boolean, index, numeric, pgTable, text, uuid } from "drizzle-orm/pg-core"
+import {
+  boolean,
+  index,
+  numeric,
+  pgTable,
+  smallint,
+  text,
+  uuid,
+  type AnyPgColumn,
+} from "drizzle-orm/pg-core"
 
 import { timestamps } from "./_columns"
 import { uoms } from "./uoms"
 import { inventoryCategory } from "./warehouses"
+
+// Kategori produk bertingkat (PRD bagian 5.1, backlog R-01), terpisah dari kategori IT Inventory
+// di produk. Bila punya prefix kode, SKU produk baru yang dikosongkan dibuat database dari prefix
+// + nomor urut kategori (trigger products_before_write). Aturan lain di migrasi
+// product_categories_rules.
+export const productCategories = pgTable(
+  "product_categories",
+  {
+    id: uuid()
+      .default(sql`gen_random_uuid()`)
+      .primaryKey(),
+    name: text().notNull(),
+    parentId: uuid().references((): AnyPgColumn => productCategories.id, {
+      onDelete: "restrict",
+    }),
+    // Huruf besar, angka, "-" atau "/"; unik (tanpa membedakan huruf besar/kecil).
+    codePrefix: text(),
+    codeDigits: smallint().notNull().default(6),
+    active: boolean().notNull().default(true),
+    ...timestamps,
+  },
+  (table) => [index("product_categories_parent_idx").on(table.parentId)],
+)
 
 // Produk (PRD bagian 5.1). Qty selalu disimpan dalam satuan stok (uom_id). Untuk dokumen BC
 // produk butuh kode HS dan satuan CEISA beserta faktornya: 1 satuan stok = ceisa_factor
@@ -17,6 +49,8 @@ export const products = pgTable(
     sku: text().notNull().unique(),
     name: text().notNull(),
     description: text(),
+    // Kategori produk (boleh kosong); kategori IT Inventory di kolom category.
+    categoryId: uuid().references(() => productCategories.id, { onDelete: "restrict" }),
     category: inventoryCategory().notNull(),
     uomId: uuid()
       .notNull()
@@ -42,5 +76,6 @@ export const products = pgTable(
   (table) => [
     index("products_name_idx").on(table.name),
     index("products_category_idx").on(table.category),
+    index("products_category_id_idx").on(table.categoryId),
   ],
 )

@@ -11,6 +11,7 @@ import { INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
 import { formatRefCode } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
+import { listProductCategoryOptions } from "@/server/queries/product-categories"
 import { getProduct } from "@/server/queries/products"
 
 import { missingCustomsData } from "../customs-readiness"
@@ -36,6 +37,7 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
 
   const missing = missingCustomsData(product)
   const rows: [string, string][] = [
+    ["Kategori produk", product.categoryPath ?? "—"],
     ["Kategori IT Inventory", INVENTORY_CATEGORY_LABELS[product.category]],
     ["Satuan stok", `[${product.uom.code}] ${product.uom.name}`],
     ["Deskripsi", product.description ?? "—"],
@@ -69,7 +71,11 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
       />
       {hasPermission(user.roles, "master:write") ? (
         <>
-          <ProductForm product={product} uoms={[]} />
+          <ProductForm
+            product={product}
+            uoms={[]}
+            categories={await listProductCategoryOptions(product.categoryId)}
+          />
           <DeleteRecord
             action={deleteProduct}
             id={product.id}

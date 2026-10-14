@@ -38,6 +38,7 @@ export async function readImportFile<Key extends string>(
   for (const column of columns) {
     byHeader.set(normalizeHeader(column.header), column)
     byHeader.set(normalizeHeader(column.key), column)
+    for (const alias of column.aliases ?? []) byHeader.set(normalizeHeader(alias), column)
   }
 
   const positions: { index: number; key: Key }[] = []

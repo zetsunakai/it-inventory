@@ -8,6 +8,11 @@ import { INVENTORY_CATEGORIES } from "./inventory"
 
 export const productFields = {
   name: requiredText("Nama produk", 200),
+  // Kategori produk (boleh kosong); kategori IT Inventory di field category.
+  categoryId: z
+    .union([z.uuid("Kategori produk tidak valid."), z.literal("")])
+    .optional()
+    .transform((value) => value || null),
   description: optionalText("Deskripsi", 2000),
   category: z.enum(INVENTORY_CATEGORIES, "Kategori IT Inventory wajib dipilih."),
   hsCode: z
@@ -26,6 +31,10 @@ export const productFields = {
 }
 
 export const skuField = requiredText("SKU", 50)
+
+// Produk baru: SKU boleh dikosongkan bila kategori produknya punya prefix kode; database yang
+// membuatnya (next_product_sku).
+export const newSkuField = z.string().trim().max(50, "SKU maksimal 50 karakter.")
 
 type CeisaUnitFields = { ceisaUnitCode: string | null; ceisaFactor: string | null }
 

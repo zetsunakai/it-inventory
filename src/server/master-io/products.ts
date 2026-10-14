@@ -45,8 +45,16 @@ export const PRODUCT_COLUMNS = [
   { key: "name", header: "Nama", width: 40, required: "new", description: "Nama produk." },
   { key: "description", header: "Deskripsi", width: 40, description: "Boleh kosong." },
   {
+    key: "productCategory",
+    header: "Kategori produk",
+    width: 28,
+    description:
+      "Jalur lengkap kategori produk, mis. Bahan baku / Logam. Boleh kosong; kategori harus aktif.",
+  },
+  {
     key: "category",
-    header: "Kategori",
+    header: "Kategori IT Inventory",
+    aliases: ["Kategori"],
     width: 18,
     required: "new",
     description: `${optionList(INVENTORY_CATEGORY_LABELS)}.`,
@@ -101,13 +109,14 @@ export const PRODUCT_COLUMNS = [
 
 type ProductKey = (typeof PRODUCT_COLUMNS)[number]["key"]
 type SheetValues = Partial<Record<ProductKey, string>>
-type SavedProduct = typeof products.$inferSelect & { uomCode: string }
+type SavedProduct = typeof products.$inferSelect & { uomCode: string; categoryPath: string | null }
 
 function sheetValues(product: SavedProduct): Record<ProductKey, string> {
   return {
     sku: product.sku,
     name: product.name,
     description: product.description ?? "",
+    productCategory: product.categoryPath ?? "",
     category: INVENTORY_CATEGORY_LABELS[product.category],
     uom: product.uomCode,
     hsCode: product.hsCode ?? "",
@@ -122,7 +131,13 @@ function sheetValues(product: SavedProduct): Record<ProductKey, string> {
   }
 }
 
-const savedProductColumns = { product: products, uomCode: uoms.code }
+const savedProductColumns = {
+  product: products,
+  uomCode: uoms.code,
+  categoryPath: sql<
+    string | null
+  >`(select path from product_category_paths where id = ${products.categoryId})`,
+}
 
 export async function exportProducts(format: SpreadsheetFormat) {
   const rows = await db
@@ -130,8 +145,8 @@ export async function exportProducts(format: SpreadsheetFormat) {
     .from(products)
     .innerJoin(uoms, eq(uoms.id, products.uomId))
     .orderBy(asc(products.sku))
-  const values = rows.map(({ product, uomCode }) => {
-    const sheet = sheetValues({ ...product, uomCode })
+  const values = rows.map(({ product, uomCode, categoryPath }) => {
+    const sheet = sheetValues({ ...product, uomCode, categoryPath })
     return PRODUCT_COLUMNS.map((column) => sheet[column.key])
   })
   return writeSpreadsheet(format, "Produk", exportColumns(PRODUCT_COLUMNS), values)
@@ -148,6 +163,14 @@ type ProductInput = z.output<typeof rowSchema>
 function hsCodeValue(value: string | undefined) {
   const digits = (value ?? "").replace(/[.\s]/g, "")
   return /^\d{7}$/.test(digits) ? `0${digits}` : digits
+}
+
+// Jalur kategori dibandingkan tanpa membedakan huruf besar/kecil dan spasi di sekitar "/".
+function normalizePath(path: string) {
+  return path
+    .split("/")
+    .map((part) => part.trim().toLowerCase())
+    .join(" / ")
 }
 
 export async function importProductRows(
@@ -179,6 +202,16 @@ export async function importProductRows(
         `Kategori "${sheet.category}" tidak dikenal. Pilih ${optionList(INVENTORY_CATEGORY_LABELS)}.`,
       )
     }
+    const categoryPath = (sheet.productCategory ?? "").trim()
+    const productCategory = categoryPath
+      ? lookups.categories.get(normalizePath(categoryPath))
+      : undefined
+    if (
+      categoryPath &&
+      (!productCategory || (!productCategory.active && productCategory.id !== saved?.categoryId))
+    ) {
+      messages.push(`Kategori produk "${categoryPath}" tidak ditemukan atau sudah diarsipkan.`)
+    }
     const lotRequired = parseFlag(sheet.lotRequired ?? "", false)
     if (lotRequired === undefined) messages.push("Wajib lot harus Ya atau Tidak.")
     const active = parseFlag(sheet.active ?? "", true)
@@ -186,6 +219,7 @@ export async function importProductRows(
 
     const parsed = rowSchema.safeParse({
       ...sheet,
+      categoryId: productCategory?.id,
       category: category || undefined,
       hsCode: hsCodeValue(sheet.hsCode),
       ceisaUnitCode: sheet.ceisaUnitCode?.toUpperCase(),
@@ -254,6 +288,7 @@ function changed(saved: SavedProduct, values: ProductInput) {
   return (
     saved.name !== values.name ||
     saved.description !== values.description ||
+    saved.categoryId !== values.categoryId ||
     saved.category !== values.category ||
     saved.hsCode !== values.hsCode ||
     saved.ceisaUnitCode !== values.ceisaUnitCode ||
@@ -300,10 +335,18 @@ async function loadLookups(tx: Transaction, rows: ImportRow<ProductKey>[]) {
     unique(rows.map((row) => row.values.ceisaUnitCode?.toUpperCase())),
   )
 
+  const categoryRows = await tx.execute<{ id: string; path: string; active: boolean }>(sql`
+    select c.id, p.path, c.active
+    from product_categories c join product_category_paths p on p.id = c.id`)
+
   return {
     products: new Map(
-      savedRows.map(({ product, uomCode }) => [product.sku, { ...product, uomCode }]),
+      savedRows.map(({ product, uomCode, categoryPath }) => [
+        product.sku,
+        { ...product, uomCode, categoryPath },
+      ]),
     ),
+    categories: new Map(categoryRows.rows.map((row) => [normalizePath(row.path), row])),
     uoms: new Map(uomRows.map((uom) => [uom.code.toUpperCase(), uom])),
     hsCodes,
     ceisaUnits,

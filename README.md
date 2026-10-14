@@ -133,6 +133,26 @@ dimatikan: user baru dibuat oleh Administrator.
 - Helper zod untuk field form ada di `src/lib/form-fields.ts`; pengecekan kode referensi di
   `src/server/db/ref-code-checks.ts`.
 
+## Kategori produk dan SKU otomatis
+
+- Tabel `product_categories` (backlog R-01): bertingkat lewat `parent_id`, jalur lengkap
+  ("Bahan baku / Logam") dari view `product_category_paths`. Halaman `/master/kategori-produk`.
+- Kategori produk (`products.category_id`, boleh kosong) terpisah dari kategori IT Inventory
+  (`products.category`, wajib, dipakai laporan BC).
+- Aturan di database (migrasi `product_categories_rules`): induk tidak boleh membentuk lingkaran
+  dan tidak boleh kategori arsip, nama unik di antara kategori seinduk dan tanpa "/", prefix kode
+  unik (huruf besar, angka, `-`, `/`, maks. 10), jumlah digit 3–10. Kategori yang punya produk
+  atau sub-kategori tidak bisa dihapus.
+- SKU otomatis: produk baru dengan SKU kosong mendapat `prefix + nomor urut kategori` (trigger
+  `products_before_write` → `next_product_sku()`), mis. `BB-000001`. Nomor urut memakai
+  `next_number('sku:<id kategori>', '')`, jadi aman saat produk dibuat bersamaan; nomor yang sudah
+  dipakai SKU manual dilewati dan nomor yang lebih panjang dari jumlah digit tidak dipotong. SKU
+  kosong ditolak bila kategori tidak dipilih atau tidak punya prefix.
+- Import/export produk punya kolom "Kategori produk" berisi jalur lengkap (huruf besar/kecil dan
+  spasi di sekitar "/" diabaikan). Kolom kategori IT Inventory sekarang berjudul "Kategori IT
+  Inventory"; judul lama "Kategori" tetap diterima (`aliases` di `ImportColumn`). Import tetap
+  mewajibkan SKU karena baris dicocokkan lewat SKU.
+
 ## Partner
 
 - Tabel `partners`: kode (tidak bisa diubah), peran vendor dan/atau customer, negara, jenis dan
@@ -236,7 +256,7 @@ dimatikan: user baru dibuat oleh Administrator.
 - Data arsip tidak bisa dipilih untuk data baru. Pilihan di form hanya berisi data aktif, dan server
   memeriksanya lagi (gudang dan induk lokasi, kategori satuan, satuan stok, kode referensi, juga
   saat import). Nilai arsip yang sudah tersimpan sebelumnya tetap boleh disimpan ulang.
-- Produk, partner, satuan (kecuali satuan acuan), gudang, dan lokasi di dalam gudang bisa dihapus
+- Produk, kategori produk, partner, satuan (kecuali satuan acuan), gudang, dan lokasi di dalam gudang bisa dihapus
   dari halaman detailnya bila belum dipakai, misalnya salah input. Yang menolak adalah database:
   `deleteUnlessUsed()` (`src/server/db/delete-record.ts`) menghapus, lalu menerjemahkan penolakan
   foreign key jadi pesan "masih dipakai di data ..., arsipkan saja". Referensi kepabeanan, profil
