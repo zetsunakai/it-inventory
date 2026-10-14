@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
+import { MOVEMENT_CODE_LABELS } from "@/lib/inventory"
 import type { TransferKind } from "@/lib/transfer"
 import type { TransferDetail, TransferLine } from "@/server/queries/transfers"
 
@@ -48,6 +49,7 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
           ] as [string, ReactNode],
         ]
       : []),
+    ["Jenis pergerakan", MOVEMENT_CODE_LABELS[transfer.movementCode]],
     ["Dari", transfer.sourcePath],
     ["Ke", transfer.destinationPath],
     [

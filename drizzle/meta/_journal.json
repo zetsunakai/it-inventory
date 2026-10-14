@@ -288,6 +288,20 @@
       "when": 1791954741214,
       "tag": "0040_product_uoms_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "7",
+      "when": 1791955097069,
+      "tag": "0041_movement_codes",
+      "breakpoints": true
+    },
+    {
+      "idx": 42,
+      "version": "7",
+      "when": 1791955131531,
+      "tag": "0042_movement_code_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -18,6 +18,8 @@ import {
 
 // Path relatif (bukan alias @/) karena schema juga dibaca oleh drizzle-kit dan script CLI.
 import {
+  MOVEMENT_CODES,
+  MOVEMENT_DIRECTIONS,
   STOCK_COUNT_STATUSES,
   STOCK_MOVE_STATUSES,
   TRANSFER_STATUSES,
@@ -47,6 +49,8 @@ export const transferType = pgEnum("transfer_type", TRANSFER_TYPES)
 export const transferStatus = pgEnum("transfer_status", TRANSFER_STATUSES)
 export const stockMoveStatus = pgEnum("stock_move_status", STOCK_MOVE_STATUSES)
 export const stockCountStatus = pgEnum("stock_count_status", STOCK_COUNT_STATUSES)
+export const movementCode = pgEnum("movement_code", MOVEMENT_CODES)
+export const movementDirection = pgEnum("movement_direction", MOVEMENT_DIRECTIONS)
 
 // Penghitung nomor per lingkup dan periode, mis. ("transfer:receipt", "2026"). Dipakai fungsi
 // next_number() supaya nomor unik walaupun dibuat bersamaan; nanti juga untuk nomor aju (M3).
@@ -87,6 +91,12 @@ export const transfers = pgTable(
     // Diisi trigger saat insert (kosong = buat nomor baru).
     number: text().notNull().unique().default(""),
     type: transferType().notNull(),
+    // Diisi trigger dari jenis dan lokasi transfer (backlog R-04); default null hanya supaya
+    // insert tidak wajib mengisinya.
+    movementCode: movementCode()
+      .notNull()
+      .default(sql`null`),
+    direction: movementDirection().generatedAlwaysAs(sql`movement_direction(movement_code)`),
     status: transferStatus().notNull().default("draft"),
     sourceLocationId: uuid()
       .notNull()
@@ -180,6 +190,8 @@ export const stockMoves = pgTable(
     sourceWarehouseId: uuid().references(() => warehouses.id, { onDelete: "restrict" }),
     destinationWarehouseId: uuid().references(() => warehouses.id, { onDelete: "restrict" }),
     category: inventoryCategory(),
+    // Disalin dari transfer saat validasi (backlog R-04).
+    movementCode: movementCode(),
     doneAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },

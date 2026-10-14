@@ -2,7 +2,7 @@ import "server-only"
 
 import { sql, type SQL } from "drizzle-orm"
 
-import type { InventoryCategory, TransferType } from "@/lib/inventory"
+import type { InventoryCategory, MovementCode, TransferType } from "@/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { containsPattern } from "@/server/db/sql-helpers"
@@ -111,6 +111,7 @@ export type StockCardLine = {
   transferId: string
   transferNumber: string
   transferType: TransferType
+  movementCode: MovementCode
   doneAt: Date
   sourcePath: string
   destinationPath: string
@@ -141,6 +142,7 @@ export async function stockCard({
     transfer_id: string
     transfer_number: string
     transfer_type: TransferType
+    movement_code: MovementCode
     done_at: string
     source_path: string
     destination_path: string
@@ -150,7 +152,7 @@ export async function stockCard({
     balance: string
   }>(sql`
     with scoped as (
-      select m.id, m.transfer_id, m.done_at, m.lot_id, m.source_location_id,
+      select m.id, m.transfer_id, m.done_at, m.lot_id, m.movement_code, m.source_location_id,
         m.destination_location_id,
         case when m.destination_warehouse_id = ${warehouseId} then m.qty else 0 end as in_qty,
         case when m.source_warehouse_id = ${warehouseId} then m.qty else 0 end as out_qty
@@ -168,7 +170,7 @@ export async function stockCard({
         and done_at <= end_of_day(${to}::date)
     )
     select o.qty::numeric(18,4)::text as opening, x.id as move_id, x.transfer_id,
-      t.number as transfer_number, t.type as transfer_type, x.done_at,
+      t.number as transfer_number, t.type as transfer_type, x.movement_code, x.done_at,
       sp.path as source_path, dp.path as destination_path, lot.name as lot_name,
       x.in_qty::numeric(18,4)::text as in_qty, x.out_qty::numeric(18,4)::text as out_qty,
       (o.qty + sum(x.in_qty - x.out_qty) over (order by x.done_at, t.number, x.id))
@@ -189,6 +191,7 @@ export async function stockCard({
       transferId: row.transfer_id,
       transferNumber: row.transfer_number,
       transferType: row.transfer_type,
+      movementCode: row.movement_code,
       doneAt: new Date(row.done_at),
       sourcePath: row.source_path,
       destinationPath: row.destination_path,

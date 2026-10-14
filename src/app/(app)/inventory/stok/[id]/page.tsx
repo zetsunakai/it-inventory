@@ -11,7 +11,7 @@ import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDateTime } from "@/lib/format"
-import { TRANSFER_TYPE_LABELS } from "@/lib/inventory"
+import { MOVEMENT_CODE_LABELS } from "@/lib/inventory"
 import { pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { TRANSFER_KINDS } from "@/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
@@ -86,7 +86,7 @@ async function StockCard({
             {line.transferNumber}
           </Link>
           <span className="text-xs text-muted-foreground">
-            {TRANSFER_TYPE_LABELS[line.transferType]}
+            {MOVEMENT_CODE_LABELS[line.movementCode]}
           </span>
         </span>
       ),

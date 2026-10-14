@@ -202,6 +202,13 @@ dimatikan: user baru dibuat oleh Administrator.
   baris harus sesuai lokasi transfernya (sub-lokasi di gudang yang sama boleh).
 - Qty baris diinput dalam satuan apa pun (`input_qty`, `input_uom_id`); database menghitung `qty`
   dalam satuan stok produk lewat `convert_qty`. Gudang asal/tujuan disalin ke baris untuk laporan.
+- Kode pergerakan (backlog R-04, mengikuti hmx-002): `transfers.movement_code` diisi trigger dari
+  jenis dan lokasi transfer (`transfer_movement_code()`): `gr` penerimaan, `gi` pengiriman, `ilt`
+  pindah lokasi di dalam gudang, `itw_out`/`itw_in` keluar ke/masuk dari transit atau ke gudang
+  lain, `gr_rtn`/`gi_rtn` retur ke vendor/dari customer, `pu` scrap/pemakaian, `adj_in`/`adj_out`
+  penyesuaian (`itw_rtn` dipakai mulai R-10). `direction` (in/out/internal) kolom turunan. Kode
+  disalin ke `stock_moves.movement_code` saat validasi; kartu stok dan `warehouse_movements`
+  membacanya. Label di `MOVEMENT_CODE_LABELS` (`src/lib/inventory.ts`).
 
 - Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
@@ -225,7 +232,7 @@ dimatikan: user baru dibuat oleh Administrator.
   kategori) dan mengunci periodenya. Penutupan berurutan tanpa melompati bulan; semua tanggal
   sampai akhir periode tertutup terakhir ditolak untuk transaksi baru (`period_is_closed`), baik di
   `validate_transfer` maupun lewat trigger. Masuk/keluar dihitung per gudang: perpindahan di dalam
-  gudang yang sama tidak dihitung, dari/ke lokasi penyesuaian masuk kolom penyesuaian
+  gudang yang sama tidak dihitung, kode `adj_in`/`adj_out` masuk kolom penyesuaian
   (`warehouse_movements`). Batas bulan selalu WIB lewat `period_start`/`period_end`; jangan pakai
   `+ interval '1 month'` pada timestamptz.
 

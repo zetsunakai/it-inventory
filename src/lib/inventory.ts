@@ -92,6 +92,41 @@ export const TRANSFER_NUMBER_PREFIXES: Record<TransferType, string> = {
   adjustment: "ADJ",
 }
 
+// Kode pergerakan (PRD bagian 6.2, backlog R-04), mengikuti hmx-002. Diisi database dari jenis
+// transfer dan lokasinya (fungsi transfer_movement_code); kartu stok dan laporan membacanya.
+export const MOVEMENT_CODES = [
+  "gr",
+  "gi",
+  "ilt",
+  "itw_out",
+  "itw_in",
+  "itw_rtn",
+  "gr_rtn",
+  "gi_rtn",
+  "pu",
+  "adj_in",
+  "adj_out",
+] as const
+export type MovementCode = (typeof MOVEMENT_CODES)[number]
+
+export const MOVEMENT_CODE_LABELS: Record<MovementCode, string> = {
+  gr: "Penerimaan",
+  gi: "Pengiriman",
+  ilt: "Pindah lokasi",
+  itw_out: "Transfer antar gudang keluar",
+  itw_in: "Transfer antar gudang masuk",
+  itw_rtn: "Kembali dari transit",
+  gr_rtn: "Retur ke vendor",
+  gi_rtn: "Retur dari customer",
+  pu: "Pemakaian & scrap",
+  adj_in: "Penyesuaian tambah",
+  adj_out: "Penyesuaian kurang",
+}
+
+// Arah pergerakan dilihat dari gudang: masuk, keluar, atau di dalam gudang.
+export const MOVEMENT_DIRECTIONS = ["in", "out", "internal"] as const
+export type MovementDirection = (typeof MOVEMENT_DIRECTIONS)[number]
+
 // Alur status transfer (PRD bagian 6.3): Draft → Siap → Selesai, atau Batal dari Draft/Siap.
 export const TRANSFER_STATUSES = ["draft", "ready", "done", "cancelled"] as const
 export type TransferStatus = (typeof TRANSFER_STATUSES)[number]
