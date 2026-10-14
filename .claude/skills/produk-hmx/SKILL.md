@@ -98,9 +98,9 @@ laporan dibuat.
 4. UI mengikuti skill `ui-it-inventory`. Label: "Pelacakan: Tanpa / Per lot / Per nomor seri",
    "Satuan khusus produk", "Kategori produk" vs "Kategori laporan IT Inventory".
 
-## Pertanyaan untuk user sebelum revisi
+## Keputusan user (14/10/2026)
 
-- Kategori produk bertingkat dengan kode otomatis: perlu, atau cukup kategori laporan PRD?
-- Pelacakan per nomor seri (mis. untuk mesin): perlu sekarang?
-- Satuan khusus produk (mis. 1 BOX = 24 PCS hanya untuk produk tertentu): perlu?
-- Barcode terpisah dari SKU, kedaluwarsa lot, dan discontinue: masuk lingkup?
+- Kategori produk bertingkat dengan SKU otomatis, pelacakan per nomor seri, dan satuan khusus
+  produk: **masuk lingkup** (Backlog R-01, R-02, R-03, RU-13, RU-14, RU-15).
+- Barcode terpisah dari SKU, kedaluwarsa lot, dan discontinue: belum diputuskan, jadi jangan dikerjakan
+  dulu.

@@ -201,11 +201,13 @@ hmx menaruh aturan di kode Python (ORM). Repo ini menaruhnya di database, dan it
    Lepas reservasi, Validasi, Buat backorder, Buang sisa); kode pergerakan tampil sebagai label,
    bukan kode mentah.
 
-## Pertanyaan yang harus diputuskan user sebelum revisi
+## Keputusan user (14/10/2026)
 
-- Revisi dikerjakan sebelum M3 atau setelah M3 (dokumen BC menautkan transfer, jadi model
-  demand/move sebaiknya final dulu)?
-- Reservasi stok saat Check Availability: perlu, atau cukup cek stok saat Validate seperti sekarang?
-- Opname: bekukan gudang (hmx) atau tetap cut-off tanpa membekukan (sekarang)?
-- IWT: hanya direct, hanya transit, atau keduanya?
-- Retur dengan pengganti dan pemakaian non-scrap: masuk lingkup?
+- Revisi dikerjakan **sebelum M3**. Tiketnya ada di tab Backlog bagian R (alur, R-01–R-15) dan RU
+  (tampilan per menu, RU-01–RU-19). Jangan mulai sebelum user minta.
+- Reservasi stok saat Cek stok: **ya** (lot terlama dulu).
+- Opname: **gudang dibekukan** selama opname berjalan.
+- Transfer antar gudang: **lewat lokasi transit (virtual)**.
+- Produk: kategori bertingkat dengan SKU otomatis, pelacakan per nomor seri, dan satuan khusus
+  produk: **ya** (lihat skill `produk-hmx`). Kedaluwarsa lot, barcode terpisah, dan discontinue
+  belum diputuskan, jadi jangan dikerjakan dulu.
