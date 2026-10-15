@@ -295,6 +295,32 @@ async function TransferDetail({
             : []),
           { label: transfer.number },
         ]}
+        actions={
+          canWrite && (
+            <>
+              <TransferActions
+                id={transfer.id}
+                number={transfer.number}
+                status={transfer.status}
+                noun={kind.noun}
+                effect={effect}
+                canBackdate={user.roles.includes("manajer")}
+                path={kind.path}
+                needsApproval={Boolean(kind.needsApproval)}
+                canApprove={hasPermission(user.roles, "inventory:approve")}
+                reservable={Boolean(transfer.sourceWarehouseId)}
+                instant={Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"}
+                lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
+                  id: line.id,
+                  sku: line.sku,
+                  inputQty: line.inputQty,
+                  uomCode: line.inputUomCode,
+                }))}
+              />
+              {canReturn && <CreateReturnButton originId={transfer.id} />}
+            </>
+          )
+        }
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <TransferStatusBadge status={transfer.status} />
@@ -303,28 +329,6 @@ async function TransferDetail({
           </span>
         }
       />
-      {canWrite && (
-        <TransferActions
-          id={transfer.id}
-          number={transfer.number}
-          status={transfer.status}
-          noun={kind.noun}
-          effect={effect}
-          canBackdate={user.roles.includes("manajer")}
-          path={kind.path}
-          needsApproval={Boolean(kind.needsApproval)}
-          canApprove={hasPermission(user.roles, "inventory:approve")}
-          reservable={Boolean(transfer.sourceWarehouseId)}
-          instant={Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"}
-          lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
-            id: line.id,
-            sku: line.sku,
-            inputQty: line.inputQty,
-            uomCode: line.inputUomCode,
-          }))}
-        />
-      )}
-      {canReturn && <CreateReturnButton originId={transfer.id} />}
       {editable ? (
         <TransferForm
           kind={kind}

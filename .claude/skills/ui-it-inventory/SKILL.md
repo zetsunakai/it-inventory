@@ -38,7 +38,12 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 | Ringkasan error form         | `FormErrors` tepat setelah `<form>` (fokus otomatis)                                                                  | Ringkasan di bawah dekat tombol Simpan                             |
 | Nilai yang tidak bisa diubah | `StaticField`                                                                                                         | `Input disabled` abu-abu                                           |
 | Kelompok field               | `FormSection`                                                                                                         | `fieldset` polos tanpa judul                                       |
-| Kembali ke daftar            | breadcrumb di header (`AppBreadcrumb`)                                                                                | Tombol "Kembali ke daftar" di setiap detail                        |
+| Kembali ke daftar            | breadcrumb di header (`AppBreadcrumb`): Area › Modul › halaman dari `PageHeader` (`crumbs` = dokumen induk + nomor)   | Tombol "Kembali ke daftar" di setiap detail                        |
+| Tombol alur dokumen          | `PageHeader actions` (kanan judul); hasilnya lewat `usePageMessage().show(result)` ke slot di bawah header            | Baris tombol + kotak pesan sendiri di bawah judul                  |
+| Info detail dokumen/master   | `InfoGrid` (label di atas nilai, 3 kolom; `wide` untuk catatan/alasan) lalu `Section` per bagian                      | `dl` dua kolom memanjang, `h2` + `space-y` buatan sendiri          |
+| Form                         | `FORM_CLASS` + `FormSection` + `FormColumns`/`FormColumn` (kiri siapa/di mana, kanan kapan/rujukan), `FormActions`    | `max-w-*` per halaman, field mengalir acak, tombol Simpan lepas    |
+| Toolbar daftar               | `ListToolbar` (cari, filter, lalu aksi Buat di kanan)                                                                 | Susunan flex buatan sendiri per halaman                            |
+| Ukuran                       | Token `text-control` (15px: input, tombol, menu, isi) dan `text-caption` (13px: judul kolom, petunjuk); kontrol 36px  | `text-xs`, `h-8`, ukuran khusus per halaman                        |
 | Beranda                      | daftar "Perlu perhatian" dari data nyata (`src/server/queries/home.ts`)                                               | Kartu sapaan, angka karangan, duplikasi menu                       |
 | Import/export master data    | `ImportExportActions` di `actions` `PageHeader`; halaman import pakai `ImportForm` + `ImportColumnGuide`              | Tombol Export/Import di toolbar tabel (toolbar jadi terlalu penuh) |
 | Hapus data master            | `DeleteRecord` di bawah form detail (konfirmasi `AlertDialog`, pesan tolak dari server); filter `Status` di daftar    | Tombol hapus di baris tabel, hapus tanpa konfirmasi                |
@@ -85,6 +90,11 @@ tablet untuk penerimaan/opname dibuat bersama M2.
 
 - Kelompokkan per arti (Data produk, Data kepabeanan) dengan judul kelompok; dua kolom di desktop
   bila field pendek, satu kolom di HP.
+- Urutan baku (UF-03): kolom kiri **siapa/di mana** (jenis/arah, partner, gudang/lokasi asal, lokasi
+  tujuan), kolom kanan **kapan/rujukan** (tanggal rencana, referensi, nomor dokumen luar); di
+  bawahnya lebar penuh **alasan** lalu **catatan**; lalu bagian Barang; lalu `FormActions`
+  (Simpan dulu, aksi sekunder, aksi berbahaya di kanan). Master data: kiri identitas (kode, nama,
+  jenis), kanan atribut (satuan, kategori, status).
 - Label singkat; hint hanya untuk aturan yang tidak tertebak (format NITKU, arti faktor konversi).
 - Error: ringkasan di **atas** form (dengan `role="alert"`, berisi semua kesalahan sekaligus,
   sesuai PRD 7.6) plus pesan di bawah field terkait. Fokus pindah ke ringkasan setelah submit gagal.

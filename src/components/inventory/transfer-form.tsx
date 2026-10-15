@@ -7,6 +7,7 @@ import { useActionState, useEffect, useId, useRef, useState } from "react"
 import { saveTransfer } from "@/app/(app)/inventory/actions"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection } from "@/components/form-field"
+import { FORM_CLASS, FormActions, FormColumn, FormColumns } from "@/components/layout/form-layout"
 import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -153,7 +154,7 @@ export function TransferForm({
   }
 
   return (
-    <form action={formAction} className="max-w-5xl space-y-6">
+    <form action={formAction} className={FORM_CLASS}>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
       {transfer && <input type="hidden" name="id" value={transfer.id} />}
       <input type="hidden" name="type" value={kind.type} />
@@ -161,24 +162,91 @@ export function TransferForm({
       <input type="hidden" name="lines" value={JSON.stringify(payload)} />
 
       <FormSection title={`Data ${kind.noun}`}>
-        <div className="grid gap-4 sm:grid-cols-2">
-          {kind.usageTypes && (
+        <FormColumns>
+          <FormColumn>
+            {kind.usageTypes && (
+              <FormField
+                label="Jenis pemakaian"
+                htmlFor={fieldId("transfer-usage")}
+                errors={fieldErrors?.usageType}
+              >
+                <Select
+                  name="usageType"
+                  items={USAGE_ITEMS}
+                  value={usageType}
+                  onValueChange={setUsageType}
+                >
+                  <SelectTrigger id={fieldId("transfer-usage")} className="w-full">
+                    <SelectValue placeholder="Pilih jenis pemakaian" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {USAGE_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
+            {kind.directional && (
+              <FormField
+                label="Arah"
+                htmlFor={fieldId("transfer-direction")}
+                errors={fieldErrors?.direction}
+              >
+                <Select
+                  name="direction"
+                  items={DIRECTION_ITEMS}
+                  value={direction}
+                  onValueChange={setDirection}
+                >
+                  <SelectTrigger id={fieldId("transfer-direction")} className="w-full">
+                    <SelectValue placeholder="Tambah atau kurangi stok" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DIRECTION_ITEMS.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
+            {kind.partnerRole && (
+              <FormField
+                label={kind.partnerLabel ?? "Partner"}
+                htmlFor={fieldId("transfer-partner")}
+              >
+                <SearchSelect<PartnerChoice>
+                  id={fieldId("transfer-partner")}
+                  endpoint="/api/partners"
+                  params={{ role: kind.partnerRole }}
+                  value={partner}
+                  onValueChange={setPartner}
+                  getKey={(item) => item.id}
+                  getLabel={(item) => `[${item.code}] ${item.name}`}
+                  placeholder={`Cari kode atau nama ${kind.partnerRole}`}
+                />
+              </FormField>
+            )}
             <FormField
-              label="Jenis pemakaian"
-              htmlFor={fieldId("transfer-usage")}
-              errors={fieldErrors?.usageType}
+              label={kind.locationLabel}
+              htmlFor={fieldId("transfer-location")}
+              errors={fieldErrors?.locationId}
             >
               <Select
-                name="usageType"
-                items={USAGE_ITEMS}
-                value={usageType}
-                onValueChange={setUsageType}
+                name="locationId"
+                items={locationItems}
+                value={locationId}
+                onValueChange={setLocationId}
               >
-                <SelectTrigger id={fieldId("transfer-usage")} className="w-full">
-                  <SelectValue placeholder="Pilih jenis pemakaian" />
+                <SelectTrigger id={fieldId("transfer-location")} className="w-full">
+                  <SelectValue placeholder="Pilih lokasi gudang" />
                 </SelectTrigger>
                 <SelectContent>
-                  {USAGE_ITEMS.map((item) => (
+                  {locationItems.map((item) => (
                     <SelectItem key={item.value} value={item.value}>
                       {item.label}
                     </SelectItem>
@@ -186,122 +254,64 @@ export function TransferForm({
                 </SelectContent>
               </Select>
             </FormField>
-          )}
-          {kind.directional && (
-            <FormField
-              label="Arah"
-              htmlFor={fieldId("transfer-direction")}
-              errors={fieldErrors?.direction}
-            >
-              <Select
-                name="direction"
-                items={DIRECTION_ITEMS}
-                value={direction}
-                onValueChange={setDirection}
+            {kind.secondLocationLabel && (
+              <FormField
+                label={kind.secondLocationLabel}
+                htmlFor={fieldId("transfer-other-location")}
+                errors={fieldErrors?.otherLocationId}
               >
-                <SelectTrigger id={fieldId("transfer-direction")} className="w-full">
-                  <SelectValue placeholder="Tambah atau kurangi stok" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DIRECTION_ITEMS.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-          )}
-          {kind.partnerRole && (
-            <FormField label={kind.partnerLabel ?? "Partner"} htmlFor={fieldId("transfer-partner")}>
-              <SearchSelect<PartnerChoice>
-                id={fieldId("transfer-partner")}
-                endpoint="/api/partners"
-                params={{ role: kind.partnerRole }}
-                value={partner}
-                onValueChange={setPartner}
-                getKey={(item) => item.id}
-                getLabel={(item) => `[${item.code}] ${item.name}`}
-                placeholder={`Cari kode atau nama ${kind.partnerRole}`}
+                <Select
+                  name="otherLocationId"
+                  items={destinationItems}
+                  value={otherLocationId}
+                  onValueChange={setOtherLocationId}
+                >
+                  <SelectTrigger id={fieldId("transfer-other-location")} className="w-full">
+                    <SelectValue
+                      placeholder={
+                        kind.sameWarehouse && !locationId
+                          ? "Pilih lokasi asal dulu"
+                          : "Pilih lokasi"
+                      }
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {destinationItems.map((item) => (
+                      <SelectItem key={item.value} value={item.value}>
+                        {item.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </FormField>
+            )}
+          </FormColumn>
+          <FormColumn>
+            <FormField
+              label="Tanggal rencana"
+              htmlFor={fieldId("transfer-date")}
+              errors={fieldErrors?.scheduledDate}
+            >
+              <Input
+                id={fieldId("transfer-date")}
+                name="scheduledDate"
+                type="date"
+                defaultValue={fieldValue(state, "scheduledDate", transfer?.scheduledDate)}
               />
             </FormField>
-          )}
-          <FormField
-            label={kind.locationLabel}
-            htmlFor={fieldId("transfer-location")}
-            errors={fieldErrors?.locationId}
-          >
-            <Select
-              name="locationId"
-              items={locationItems}
-              value={locationId}
-              onValueChange={setLocationId}
-            >
-              <SelectTrigger id={fieldId("transfer-location")} className="w-full">
-                <SelectValue placeholder="Pilih lokasi gudang" />
-              </SelectTrigger>
-              <SelectContent>
-                {locationItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          {kind.secondLocationLabel && (
             <FormField
-              label={kind.secondLocationLabel}
-              htmlFor={fieldId("transfer-other-location")}
-              errors={fieldErrors?.otherLocationId}
+              label={kind.partnerRole ? "Referensi PO/SO" : "Referensi"}
+              htmlFor={fieldId("transfer-reference")}
+              errors={fieldErrors?.reference}
             >
-              <Select
-                name="otherLocationId"
-                items={destinationItems}
-                value={otherLocationId}
-                onValueChange={setOtherLocationId}
-              >
-                <SelectTrigger id={fieldId("transfer-other-location")} className="w-full">
-                  <SelectValue
-                    placeholder={
-                      kind.sameWarehouse && !locationId ? "Pilih lokasi asal dulu" : "Pilih lokasi"
-                    }
-                  />
-                </SelectTrigger>
-                <SelectContent>
-                  {destinationItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                id={fieldId("transfer-reference")}
+                name="reference"
+                defaultValue={fieldValue(state, "reference", transfer?.reference)}
+              />
             </FormField>
-          )}
-          <FormField
-            label="Tanggal rencana"
-            htmlFor={fieldId("transfer-date")}
-            errors={fieldErrors?.scheduledDate}
-          >
-            <Input
-              id={fieldId("transfer-date")}
-              name="scheduledDate"
-              type="date"
-              defaultValue={fieldValue(state, "scheduledDate", transfer?.scheduledDate)}
-            />
-          </FormField>
-          <FormField
-            label={kind.partnerRole ? "Referensi PO/SO" : "Referensi"}
-            htmlFor={fieldId("transfer-reference")}
-            errors={fieldErrors?.reference}
-          >
-            <Input
-              id={fieldId("transfer-reference")}
-              name="reference"
-              defaultValue={fieldValue(state, "reference", transfer?.reference)}
-            />
-          </FormField>
-        </div>
+          </FormColumn>
+        </FormColumns>
         {kind.needsApproval && (
           <FormField
             label="Alasan"
@@ -443,16 +453,16 @@ export function TransferForm({
         </div>
       </FormSection>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <FormActions>
         <Button type="submit" disabled={pending} className={TOUCH}>
           {pending ? "Menyimpan…" : transfer ? "Simpan perubahan" : `Simpan ${kind.noun}`}
         </Button>
         {state?.ok && transfer && (
-          <p role="status" className="text-sm text-success">
+          <p role="status" className="text-control text-success">
             Perubahan disimpan.
           </p>
         )}
-      </div>
+      </FormActions>
     </form>
   )
 }
