@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import { parseDecimalInput } from "./decimal"
-import type { TransferStatus, TransferType } from "./inventory"
+import type { MovementCode, TransferStatus, TransferType } from "./inventory"
 
 // Form transfer (penerimaan, pengiriman, dst.): dipakai bersama oleh form di client dan server
 // action. Baris barang dikirim sebagai JSON di satu field form karena jumlahnya dinamis.
@@ -105,6 +105,8 @@ export type TransferKind = {
   needsApproval?: boolean
   // Pindah lokasi (R-09): kedua lokasi di satu gudang, divalidasi langsung dari Draft.
   sameWarehouse?: boolean
+  // Daftar hanya menampilkan kode pergerakan ini (pindah lokasi tanpa transfer antar gudang).
+  movementCodes?: readonly MovementCode[]
 }
 
 export const TRANSFER_KINDS = {
@@ -134,6 +136,7 @@ export const TRANSFER_KINDS = {
     locationLabel: "Lokasi asal",
     secondLocationLabel: "Lokasi tujuan",
     sameWarehouse: true,
+    movementCodes: ["ilt"],
   },
   return: {
     type: "return",

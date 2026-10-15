@@ -14,7 +14,7 @@ import { PageHeader } from "@/components/page-header"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate, formatNumber } from "@/lib/format"
-import { TRANSFER_STATUS_LABELS, TRANSFER_STATUSES } from "@/lib/inventory"
+import { MOVEMENT_CODE_LABELS, TRANSFER_STATUS_LABELS, TRANSFER_STATUSES } from "@/lib/inventory"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import type { TransferKind } from "@/lib/transfer"
@@ -81,6 +81,7 @@ async function TransferTable({
     ...params,
     userId: user.id,
     type: kind.type,
+    movementCodes: kind.movementCodes,
     status,
   })
   const createHref = `${kind.path}/baru`
@@ -233,7 +234,9 @@ async function TransferDetail({
   const transfer = await getTransfer(user.id, id)
   if (!transfer || transfer.type !== kind.type) notFound()
   const canWrite = hasPermission(user.roles, "inventory:write")
-  const editable = canWrite && transfer.status === "draft"
+  // Transfer antar gudang dibuat dan diatur permintaannya (R-10), bukan lewat form pindah lokasi.
+  const fromRequest = Boolean(transfer.interwarehouseId)
+  const editable = canWrite && transfer.status === "draft" && !fromRequest
   const isReturn = transfer.type === "return"
   const [locations, uoms] =
     editable && !isReturn
@@ -252,7 +255,7 @@ async function TransferDetail({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)} ${transfer.number}`}
+        title={`${fromRequest ? MOVEMENT_CODE_LABELS[transfer.movementCode] : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`} ${transfer.number}`}
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <TransferStatusBadge status={transfer.status} />
@@ -273,7 +276,7 @@ async function TransferDetail({
           needsApproval={Boolean(kind.needsApproval)}
           canApprove={hasPermission(user.roles, "inventory:approve")}
           reservable={Boolean(transfer.sourceWarehouseId)}
-          instant={Boolean(kind.sameWarehouse)}
+          instant={Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"}
           lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
             id: line.id,
             sku: line.sku,

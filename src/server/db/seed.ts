@@ -91,6 +91,8 @@ async function seedVirtualLocations(db: Db) {
       { code: "CUSTOMER", name: "Customer", type: "customer" },
       { code: "SCRAP", name: "Scrap", type: "scrap" },
       { code: "PENYESUAIAN", name: "Penyesuaian stok", type: "adjustment" },
+      // Barang transfer antar gudang yang masih di jalan (R-10; juga dibuat migrasi).
+      { code: "TRANSIT", name: "Transit antar gudang", type: "transit" },
     ])
     .onConflictDoNothing()
 }

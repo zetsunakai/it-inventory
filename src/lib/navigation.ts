@@ -61,6 +61,11 @@ export const NAVIGATION: NavGroup[] = [
         permission: "inventory:read",
       },
       {
+        title: "Transfer antar gudang",
+        href: "/inventory/antar-gudang",
+        permission: "inventory:read",
+      },
+      {
         title: "Retur",
         href: "/inventory/retur",
         permission: "inventory:read",

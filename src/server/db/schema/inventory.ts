@@ -20,6 +20,7 @@ import {
 import {
   MOVEMENT_CODES,
   MOVEMENT_DIRECTIONS,
+  INTERWAREHOUSE_STATUSES,
   STOCK_COUNT_STATUSES,
   TRANSACTION_CLASSIFICATIONS,
   STOCK_MOVE_STATUSES,
@@ -52,6 +53,7 @@ export const stockMoveStatus = pgEnum("stock_move_status", STOCK_MOVE_STATUSES)
 export const stockCountStatus = pgEnum("stock_count_status", STOCK_COUNT_STATUSES)
 export const movementCode = pgEnum("movement_code", MOVEMENT_CODES)
 export const movementDirection = pgEnum("movement_direction", MOVEMENT_DIRECTIONS)
+export const interwarehouseStatus = pgEnum("interwarehouse_status", INTERWAREHOUSE_STATUSES)
 export const transactionClassification = pgEnum(
   "transaction_classification",
   TRANSACTION_CLASSIFICATIONS,
@@ -124,6 +126,10 @@ export const transfers = pgTable(
     backorderOfId: uuid().references((): AnyPgColumn => transfers.id, { onDelete: "restrict" }),
     // Diisi validate_transfer() (backlog R-08).
     classification: transactionClassification(),
+    // Permintaan transfer antar gudang yang membuat transfer ini (backlog R-10).
+    interwarehouseId: uuid().references((): AnyPgColumn => interwarehouseTransfers.id, {
+      onDelete: "restrict",
+    }),
     doneAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
     approvedAt: timestamp({ withTimezone: true }),
@@ -140,6 +146,7 @@ export const transfers = pgTable(
     index("transfers_return_of_idx").on(table.returnOfId),
     index("transfers_backorder_of_idx").on(table.backorderOfId),
     index("transfers_stock_count_idx").on(table.stockCountId),
+    index("transfers_interwarehouse_idx").on(table.interwarehouseId),
     index("transfers_done_at_idx").on(table.doneAt),
     check(
       "transfers_locations_differ",
@@ -395,5 +402,63 @@ export const periodBalances = pgTable(
       columns: [table.year, table.month, table.warehouseId, table.productId, table.category],
     }),
     index("period_balances_product_idx").on(table.productId),
+  ],
+)
+
+// Permintaan transfer antar gudang (backlog R-10, PRD bagian 6.2 dan 6.4, mengikuti iwt_request
+// hmx-002). Konfirmasi membuat transfer keluar (lokasi asal → lokasi transit); saat transfer keluar
+// Selesai, database membuat transfer masuk (transit → lokasi tujuan) sebesar qty yang keluar. Barang
+// di jalan tercatat di lokasi transit. Aturan dan fungsi di migrasi interwarehouse_rules.
+export const interwarehouseTransfers = pgTable(
+  "interwarehouse_transfers",
+  {
+    id: id(),
+    // Diisi trigger saat insert, mis. ITW/2026/00001.
+    number: text().notNull().unique().default(""),
+    status: interwarehouseStatus().notNull().default("draft"),
+    sourceLocationId: uuid()
+      .notNull()
+      .references(() => locations.id, { onDelete: "restrict" }),
+    destinationLocationId: uuid()
+      .notNull()
+      .references(() => locations.id, { onDelete: "restrict" }),
+    transitLocationId: uuid()
+      .notNull()
+      .references(() => locations.id, { onDelete: "restrict" }),
+    scheduledDate: date(),
+    reference: text(),
+    notes: text(),
+    createdBy: uuid(),
+    ...timestamps,
+  },
+  (table) => [index("interwarehouse_transfers_status_idx").on(table.status)],
+)
+
+// Baris permintaan transfer antar gudang. qty dihitung database dari input (satuan stok).
+export const interwarehouseTransferLines = pgTable(
+  "interwarehouse_transfer_lines",
+  {
+    id: id(),
+    interwarehouseId: uuid()
+      .notNull()
+      .references(() => interwarehouseTransfers.id, { onDelete: "cascade" }),
+    position: integer().notNull().default(0),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    lotId: uuid().references(() => lots.id, { onDelete: "restrict" }),
+    inputQty: qty().notNull(),
+    inputUomId: uuid()
+      .notNull()
+      .references(() => uoms.id, { onDelete: "restrict" }),
+    qty: qty().notNull().default("0"),
+    ...timestamps,
+  },
+  (table) => [
+    index("interwarehouse_transfer_lines_request_idx").on(table.interwarehouseId),
+    check(
+      "interwarehouse_transfer_lines_qty_positive",
+      sql`${table.inputQty} > 0 and ${table.qty} > 0`,
+    ),
   ],
 )

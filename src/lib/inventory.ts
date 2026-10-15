@@ -164,6 +164,37 @@ export const CONFIRMED_TRANSFER_STATUSES: readonly TransferStatus[] = [
   "ready",
 ]
 
+// Permintaan transfer antar gudang (backlog R-10, iwt_request hmx-002): barang keluar dari gudang
+// asal ke lokasi transit, lalu masuk ke gudang tujuan. Sisa di transit dikembalikan ke gudang asal
+// atau dicatat sebagai susut transit.
+export const INTERWAREHOUSE_STATUSES = [
+  "draft",
+  "confirmed",
+  "in_progress",
+  "done",
+  "cancelled",
+] as const
+export type InterwarehouseStatus = (typeof INTERWAREHOUSE_STATUSES)[number]
+
+export const INTERWAREHOUSE_STATUS_LABELS: Record<InterwarehouseStatus, string> = {
+  draft: "Draft",
+  confirmed: "Dikonfirmasi",
+  in_progress: "Di perjalanan",
+  done: "Selesai",
+  cancelled: "Batal",
+}
+
+export const INTERWAREHOUSE_STATUS_TONES: Record<
+  InterwarehouseStatus,
+  "neutral" | "info" | "success" | "warning"
+> = {
+  draft: "neutral",
+  confirmed: "info",
+  in_progress: "warning",
+  done: "success",
+  cancelled: "neutral",
+}
+
 // Klasifikasi transaksi saat validasi (backlog R-08, transaction_classification hmx-002): tanggal
 // efektif mundur (backdate) dan/atau qty selesai kurang dari qty diminta (dengan transfer lanjutan
 // atau sisanya dibuang). Kosong = transaksi biasa.

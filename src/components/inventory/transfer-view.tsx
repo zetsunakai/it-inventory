@@ -99,6 +99,20 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
         ]
       : []),
     [kind.partnerRole ? "Referensi PO/SO" : "Referensi", transfer.reference ?? "—"],
+    ...(transfer.interwarehouseId
+      ? [
+          [
+            "Permintaan",
+            <Link
+              key="interwarehouse"
+              href={`/inventory/antar-gudang/${transfer.interwarehouseId}`}
+              className="font-mono text-primary underline-offset-4 hover:underline"
+            >
+              {transfer.interwarehouseNumber}
+            </Link>,
+          ] as [string, ReactNode],
+        ]
+      : []),
     ...(transfer.backorderOfNumber
       ? [["Lanjutan dari", transfer.backorderOfNumber] as [string, ReactNode]]
       : []),

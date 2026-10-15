@@ -1,8 +1,20 @@
 import "server-only"
 
-import { aliasedTable, and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm"
+import {
+  aliasedTable,
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm"
 
-import type { ProductTracking, TransferStatus, TransferType } from "@/lib/inventory"
+import type { MovementCode, ProductTracking, TransferStatus, TransferType } from "@/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import {
@@ -52,12 +64,19 @@ export type TransferRow = {
 export async function listTransfers({
   userId,
   type,
+  movementCodes,
   status,
   search,
   pageSize,
   offset,
-}: ListParams & { userId: string; type: TransferType; status?: TransferStatus }) {
+}: ListParams & {
+  userId: string
+  type: TransferType
+  movementCodes?: readonly MovementCode[]
+  status?: TransferStatus
+}) {
   const conditions: SQL[] = [eq(transfers.type, type), accessibleBy(userId)]
+  if (movementCodes) conditions.push(inArray(transfers.movementCode, [...movementCodes]))
   if (status) conditions.push(eq(transfers.status, status))
   if (search) {
     const pattern = containsPattern(search)
@@ -171,6 +190,9 @@ export async function getTransfer(userId: string, id: string) {
       returnOfNumber: sql<
         string | null
       >`(select t.number from transfers t where t.id = ${transfers.returnOfId})`,
+      interwarehouseNumber: sql<
+        string | null
+      >`(select i.number from interwarehouse_transfers i where i.id = ${transfers.interwarehouseId})`,
       approvedByName: sql<
         string | null
       >`(select u.name from users u where u.id = ${transfers.approvedBy})`,
@@ -246,6 +268,7 @@ export async function getTransfer(userId: string, id: string) {
     backorderOfNumber: header.backorderOfNumber,
     returnOfNumber: header.returnOfNumber,
     approvedByName: header.approvedByName,
+    interwarehouseNumber: header.interwarehouseNumber,
     sourceWarehouseId: header.sourceWarehouseId,
     destinationWarehouseId: header.destinationWarehouseId,
     returns: await db

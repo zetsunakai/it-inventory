@@ -240,7 +240,7 @@ describe("transfer", () => {
       ],
       [
         { type: "scrap", sourceLocationId: ids.rack, destinationLocationId: ids.customer },
-        "Scrap harus dari lokasi internal gudang ke lokasi scrap.",
+        "Scrap harus dari lokasi internal gudang (atau transit) ke lokasi scrap.",
       ],
       [
         { type: "adjustment", sourceLocationId: ids.vendor, destinationLocationId: ids.rack },

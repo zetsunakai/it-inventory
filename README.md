@@ -249,6 +249,18 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Pindah lokasi (`ilt`) boleh divalidasi langsung dari Draft: aksi `validateTransfer` memanggil
   `confirm_transfer()` (pesan stok) lalu validasi dalam satu transaksi; transfer lain harus
   dikonfirmasi dulu.
+- Transfer antar gudang (backlog R-10, menu `/inventory/antar-gudang`, mengikuti `iwt_request`
+  hmx-002 tipe transit): dokumen `interwarehouse_transfers` (nomor `ITW/tahun/urut`, status Draft →
+  Dikonfirmasi → Di perjalanan → Selesai, atau Batal sebelum barang keluar) dengan barisnya.
+  `confirm_interwarehouse()` membuat transfer keluar (lokasi asal → lokasi `TRANSIT`, `itw_out`) dan
+  memesan stok. Saat transfer keluar Selesai, trigger `interwarehouse_after_transfer_done` membuat
+  transfer masuk (transit → lokasi tujuan, `itw_in`) sebesar qty dan lot yang keluar. Barang di jalan
+  tercatat di lokasi transit (tanpa gudang), jadi tidak masuk stok gudang mana pun
+  (`interwarehouse_in_transit()`). Transfer dari transit tidak boleh melebihi yang masih di
+  perjalanan. Sisa di transit diselesaikan `settle_interwarehouse()`: kembali ke lokasi asal
+  (`itw_rtn`) atau susut transit (scrap dari transit, alasan wajib, disetujui Manajer). Permintaan
+  otomatis Selesai bila transit kosong dan tidak ada transfer terbuka. Transfer lanjutan
+  (backorder) ikut membawa `interwarehouse_id`. Lokasi `TRANSIT` dibuat migrasi dan seed.
 - Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate

@@ -365,6 +365,20 @@
       "when": 1792048119284,
       "tag": "0051_internal_moves_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 52,
+      "version": "7",
+      "when": 1792048514727,
+      "tag": "0052_interwarehouse_transfers",
+      "breakpoints": true
+    },
+    {
+      "idx": 53,
+      "version": "7",
+      "when": 1792048515471,
+      "tag": "0053_interwarehouse_rules",
+      "breakpoints": true
     }
   ]
 }
