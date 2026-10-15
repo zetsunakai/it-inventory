@@ -11,9 +11,9 @@ import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDateTime } from "@/lib/format"
-import { MOVEMENT_CODE_LABELS } from "@/lib/inventory"
+import { movementLabel } from "@/lib/inventory"
 import { pickFilter, type RawSearchParams } from "@/lib/list-params"
-import { TRANSFER_KINDS } from "@/lib/transfer"
+import { transferHref } from "@/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
 import {
   getStockProduct,
@@ -33,10 +33,6 @@ function pickDate(raw: RawSearchParams, name: string, fallback: string) {
   const value = raw[name]
   return typeof value === "string" && ISO_DATE.test(value) ? value : fallback
 }
-
-const KIND_PATHS: Record<string, string> = Object.fromEntries(
-  Object.values(TRANSFER_KINDS).map((kind) => [kind.type, kind.path]),
-)
 
 export default function StockCardPage({ params, searchParams }: PageProps<"/inventory/stok/[id]">) {
   return (
@@ -80,13 +76,13 @@ async function StockCard({
       cell: (line) => (
         <span className="flex flex-col">
           <Link
-            href={`${KIND_PATHS[line.transferType]}/${line.transferId}`}
+            href={transferHref(line.transferType, line.transferId)}
             className="font-mono text-primary underline-offset-4 hover:underline"
           >
             {line.transferNumber}
           </Link>
           <span className="text-xs text-muted-foreground">
-            {MOVEMENT_CODE_LABELS[line.movementCode]}
+            {movementLabel(line.movementCode, line.usageType)}
           </span>
         </span>
       ),
@@ -97,7 +93,14 @@ async function StockCard({
       cell: (line) => (
         <span className="font-mono text-xs">
           {line.sourcePath} → {line.destinationPath}
-          {line.lotName && <span className="block">lot {line.lotName}</span>}
+          {line.lotId && (
+            <Link
+              href={`/inventory/lot/${line.lotId}`}
+              className="block text-primary underline-offset-4 hover:underline"
+            >
+              lot {line.lotName}
+            </Link>
+          )}
         </span>
       ),
     },

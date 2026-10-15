@@ -127,6 +127,21 @@ export const MOVEMENT_CODE_LABELS: Record<MovementCode, string> = {
 export const MOVEMENT_DIRECTIONS = ["in", "out", "internal"] as const
 export type MovementDirection = (typeof MOVEMENT_DIRECTIONS)[number]
 
+// Sama dengan fungsi database movement_direction() (migrasi movement_codes).
+export const MOVEMENT_CODE_DIRECTIONS: Record<MovementCode, MovementDirection> = {
+  gr: "in",
+  gi_rtn: "in",
+  itw_in: "in",
+  itw_rtn: "in",
+  adj_in: "in",
+  ilt: "internal",
+  gi: "out",
+  gr_rtn: "out",
+  itw_out: "out",
+  pu: "out",
+  adj_out: "out",
+}
+
 // Alur status transfer (PRD bagian 6.3, backlog R-06, mengikuti hmx-002): Draft → Konfirmasi →
 // Menunggu / Sebagian tersedia / Siap → Selesai; Batal dari status mana pun sebelum Selesai.
 // Transfer masuk langsung Siap; transfer yang mengambil stok gudang menunggu stoknya tersedia.
@@ -304,3 +319,9 @@ export const FROZEN_STOCK_COUNT_STATUSES: readonly StockCountStatus[] = [
   "counted",
   "review",
 ]
+
+// Label jenis pergerakan untuk kartu stok dan penelusuran lot: kode pu dirinci per jenis pemakaian
+// (R-12, R-14).
+export function movementLabel(code: MovementCode, usageType?: UsageType | null) {
+  return code === "pu" && usageType ? USAGE_TYPE_LABELS[usageType] : MOVEMENT_CODE_LABELS[code]
+}

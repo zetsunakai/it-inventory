@@ -48,13 +48,28 @@ const COLUMNS: DataTableColumn<StockRow>[] = [
     cell: (row) => (row.lotName ? <span className="font-mono">{row.lotName}</span> : "—"),
   },
   {
-    header: "Qty",
+    header: "Saldo",
     align: "right",
     cell: (row) => (
       <span className={Number(row.qty) < 0 ? "font-medium text-destructive" : "font-medium"}>
         {formatDecimal(row.qty)} {row.uomCode}
       </span>
     ),
+  },
+]
+
+// Saldo sekarang juga menampilkan qty yang dipesan transfer terkonfirmasi dan sisanya yang tersedia
+// (R-07, R-14). Saldo per tanggal hanya punya saldo.
+const RESERVATION_COLUMNS: DataTableColumn<StockRow>[] = [
+  {
+    header: "Dipesan",
+    align: "right",
+    cell: (row) => (Number(row.reservedQty) ? formatDecimal(row.reservedQty!) : "—"),
+  },
+  {
+    header: "Tersedia",
+    align: "right",
+    cell: (row) => formatDecimal((Number(row.qty) - Number(row.reservedQty ?? 0)).toFixed(4)),
   },
 ]
 
@@ -66,7 +81,7 @@ export default function StockPage({ searchParams }: PageProps<"/inventory/stok">
     <>
       <PageHeader
         title="Stok"
-        description="Saldo per produk, lokasi, dan lot di gudang yang boleh Anda lihat. Pilih tanggal untuk melihat saldo per akhir hari itu."
+        description="Saldo, qty dipesan transfer yang sudah dikonfirmasi, dan qty tersedia per produk, lokasi, dan lot di gudang yang boleh Anda lihat. Pilih tanggal untuk melihat saldo per akhir hari itu."
       />
       <Suspense fallback={<DataTableSkeleton />}>
         <StockTable searchParams={searchParams} />
@@ -111,7 +126,7 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
         </p>
       )}
       <DataTable
-        columns={COLUMNS}
+        columns={date ? COLUMNS : [...COLUMNS, ...RESERVATION_COLUMNS]}
         rows={rows}
         rowKey={(row) => `${row.productId}|${row.locationPath}|${row.lotName ?? ""}`}
         rowHref={(row) => `/inventory/stok/${row.productId}?gudang=${row.warehouseId}`}

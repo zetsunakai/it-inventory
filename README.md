@@ -291,6 +291,14 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   tanggal menghitung dari ledger lewat `stock_on_hand(end_of_day(tanggal))`, dan untuk hari ini
   hasil keduanya sama. Kartu stok (`/inventory/stok/[produk]`) per gudang dan rentang tanggal:
   saldo awal, masuk, keluar, saldo berjalan, dengan tautan ke transfernya.
+- Backlog R-14: saldo sekarang juga menampilkan Dipesan (`stock_balances.reserved_qty`) dan
+  Tersedia; saldo per tanggal hanya saldo. Jenis pergerakan di kartu stok dibaca dari kode
+  (`movementLabel()`, kode `pu` dirinci per jenis pemakaian) dan arahnya sama dengan
+  `movement_direction()` (`MOVEMENT_CODE_DIRECTIONS`). Penelusuran lot/nomor seri
+  (`/inventory/lot`, `src/server/queries/lots.ts`): saldo per lokasi (dipesan, tersedia) dan riwayat
+  masuk-keluar di semua gudang yang boleh diakses, dengan partner dan tautan transfer.
+  `tests/db/stock-card.test.ts` memastikan saldo kartu stok sama dengan saldo per tanggal untuk
+  setiap kode pergerakan.
 
 ## Layar transaksi inventory
 

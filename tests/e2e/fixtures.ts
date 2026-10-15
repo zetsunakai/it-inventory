@@ -84,6 +84,8 @@ export async function receiveStock(
   at?: string,
   // false = penerimaan dibiarkan Draft (mis. untuk divalidasi lewat UI).
   validate = true,
+  // Nomor lot; produknya dijadikan berpelacakan lot dulu.
+  lotName?: string,
 ) {
   const { db, pool } = createDb(TEST_DATABASE_URL)
   try {
@@ -93,6 +95,18 @@ export async function receiveStock(
         .from(locations)
         .where(eq(locations.code, "VENDOR"))
       const [pcs] = await tx.select({ id: uoms.id }).from(uoms).where(eq(uoms.code, "PCS"))
+      let lotId: string | null = null
+      if (lotName) {
+        await tx
+          .update(products)
+          .set({ tracking: "lot" })
+          .where(eq(products.id, fixture.product.id))
+        const result = await tx.execute<{ id: string }>(sql`
+          insert into lots (product_id, name) values (${fixture.product.id}, ${lotName})
+          on conflict (product_id, name) do update set name = excluded.name
+          returning id`)
+        lotId = result.rows[0].id
+      }
       const [transfer] = await tx
         .insert(transfers)
         .values({
@@ -119,6 +133,7 @@ export async function receiveStock(
         transferId: transfer.id,
         lineId: line.id,
         productId: fixture.product.id,
+        lotId,
         inputQty: qty,
         inputUomId: pcs.id,
         sourceLocationId: vendor.id,
@@ -127,6 +142,57 @@ export async function receiveStock(
       if (validate) {
         await tx.execute(sql`select validate_transfer(${transfer.id}, ${at ?? null}::timestamptz)`)
       }
+      return transfer.id
+    })
+  } finally {
+    await pool.end()
+  }
+}
+
+// Pengiriman yang sudah dikonfirmasi (memesan stok lot terlama di rak fixture), belum divalidasi.
+export async function reserveDelivery(
+  fixture: Awaited<ReturnType<typeof createInventoryFixture>>,
+  qty: string,
+) {
+  const { db, pool } = createDb(TEST_DATABASE_URL)
+  try {
+    return await db.transaction(async (tx) => {
+      const [customer] = await tx
+        .select({ id: locations.id })
+        .from(locations)
+        .where(eq(locations.code, "CUSTOMER"))
+      const [pcs] = await tx.select({ id: uoms.id }).from(uoms).where(eq(uoms.code, "PCS"))
+      const [transfer] = await tx
+        .insert(transfers)
+        .values({
+          type: "delivery",
+          sourceLocationId: fixture.rack.id,
+          destinationLocationId: customer.id,
+          partnerId: fixture.partner.id,
+          scheduledDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
+            new Date(),
+          ),
+        })
+        .returning({ id: transfers.id })
+      const [line] = await tx
+        .insert(transferLines)
+        .values({
+          transferId: transfer.id,
+          productId: fixture.product.id,
+          inputQty: qty,
+          inputUomId: pcs.id,
+        })
+        .returning({ id: transferLines.id })
+      await tx.insert(stockMoves).values({
+        transferId: transfer.id,
+        lineId: line.id,
+        productId: fixture.product.id,
+        inputQty: qty,
+        inputUomId: pcs.id,
+        sourceLocationId: fixture.rack.id,
+        destinationLocationId: customer.id,
+      })
+      await tx.execute(sql`select confirm_transfer(${transfer.id})`)
       return transfer.id
     })
   } finally {

@@ -2,7 +2,7 @@ import "server-only"
 
 import { sql, type SQL } from "drizzle-orm"
 
-import type { InventoryCategory, MovementCode, TransferType } from "@/lib/inventory"
+import type { InventoryCategory, MovementCode, TransferType, UsageType } from "@/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { containsPattern } from "@/server/db/sql-helpers"
@@ -20,8 +20,11 @@ export type StockRow = {
   warehouseId: string
   warehouseCode: string
   locationPath: string
+  lotId: string | null
   lotName: string | null
   qty: string
+  // Dipesan transfer yang sudah dikonfirmasi (R-07, R-14); kosong untuk saldo per tanggal.
+  reservedQty: string | null
 }
 
 export async function listStock({
@@ -38,8 +41,9 @@ export async function listStock({
   date?: string
 }) {
   const source = date
-    ? sql`stock_on_hand(end_of_day(${date}::date))`
-    : sql`(select product_id, location_id, lot_id, qty from stock_balances where qty <> 0)`
+    ? sql`(select *, null::numeric as reserved_qty from stock_on_hand(end_of_day(${date}::date)))`
+    : sql`(select product_id, location_id, lot_id, qty, reserved_qty
+        from stock_balances where qty <> 0)`
   const conditions: SQL[] = [sql`can_access_warehouse(${userId}, w.id)`]
   if (warehouseId) conditions.push(sql`w.id = ${warehouseId}`)
   if (search) {
@@ -67,12 +71,15 @@ export async function listStock({
       warehouse_id: string
       warehouse_code: string
       location_path: string
+      lot_id: string | null
       lot_name: string | null
       qty: string
+      reserved_qty: string | null
     }>(sql`
       select p.id as product_id, p.sku, p.name as product_name, p.category, u.code as uom_code,
         w.id as warehouse_id, w.code as warehouse_code, lp.path as location_path,
-        lot.name as lot_name, s.qty::numeric(18,4)::text as qty
+        lot.id as lot_id, lot.name as lot_name, s.qty::numeric(18,4)::text as qty,
+        s.reserved_qty::numeric(18,4)::text as reserved_qty
       ${from}
       order by p.sku, lp.path, lot.name nulls first
       limit ${pageSize} offset ${offset}`),
@@ -88,8 +95,10 @@ export async function listStock({
       warehouseId: row.warehouse_id,
       warehouseCode: row.warehouse_code,
       locationPath: row.location_path,
+      lotId: row.lot_id,
       lotName: row.lot_name,
       qty: row.qty,
+      reservedQty: row.reserved_qty,
     })),
     total: totals.rows[0]?.total ?? 0,
   }
@@ -112,9 +121,11 @@ export type StockCardLine = {
   transferNumber: string
   transferType: TransferType
   movementCode: MovementCode
+  usageType: UsageType | null
   doneAt: Date
   sourcePath: string
   destinationPath: string
+  lotId: string | null
   lotName: string | null
   inQty: string
   outQty: string
@@ -143,9 +154,11 @@ export async function stockCard({
     transfer_number: string
     transfer_type: TransferType
     movement_code: MovementCode
+    usage_type: UsageType | null
     done_at: string
     source_path: string
     destination_path: string
+    lot_id: string | null
     lot_name: string | null
     in_qty: string
     out_qty: string
@@ -170,8 +183,9 @@ export async function stockCard({
         and done_at <= end_of_day(${to}::date)
     )
     select o.qty::numeric(18,4)::text as opening, x.id as move_id, x.transfer_id,
-      t.number as transfer_number, t.type as transfer_type, x.movement_code, x.done_at,
-      sp.path as source_path, dp.path as destination_path, lot.name as lot_name,
+      t.number as transfer_number, t.type as transfer_type, x.movement_code,
+      t.usage_type, x.done_at, sp.path as source_path, dp.path as destination_path,
+      x.lot_id, lot.name as lot_name,
       x.in_qty::numeric(18,4)::text as in_qty, x.out_qty::numeric(18,4)::text as out_qty,
       (o.qty + sum(x.in_qty - x.out_qty) over (order by x.done_at, t.number, x.id))
         ::numeric(18,4)::text as balance
@@ -192,9 +206,11 @@ export async function stockCard({
       transferNumber: row.transfer_number,
       transferType: row.transfer_type,
       movementCode: row.movement_code,
+      usageType: row.usage_type,
       doneAt: new Date(row.done_at),
       sourcePath: row.source_path,
       destinationPath: row.destination_path,
+      lotId: row.lot_id,
       lotName: row.lot_name,
       inQty: row.in_qty,
       outQty: row.out_qty,

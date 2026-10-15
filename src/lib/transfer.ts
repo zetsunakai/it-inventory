@@ -170,3 +170,9 @@ export const TRANSFER_KINDS = {
     needsApproval: true,
   },
 } satisfies Partial<Record<TransferType, TransferKind>>
+
+// Halaman detail transfer per jenis, untuk tautan dari kartu stok dan penelusuran lot.
+export function transferHref(type: TransferType, id: string) {
+  const kind = (TRANSFER_KINDS as Partial<Record<TransferType, TransferKind>>)[type]
+  return `${kind?.path ?? "/inventory/transfer"}/${id}`
+}

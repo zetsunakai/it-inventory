@@ -187,7 +187,9 @@ describe("saldo", () => {
     const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
     const fromBalances = await listStock({ ...page, userId: people.admin })
     const fromLedger = await listStock({ ...page, userId: people.admin, date: today })
-    expect(fromLedger.rows).toEqual(fromBalances.rows)
+    // Saldo per tanggal tidak punya qty dipesan; selain itu sama.
+    expect(fromLedger.rows).toEqual(fromBalances.rows.map((row) => ({ ...row, reservedQty: null })))
+    expect(fromBalances.rows.every((row) => row.reservedQty === "0.0000")).toBe(true)
   })
 
   test("hanya gudang yang boleh diakses user", async () => {
