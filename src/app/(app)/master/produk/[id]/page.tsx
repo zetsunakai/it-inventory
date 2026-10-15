@@ -18,12 +18,13 @@ import { getProduct } from "@/server/queries/products"
 import { missingCustomsData } from "../customs-readiness"
 import { deleteProduct } from "../actions"
 import { ProductForm } from "../product-form"
+import { InfoGrid } from "@/components/layout/info-grid"
 
 export const metadata: Metadata = { title: "Detail produk · IT Inventory" }
 
 export default function ProductPage({ params }: PageProps<"/master/produk/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-3xl" />}>
+    <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
       <ProductDetail params={params} />
     </Suspense>
   )
@@ -90,14 +91,13 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
           />
         </>
       ) : (
-        <dl className="grid max-w-3xl grid-cols-[12rem_1fr] gap-x-4 gap-y-3 text-sm">
-          {rows.map(([label, value]) => (
-            <div key={label} className="contents">
-              <dt className="text-muted-foreground">{label}</dt>
-              <dd className="whitespace-pre-line">{value}</dd>
-            </div>
-          ))}
-        </dl>
+        <InfoGrid
+          items={rows.map(([label, value]) => ({
+            label,
+            value,
+            wide: label === "Alamat" || label === "Deskripsi" || label === "Catatan",
+          }))}
+        />
       )}
     </div>
   )

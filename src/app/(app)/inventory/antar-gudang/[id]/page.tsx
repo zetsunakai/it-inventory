@@ -22,6 +22,8 @@ import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { getInterwarehouse, type InterwarehouseDetail } from "@/server/queries/interwarehouse"
 import { listInternalLocations, listUomChoices } from "@/server/queries/transfers"
+import { InfoGrid } from "@/components/layout/info-grid"
+import { Section } from "@/components/layout/section"
 
 export const metadata: Metadata = { title: "Detail transfer antar gudang · IT Inventory" }
 
@@ -94,7 +96,7 @@ export default function InterwarehouseDetailPage({
   params,
 }: PageProps<"/inventory/antar-gudang/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-5xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
       <Detail params={params} />
     </Suspense>
   )
@@ -131,6 +133,16 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        actions={
+          canWrite && (
+            <InterwarehouseActions
+              id={request.id}
+              number={request.number}
+              status={request.status}
+              canSettle={canSettle}
+            />
+          )
+        }
         title={`Transfer antar gudang ${request.number}`}
         crumbs={[{ label: request.number }]}
         description={
@@ -139,14 +151,6 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           </StatusBadge>
         }
       />
-      {canWrite && (
-        <InterwarehouseActions
-          id={request.id}
-          number={request.number}
-          status={request.status}
-          canSettle={canSettle}
-        />
-      )}
       {editable ? (
         <InterwarehouseForm
           locations={locations}
@@ -166,37 +170,33 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           }}
         />
       ) : (
-        <div className="max-w-5xl space-y-6">
-          <dl className="grid grid-cols-[9rem_1fr] gap-x-4 gap-y-2 text-sm sm:grid-cols-[12rem_1fr]">
-            {rows.map(([label, value]) => (
-              <div key={label} className="contents">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="whitespace-pre-line">{value}</dd>
-              </div>
-            ))}
-          </dl>
+        <div className="space-y-8">
+          <InfoGrid
+            items={rows.map(([label, value]) => ({
+              label,
+              value,
+              wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
+            }))}
+          />
           {request.inTransit.length > 0 && (
-            <section className="space-y-3">
-              <h2 className="text-base font-semibold">Masih di perjalanan</h2>
+            <Section title="Masih di perjalanan">
               <DataTable
                 columns={TRANSIT_COLUMNS}
                 rows={request.inTransit}
                 rowKey={(row) => `${row.sku}|${row.lot ?? ""}`}
               />
-            </section>
+            </Section>
           )}
-          <section className="space-y-3">
-            <h2 className="text-base font-semibold">Transfer</h2>
+          <Section title="Transfer">
             <DataTable
               columns={TRANSFER_COLUMNS}
               rows={request.transfers}
               rowKey={(row) => row.id}
             />
-          </section>
-          <section className="space-y-3">
-            <h2 className="text-base font-semibold">Barang diminta</h2>
+          </Section>
+          <Section title="Barang diminta">
             <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
-          </section>
+          </Section>
         </div>
       )}
     </div>

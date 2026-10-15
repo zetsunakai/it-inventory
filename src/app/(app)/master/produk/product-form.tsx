@@ -34,6 +34,7 @@ import type { ProductCategoryOption } from "@/server/queries/product-categories"
 import type { UomOption } from "@/server/queries/products"
 
 import { createProduct, updateProduct } from "./actions"
+import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
 
 const TRACKING_ITEMS = PRODUCT_TRACKINGS.map((tracking) => ({
   value: tracking,
@@ -116,7 +117,7 @@ export function ProductForm({
   }, [product, state, router])
 
   return (
-    <form action={formAction} className="max-w-3xl space-y-6">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {product && <input type="hidden" name="id" value={product.id} />}
 
@@ -168,7 +169,7 @@ export function ProductForm({
             rows={3}
           />
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <FormGrid>
           <FormField
             label="Kategori IT Inventory"
             htmlFor="category"
@@ -209,7 +210,7 @@ export function ProductForm({
               </Select>
             </FormField>
           )}
-        </div>
+        </FormGrid>
         <div className="grid gap-4 sm:grid-cols-3">
           <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand}>
             <Input
@@ -383,13 +384,15 @@ export function ProductForm({
         />
       )}
       {state?.ok && product && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
     </form>
   )
 }

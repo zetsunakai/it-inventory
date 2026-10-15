@@ -19,7 +19,7 @@ export default function ImportLocationsPage() {
         title="Import lokasi"
         description="Lokasi untuk semua gudang dalam satu file. Kode baru ditambahkan, kode yang sudah ada diperbarui. Bila ada satu baris yang salah, tidak ada yang disimpan."
       />
-      <Suspense fallback={<Skeleton className="h-40 w-full max-w-xl" />}>
+      <Suspense fallback={<Skeleton className="h-40 w-full max-w-4xl" />}>
         <Guarded />
       </Suspense>
       <ImportColumnGuide columns={LOCATION_COLUMNS} />

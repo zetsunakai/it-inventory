@@ -14,7 +14,7 @@ export default function NewProductCategoryPage() {
   return (
     <>
       <PageHeader title="Tambah kategori produk" />
-      <Suspense fallback={<Skeleton className="h-72 w-full max-w-xl" />}>
+      <Suspense fallback={<Skeleton className="h-72 w-full max-w-4xl" />}>
         <Guarded />
       </Suspense>
     </>

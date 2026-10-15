@@ -38,6 +38,7 @@ import { TransferActions } from "./transfer-actions"
 import { TransferForm } from "./transfer-form"
 import { TransferStatusBadge } from "./transfer-status"
 import { TransferView } from "./transfer-view"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 // Halaman daftar, buat, dan detail yang sama untuk semua jenis transfer (penerimaan, pengiriman,
 // dst.). Halaman di app/(app)/inventory/<jenis>/ hanya meneruskan TRANSFER_KINDS miliknya.
@@ -153,7 +154,7 @@ async function TransferTable({
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch
           placeholder={
             kind.partnerLabel
@@ -171,7 +172,7 @@ async function TransferTable({
             {createLabel}
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={columns}
         rows={rows}
@@ -208,7 +209,7 @@ export function NewTransferPage({
   return (
     <>
       <PageHeader title={`Buat ${kind.noun}`} description={description} />
-      <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-5xl" />}>
+      <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
         <NewTransferForm kind={kind} />
       </Suspense>
     </>
@@ -232,7 +233,7 @@ export function TransferDetailPage({
   params: Promise<{ id: string }>
 }) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-5xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
       <TransferDetail kind={kind} effect={effect} params={params} />
     </Suspense>
   )

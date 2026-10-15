@@ -22,6 +22,7 @@ import { fieldValue, type FormState } from "@/lib/action-result"
 import { toDecimalInput } from "@/lib/decimal"
 import type { TransferLineDraft } from "@/lib/transfer"
 import type { LocationOption, ProductChoice, UomChoice } from "@/server/queries/transfers"
+import { FORM_CLASS, FormActions, FormColumn, FormColumns } from "@/components/layout/form-layout"
 
 export type InterwarehouseFormValues = {
   id: string
@@ -98,88 +99,94 @@ export function InterwarehouseForm({
   }
 
   return (
-    <form action={formAction} className="max-w-5xl space-y-6">
+    <form action={formAction} className={FORM_CLASS}>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
       {request && <input type="hidden" name="id" value={request.id} />}
       <input type="hidden" name="lines" value={JSON.stringify(payload)} />
 
       <FormSection title="Data permintaan">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <FormField
-            label="Lokasi asal"
-            htmlFor={fieldId("source")}
-            errors={fieldErrors?.sourceLocationId}
-          >
-            <Select
-              name="sourceLocationId"
-              items={sourceItems}
-              value={sourceId}
-              onValueChange={(value) => {
-                setSourceId(value)
-                setDestinationId(null)
-              }}
+        <FormColumns>
+          <FormColumn>
+            <FormField
+              label="Lokasi asal"
+              htmlFor={fieldId("source")}
+              errors={fieldErrors?.sourceLocationId}
             >
-              <SelectTrigger id={fieldId("source")} className="w-full">
-                <SelectValue placeholder="Pilih lokasi gudang asal" />
-              </SelectTrigger>
-              <SelectContent>
-                {sourceItems.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField
-            label="Lokasi tujuan"
-            htmlFor={fieldId("destination")}
-            errors={fieldErrors?.destinationLocationId}
-          >
-            <Select
-              name="destinationLocationId"
-              items={destinationItems}
-              value={destinationId}
-              onValueChange={setDestinationId}
+              <Select
+                name="sourceLocationId"
+                items={sourceItems}
+                value={sourceId}
+                onValueChange={(value) => {
+                  setSourceId(value)
+                  setDestinationId(null)
+                }}
+              >
+                <SelectTrigger id={fieldId("source")} className="w-full">
+                  <SelectValue placeholder="Pilih lokasi gudang asal" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sourceItems.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField
+              label="Lokasi tujuan"
+              htmlFor={fieldId("destination")}
+              errors={fieldErrors?.destinationLocationId}
             >
-              <SelectTrigger id={fieldId("destination")} className="w-full">
-                <SelectValue
-                  placeholder={sourceId ? "Pilih lokasi di gudang lain" : "Pilih lokasi asal dulu"}
-                />
-              </SelectTrigger>
-              <SelectContent>
-                {destinationItems.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField
-            label="Tanggal rencana"
-            htmlFor={fieldId("date")}
-            errors={fieldErrors?.scheduledDate}
-          >
-            <Input
-              id={fieldId("date")}
-              name="scheduledDate"
-              type="date"
-              defaultValue={fieldValue(state, "scheduledDate", request?.scheduledDate)}
-            />
-          </FormField>
-          <FormField
-            label="Referensi"
-            htmlFor={fieldId("reference")}
-            errors={fieldErrors?.reference}
-          >
-            <Input
-              id={fieldId("reference")}
-              name="reference"
-              defaultValue={fieldValue(state, "reference", request?.reference)}
-            />
-          </FormField>
-        </div>
+              <Select
+                name="destinationLocationId"
+                items={destinationItems}
+                value={destinationId}
+                onValueChange={setDestinationId}
+              >
+                <SelectTrigger id={fieldId("destination")} className="w-full">
+                  <SelectValue
+                    placeholder={
+                      sourceId ? "Pilih lokasi di gudang lain" : "Pilih lokasi asal dulu"
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {destinationItems.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </FormColumn>
+          <FormColumn>
+            <FormField
+              label="Tanggal rencana"
+              htmlFor={fieldId("date")}
+              errors={fieldErrors?.scheduledDate}
+            >
+              <Input
+                id={fieldId("date")}
+                name="scheduledDate"
+                type="date"
+                defaultValue={fieldValue(state, "scheduledDate", request?.scheduledDate)}
+              />
+            </FormField>
+            <FormField
+              label="Referensi"
+              htmlFor={fieldId("reference")}
+              errors={fieldErrors?.reference}
+            >
+              <Input
+                id={fieldId("reference")}
+                name="reference"
+                defaultValue={fieldValue(state, "reference", request?.reference)}
+              />
+            </FormField>
+          </FormColumn>
+        </FormColumns>
         <FormField label="Catatan" htmlFor={fieldId("notes")} errors={fieldErrors?.notes}>
           <Textarea
             id={fieldId("notes")}
@@ -283,16 +290,16 @@ export function InterwarehouseForm({
         </div>
       </FormSection>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <FormActions>
         <Button type="submit" disabled={pending} className={TOUCH}>
           {pending ? "Menyimpan…" : request ? "Simpan perubahan" : "Simpan permintaan"}
         </Button>
         {state?.ok && request && (
-          <p role="status" className="text-sm text-success">
+          <p role="status" className="text-control text-success">
             Perubahan disimpan.
           </p>
         )}
-      </div>
+      </FormActions>
     </form>
   )
 }

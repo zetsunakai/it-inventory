@@ -16,7 +16,7 @@ export default function NewRefCodePage() {
         title="Tambah referensi"
         description="Jenis dan kode tidak bisa diubah setelah disimpan."
       />
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-xl" />}>
+      <Suspense fallback={<Skeleton className="h-64 w-full max-w-4xl" />}>
         <Guarded />
       </Suspense>
     </>

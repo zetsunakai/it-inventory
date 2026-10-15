@@ -37,6 +37,7 @@ import {
   type LocationRow,
   type WarehouseRow,
 } from "@/server/queries/warehouses"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Gudang & lokasi · IT Inventory" }
 
@@ -87,7 +88,7 @@ export default function WarehousesPage({ searchParams }: PageProps<"/master/guda
       </Suspense>
       <section className="space-y-3">
         <div>
-          <h2 className="text-lg font-semibold">Lokasi virtual</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Lokasi virtual</h2>
           <p className="text-sm text-muted-foreground">
             Asal dan tujuan pergerakan di luar gudang: dari vendor, ke customer, scrap, dan
             penyesuaian stok.
@@ -116,7 +117,7 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari kode atau nama gudang" />
         <DataTableFilter name={CATEGORY_FILTER} label="Kategori" options={CATEGORY_OPTIONS} />
         <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
@@ -126,7 +127,7 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
             Tambah gudang
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

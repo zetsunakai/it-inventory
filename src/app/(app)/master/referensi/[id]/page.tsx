@@ -10,6 +10,7 @@ import { requirePermission } from "@/server/auth/session"
 import { findRefCode, getRefCode } from "@/server/queries/ref-codes"
 
 import { RefCodeEditForm } from "../ref-code-forms"
+import { InfoGrid } from "@/components/layout/info-grid"
 
 export const metadata: Metadata = { title: "Ubah referensi · IT Inventory" }
 
@@ -17,7 +18,7 @@ export default function EditRefCodePage({ params }: PageProps<"/master/referensi
   return (
     <>
       <PageHeader title="Ubah referensi" description="Jenis dan kode tidak bisa diubah." />
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-xl" />}>
+      <Suspense fallback={<Skeleton className="h-64 w-full max-w-4xl" />}>
         <EditRefCode params={params} />
       </Suspense>
     </>
@@ -37,18 +38,20 @@ async function EditRefCode({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-6">
-      <dl className="grid max-w-xl grid-cols-[8rem_1fr] gap-x-4 gap-y-2 text-sm">
-        <dt className="text-muted-foreground">Jenis</dt>
-        <dd>{REF_CODE_TYPE_LABELS[row.type]}</dd>
-        <dt className="text-muted-foreground">Kode</dt>
-        <dd className="font-mono">{row.code}</dd>
-        {parentType && (
-          <>
-            <dt className="text-muted-foreground">{REF_CODE_TYPE_LABELS[parentType]}</dt>
-            <dd>{parent ? formatRefCode(parent) : row.parentCode}</dd>
-          </>
-        )}
-      </dl>
+      <InfoGrid
+        items={[
+          { label: "Jenis", value: REF_CODE_TYPE_LABELS[row.type] },
+          { label: "Kode", value: <span className="font-mono">{row.code}</span> },
+          ...(parentType
+            ? [
+                {
+                  label: REF_CODE_TYPE_LABELS[parentType],
+                  value: parent ? formatRefCode(parent) : row.parentCode,
+                },
+              ]
+            : []),
+        ]}
+      />
       <RefCodeEditForm id={row.id} name={row.name} active={row.active} />
     </div>
   )

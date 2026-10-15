@@ -27,6 +27,7 @@ import { requirePermission } from "@/server/auth/session"
 import { listProducts, type ProductRow } from "@/server/queries/products"
 
 import { CustomsReadiness } from "./customs-readiness"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Produk · IT Inventory" }
 
@@ -89,7 +90,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari SKU, nama, atau kode HS" />
         <DataTableFilter
           name={CATEGORY_FILTER}
@@ -107,7 +108,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
             Tambah produk
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

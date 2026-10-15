@@ -64,7 +64,7 @@ export function CountReview({ lines }: { lines: StockCountLine[] }) {
   return (
     <section className="space-y-3" aria-labelledby="count-result">
       <div>
-        <h2 id="count-result" className="text-base font-semibold">
+        <h2 id="count-result" className="text-lg font-semibold tracking-tight">
           Hasil hitung
         </h2>
         <p className="text-sm text-muted-foreground">

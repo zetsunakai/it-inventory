@@ -22,6 +22,7 @@ import {
   RETURN_LINE_ACTIONS,
   type ReturnLineAction,
 } from "@/lib/inventory"
+import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
 
 export type ReturnRequestFormValues = {
   id: string
@@ -82,7 +83,7 @@ export function ReturnRequestForm({
 
   return (
     <form
-      className="max-w-5xl space-y-6"
+      className={FORM_CLASS}
       onSubmit={(event) => {
         event.preventDefault()
         const data = new FormData(event.currentTarget)
@@ -103,7 +104,7 @@ export function ReturnRequestForm({
       <FormErrors errors={result?.ok === false ? result.errors : undefined} />
 
       <FormSection title="Data retur">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <FormGrid>
           <FormField
             label={locationLabel}
             htmlFor={fieldId("location")}
@@ -134,7 +135,7 @@ export function ReturnRequestForm({
               defaultValue={request.scheduledDate ?? ""}
             />
           </FormField>
-        </div>
+        </FormGrid>
         <FormField label="Alasan retur" htmlFor={fieldId("reason")} errors={fieldErrors?.reason}>
           <Textarea
             id={fieldId("reason")}
@@ -206,16 +207,16 @@ export function ReturnRequestForm({
         </div>
       </FormSection>
 
-      <div className="flex flex-wrap items-center gap-3">
+      <FormActions>
         <Button type="submit" disabled={pending} className={TOUCH}>
           {pending ? "Menyimpan…" : "Simpan perubahan"}
         </Button>
         {result?.ok && (
-          <p role="status" className="text-sm text-success">
+          <p role="status" className="text-control text-success">
             {result.message}
           </p>
         )}
-      </div>
+      </FormActions>
     </form>
   )
 }

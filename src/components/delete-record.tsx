@@ -55,9 +55,9 @@ export function DeleteRecord({
   }
 
   return (
-    <section className="max-w-3xl space-y-3 border-t pt-6" aria-labelledby="delete-record">
+    <section className="max-w-4xl space-y-3 border-t pt-6" aria-labelledby="delete-record">
       <div>
-        <h2 id="delete-record" className="text-base font-semibold">
+        <h2 id="delete-record" className="text-lg font-semibold tracking-tight">
           Hapus {noun}
         </h2>
         <p className="text-sm text-muted-foreground">

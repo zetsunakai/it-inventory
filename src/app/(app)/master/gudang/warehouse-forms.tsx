@@ -23,6 +23,7 @@ import {
 } from "@/lib/inventory"
 
 import { createWarehouse, updateWarehouse } from "./actions"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const CATEGORY_ITEMS = INVENTORY_CATEGORIES.map((category) => ({
   value: category,
@@ -56,7 +57,7 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
   }, [warehouse, state, router])
 
   return (
-    <form action={formAction} className="max-w-2xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {warehouse && <input type="hidden" name="id" value={warehouse.id} />}
       <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
@@ -124,13 +125,15 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
         />
       )}
       {state?.ok && warehouse && state.message && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
     </form>
   )
 }

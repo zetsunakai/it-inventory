@@ -11,6 +11,7 @@ import { requirePermission } from "@/server/auth/session"
 import { getCompanyProfile } from "@/server/queries/company"
 
 import { CompanyProfileForm } from "./company-profile-form"
+import { InfoGrid } from "@/components/layout/info-grid"
 
 export const metadata: Metadata = { title: "Profil perusahaan · IT Inventory" }
 
@@ -21,7 +22,7 @@ export default function CompanyProfilePage() {
         title="Profil perusahaan"
         description="Dipakai otomatis sebagai entitas Pengusaha/Pemilik di dokumen BC."
       />
-      <Suspense fallback={<Skeleton className="h-96 w-full max-w-2xl" />}>
+      <Suspense fallback={<Skeleton className="h-96 w-full max-w-4xl" />}>
         <CompanyProfile />
       </Suspense>
     </>
@@ -59,13 +60,12 @@ async function CompanyProfile() {
     ["Tanggal izin fasilitas", formatDate(new Date(`${profile.permitDate}T00:00:00+07:00`))],
   ]
   return (
-    <dl className="grid max-w-2xl grid-cols-[12rem_1fr] gap-x-4 gap-y-3 text-sm">
-      {rows.map(([label, value]) => (
-        <div key={label} className="contents">
-          <dt className="text-muted-foreground">{label}</dt>
-          <dd>{value}</dd>
-        </div>
-      ))}
-    </dl>
+    <InfoGrid
+      items={rows.map(([label, value]) => ({
+        label,
+        value,
+        wide: label === "Alamat" || label === "Deskripsi" || label === "Catatan",
+      }))}
+    />
   )
 }

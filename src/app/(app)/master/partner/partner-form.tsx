@@ -27,6 +27,7 @@ import {
 import type { RefCodeOption } from "@/lib/ref-codes"
 
 import { createPartner, updatePartner } from "./actions"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const IDENTITY_ITEMS = IDENTITY_TYPES.map((type) => ({
   value: type,
@@ -74,7 +75,7 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
   }, [partner, state, router])
 
   return (
-    <form action={formAction} className="max-w-3xl space-y-6">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {partner && <input type="hidden" name="id" value={partner.id} />}
       <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
@@ -210,13 +211,15 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
         />
       )}
       {state?.ok && partner && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
     </form>
   )
 }

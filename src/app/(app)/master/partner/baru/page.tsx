@@ -16,7 +16,7 @@ export default function NewPartnerPage() {
         title="Tambah partner"
         description="Kode partner tidak bisa diubah setelah disimpan."
       />
-      <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-3xl" />}>
+      <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
         <Guarded />
       </Suspense>
     </>

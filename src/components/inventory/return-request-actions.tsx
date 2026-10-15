@@ -1,7 +1,6 @@
 "use client"
 
-import { CircleAlert, CircleCheck } from "lucide-react"
-import { useEffect, useRef, useState, useTransition } from "react"
+import { useState, useTransition } from "react"
 
 import { cancelReturnRequest, confirmReturnRequest } from "@/app/(app)/inventory/retur/actions"
 import {
@@ -17,6 +16,7 @@ import {
 import { Button } from "@/components/ui/button"
 import type { ActionResult } from "@/lib/action-result"
 import type { ReturnRequestStatus } from "@/lib/inventory"
+import { usePageMessage } from "@/components/layout/page-message"
 
 // Aksi permintaan retur sesuai statusnya (backlog R-11): Konfirmasi saat Draft, Batal selama
 // belum ada barang yang diretur.
@@ -31,54 +31,22 @@ export function ReturnRequestActions({
   status: ReturnRequestStatus
   cancellable: boolean
 }) {
-  const [result, setResult] = useState<ActionResult<unknown> | null>(null)
+  const { show } = usePageMessage()
   const [pending, startTransition] = useTransition()
   const [cancelOpen, setCancelOpen] = useState(false)
-  const messageRef = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    if (result) messageRef.current?.focus()
-  }, [result])
 
   function run(action: () => Promise<ActionResult<unknown>>, close?: () => void) {
     startTransition(async () => {
       const next = await action()
       close?.()
-      setResult(next)
+      show(next)
     })
   }
 
-  if (status !== "draft" && !cancellable && !result) return null
+  if (status !== "draft" && !cancellable) return null
 
   return (
-    <div className="space-y-3">
-      {result && (
-        <div
-          ref={messageRef}
-          tabIndex={-1}
-          role={result.ok ? "status" : "alert"}
-          className={
-            result.ok
-              ? "flex gap-2 rounded-lg bg-success-soft px-3 py-2.5 text-sm outline-none"
-              : "flex gap-2 rounded-lg bg-destructive-soft px-3 py-2.5 text-sm text-destructive outline-none"
-          }
-        >
-          {result.ok ? (
-            <CircleCheck className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
-          ) : (
-            <CircleAlert className="mt-0.5 size-4 shrink-0" aria-hidden />
-          )}
-          {result.ok ? (
-            <p>{result.message}</p>
-          ) : (
-            <ul className="list-disc space-y-0.5 pl-4">
-              {result.errors.map((error) => (
-                <li key={error}>{error}</li>
-              ))}
-            </ul>
-          )}
-        </div>
-      )}
+    <>
       <div className="flex flex-wrap gap-2">
         {status === "draft" && (
           <Button
@@ -129,6 +97,6 @@ export function ReturnRequestActions({
           </AlertDialog>
         )}
       </div>
-    </div>
+    </>
   )
 }

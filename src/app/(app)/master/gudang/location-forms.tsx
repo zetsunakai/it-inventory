@@ -18,6 +18,7 @@ import { fieldValue, type FormState } from "@/lib/action-result"
 import { LOCATION_TYPE_LABELS, WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
 
 import { createLocation, updateLocation } from "./actions"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const TYPE_ITEMS = WAREHOUSE_LOCATION_TYPES.map((type) => ({
   value: type,
@@ -111,13 +112,15 @@ export function LocationCreateForm({
         <ParentSelect options={parents} defaultValue={fieldValue(state, "parentId")} />
       </FormField>
       {state?.ok && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Tambah lokasi"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Tambah lokasi"}
+        </Button>
+      </FormActions>
     </form>
   )
 }
@@ -136,7 +139,7 @@ export function LocationEditForm({
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
 
   return (
-    <form action={formAction} className="max-w-2xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="id" value={location.id} />
       <FormField label="Nama lokasi" htmlFor="location-name" errors={fieldErrors?.name}>
@@ -157,13 +160,15 @@ export function LocationEditForm({
         defaultChecked={state?.ok === false ? state.values?.active === "on" : location.active}
       />
       {state?.ok && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
     </form>
   )
 }

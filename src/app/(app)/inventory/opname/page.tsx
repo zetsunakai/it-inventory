@@ -18,6 +18,7 @@ import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-pa
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listStockCounts, type StockCountRow } from "@/server/queries/stock-counts"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Stock opname · IT Inventory" }
 
@@ -78,7 +79,7 @@ async function StockCountTable({ searchParams }: { searchParams: Promise<RawSear
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari nomor atau gudang" />
         <DataTableFilter
           name={STATUS_FILTER}
@@ -97,7 +98,7 @@ async function StockCountTable({ searchParams }: { searchParams: Promise<RawSear
             Buat sesi opname
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

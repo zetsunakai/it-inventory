@@ -21,6 +21,7 @@ import { toDecimalInput } from "@/lib/decimal"
 import type { ProductChoice } from "@/server/queries/transfers"
 
 import { createUom, createUomCategory, updateUom } from "./actions"
+import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
 
 export type CategoryOption = { id: string; name: string; referenceCode: string | null }
 
@@ -43,7 +44,7 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
   }, [state, router, categoryId])
 
   return (
-    <form action={formAction} className="max-w-xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="productId" value={product?.id ?? ""} />
       {/* Pilihan kategori dikunci ke kategori satuan stok produk; select yang disabled tidak
@@ -113,9 +114,11 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
         }
       />
       <RoundingField errors={fieldErrors?.rounding} defaultValue={fieldValue(state, "rounding")} />
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
     </form>
   )
 }
@@ -141,7 +144,7 @@ export function UomEditForm({
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
 
   return (
-    <form action={formAction} className="max-w-xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="id" value={uom.id} />
       {/* Satuan acuan selalu berfaktor 1, jadi faktornya dikirim tetap. */}
@@ -176,13 +179,15 @@ export function UomEditForm({
         defaultChecked={state?.ok === false ? state.values?.active === "on" : uom.active}
       />
       {state?.ok && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
     </form>
   )
 }
@@ -242,7 +247,7 @@ export function UomCategoryForm() {
     <form action={formAction} className="space-y-4 rounded-lg border p-4">
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <p className="font-medium">Tambah kategori</p>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <FormGrid>
         <FormField label="Kode kategori" htmlFor="category-code" errors={fieldErrors?.code}>
           <Input
             id="category-code"
@@ -286,15 +291,17 @@ export function UomCategoryForm() {
             maxLength={100}
           />
         </FormField>
-      </div>
+      </FormGrid>
       {state?.ok && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Tambah kategori"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Tambah kategori"}
+        </Button>
+      </FormActions>
     </form>
   )
 }

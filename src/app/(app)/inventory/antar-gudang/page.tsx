@@ -22,6 +22,7 @@ import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-pa
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listInterwarehouse, type InterwarehouseRow } from "@/server/queries/interwarehouse"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Transfer antar gudang · IT Inventory" }
 
@@ -82,7 +83,7 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari nomor atau referensi" />
         <DataTableFilter
           name="status"
@@ -98,7 +99,7 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
             Buat permintaan
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

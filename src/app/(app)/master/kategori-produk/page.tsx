@@ -24,6 +24,7 @@ import { hasPermission } from "@/lib/permissions"
 import { skuExample } from "@/lib/product-category"
 import { requirePermission } from "@/server/auth/session"
 import { listProductCategories, type ProductCategoryRow } from "@/server/queries/product-categories"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Kategori produk · IT Inventory" }
 
@@ -75,7 +76,7 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari nama atau prefix kode" />
         <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canEdit && (
@@ -87,7 +88,7 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
             Tambah kategori
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

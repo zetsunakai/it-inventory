@@ -23,6 +23,7 @@ import { AccessManager } from "../access-manager"
 import { deleteWarehouse } from "../actions"
 import { LocationCreateForm } from "../location-forms"
 import { WarehouseForm } from "../warehouse-forms"
+import { Section } from "@/components/layout/section"
 
 export const metadata: Metadata = { title: "Detail gudang · IT Inventory" }
 
@@ -90,8 +91,7 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
         }
       />
 
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold">Lokasi</h2>
+      <Section title="Lokasi">
         <DataTable
           columns={LOCATION_COLUMNS}
           rows={locations}
@@ -113,12 +113,12 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
               Gudang ini diarsipkan. Aktifkan lagi di Data gudang untuk menambah lokasi.
             </p>
           ))}
-      </section>
+      </Section>
 
       {canManageAccess && (
         <section className="space-y-3">
           <div>
-            <h2 className="text-base font-semibold">Akses user</h2>
+            <h2 className="text-lg font-semibold tracking-tight">Akses user</h2>
             <p className="text-sm text-muted-foreground">
               {ALL_WAREHOUSE_ROLES.map((role) => ROLE_LABELS[role]).join(", ")} otomatis bisa
               melihat semua gudang. Peran lain hanya melihat gudang yang diberikan di sini.
@@ -128,10 +128,9 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
         </section>
       )}
       {canEdit && (
-        <section className="space-y-3">
-          <h2 className="text-base font-semibold">Data gudang</h2>
+        <Section title="Data gudang">
           <WarehouseForm warehouse={warehouse} />
-        </section>
+        </Section>
       )}
       {canEdit && (
         <DeleteRecord

@@ -24,6 +24,7 @@ import { hasPermission } from "@/lib/permissions"
 import { REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS, REF_CODE_TYPES } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
 import { listRefCodes, type RefCodeRow } from "@/server/queries/ref-codes"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Referensi kepabeanan · IT Inventory" }
 
@@ -81,7 +82,7 @@ async function RefCodeTable({ searchParams }: { searchParams: Promise<RawSearchP
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari kode atau nama" />
         <DataTableFilter name={TYPE_FILTER} label="Jenis" options={TYPE_OPTIONS} />
         <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
@@ -94,7 +95,7 @@ async function RefCodeTable({ searchParams }: { searchParams: Promise<RawSearchP
             Tambah referensi
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

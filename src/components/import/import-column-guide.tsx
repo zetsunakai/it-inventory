@@ -25,7 +25,7 @@ export function ImportColumnGuide({ columns }: { columns: readonly ImportColumn[
   return (
     <section className="space-y-3" aria-labelledby="import-columns">
       <div>
-        <h2 id="import-columns" className="text-base font-semibold">
+        <h2 id="import-columns" className="text-lg font-semibold tracking-tight">
           Kolom file
         </h2>
         <p className="text-sm text-muted-foreground">

@@ -16,7 +16,7 @@ export default function NewWarehousePage() {
         title="Tambah gudang"
         description="Kode gudang tidak bisa diubah setelah disimpan. Lokasi ditambahkan setelahnya."
       />
-      <Suspense fallback={<Skeleton className="h-80 w-full max-w-2xl" />}>
+      <Suspense fallback={<Skeleton className="h-80 w-full max-w-4xl" />}>
         <Guarded />
       </Suspense>
     </>

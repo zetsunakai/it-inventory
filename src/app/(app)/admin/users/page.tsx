@@ -14,6 +14,7 @@ import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-pa
 import { requiresMfa, ROLE_LABELS, ROLES } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listUsers, type UserListRow } from "@/server/queries/users"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Pengguna · IT Inventory" }
 
@@ -67,10 +68,10 @@ async function UserTable({ searchParams }: { searchParams: Promise<RawSearchPara
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari nama atau email" />
         <DataTableFilter name={ROLE_FILTER} label="Peran" options={ROLE_OPTIONS} />
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

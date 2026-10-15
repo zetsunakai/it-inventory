@@ -27,7 +27,7 @@ async function Home() {
   return (
     <div className="max-w-3xl">
       <section aria-labelledby="perlu-perhatian" className="space-y-3">
-        <h2 id="perlu-perhatian" className="text-base font-semibold">
+        <h2 id="perlu-perhatian" className="text-lg font-semibold tracking-tight">
           Perlu perhatian
         </h2>
         {items.length === 0 ? (

@@ -26,6 +26,7 @@ import {
 } from "@/lib/ref-codes"
 
 import { createRefCode, updateRefCode } from "./actions"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const TYPE_ITEMS = REF_CODE_TYPES.map((type) => ({
   value: type,
@@ -50,7 +51,7 @@ export function RefCodeCreateForm() {
   }, [state, router])
 
   return (
-    <form action={formAction} className="max-w-xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <FormField label="Jenis" htmlFor="type" errors={fieldErrors?.type}>
         <Select
@@ -99,14 +100,14 @@ export function RefCodeCreateForm() {
           autoComplete="off"
         />
       </FormField>
-      <div className="flex gap-2">
+      <FormActions>
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
         <Button type="button" variant="outline" onClick={() => router.push("/master/referensi")}>
           Batal
         </Button>
-      </div>
+      </FormActions>
     </form>
   )
 }
@@ -127,7 +128,7 @@ export function RefCodeEditForm({
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
 
   return (
-    <form action={formAction} className="max-w-xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="id" value={id} />
       <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name}>
@@ -153,14 +154,16 @@ export function RefCodeEditForm({
           </p>
         </div>
       </div>
-      {state?.ok && state.message && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+        {state?.ok && state.message && (
+          <p role="status" className="text-control text-muted-foreground">
+            {state.message}
+          </p>
+        )}
+      </FormActions>
     </form>
   )
 }

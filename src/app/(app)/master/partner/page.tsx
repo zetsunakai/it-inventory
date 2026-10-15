@@ -25,6 +25,7 @@ import { IDENTITY_TYPE_LABELS } from "@/lib/partner"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listPartners, type PartnerRow } from "@/server/queries/partners"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Partner · IT Inventory" }
 
@@ -88,7 +89,7 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari kode, nama, NPWP, atau NITKU" />
         <DataTableFilter name={ROLE_FILTER} label="Peran" options={ROLE_OPTIONS} />
         <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
@@ -98,7 +99,7 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
             Tambah partner
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

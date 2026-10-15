@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import type { ActionResult, FormState } from "@/lib/action-result"
 import { formatNumber } from "@/lib/format"
 import type { ImportResult, ImportRowError } from "@/lib/import"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 type ImportAction = (
   state: FormState<ImportResult>,
@@ -43,7 +44,7 @@ export function ImportForm({
 
   return (
     <div className="space-y-6">
-      <form action={formAction} className="max-w-xl space-y-4">
+      <form action={formAction} className={FORM_CLASS}>
         <FormErrors errors={state?.ok === false ? state.errors : undefined} />
         <FormField
           label="File Excel atau CSV"
@@ -58,7 +59,7 @@ export function ImportForm({
             accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
           />
         </FormField>
-        <div className="flex flex-wrap items-center gap-2">
+        <FormActions>
           <Button type="submit" disabled={pending}>
             {pending ? "Memeriksa file…" : "Import"}
           </Button>
@@ -66,7 +67,7 @@ export function ImportForm({
             <Download />
             Unduh data sekarang sebagai template
           </a>
-        </div>
+        </FormActions>
       </form>
       {state?.ok && (
         <ImportResultView result={state.data} noun={noun} keyLabel={keyLabel} listHref={listHref} />

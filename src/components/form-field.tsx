@@ -64,11 +64,11 @@ export function FormSection({
   children: ReactNode
 }) {
   return (
-    <fieldset className="space-y-4 border-t pt-5 first-of-type:border-t-0 first-of-type:pt-0">
+    <fieldset className="space-y-5 border-t pt-6 first-of-type:border-t-0 first-of-type:pt-0">
       <legend className="sr-only">{title}</legend>
       <div aria-hidden>
-        <p className="text-sm font-semibold">{title}</p>
-        {description && <p className="mt-0.5 text-sm text-muted-foreground">{description}</p>}
+        <p className="text-base font-semibold">{title}</p>
+        {description && <p className="mt-0.5 text-control text-muted-foreground">{description}</p>}
       </div>
       {children}
     </fieldset>

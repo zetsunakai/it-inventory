@@ -25,6 +25,8 @@ import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { getReturnRequest, type ReturnRequestDetail } from "@/server/queries/return-requests"
 import { listInternalLocations } from "@/server/queries/transfers"
+import { InfoGrid } from "@/components/layout/info-grid"
+import { Section } from "@/components/layout/section"
 
 export const metadata: Metadata = { title: "Detail retur · IT Inventory" }
 
@@ -88,7 +90,7 @@ const LINE_COLUMNS: DataTableColumn<RequestLine>[] = [
 
 export default function ReturnRequestPage({ params }: PageProps<"/inventory/retur/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-5xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
       <Detail params={params} />
     </Suspense>
   )
@@ -130,6 +132,16 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   return (
     <div className="space-y-6">
       <PageHeader
+        actions={
+          canWrite && (
+            <ReturnRequestActions
+              id={request.id}
+              number={request.number}
+              status={request.status}
+              cancellable={cancellable}
+            />
+          )
+        }
         title={`Retur ${request.number}`}
         crumbs={[{ label: request.number }]}
         description={
@@ -151,14 +163,6 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           </span>
         }
       />
-      {canWrite && (
-        <ReturnRequestActions
-          id={request.id}
-          number={request.number}
-          status={request.status}
-          cancellable={cancellable}
-        />
-      )}
       {editable ? (
         <ReturnRequestForm
           locations={locations}
@@ -173,27 +177,24 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
           }}
         />
       ) : (
-        <div className="max-w-5xl space-y-6">
-          <dl className="grid grid-cols-[9rem_1fr] gap-x-4 gap-y-2 text-sm sm:grid-cols-[12rem_1fr]">
-            {rows.map(([label, value]) => (
-              <div key={label} className="contents">
-                <dt className="text-muted-foreground">{label}</dt>
-                <dd className="whitespace-pre-line">{value}</dd>
-              </div>
-            ))}
-          </dl>
-          <section className="space-y-3">
-            <h2 className="text-base font-semibold">Transfer</h2>
+        <div className="space-y-8">
+          <InfoGrid
+            items={rows.map(([label, value]) => ({
+              label,
+              value,
+              wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
+            }))}
+          />
+          <Section title="Transfer">
             <DataTable
               columns={TRANSFER_COLUMNS}
               rows={request.transfers}
               rowKey={(row) => row.id}
             />
-          </section>
-          <section className="space-y-3">
-            <h2 className="text-base font-semibold">Barang</h2>
+          </Section>
+          <Section title="Barang">
             <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
-          </section>
+          </Section>
         </div>
       )}
     </div>

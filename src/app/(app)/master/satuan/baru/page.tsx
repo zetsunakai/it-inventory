@@ -17,7 +17,7 @@ export default function NewUomPage() {
         title="Tambah satuan"
         description="Kode dan kategori tidak bisa diubah setelah disimpan."
       />
-      <Suspense fallback={<Skeleton className="h-72 w-full max-w-xl" />}>
+      <Suspense fallback={<Skeleton className="h-72 w-full max-w-4xl" />}>
         <Guarded />
       </Suspense>
     </>

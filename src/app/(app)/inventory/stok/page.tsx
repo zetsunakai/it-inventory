@@ -15,6 +15,7 @@ import { INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { requirePermission } from "@/server/auth/session"
 import { listAccessibleWarehouses, listStock, type StockRow } from "@/server/queries/stock"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Stok · IT Inventory" }
 
@@ -107,7 +108,7 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari SKU atau nama produk" />
         <DataTableFilter
           name={WAREHOUSE_FILTER}
@@ -118,7 +119,7 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
           }))}
         />
         <DataTableDate name={DATE_FILTER} label="Saldo per" max={today()} />
-      </div>
+      </ListToolbar>
       {date && (
         <p className="text-sm text-muted-foreground">
           Saldo per akhir {formatDate(new Date(`${date}T12:00:00+07:00`))}, dihitung dari riwayat

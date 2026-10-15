@@ -19,6 +19,7 @@ import { FACILITY_TYPE_LABELS, FACILITY_TYPES, type CompanyProfileInput } from "
 import type { RefCodeOption } from "@/lib/ref-codes"
 
 import { saveCompanyProfile } from "./actions"
+import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
 
 const FACILITY_ITEMS = FACILITY_TYPES.map((type) => ({
   value: type,
@@ -39,7 +40,7 @@ export function CompanyProfileForm({
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
 
   return (
-    <form action={formAction} className="max-w-2xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <FormField label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name}>
         <Input
@@ -57,7 +58,7 @@ export function CompanyProfileForm({
           maxLength={500}
         />
       </FormField>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <FormGrid>
         <FormField
           label="NPWP"
           htmlFor="npwp"
@@ -79,7 +80,7 @@ export function CompanyProfileForm({
             inputMode="numeric"
           />
         </FormField>
-      </div>
+      </FormGrid>
       <FormField
         label="NITKU"
         htmlFor="nitku"
@@ -93,7 +94,7 @@ export function CompanyProfileForm({
           inputMode="numeric"
         />
       </FormField>
-      <div className="grid gap-4 sm:grid-cols-2">
+      <FormGrid>
         <FormField
           label="Jenis fasilitas"
           htmlFor="facilityType"
@@ -128,8 +129,8 @@ export function CompanyProfileForm({
             defaultValue={office}
           />
         </FormField>
-      </div>
-      <div className="grid gap-4 sm:grid-cols-2">
+      </FormGrid>
+      <FormGrid>
         <FormField
           label="Nomor izin fasilitas"
           htmlFor="permitNumber"
@@ -154,15 +155,17 @@ export function CompanyProfileForm({
             defaultValue={fieldValue(state, "permitDate", profile?.permitDate)}
           />
         </FormField>
-      </div>
-      {state?.ok && state.message && (
-        <p role="status" className="text-sm text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      </FormGrid>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+        {state?.ok && state.message && (
+          <p role="status" className="text-control text-muted-foreground">
+            {state.message}
+          </p>
+        )}
+      </FormActions>
     </form>
   )
 }

@@ -13,6 +13,7 @@ import { MOVEMENT_CODE_DIRECTIONS, movementLabel } from "@/lib/inventory"
 import { transferHref } from "@/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
 import { getLotTrace, type LotMove, type LotTrace } from "@/server/queries/lots"
+import { Section } from "@/components/layout/section"
 
 export const metadata: Metadata = { title: "Penelusuran lot · IT Inventory" }
 
@@ -24,7 +25,7 @@ function place(path: string, warehouse: string | null) {
 
 export default function LotPage({ params }: PageProps<"/inventory/lot/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-5xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
       <Trace params={params} />
     </Suspense>
   )
@@ -125,24 +126,22 @@ async function Trace({ params }: { params: Promise<{ id: string }> }) {
           </span>
         }
       />
-      <section className="max-w-3xl space-y-3">
-        <h2 className="text-base font-semibold">Stok sekarang</h2>
+      <Section title="Stok sekarang">
         <DataTable
           columns={balanceColumns}
           rows={lot.balances}
           rowKey={(row) => row.locationId}
           empty={{ title: `${serial ? "Nomor seri" : "Lot"} ini sudah tidak ada di gudang.` }}
         />
-      </section>
-      <section className="space-y-3">
-        <h2 className="text-base font-semibold">Riwayat masuk-keluar</h2>
+      </Section>
+      <Section title="Riwayat masuk-keluar">
         <DataTable
           columns={moveColumns}
           rows={lot.moves}
           rowKey={(row) => row.id}
           empty={{ title: "Belum ada pergerakan." }}
         />
-      </section>
+      </Section>
     </div>
   )
 }

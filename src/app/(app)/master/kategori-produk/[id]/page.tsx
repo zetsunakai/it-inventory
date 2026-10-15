@@ -19,7 +19,7 @@ export default function EditProductCategoryPage({
   params,
 }: PageProps<"/master/kategori-produk/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-72 w-full max-w-xl" />}>
+    <Suspense fallback={<Skeleton className="h-72 w-full max-w-4xl" />}>
       <EditCategory params={params} />
     </Suspense>
   )

@@ -20,6 +20,7 @@ import {
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { requirePermission } from "@/server/auth/session"
 import { listReturnRequests, type ReturnRequestRow } from "@/server/queries/return-requests"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Retur · IT Inventory" }
 
@@ -83,7 +84,7 @@ async function ReturnRequestTable({ searchParams }: { searchParams: Promise<RawS
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari nomor, transfer asal, atau partner" />
         <DataTableFilter
           name="jenis"
@@ -101,7 +102,7 @@ async function ReturnRequestTable({ searchParams }: { searchParams: Promise<RawS
             label: RETURN_REQUEST_STATUS_LABELS[value],
           }))}
         />
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

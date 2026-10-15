@@ -21,6 +21,7 @@ import {
   stockCard,
   type StockCardLine,
 } from "@/server/queries/stock"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Kartu stok · IT Inventory" }
 
@@ -128,7 +129,7 @@ async function StockCard({
         crumbs={[{ label: `Kartu stok ${product.sku}` }]}
         description={`${product.name}. Qty dalam ${unit}; pindah lokasi di dalam gudang yang sama tampil masuk dan keluar sekaligus.`}
       />
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableFilter
           name="gudang"
           label="Gudang"
@@ -139,7 +140,7 @@ async function StockCard({
         />
         <DataTableDate name="dari" label="Dari" max={to} fallback={from} />
         <DataTableDate name="sampai" label="Sampai" max={today()} fallback={to} />
-      </div>
+      </ListToolbar>
       {card ? (
         <>
           <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">

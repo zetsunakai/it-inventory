@@ -28,6 +28,7 @@ import { requirePermission } from "@/server/auth/session"
 import { listUomCategories, listUoms, type UomRow } from "@/server/queries/uoms"
 
 import { UomCategoryForm } from "./uom-forms"
+import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Satuan · IT Inventory" }
 
@@ -75,7 +76,7 @@ export default function UomsPage({ searchParams }: PageProps<"/master/satuan">) 
       </Suspense>
       <section className="space-y-3">
         <div>
-          <h2 className="text-base font-semibold">Kategori satuan</h2>
+          <h2 className="text-lg font-semibold tracking-tight">Kategori satuan</h2>
           <p className="text-sm text-muted-foreground">
             Setiap kategori punya satu satuan acuan dengan faktor 1.
           </p>
@@ -103,7 +104,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col gap-2 sm:flex-row">
+      <ListToolbar>
         <DataTableSearch placeholder="Cari kode, nama satuan, atau SKU" />
         <DataTableFilter
           name={CATEGORY_FILTER}
@@ -117,7 +118,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
             Tambah satuan
           </Link>
         )}
-      </div>
+      </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}

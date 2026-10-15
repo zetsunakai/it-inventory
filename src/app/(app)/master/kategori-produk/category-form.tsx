@@ -14,6 +14,7 @@ import { CODE_PREFIX_PATTERN, DEFAULT_CODE_DIGITS, skuExample } from "@/lib/prod
 import type { ProductCategoryOption, ProductCategoryRow } from "@/server/queries/product-categories"
 
 import { createProductCategory, updateProductCategory } from "./actions"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 // Form tambah (tanpa category) dan ubah kategori produk.
 export function ProductCategoryForm({
@@ -46,7 +47,7 @@ export function ProductCategoryForm({
       : null
 
   return (
-    <form action={formAction} className="max-w-xl space-y-4">
+    <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {category && <input type="hidden" name="id" value={category.id} />}
       <FormField label="Nama kategori" htmlFor="name" errors={fieldErrors?.name}>
@@ -108,13 +109,15 @@ export function ProductCategoryForm({
         />
       )}
       {state?.ok && category && (
-        <p role="status" className="text-sm text-muted-foreground">
+        <p role="status" className="text-control text-muted-foreground">
           {state.message}
         </p>
       )}
-      <Button type="submit" disabled={pending}>
-        {pending ? "Menyimpan…" : "Simpan"}
-      </Button>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
     </form>
   )
 }

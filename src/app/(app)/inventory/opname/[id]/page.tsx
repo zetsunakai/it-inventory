@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: "Sesi opname · IT Inventory" }
 
 export default function StockCountPage({ params }: PageProps<"/inventory/opname/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-3xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
       <StockCountDetail params={params} />
     </Suspense>
   )
@@ -60,6 +60,18 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
   return (
     <div className="space-y-6">
       <PageHeader
+        actions={
+          <CountActions
+            id={count.id}
+            number={count.number}
+            status={count.status}
+            warehouseCode={count.warehouseCode}
+            differing={differing}
+            completedAt={count.completedAt ? formatDateTime(count.completedAt) : null}
+            canWrite={canWrite}
+            canApprove={canApprove}
+          />
+        }
         title={`Stock opname ${count.number}`}
         crumbs={[{ label: count.number }]}
         description={
@@ -81,16 +93,6 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
           tidak bisa divalidasi sampai opname disetujui atau dibatalkan.
         </p>
       )}
-      <CountActions
-        id={count.id}
-        number={count.number}
-        status={count.status}
-        warehouseCode={count.warehouseCode}
-        differing={differing}
-        completedAt={count.completedAt ? formatDateTime(count.completedAt) : null}
-        canWrite={canWrite}
-        canApprove={canApprove}
-      />
       {count.status === "draft" ? (
         <p className="text-sm text-muted-foreground">
           Belum dimulai. Daftar hitung dan qty sistem diambil dari stok saat Manajer menekan Mulai
