@@ -31,6 +31,11 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   await expect(
     page.getByRole("status").filter({ hasText: "Stok baru tersedia sebagian." }),
   ).toBeVisible()
+  // Stok yang ada (5) sudah dipesan untuk pengiriman ini (R-07).
+  await expect(
+    page.getByRole("row").filter({ hasText: fixture.product.sku }).filter({ visible: true }),
+  ).toContainText("5 PCS")
+  await expect(page.getByRole("button", { name: "Lepas reservasi" })).toBeVisible()
   await page.getByRole("button", { name: "Validasi" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(page.getByRole("alert").filter({ hasText: "Perlu diselesaikan" })).toContainText(

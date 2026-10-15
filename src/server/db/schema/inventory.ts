@@ -226,6 +226,8 @@ export const stockMoves = pgTable(
     category: inventoryCategory(),
     // Disalin dari transfer saat validasi (backlog R-04).
     movementCode: movementCode(),
+    // Qty (satuan stok) yang dipesan baris ini dari saldo lokasi asalnya (backlog R-07).
+    reservedQty: qty().notNull().default("0"),
     doneAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
@@ -269,6 +271,8 @@ export const stockBalances = pgTable(
     lotId: uuid().references(() => lots.id, { onDelete: "restrict" }),
     warehouseId: uuid().references(() => warehouses.id, { onDelete: "restrict" }),
     qty: qty().notNull().default("0"),
+    // Qty yang dipesan transfer yang sudah dikonfirmasi (backlog R-07). Tersedia = qty − ini.
+    reservedQty: qty().notNull().default("0"),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

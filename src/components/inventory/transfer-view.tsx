@@ -10,7 +10,7 @@ import type { TransferDetail, TransferLine } from "@/server/queries/transfers"
 
 // Baris permintaan (R-05): qty diminta, qty selesai (setelah validasi), dan lot/nomor seri
 // pergerakannya. Nomor seri bisa banyak per baris, jadi ditampilkan satu per baris.
-const LINE_COLUMNS: DataTableColumn<TransferLine>[] = [
+const BASE_COLUMNS: DataTableColumn<TransferLine>[] = [
   {
     header: "Produk",
     className: "w-full whitespace-normal",
@@ -41,13 +41,33 @@ const LINE_COLUMNS: DataTableColumn<TransferLine>[] = [
     align: "right",
     cell: (line) => `${formatDecimal(line.inputQty)} ${line.inputUomCode}`,
   },
-  {
-    header: "Qty selesai",
-    align: "right",
-    cell: (line) =>
-      line.doneQty === null ? "—" : `${formatDecimal(line.doneQty)} ${line.stockUomCode}`,
-  },
 ]
+
+// Qty dipesan hanya berarti untuk transfer yang sudah dikonfirmasi dan belum Selesai; qty selesai
+// hanya ada setelah Selesai. Kolom yang tidak berlaku tidak ditampilkan (tabel tetap muat di HP).
+const RESERVED_COLUMN: DataTableColumn<TransferLine> = {
+  header: "Qty dipesan",
+  align: "right",
+  cell: (line) => {
+    const reserved = line.moves.reduce((sum, move) => sum + Number(move.reservedQty), 0)
+    return reserved ? `${formatDecimal(String(reserved))} ${line.stockUomCode}` : "—"
+  },
+}
+
+const DONE_COLUMN: DataTableColumn<TransferLine> = {
+  header: "Qty selesai",
+  align: "right",
+  cell: (line) =>
+    line.doneQty === null ? "—" : `${formatDecimal(line.doneQty)} ${line.stockUomCode}`,
+}
+
+function lineColumns({ status, sourceWarehouseId }: TransferDetail) {
+  if (status === "done") return [...BASE_COLUMNS, DONE_COLUMN]
+  const confirmed = status === "waiting" || status === "partially_available" || status === "ready"
+  // Hanya transfer yang mengambil stok gudang yang memesan stok (R-07).
+  if (confirmed && sourceWarehouseId) return [...BASE_COLUMNS, RESERVED_COLUMN]
+  return BASE_COLUMNS
+}
 
 // Tampilan baca transfer (Siap, Selesai, Batal, atau peran tanpa izin ubah).
 export function TransferView({ kind, transfer }: { kind: TransferKind; transfer: TransferDetail }) {
@@ -120,7 +140,11 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
       </dl>
       <section className="space-y-3">
         <h2 className="text-base font-semibold">Barang</h2>
-        <DataTable columns={LINE_COLUMNS} rows={transfer.lines} rowKey={(line) => line.id} />
+        <DataTable
+          columns={lineColumns(transfer)}
+          rows={transfer.lines}
+          rowKey={(line) => line.id}
+        />
       </section>
     </div>
   )

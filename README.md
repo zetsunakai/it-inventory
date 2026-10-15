@@ -228,6 +228,15 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Trigger `transfers_status_guard` menolak perubahan status di luar fungsi-fungsi itu; transfer
   baru selalu Draft. Validasi tetap bisa dipanggil sistem dari Draft (opname, tes); UI menampilkan
   Validasi untuk Siap dan Sebagian tersedia.
+- Reservasi stok (backlog R-07): transfer yang mengambil stok gudang memesan stok saat
+  Konfirmasi dan Cek stok (`reserve_transfer()`): `stock_balances.reserved_qty` dan
+  `stock_moves.reserved_qty`, tersedia = saldo − dipesan. Pergerakan produk berpelacakan tanpa lot
+  memesan dari lot terlama (`lots.created_at`) dan dipecah per lot. Saldo dikunci dulu, jadi dua
+  transfer yang dikonfirmasi bersamaan tidak memesan stok yang sama. `unreserve_transfer()`
+  dipanggil saat Lepas reservasi (`release_transfer_reservation()`, status kembali Menunggu),
+  Kembali ke Draft, Batal, dan di awal validasi; pengecekan stok saat validasi
+  (`transfer_stock_errors()`) memakai saldo dikurangi pesanan transfer lain. Gudang non-berikat
+  yang boleh stok negatif tidak dipesan. Petunjuk "Tersedia" di form memakai saldo − dipesan.
 - Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate

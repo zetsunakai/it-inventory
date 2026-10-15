@@ -126,6 +126,8 @@ export type TransferMove = {
   lotName: string | null
   // Satuan stok.
   qty: string
+  // Qty yang dipesan dari saldo lokasi asal (R-07), satuan stok.
+  reservedQty: string
 }
 
 // Baris permintaan transfer (R-05) beserta pergerakannya.
@@ -212,6 +214,7 @@ export async function getTransfer(userId: string, id: string) {
       lotId: stockMoves.lotId,
       lotName: lots.name,
       qty: stockMoves.qty,
+      reservedQty: stockMoves.reservedQty,
     })
     .from(stockMoves)
     .leftJoin(lots, eq(lots.id, stockMoves.lotId))
@@ -220,7 +223,13 @@ export async function getTransfer(userId: string, id: string) {
   const lines: TransferLine[] = lineRows.map((line) => {
     const moves = moveRows
       .filter((move) => move.lineId === line.id)
-      .map(({ id: moveId, lotId, lotName, qty }) => ({ id: moveId, lotId, lotName, qty }))
+      .map(({ id: moveId, lotId, lotName, qty, reservedQty }) => ({
+        id: moveId,
+        lotId,
+        lotName,
+        qty,
+        reservedQty,
+      }))
     return {
       ...line,
       moves,
@@ -385,7 +394,12 @@ export async function stockAvailability(
   locationId: string,
 ): Promise<StockAvailability> {
   const rows = await db
-    .select({ lotName: lots.name, qty: stockBalances.qty, uomCode: uoms.code })
+    // Tersedia = saldo − qty yang dipesan transfer lain (R-07).
+    .select({
+      lotName: lots.name,
+      qty: sql<string>`${stockBalances.qty} - ${stockBalances.reservedQty}`,
+      uomCode: uoms.code,
+    })
     .from(stockBalances)
     .innerJoin(products, eq(products.id, stockBalances.productId))
     .innerJoin(uoms, eq(uoms.id, products.uomId))

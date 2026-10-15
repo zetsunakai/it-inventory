@@ -9,6 +9,7 @@ import {
   cancelTransfer,
   checkTransferAvailability,
   confirmTransfer,
+  releaseTransferReservation,
   reopenTransfer,
   validateTransfer,
 } from "@/app/(app)/inventory/actions"
@@ -43,6 +44,7 @@ export function TransferActions({
   lines,
   needsApproval = false,
   canApprove = false,
+  reservable = false,
 }: {
   id: string
   number: string
@@ -59,6 +61,8 @@ export function TransferActions({
   // Scrap/penyesuaian: Validasi diganti "Setujui dan validasi" khusus Manajer.
   needsApproval?: boolean
   canApprove?: boolean
+  // Transfer yang mengambil stok gudang memesan stok (R-07); hanya itu yang bisa dilepas.
+  reservable?: boolean
 }) {
   const [result, setResult] = useState<ActionResult<unknown> | null>(null)
   const [pending, startTransition] = useTransition()
@@ -268,6 +272,16 @@ export function TransferActions({
                 </AlertDialogContent>
               </AlertDialog>
             </>
+          )}
+          {reservable && validatable && (
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => run(() => releaseTransferReservation({ id }))}
+              className="pointer-coarse:h-11"
+            >
+              Lepas reservasi
+            </Button>
           )}
           {confirmed && (
             <Button

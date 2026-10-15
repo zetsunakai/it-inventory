@@ -1,4 +1,4 @@
-import { eq, like } from "drizzle-orm"
+import { eq, like, sql } from "drizzle-orm"
 import { afterAll, afterEach, beforeAll, describe, expect, test, vi } from "vitest"
 
 import {
@@ -21,7 +21,6 @@ import {
   stockBalances,
   stockMoves,
   transferLines,
-  transfers,
   uomCategories,
   userRoles,
   users,
@@ -702,6 +701,15 @@ describe("scrap dan penyesuaian", () => {
     return (await stockAvailability(productId, ids.rack)).qty
   }
 
+  // Saldo fisik di rak (tanpa dikurangi pesanan).
+  async function onHandOnRack(productId = ids.product) {
+    const result = await db.execute<{ qty: string }>(
+      sql`select coalesce(sum(qty), 0)::numeric(18,4)::text as qty from stock_balances
+          where product_id = ${productId} and location_id = ${ids.rack}`,
+    )
+    return result.rows[0].qty
+  }
+
   async function receiveTen() {
     const id = await savedId(
       await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
@@ -736,7 +744,9 @@ describe("scrap dan penyesuaian", () => {
       ok: false,
       errors: ["Anda tidak punya izin untuk melakukan aksi ini."],
     })
-    expect(await stockOnRack()).toBe("10.0000")
+    // Stok fisik belum berubah; 2 sudah dipesan penyesuaian ini (R-07), jadi tersedia 8.
+    expect(await onHandOnRack()).toBe("10.0000")
+    expect(await stockOnRack()).toBe("8.0000")
 
     loginAs("manajer")
     expect(await approveTransfer({ id })).toMatchObject({ ok: true })
@@ -790,6 +800,8 @@ describe("scrap dan penyesuaian", () => {
       errors: ["Stok ZTP1 di ZTRAK tidak cukup: tersedia 10, dibutuhkan 12."],
     })
     expect((await getTransfer(people.manajer.id, tooMuch))!.approvedAt).toBeNull()
+    // Transfer yang ditolak masih memesan stok; dibatalkan dulu supaya stoknya tersedia lagi.
+    expect(await cancelTransfer({ id: tooMuch })).toMatchObject({ ok: true })
 
     loginAs("admin")
     const id = await savedId(await scrap("4"))

@@ -1,0 +1,2 @@
+ALTER TABLE "stock_balances" ADD COLUMN "reserved_qty" numeric(18, 4) DEFAULT '0' NOT NULL;--> statement-breakpoint
+ALTER TABLE "stock_moves" ADD COLUMN "reserved_qty" numeric(18, 4) DEFAULT '0' NOT NULL;

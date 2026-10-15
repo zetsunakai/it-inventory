@@ -281,6 +281,17 @@ export const checkTransferAvailability = defineAction({
   },
 })
 
+// Lepas reservasi (R-07): stok yang dipesan dikembalikan, status kembali Menunggu.
+export const releaseTransferReservation = defineAction({
+  name: "releaseTransferReservation",
+  permission: "inventory:write",
+  schema: idInput,
+  successMessage: "Reservasi dilepas. Transfer menunggu stok dipesan lagi lewat Cek stok.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(sql`select release_transfer_reservation(${input.id})`)
+  },
+})
+
 export const reopenTransfer = defineAction({
   name: "reopenTransfer",
   permission: "inventory:write",

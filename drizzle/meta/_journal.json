@@ -330,6 +330,20 @@
       "when": 1792046549996,
       "tag": "0046_transfer_status_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 47,
+      "version": "7",
+      "when": 1792047162636,
+      "tag": "0047_stock_reservations",
+      "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "7",
+      "when": 1792047163358,
+      "tag": "0048_stock_reservation_rules",
+      "breakpoints": true
     }
   ]
 }
