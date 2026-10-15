@@ -3,7 +3,9 @@ import { STOCK_COUNT_STATUS_LABELS, type StockCountStatus } from "@/lib/inventor
 
 // Menunggu persetujuan = perlu tindakan Manajer, jadi ditonjolkan.
 const TONES: Record<StockCountStatus, StatusTone> = {
+  draft: "neutral",
   counting: "info",
+  counted: "info",
   review: "warning",
   approved: "success",
   cancelled: "neutral",

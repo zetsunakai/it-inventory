@@ -5,9 +5,12 @@ import {
   addCountLine,
   approveStockCount,
   cancelStockCount,
+  completeStockCount,
   createStockCount,
   recordCount,
+  rejectStockCount,
   reopenStockCount,
+  startStockCount,
   submitStockCount,
 } from "@/app/(app)/inventory/opname/actions"
 import type { Role } from "@/lib/permissions"
@@ -16,6 +19,7 @@ import { db } from "@/server/db"
 import {
   locations,
   partners,
+  productCategories,
   products,
   stockBalances,
   stockCountLines,
@@ -30,7 +34,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { purgeInventory, withLine } from "./helpers"
+import { pgErrorMessage, purgeInventory, withLine } from "./helpers"
 
 // Stock opname (backlog M2-09). Semua data uji berawalan ZO.
 
@@ -197,11 +201,24 @@ async function receive(productId: string, locationId: string, qty: string) {
   })
 }
 
-async function newCount(values: Record<string, string> = {}) {
+// Sesi baru (Draft) lalu, kecuali start = false, langsung dimulai (gudang dibekukan).
+async function newCount(values: Record<string, string> = {}, start = true) {
   loginAs("manajer")
   const result = await createStockCount(null, form({ warehouseId: ids.warehouse, ...values }))
   if (!result.ok) throw new Error(result.errors.join(" | "))
+  if (start) {
+    const started = await startStockCount({ id: result.data.id })
+    if (!started.ok) throw new Error(started.errors.join(" | "))
+  }
   return result.data.id
+}
+
+async function status(countId: string) {
+  const [row] = await db
+    .select({ status: stockCounts.status })
+    .from(stockCounts)
+    .where(eq(stockCounts.id, countId))
+  return row.status
 }
 
 async function lines(countId: string) {
@@ -225,42 +242,107 @@ async function stockAt(productId: string, locationId: string) {
   return row ? Number(row.qty) : 0
 }
 
-describe("membuat sesi", () => {
-  test("daftar hitung berisi barang bersaldo di lingkup sesi; nomor OPN dibuat database", async () => {
+describe("membuat dan memulai sesi", () => {
+  test("Draft tanpa daftar hitung; mulai hitung mengambil saldo di lingkup sesi sebagai qty sistem", async () => {
     await receive(ids.product, ids.rack, "10")
     await receive(ids.other, ids.bin, "4")
     await receive(ids.product, ids.elsewhere, "7")
 
-    const rackOnly = await newCount({ locationId: ids.rack })
-    expect((await lines(rackOnly)).map((line) => [line.locationId, line.productId]).sort()).toEqual(
-      [
-        [ids.rack, ids.product],
-        [ids.bin, ids.other],
-      ].sort(),
-    )
-    const whole = await newCount()
-    expect(await lines(whole)).toHaveLength(3)
-    const [saved] = await db.select().from(stockCounts).where(eq(stockCounts.id, whole))
-    expect([saved.number.slice(0, 4), saved.status, saved.createdBy]).toEqual([
+    const rackOnly = await newCount({ locationId: ids.rack }, false)
+    const [draft] = await db.select().from(stockCounts).where(eq(stockCounts.id, rackOnly))
+    expect([draft.number.slice(0, 4), draft.status, draft.createdBy]).toEqual([
       "OPN/",
-      "counting",
+      "draft",
       people.manajer.id,
     ])
-    // Daftar hitung tanpa qty sistem selama penghitungan.
-    expect((await lines(whole)).every((line) => line.systemQty === null)).toBe(true)
+    expect(await lines(rackOnly)).toEqual([])
+    expect(await startStockCount({ id: rackOnly })).toMatchObject({ ok: true })
+    expect(await status(rackOnly)).toBe("counting")
+    expect(
+      (await lines(rackOnly))
+        .map((line) => [line.locationId, line.productId, line.systemQty])
+        .sort(),
+    ).toEqual(
+      [
+        [ids.rack, ids.product, "10.0000"],
+        [ids.bin, ids.other, "4.0000"],
+      ].sort(),
+    )
+
+    // Satu gudang hanya satu opname berjalan.
+    const whole = await newCount({}, false)
+    const second = await startStockCount({ id: whole })
+    expect(second).toMatchObject({ ok: false })
+    expect(!second.ok && second.errors[0]).toMatch(
+      /^Gudang ZOG sudah punya stock opname berjalan: OPN\/\d{4}\/\d{5}\. Selesaikan atau batalkan dulu\.$/,
+    )
+    await cancelStockCount({ id: rackOnly })
+    expect(await startStockCount({ id: whole })).toMatchObject({ ok: true })
+    expect(await lines(whole)).toHaveLength(3)
   })
 
-  test("hanya Manajer (inventory:approve) yang membuat sesi", async () => {
+  test("lingkup kategori produk termasuk sub-kategorinya", async () => {
+    const [parent] = await db
+      .insert(productCategories)
+      .values({ name: "ZO Induk" })
+      .returning({ id: productCategories.id })
+    const [child] = await db
+      .insert(productCategories)
+      .values({ name: "ZO Anak", parentId: parent.id })
+      .returning({ id: productCategories.id })
+    try {
+      await db.update(products).set({ categoryId: child.id }).where(eq(products.id, ids.other))
+      await receive(ids.product, ids.rack, "1")
+      await receive(ids.other, ids.rack, "2")
+      const countId = await newCount({ productCategoryId: parent.id })
+      expect((await lines(countId)).map((line) => line.productId)).toEqual([ids.other])
+      loginAs("gudang")
+      expect(
+        await addCountLine({ countId, productId: ids.product, locationId: ids.rack, lotName: "" }),
+      ).toMatchObject({ ok: false, errors: ["Produk di luar kategori sesi opname."] })
+    } finally {
+      await purgeCounts()
+      await db.update(products).set({ categoryId: null }).where(eq(products.id, ids.other))
+      await db.delete(productCategories).where(eq(productCategories.id, child.id))
+      await db.delete(productCategories).where(eq(productCategories.id, parent.id))
+    }
+  })
+
+  test("hanya Manajer (inventory:approve) yang membuat dan memulai sesi", async () => {
+    const countId = await newCount({}, false)
     loginAs("gudang")
     expect(await createStockCount(null, form({ warehouseId: ids.warehouse }))).toMatchObject({
+      ok: false,
+      errors: ["Anda tidak punya izin untuk melakukan aksi ini."],
+    })
+    expect(await startStockCount({ id: countId })).toMatchObject({
       ok: false,
       errors: ["Anda tidak punya izin untuk melakukan aksi ini."],
     })
   })
 })
 
+describe("pembekuan gudang", () => {
+  test("transfer di gudang yang di-opname ditolak sampai opname dibatalkan atau disetujui", async () => {
+    await receive(ids.product, ids.rack, "5")
+    const countId = await newCount({ locationId: ids.bin })
+    const [{ number }] = await db
+      .select({ number: stockCounts.number })
+      .from(stockCounts)
+      .where(eq(stockCounts.id, countId))
+    // Seluruh gudang dibekukan, walau lingkup hitungnya hanya satu lokasi.
+    expect(await pgErrorMessage(receive(ids.product, ids.rack, "1"))).toBe(
+      `Gudang ZOG sedang dibekukan untuk stock opname ${number}. Transfer bisa divalidasi setelah opnamenya disetujui atau dibatalkan.`,
+    )
+    loginAs("manajer")
+    expect(await cancelStockCount({ id: countId })).toMatchObject({ ok: true })
+    await receive(ids.product, ids.rack, "1")
+    expect(await stockAt(ids.product, ids.rack)).toBe(6)
+  })
+})
+
 describe("menghitung, mengajukan, dan menyetujui", () => {
-  test("selisih yang disetujui tercatat sebagai penyesuaian yang menunjuk ke sesi opname", async () => {
+  test("selesai hitung → ajukan → tolak → hitung ulang → setujui; selisih jadi penyesuaian bertanggal selesai hitung", async () => {
     await receive(ids.product, ids.rack, "10")
     await receive(ids.other, ids.bin, "4")
     const countId = await newCount({ locationId: ids.rack })
@@ -271,21 +353,41 @@ describe("menghitung, mengajukan, dan menyetujui", () => {
     loginAs("gudang")
     expect(await recordCount({ lineId: productLine.id, qty: "8" })).toMatchObject({ ok: true })
     // Belum semua dihitung.
-    const early = await submitStockCount({ id: countId })
+    const early = await completeStockCount({ id: countId })
     expect(early).toMatchObject({ ok: false })
     expect(!early.ok && early.errors[0]).toMatch(/^1 baris belum dihitung: ZOP2 di ZORAK\/ZOBIN/)
+    // Belum Selesai hitung, belum bisa diajukan.
+    expect(await submitStockCount({ id: countId })).toMatchObject({
+      ok: false,
+      errors: ["Hanya sesi opname Selesai hitung yang bisa diajukan."],
+    })
 
     expect(await recordCount({ lineId: otherLine.id, qty: "5,5" })).toMatchObject({ ok: true })
-    expect(await submitStockCount({ id: countId })).toMatchObject({ ok: true })
-    // Terkunci selama menunggu persetujuan.
+    expect(await completeStockCount({ id: countId })).toMatchObject({ ok: true })
+    // Terkunci setelah Selesai hitung.
     expect(await recordCount({ lineId: otherLine.id, qty: "1" })).toMatchObject({
       ok: false,
-      errors: ["Daftar hitung hanya bisa diubah selama sesi opname masih Dihitung."],
+      errors: ["Daftar hitung hanya bisa diubah selama sesi opname Berjalan."],
     })
+    expect(await submitStockCount({ id: countId })).toMatchObject({ ok: true })
+    expect(await status(countId)).toBe("review")
+
+    expect(await rejectStockCount({ id: countId })).toMatchObject({
+      ok: false,
+      errors: ["Anda tidak punya izin untuk melakukan aksi ini."],
+    })
+    loginAs("manajer")
+    expect(await rejectStockCount({ id: countId })).toMatchObject({ ok: true })
+    expect(await status(countId)).toBe("counted")
+    loginAs("gudang")
+    expect(await reopenStockCount({ id: countId })).toMatchObject({ ok: true })
+    expect(await recordCount({ lineId: otherLine.id, qty: "5" })).toMatchObject({ ok: true })
+    await completeStockCount({ id: countId })
+    await submitStockCount({ id: countId })
     expect((await lines(countId)).map((line) => [line.systemQty, line.countedQty]).sort()).toEqual(
       [
         ["10.0000", "8.0000"],
-        ["4.0000", "5.5000"],
+        ["4.0000", "5.0000"],
       ].sort(),
     )
 
@@ -297,14 +399,16 @@ describe("menghitung, mengajukan, dan menyetujui", () => {
     expect(await approveStockCount({ id: countId })).toMatchObject({ ok: true })
 
     expect(await stockAt(ids.product, ids.rack)).toBe(8)
-    expect(await stockAt(ids.other, ids.bin)).toBe(5.5)
+    expect(await stockAt(ids.other, ids.bin)).toBe(5)
+    const [saved] = await db.select().from(stockCounts).where(eq(stockCounts.id, countId))
+    expect([saved.status, saved.approvedBy]).toEqual(["approved", people.manajer.id])
     const adjustments = await db
       .select({
         number: transfers.number,
         status: transfers.status,
         reason: transfers.reason,
         approvedBy: transfers.approvedBy,
-        sourceLocationId: transfers.sourceLocationId,
+        doneAt: transfers.doneAt,
       })
       .from(transfers)
       .where(eq(transfers.stockCountId, countId))
@@ -314,27 +418,15 @@ describe("menghitung, mengajukan, dan menyetujui", () => {
     )
     expect(adjustments[0].reason).toMatch(/^Selisih stock opname OPN\//)
     expect(adjustments.every((row) => row.approvedBy === people.manajer.id)).toBe(true)
-    const [saved] = await db.select().from(stockCounts).where(eq(stockCounts.id, countId))
-    expect([saved.status, saved.approvedBy]).toEqual(["approved", people.manajer.id])
+    expect(adjustments.every((row) => row.doneAt?.getTime() === saved.completedAt?.getTime())).toBe(
+      true,
+    )
+    // Gudang dibuka lagi.
+    await receive(ids.product, ids.rack, "1")
+    expect(await stockAt(ids.product, ids.rack)).toBe(9)
   })
 
-  test("qty sistem dihitung per cut-off: pergerakan setelah sesi dibuat tidak ikut", async () => {
-    await receive(ids.product, ids.rack, "10")
-    const countId = await newCount({ locationId: ids.rack })
-    await receive(ids.product, ids.rack, "3")
-    const [line] = await lines(countId)
-    loginAs("gudang")
-    await recordCount({ lineId: line.id, qty: "10" })
-    await submitStockCount({ id: countId })
-    expect((await lines(countId))[0].systemQty).toBe("10.0000")
-    loginAs("manajer")
-    expect(await approveStockCount({ id: countId })).toMatchObject({ ok: true })
-    // Tanpa selisih: tidak ada penyesuaian, stok tetap 13.
-    expect(await db.select().from(transfers).where(eq(transfers.stockCountId, countId))).toEqual([])
-    expect(await stockAt(ids.product, ids.rack)).toBe(13)
-  })
-
-  test("barang temuan di luar daftar ditambahkan dan menambah stok setelah disetujui", async () => {
+  test("barang temuan di luar daftar: qty sistem 0, menambah stok setelah disetujui", async () => {
     const countId = await newCount({ locationId: ids.rack })
     loginAs("gudang")
     expect(
@@ -350,27 +442,25 @@ describe("menghitung, mengajukan, dan menyetujui", () => {
     expect(
       await addCountLine({ countId, productId: ids.other, locationId: ids.bin, lotName: "" }),
     ).toMatchObject({ ok: false, errors: ["Barang ini sudah ada di daftar hitung."] })
+    expect((await lines(countId))[0].systemQty).toBe("0.0000")
     await recordCount({ lineId: added.data.id, qty: "2" })
+    await completeStockCount({ id: countId })
     await submitStockCount({ id: countId })
     loginAs("manajer")
-    await approveStockCount({ id: countId })
+    expect(await approveStockCount({ id: countId })).toMatchObject({ ok: true })
     expect(await stockAt(ids.other, ids.bin)).toBe(2)
   })
 
-  test("dikembalikan ke penghitungan bisa diubah lagi; sesi batal terkunci", async () => {
+  test("sesi batal terkunci dan tidak bisa dibatalkan lagi", async () => {
     await receive(ids.product, ids.rack, "1")
     const countId = await newCount({ locationId: ids.rack })
-    const [line] = await lines(countId)
-    loginAs("gudang")
-    await recordCount({ lineId: line.id, qty: "1" })
-    await submitStockCount({ id: countId })
-    loginAs("manajer")
-    expect(await reopenStockCount({ id: countId })).toMatchObject({ ok: true })
-    loginAs("gudang")
-    expect(await recordCount({ lineId: line.id, qty: "0" })).toMatchObject({ ok: true })
     loginAs("manajer")
     expect(await cancelStockCount({ id: countId })).toMatchObject({ ok: true })
-    expect(await cancelStockCount({ id: countId })).toMatchObject({ ok: false })
+    expect(await cancelStockCount({ id: countId })).toMatchObject({
+      ok: false,
+      errors: ["Sesi opname yang sudah disetujui atau dibatalkan tidak bisa dibatalkan."],
+    })
+    expect(await startStockCount({ id: countId })).toMatchObject({ ok: false })
     expect(await stockAt(ids.product, ids.rack)).toBe(1)
   })
 })

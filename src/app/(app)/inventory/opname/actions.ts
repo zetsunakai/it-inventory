@@ -8,8 +8,9 @@ import { AppError, defineAction, defineFormAction } from "@/server/actions/defin
 import type { Transaction } from "@/server/db/audit"
 import { lots, stockCountLines, stockCounts, warehouses } from "@/server/db/schema"
 
-// Stock opname (backlog M2-09, PRD bagian 6.5). Manajer membuat dan menyetujui sesi (izin
-// inventory:approve); admin gudang mengisi qty fisik (inventory:write). Aturan lingkup lokasi,
+// Stock opname (backlog M2-09 dan R-13, PRD bagian 6.5). Manajer membuat, memulai (gudang
+// dibekukan), menyetujui, menolak, dan membatalkan sesi (izin inventory:approve); admin gudang
+// mengisi qty fisik, menyelesaikan hitung, dan mengajukan (inventory:write). Aturan lingkup lokasi,
 // status, qty sistem, dan pembuatan penyesuaian ada di database (migrasi stock_count_rules).
 
 const optionalUuid = z
@@ -26,28 +27,35 @@ async function assertWarehouseAccess(tx: Transaction, userId: string, warehouseI
   if (!row.allowed) throw new AppError("Anda tidak punya akses ke gudang ini.")
 }
 
-// Sesi baru dengan daftar hitung: semua produk × lokasi × lot yang punya saldo di lingkup sesi.
-// Cut-off = saat sesi dibuat.
+const optionalCategory = z
+  .union([z.uuid("Kategori produk tidak valid."), z.literal("")])
+  .optional()
+  .transform((value) => value || null)
+
+// Sesi baru berstatus Draft (R-13): lingkup gudang, opsional lokasi (beserta sub-lokasinya) dan
+// kategori produk (beserta sub-kategorinya). Daftar hitung baru diisi saat mulai hitung.
 export const createStockCount = defineFormAction({
   name: "createStockCount",
   permission: "inventory:approve",
   schema: z.object({
     warehouseId: z.uuid("Pilih gudang."),
     locationId: optionalUuid,
+    productCategoryId: optionalCategory,
     notes: optionalText("Catatan", 1000),
   }),
-  successMessage: "Sesi opname dibuat.",
+  successMessage: "Sesi opname dibuat sebagai Draft.",
   handler: async ({ input, user, tx }) => {
     await assertWarehouseAccess(tx, user.id, input.warehouseId)
     const [session] = await tx
       .insert(stockCounts)
-      .values({ warehouseId: input.warehouseId, locationId: input.locationId, notes: input.notes })
+      .values({
+        status: "draft",
+        warehouseId: input.warehouseId,
+        locationId: input.locationId,
+        productCategoryId: input.productCategoryId,
+        notes: input.notes,
+      })
       .returning({ id: stockCounts.id })
-    await tx.execute(sql`
-      insert into stock_count_lines (stock_count_id, product_id, location_id, lot_id)
-      select ${session.id}, b.product_id, b.location_id, b.lot_id
-      from stock_balances b
-      where b.qty <> 0 and stock_count_covers(${session.id}, b.location_id)`)
     return session
   },
 })
@@ -154,6 +162,41 @@ async function assertCountAccess(tx: Transaction, userId: string, id: string) {
   await assertWarehouseAccess(tx, userId, session.warehouseId)
 }
 
+// Mulai hitung: daftar hitung dan qty sistem diambil dari saldo, gudang dibekukan.
+export const startStockCount = defineAction({
+  name: "startStockCount",
+  permission: "inventory:approve",
+  schema: countInput,
+  successMessage:
+    "Penghitungan dimulai. Gudang dibekukan: transfer di gudang ini tidak bisa divalidasi sampai opname disetujui atau dibatalkan.",
+  handler: async ({ input, user, tx }) => {
+    await assertCountAccess(tx, user.id, input.id)
+    await tx.execute(sql`select start_stock_count(${input.id})`)
+  },
+})
+
+export const completeStockCount = defineAction({
+  name: "completeStockCount",
+  permission: "inventory:write",
+  schema: countInput,
+  successMessage: "Penghitungan selesai. Periksa selisihnya, lalu ajukan persetujuan.",
+  handler: async ({ input, user, tx }) => {
+    await assertCountAccess(tx, user.id, input.id)
+    await tx.execute(sql`select complete_stock_count(${input.id})`)
+  },
+})
+
+export const reopenStockCount = defineAction({
+  name: "reopenStockCount",
+  permission: "inventory:write",
+  schema: countInput,
+  successMessage: "Sesi dikembalikan ke penghitungan.",
+  handler: async ({ input, user, tx }) => {
+    await assertCountAccess(tx, user.id, input.id)
+    await tx.execute(sql`select reopen_stock_count(${input.id})`)
+  },
+})
+
 export const submitStockCount = defineAction({
   name: "submitStockCount",
   permission: "inventory:write",
@@ -165,20 +208,14 @@ export const submitStockCount = defineAction({
   },
 })
 
-export const reopenStockCount = defineAction({
-  name: "reopenStockCount",
+export const rejectStockCount = defineAction({
+  name: "rejectStockCount",
   permission: "inventory:approve",
   schema: countInput,
-  successMessage: "Sesi dikembalikan ke penghitungan.",
+  successMessage: "Hasil opname ditolak dan kembali ke Selesai hitung.",
   handler: async ({ input, user, tx }) => {
     await assertCountAccess(tx, user.id, input.id)
-    const updated = await tx
-      .update(stockCounts)
-      .set({ status: "counting", submittedAt: null })
-      .where(and(eq(stockCounts.id, input.id), eq(stockCounts.status, "review")))
-      .returning({ id: stockCounts.id })
-    if (!updated.length)
-      throw new AppError("Hanya sesi yang menunggu persetujuan yang bisa dikembalikan.")
+    await tx.execute(sql`select reject_stock_count(${input.id})`)
   },
 })
 
@@ -186,7 +223,7 @@ export const approveStockCount = defineAction({
   name: "approveStockCount",
   permission: "inventory:approve",
   schema: countInput,
-  successMessage: "Sesi opname disetujui. Selisih tercatat sebagai penyesuaian.",
+  successMessage: "Sesi opname disetujui. Selisih tercatat sebagai penyesuaian dan gudang dibuka.",
   handler: async ({ input, user, tx }) => {
     await assertCountAccess(tx, user.id, input.id)
     await tx.execute(sql`select approve_stock_count(${input.id})`)
@@ -197,12 +234,9 @@ export const cancelStockCount = defineAction({
   name: "cancelStockCount",
   permission: "inventory:approve",
   schema: countInput,
-  successMessage: "Sesi opname dibatalkan.",
+  successMessage: "Sesi opname dibatalkan. Gudang dibuka kembali.",
   handler: async ({ input, user, tx }) => {
     await assertCountAccess(tx, user.id, input.id)
-    await tx
-      .update(stockCounts)
-      .set({ status: "cancelled", cancelledAt: new Date() })
-      .where(eq(stockCounts.id, input.id))
+    await tx.execute(sql`select cancel_stock_count(${input.id})`)
   },
 })

@@ -34,7 +34,7 @@ import {
 
 import { timestamps } from "./_columns"
 import { partners } from "./partners"
-import { products } from "./products"
+import { productCategories, products } from "./products"
 import { uoms } from "./uoms"
 import { inventoryCategory, locations, warehouses } from "./warehouses"
 
@@ -332,10 +332,17 @@ export const stockCounts = pgTable(
       .references(() => warehouses.id, { onDelete: "restrict" }),
     // Kosong = seluruh lokasi internal di gudang.
     locationId: uuid().references(() => locations.id, { onDelete: "restrict" }),
+    // Kosong = semua kategori; diisi = kategori ini dan sub-kategorinya (R-13).
+    productCategoryId: uuid().references(() => productCategories.id, { onDelete: "restrict" }),
+    // Saat mulai hitung (qty sistem diambil dari saldo saat itu, gudang dibekukan).
     cutOffAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-    status: stockCountStatus().notNull().default("counting"),
+    // Tanpa default: sesi baru selalu Draft, dipaksakan trigger (nilai enum baru R-13 belum boleh
+    // dipakai di transaksi migrasi yang menambahkannya).
+    status: stockCountStatus().notNull(),
     notes: text(),
     createdBy: uuid(),
+    // Selesai hitung; tanggal efektif penyesuaian selisihnya.
+    completedAt: timestamp({ withTimezone: true }),
     submittedAt: timestamp({ withTimezone: true }),
     approvedAt: timestamp({ withTimezone: true }),
     approvedBy: uuid(),

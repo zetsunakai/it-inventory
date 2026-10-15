@@ -3,7 +3,7 @@
 import { Check, CircleAlert, ScanLine } from "lucide-react"
 import { useRef, useState, useTransition } from "react"
 
-import { addCountLine, recordCount, submitStockCount } from "@/app/(app)/inventory/opname/actions"
+import { addCountLine, completeStockCount, recordCount } from "@/app/(app)/inventory/opname/actions"
 import { SearchSelect } from "@/components/search-select"
 import {
   AlertDialog,
@@ -222,7 +222,7 @@ export function CountSheet({
       </ul>
 
       <AddFoundItem countId={countId} locations={locations} />
-      <SubmitCount countId={countId} uncounted={lines.length - counted} />
+      <CompleteCount countId={countId} uncounted={lines.length - counted} />
     </div>
   )
 }
@@ -321,7 +321,7 @@ function AddFoundItem({
   )
 }
 
-function SubmitCount({ countId, uncounted }: { countId: string; uncounted: number }) {
+function CompleteCount({ countId, uncounted }: { countId: string; uncounted: number }) {
   const [open, setOpen] = useState(false)
   const [errors, setErrors] = useState<string[]>()
   const [pending, startTransition] = useTransition()
@@ -330,15 +330,15 @@ function SubmitCount({ countId, uncounted }: { countId: string; uncounted: numbe
     <div className="space-y-2">
       <AlertDialog open={open} onOpenChange={setOpen}>
         <AlertDialogTrigger render={<Button className="h-11 w-full sm:w-auto" />}>
-          Ajukan persetujuan
+          Selesai hitung
         </AlertDialogTrigger>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Ajukan hasil hitung?</AlertDialogTitle>
+            <AlertDialogTitle>Selesaikan penghitungan?</AlertDialogTitle>
             <AlertDialogDescription>
               {uncounted > 0
                 ? `Masih ada ${formatNumber(uncounted)} baris yang belum dihitung; isi 0 bila barangnya memang tidak ada.`
-                : "Qty sistem per cut-off akan dihitung dan dibandingkan. Daftar hitung terkunci sampai Manajer menyetujui atau mengembalikannya."}
+                : "Qty fisik dibandingkan dengan qty sistem saat mulai hitung. Daftar hitung terkunci; bila ada yang salah, pilih Hitung ulang."}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -347,13 +347,13 @@ function SubmitCount({ countId, uncounted }: { countId: string; uncounted: numbe
               disabled={pending}
               onClick={() =>
                 startTransition(async () => {
-                  const result = await submitStockCount({ id: countId })
+                  const result = await completeStockCount({ id: countId })
                   setOpen(false)
                   setErrors(result.ok ? undefined : result.errors)
                 })
               }
             >
-              {pending ? "Mengajukan…" : "Ajukan"}
+              {pending ? "Menyimpan…" : "Selesai hitung"}
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>

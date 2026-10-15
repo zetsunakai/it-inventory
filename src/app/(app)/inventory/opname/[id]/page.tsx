@@ -1,3 +1,4 @@
+import { Snowflake } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -11,6 +12,7 @@ import { CountStatusBadge } from "@/components/inventory/count-status"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDateTime, formatNumber } from "@/lib/format"
+import { FROZEN_STOCK_COUNT_STATUSES } from "@/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { getStockCount } from "@/server/queries/stock-counts"
@@ -33,8 +35,10 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
   const count = await getStockCount(user.id, id)
   if (!count) notFound()
 
-  const canCount = hasPermission(user.roles, "inventory:write") && count.status === "counting"
+  const canWrite = hasPermission(user.roles, "inventory:write")
+  const canCount = canWrite && count.status === "counting"
   const canApprove = hasPermission(user.roles, "inventory:approve")
+  const frozen = FROZEN_STOCK_COUNT_STATUSES.includes(count.status)
   const counted = count.lines.filter((line) => line.countedQty !== null).length
   const differing = count.lines.filter(
     (line) =>
@@ -62,21 +66,36 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
             <CountStatusBadge status={count.status} />
             <span>
               {count.warehouseCode} · {count.locationPath ?? "seluruh gudang"}
+              {count.productCategoryPath && ` · kategori ${count.productCategoryPath}`}
             </span>
-            <span>Cut-off {formatDateTime(count.cutOffAt)}</span>
+            {count.status !== "draft" && <span>Mulai {formatDateTime(count.cutOffAt)}</span>}
+            {count.completedAt && <span>Selesai hitung {formatDateTime(count.completedAt)}</span>}
           </span>
         }
       />
-      {canApprove && (
-        <CountActions
-          id={count.id}
-          number={count.number}
-          status={count.status}
-          differing={differing}
-          cutOff={formatDateTime(count.cutOffAt)}
-        />
+      {frozen && (
+        <p className="flex gap-2 rounded-lg bg-warning-soft px-3 py-2.5 text-sm">
+          <Snowflake className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
+          Gudang {count.warehouseCode} dibekukan selama opname ini berjalan. Transfer di gudang ini
+          tidak bisa divalidasi sampai opname disetujui atau dibatalkan.
+        </p>
       )}
-      {count.status === "counting" ? (
+      <CountActions
+        id={count.id}
+        number={count.number}
+        status={count.status}
+        warehouseCode={count.warehouseCode}
+        differing={differing}
+        completedAt={count.completedAt ? formatDateTime(count.completedAt) : null}
+        canWrite={canWrite}
+        canApprove={canApprove}
+      />
+      {count.status === "draft" ? (
+        <p className="text-sm text-muted-foreground">
+          Belum dimulai. Daftar hitung dan qty sistem diambil dari stok saat Manajer menekan Mulai
+          hitung.
+        </p>
+      ) : count.status === "counting" ? (
         canCount ? (
           <CountSheet
             countId={count.id}

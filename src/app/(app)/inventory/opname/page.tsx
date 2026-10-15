@@ -42,7 +42,10 @@ const COLUMNS: DataTableColumn<StockCountRow>[] = [
       </span>
     ),
   },
-  { header: "Cut-off", cell: (row) => formatDateTime(row.cutOffAt) },
+  {
+    header: "Mulai hitung",
+    cell: (row) => (row.status === "draft" ? "—" : formatDateTime(row.cutOffAt)),
+  },
   {
     header: "Dihitung",
     align: "right",
@@ -56,7 +59,7 @@ export default function StockCountsPage({ searchParams }: PageProps<"/inventory/
     <>
       <PageHeader
         title="Stock opname"
-        description="Hitung fisik per gudang atau lokasi. Selisih yang disetujui Manajer menjadi penyesuaian stok."
+        description="Hitung fisik per gudang atau lokasi. Selama opname berjalan gudangnya dibekukan; selisih yang disetujui Manajer menjadi penyesuaian stok."
       />
       <Suspense fallback={<DataTableSkeleton />}>
         <StockCountTable searchParams={searchParams} />

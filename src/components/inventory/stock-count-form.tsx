@@ -19,9 +19,17 @@ import type { FormState } from "@/lib/action-result"
 import type { LocationOption } from "@/server/queries/transfers"
 
 const WHOLE_WAREHOUSE = ""
+const ALL_CATEGORIES = ""
 
-// Sesi opname baru: satu gudang, atau satu lokasi beserta sub-lokasinya. Cut-off = sekarang.
-export function StockCountForm({ locations }: { locations: LocationOption[] }) {
+// Sesi opname baru (Draft): satu gudang, atau satu lokasi beserta sub-lokasinya, opsional satu
+// kategori produk beserta sub-kategorinya. Daftar hitung dibuat saat mulai hitung (R-13).
+export function StockCountForm({
+  locations,
+  categories,
+}: {
+  locations: LocationOption[]
+  categories: { id: string; path: string }[]
+}) {
   const router = useRouter()
   const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
     createStockCount,
@@ -41,6 +49,14 @@ export function StockCountForm({ locations }: { locations: LocationOption[] }) {
   ]
   const [warehouseId, setWarehouseId] = useState<string | null>(warehouses[0]?.value ?? null)
   const [locationId, setLocationId] = useState<string | null>(WHOLE_WAREHOUSE)
+  const [categoryId, setCategoryId] = useState<string | null>(ALL_CATEGORIES)
+  const categoryItems = [
+    { value: ALL_CATEGORIES, label: "Semua kategori" },
+    ...categories.map((category) => ({
+      value: category.id,
+      label: `${category.path} dan sub-kategorinya`,
+    })),
+  ]
   const locationItems = [
     { value: WHOLE_WAREHOUSE, label: "Seluruh gudang" },
     ...locations
@@ -89,6 +105,29 @@ export function StockCountForm({ locations }: { locations: LocationOption[] }) {
           </SelectTrigger>
           <SelectContent>
             {locationItems.map((item) => (
+              <SelectItem key={item.value || "semua"} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </FormField>
+      <FormField
+        label="Kategori produk"
+        htmlFor="count-category"
+        errors={fieldErrors?.productCategoryId}
+      >
+        <Select
+          name="productCategoryId"
+          items={categoryItems}
+          value={categoryId}
+          onValueChange={setCategoryId}
+        >
+          <SelectTrigger id="count-category" className="w-full">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {categoryItems.map((item) => (
               <SelectItem key={item.value || "semua"} value={item.value}>
                 {item.label}
               </SelectItem>

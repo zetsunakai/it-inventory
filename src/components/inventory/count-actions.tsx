@@ -6,7 +6,10 @@ import { useState, useTransition } from "react"
 import {
   approveStockCount,
   cancelStockCount,
+  rejectStockCount,
   reopenStockCount,
+  startStockCount,
+  submitStockCount,
 } from "@/app/(app)/inventory/opname/actions"
 import {
   AlertDialog,
@@ -22,35 +25,51 @@ import { Button } from "@/components/ui/button"
 import type { ActionResult } from "@/lib/action-result"
 import type { StockCountStatus } from "@/lib/inventory"
 
-// Keputusan Manajer atas sesi opname: setujui selisih, kembalikan ke penghitungan, atau batalkan.
+const TOUCH = "pointer-coarse:h-11"
+
+// Tombol alur sesi opname (backlog R-13). Manajer (canApprove): mulai hitung, setujui, tolak,
+// batal. Admin gudang (canWrite): hitung ulang dan ajukan setelah Selesai hitung. "Selesai hitung"
+// ada di lembar hitung.
 export function CountActions({
   id,
   number,
   status,
+  warehouseCode,
   differing,
-  cutOff,
+  completedAt,
+  canWrite,
+  canApprove,
 }: {
   id: string
   number: string
   status: StockCountStatus
+  warehouseCode: string
   differing: number
-  cutOff: string
+  // Tanggal efektif penyesuaian (selesai hitung), sudah diformat.
+  completedAt: string | null
+  canWrite: boolean
+  canApprove: boolean
 }) {
   const [result, setResult] = useState<ActionResult<unknown> | null>(null)
   const [pending, startTransition] = useTransition()
-  const [approveOpen, setApproveOpen] = useState(false)
-  const [cancelOpen, setCancelOpen] = useState(false)
+  const [dialog, setDialog] = useState<"start" | "approve" | "cancel" | null>(null)
 
-  function run(action: () => Promise<ActionResult<unknown>>, close?: () => void) {
+  function run(action: () => Promise<ActionResult<unknown>>) {
     startTransition(async () => {
       const next = await action()
-      close?.()
+      setDialog(null)
       setResult(next)
     })
   }
 
-  const open = status === "counting" || status === "review"
-  if (!open && !result) return null
+  const cancellable = canApprove && status !== "approved" && status !== "cancelled"
+  const buttons = [
+    status === "draft" && canApprove,
+    status === "counted" && canWrite,
+    status === "review" && canApprove,
+    cancellable,
+  ].some(Boolean)
+  if (!buttons && !result) return null
 
   return (
     <div className="space-y-3">
@@ -77,52 +96,95 @@ export function CountActions({
           </div>
         </div>
       )}
-      {open && (
-        <div className="flex flex-wrap gap-2">
-          {status === "review" && (
-            <>
-              <AlertDialog open={approveOpen} onOpenChange={setApproveOpen}>
-                <AlertDialogTrigger render={<Button className="pointer-coarse:h-11" />}>
-                  Setujui hasil opname
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Setujui opname {number}?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      {differing
-                        ? `${differing} baris berselisih dicatat sebagai penyesuaian dengan tanggal efektif cut-off ${cutOff}. Stok langsung diperbarui.`
-                        : "Tidak ada selisih; sesi ditutup tanpa penyesuaian."}
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel disabled={pending}>Kembali</AlertDialogCancel>
-                    <Button
-                      disabled={pending}
-                      onClick={() =>
-                        run(
-                          () => approveStockCount({ id }),
-                          () => setApproveOpen(false),
-                        )
-                      }
-                    >
-                      {pending ? "Menyetujui…" : "Setujui"}
-                    </Button>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-              <Button
-                variant="outline"
-                disabled={pending}
-                onClick={() => run(() => reopenStockCount({ id }))}
-                className="pointer-coarse:h-11"
-              >
-                Kembalikan ke penghitungan
-              </Button>
-            </>
-          )}
-          <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
+      <div className="flex flex-wrap gap-2">
+        {status === "draft" && canApprove && (
+          <AlertDialog
+            open={dialog === "start"}
+            onOpenChange={(open) => setDialog(open ? "start" : null)}
+          >
+            <AlertDialogTrigger render={<Button className={TOUCH} />}>
+              Mulai hitung
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Mulai hitung {number}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Daftar hitung diambil dari stok saat ini. Gudang {warehouseCode} dibekukan:
+                  transfer di gudang ini tidak bisa divalidasi sampai opname disetujui atau
+                  dibatalkan.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending}>Kembali</AlertDialogCancel>
+                <Button disabled={pending} onClick={() => run(() => startStockCount({ id }))}>
+                  {pending ? "Memulai…" : "Mulai hitung"}
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
+        {status === "counted" && canWrite && (
+          <>
+            <Button
+              disabled={pending}
+              onClick={() => run(() => submitStockCount({ id }))}
+              className={TOUCH}
+            >
+              Ajukan persetujuan
+            </Button>
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => run(() => reopenStockCount({ id }))}
+              className={TOUCH}
+            >
+              Hitung ulang
+            </Button>
+          </>
+        )}
+        {status === "review" && canApprove && (
+          <>
+            <AlertDialog
+              open={dialog === "approve"}
+              onOpenChange={(open) => setDialog(open ? "approve" : null)}
+            >
+              <AlertDialogTrigger render={<Button className={TOUCH} />}>
+                Setujui hasil opname
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Setujui opname {number}?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    {differing
+                      ? `${differing} baris berselisih dicatat sebagai penyesuaian dengan tanggal efektif selesai hitung ${completedAt ?? ""}. Stok langsung diperbarui dan gudang dibuka.`
+                      : "Tidak ada selisih; sesi ditutup tanpa penyesuaian dan gudang dibuka."}
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel disabled={pending}>Kembali</AlertDialogCancel>
+                  <Button disabled={pending} onClick={() => run(() => approveStockCount({ id }))}>
+                    {pending ? "Menyetujui…" : "Setujui"}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => run(() => rejectStockCount({ id }))}
+              className={TOUCH}
+            >
+              Tolak
+            </Button>
+          </>
+        )}
+        {cancellable && (
+          <AlertDialog
+            open={dialog === "cancel"}
+            onOpenChange={(open) => setDialog(open ? "cancel" : null)}
+          >
             <AlertDialogTrigger
-              render={<Button variant="ghost" className="text-destructive pointer-coarse:h-11" />}
+              render={<Button variant="ghost" className={`text-destructive ${TOUCH}`} />}
             >
               Batalkan sesi
             </AlertDialogTrigger>
@@ -130,7 +192,8 @@ export function CountActions({
               <AlertDialogHeader>
                 <AlertDialogTitle>Batalkan opname {number}?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Hasil hitung tidak dipakai dan stok tidak berubah. Sesi tidak bisa dibuka lagi.
+                  Hasil hitung tidak dipakai, stok tidak berubah, dan gudang dibuka kembali. Sesi
+                  tidak bisa dibuka lagi.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -138,20 +201,15 @@ export function CountActions({
                 <Button
                   variant="destructive"
                   disabled={pending}
-                  onClick={() =>
-                    run(
-                      () => cancelStockCount({ id }),
-                      () => setCancelOpen(false),
-                    )
-                  }
+                  onClick={() => run(() => cancelStockCount({ id }))}
                 >
                   Batalkan sesi
                 </Button>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }

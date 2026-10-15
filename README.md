@@ -342,10 +342,18 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Manajer menekan "Setujui dan validasi" (`approveTransfer`, izin `inventory:approve`) sehingga
   pergerakan baru tercatat setelah disetujui. `validate_transfer` hanya menerima persetujuan dari
   user berperan Manajer atau Administrator; bila validasi gagal, persetujuan ikut batal.
-- Stock opname (`/inventory/opname`): Manajer membuat sesi per gudang/lokasi (cut-off = saat dibuat),
-  admin gudang menghitung di HP lewat scan SKU tanpa melihat qty sistem (disimpan per baris),
-  `submit_stock_count()` menyimpan qty sistem per cut-off (`stock_qty_at()`), dan
-  `approve_stock_count()` membuat penyesuaian dari selisihnya (`transfers.stock_count_id`).
+- Stock opname (`/inventory/opname`, backlog M2-09 dan R-13): Manajer membuat sesi Draft per gudang,
+  opsional satu lokasi dan/atau satu kategori produk (beserta sub-lokasi/sub-kategorinya).
+  `start_stock_count()` mengunci gudang, menolak bila gudang itu sudah punya opname yang berjalan,
+  lalu mengisi daftar hitung dari saldo dengan qty sistem saat itu dan **membekukan gudang**: selama
+  Berjalan, Selesai hitung, atau Menunggu persetujuan, `transfer_validation_errors()` menolak transfer
+  yang menyentuh gudang itu (`stock_count_freeze_errors()`, menyebut nomor sesinya), kecuali
+  penyesuaian dari sesi itu sendiri. Admin gudang menghitung di HP lewat scan SKU tanpa melihat qty
+  sistem, lalu `complete_stock_count()` (Selesai hitung, bisa `reopen_stock_count()` = Hitung ulang)
+  dan `submit_stock_count()` (ajukan). Manajer `approve_stock_count()` (selisih jadi penyesuaian
+  bertanggal selesai hitung, `transfers.stock_count_id`, gudang dibuka) atau `reject_stock_count()`
+  (kembali ke Selesai hitung). `cancel_stock_count()` membuka gudang. Status hanya berubah lewat
+  fungsi-fungsi itu.
 - Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`. Isi pemilih
   berpencarian dengan `fillInteractive()` (`tests/e2e/interactive.ts`), yang menunggu hidrasi React
   dulu; label dicari dengan `exact: true` supaya tidak cocok dengan placeholder lain.

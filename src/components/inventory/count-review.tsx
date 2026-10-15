@@ -4,7 +4,7 @@ import { formatDecimal } from "@/lib/decimal"
 import { formatNumber } from "@/lib/format"
 import type { StockCountLine } from "@/server/queries/stock-counts"
 
-// Selisih qty fisik − qty sistem per cut-off, dalam satuan stok.
+// Selisih qty fisik − qty sistem saat mulai hitung, dalam satuan stok.
 function difference(line: StockCountLine) {
   if (line.systemQty === null || line.countedQty === null) return null
   return Number(line.countedQty) - Number(line.systemQty)

@@ -82,6 +82,8 @@ export async function receiveStock(
   qty: string,
   // Tanggal efektif (ISO); kosong = sekarang.
   at?: string,
+  // false = penerimaan dibiarkan Draft (mis. untuk divalidasi lewat UI).
+  validate = true,
 ) {
   const { db, pool } = createDb(TEST_DATABASE_URL)
   try {
@@ -98,6 +100,10 @@ export async function receiveStock(
           sourceLocationId: vendor.id,
           destinationLocationId: fixture.rack.id,
           partnerId: fixture.partner.id,
+          // Hari ini (WIB): Konfirmasi lewat UI mewajibkan tanggal rencana.
+          scheduledDate: new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(
+            new Date(),
+          ),
         })
         .returning({ id: transfers.id })
       const [line] = await tx
@@ -118,7 +124,9 @@ export async function receiveStock(
         sourceLocationId: vendor.id,
         destinationLocationId: fixture.rack.id,
       })
-      await tx.execute(sql`select validate_transfer(${transfer.id}, ${at ?? null}::timestamptz)`)
+      if (validate) {
+        await tx.execute(sql`select validate_transfer(${transfer.id}, ${at ?? null}::timestamptz)`)
+      }
       return transfer.id
     })
   } finally {

@@ -276,13 +276,31 @@ export const TRANSACTION_CLASSIFICATION_LABELS: Record<TransactionClassification
 export const STOCK_MOVE_STATUSES = ["draft", "done", "cancelled"] as const
 export type StockMoveStatus = (typeof STOCK_MOVE_STATUSES)[number]
 
-// Sesi stock opname (PRD bagian 6.5): dihitung → menunggu persetujuan → disetujui, atau batal.
-export const STOCK_COUNT_STATUSES = ["counting", "review", "approved", "cancelled"] as const
+// Sesi stock opname (PRD bagian 6.5, backlog R-13, stock_count hmx-002): Draft → Berjalan (daftar
+// hitung dan qty sistem diambil dari saldo, gudang dibekukan) → Selesai hitung → Menunggu
+// persetujuan → Disetujui (gudang dibuka); ditolak kembali ke Selesai hitung; Batal membuka gudang.
+export const STOCK_COUNT_STATUSES = [
+  "draft",
+  "counting",
+  "counted",
+  "review",
+  "approved",
+  "cancelled",
+] as const
 export type StockCountStatus = (typeof STOCK_COUNT_STATUSES)[number]
 
 export const STOCK_COUNT_STATUS_LABELS: Record<StockCountStatus, string> = {
-  counting: "Dihitung",
+  draft: "Draft",
+  counting: "Berjalan",
+  counted: "Selesai hitung",
   review: "Menunggu persetujuan",
   approved: "Disetujui",
   cancelled: "Batal",
 }
+
+// Status yang membekukan gudang: transfer di gudang itu tidak bisa divalidasi.
+export const FROZEN_STOCK_COUNT_STATUSES: readonly StockCountStatus[] = [
+  "counting",
+  "counted",
+  "review",
+]

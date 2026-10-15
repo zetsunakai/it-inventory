@@ -118,6 +118,9 @@ export async function getStockCount(userId: string, id: string) {
       warehouseCode: warehouses.code,
       warehouseName: warehouses.name,
       locationPath: locationPathOf,
+      productCategoryPath: sql<
+        string | null
+      >`(select pp.path from product_category_paths pp where pp.id = ${stockCounts.productCategoryId})`,
       approvedByName: sql<
         string | null
       >`(select u.name from users u where u.id = ${stockCounts.approvedBy})`,
@@ -162,6 +165,7 @@ export async function getStockCount(userId: string, id: string) {
     warehouseCode: header.warehouseCode,
     warehouseName: header.warehouseName,
     locationPath: header.locationPath,
+    productCategoryPath: header.productCategoryPath,
     approvedByName: header.approvedByName,
     lines: lines as StockCountLine[],
     adjustments,
