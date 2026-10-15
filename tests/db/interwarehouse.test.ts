@@ -259,6 +259,18 @@ test("susut transit dicatat sebagai scrap yang perlu persetujuan", async () => {
     ).rows
     const [row] = (await linked(tx, req.id)).filter((item) => item.id === loss)
     expect([row.type, row.code, row.status]).toEqual(["scrap", "pu", "ready"])
+    // Jenis pemakaian diisi database dari lokasi asal transit (R-12) dan tidak bisa diganti.
+    const [{ usage_type }] = (
+      await tx.execute<{ usage_type: string }>(
+        sql`select usage_type from transfers where id = ${loss}`,
+      )
+    ).rows
+    expect(usage_type).toBe("transit_loss")
+    expect(
+      await pgErrorInSavepoint(tx, (sp) =>
+        sp.execute(sql`update transfers set usage_type = 'scrap' where id = ${loss}`),
+      ),
+    ).toBe("Barang di lokasi transit hanya bisa dicatat sebagai susut transit.")
     expect(
       await pgErrorInSavepoint(tx, (sp) => sp.execute(sql`select validate_transfer(${loss})`)),
     ).toBe("Belum disetujui Manajer.")

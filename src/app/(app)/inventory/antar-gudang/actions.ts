@@ -149,7 +149,7 @@ export const settleInterwarehouse = defineAction({
       message:
         input.mode === "return"
           ? "Transfer kembali ke gudang asal dibuat. Validasi transfernya setelah barang tiba."
-          : "Susut transit dicatat sebagai scrap. Menunggu persetujuan Manajer di halaman Scrap.",
+          : "Susut transit dicatat sebagai scrap. Menunggu persetujuan Manajer di halaman Pemakaian & scrap.",
     }
   },
 })

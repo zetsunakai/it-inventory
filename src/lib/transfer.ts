@@ -105,6 +105,8 @@ export type TransferKind = {
   needsApproval?: boolean
   // Pindah lokasi (R-09): kedua lokasi di satu gudang, divalidasi langsung dari Draft.
   sameWarehouse?: boolean
+  // Pemakaian & scrap (R-12): user memilih jenis pemakaian.
+  usageTypes?: boolean
   // Daftar hanya menampilkan kode pergerakan ini (pindah lokasi tanpa transfer antar gudang).
   movementCodes?: readonly MovementCode[]
 }
@@ -152,7 +154,8 @@ export const TRANSFER_KINDS = {
   scrap: {
     type: "scrap",
     path: "/inventory/scrap",
-    noun: "scrap",
+    noun: "pemakaian",
+    usageTypes: true,
     locationSide: "source",
     locationLabel: "Lokasi asal",
     needsApproval: true,

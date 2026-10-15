@@ -934,13 +934,14 @@ describe("scrap dan penyesuaian", () => {
   test("scrap memindah stok ke lokasi scrap; gagal validasi membatalkan persetujuan", async () => {
     loginAs("admin")
     await receiveTen()
-    const scrap = (qty: string) =>
+    const scrap = (qty: string, usageType = "scrap") =>
       saveTransfer(
         null,
         form({
           type: "scrap",
           locationId: ids.rack,
           reason: "Reject QC",
+          usageType,
           lines: JSON.stringify([{ productId: ids.product, inputQty: qty, uomId: ids.pcs }]),
         }),
       )
@@ -964,5 +965,35 @@ describe("scrap dan penyesuaian", () => {
     expect(await approveTransfer({ id })).toMatchObject({ ok: true })
     expect(await stockOnRack()).toBe("6.0000")
     expect((await getTransfer(people.manajer.id, id))!.number).toMatch(/^SCR\//)
+  })
+
+  test("jenis pemakaian wajib dan tersimpan; susut transit tidak bisa dipilih di form", async () => {
+    loginAs("admin")
+    const save = (usageType?: string) =>
+      saveTransfer(
+        null,
+        form({
+          type: "scrap",
+          locationId: ids.rack,
+          reason: "Dipakai produksi",
+          ...(usageType ? { usageType } : {}),
+          lines: JSON.stringify([{ productId: ids.product, inputQty: "1", uomId: ids.pcs }]),
+        }),
+      )
+    expect(await save()).toMatchObject({ ok: false, errors: ["Pilih jenis pemakaian."] })
+    expect(await save("transit_loss")).toMatchObject({ ok: false })
+    const id = await savedId(await save("usage"))
+    const saved = await getTransfer(people.admin.id, id)
+    expect([saved!.usageType, saved!.movementCode]).toEqual(["usage", "pu"])
+    const rows = await listTransfers({
+      userId: people.admin.id,
+      type: "scrap",
+      usageType: "usage",
+      search: "",
+      page: 1,
+      pageSize: 50,
+      offset: 0,
+    })
+    expect(rows.rows.map((row) => row.id)).toContain(id)
   })
 })

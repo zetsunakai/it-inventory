@@ -123,7 +123,7 @@ export function InterwarehouseActions({
                   <AlertDialogTitle>Catat susut transit {number}?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Sisa barang di transit dicatat sebagai scrap dan baru mengurangi stok setelah
-                    disetujui Manajer di halaman Scrap.
+                    disetujui Manajer di halaman Pemakaian & scrap.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <div className="space-y-1.5">

@@ -4,7 +4,7 @@ import { and, asc, eq, inArray, isNull, sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { optionalText } from "@/lib/form-fields"
-import { TRANSFER_TYPES, type TransferType } from "@/lib/inventory"
+import { MANUAL_USAGE_TYPES, TRANSFER_TYPES, type TransferType } from "@/lib/inventory"
 import { transferLinesField, type TransferLineInput } from "@/lib/transfer"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
@@ -85,6 +85,8 @@ export const saveTransfer = defineFormAction({
     // Scrap dan penyesuaian: alasan wajib; penyesuaian juga arahnya.
     reason: optionalText("Alasan", 500),
     direction: z.enum(["increase", "decrease"]).optional(),
+    // Pemakaian & scrap (R-12). Susut transit hanya dibuat permintaan antar gudang.
+    usageType: z.enum(MANUAL_USAGE_TYPES).optional(),
     lines: transferLinesField,
   }),
   successMessage: "Transfer disimpan.",
@@ -97,6 +99,7 @@ export const saveTransfer = defineFormAction({
     const withPartner = WITH_PARTNER.includes(input.type)
     if (withPartner && !input.partnerId) errors.push(`Pilih ${virtualType}.`)
     if (NEEDS_APPROVAL.includes(input.type) && !input.reason) errors.push("Alasan wajib diisi.")
+    if (input.type === "scrap" && !input.usageType) errors.push("Pilih jenis pemakaian.")
     if (input.type === "adjustment" && !input.direction) {
       errors.push("Pilih arah penyesuaian: tambah atau kurangi stok.")
     }
@@ -149,6 +152,7 @@ export const saveTransfer = defineFormAction({
     const header = {
       partnerId: withPartner ? input.partnerId : null,
       reason: NEEDS_APPROVAL.includes(input.type) ? input.reason : null,
+      usageType: input.type === "scrap" ? input.usageType : null,
       sourceLocationId: inbound ? otherId! : input.locationId,
       destinationLocationId: inbound ? input.locationId : otherId!,
       // Kosong = hari ini (WIB); Konfirmasi mewajibkan tanggal rencana (R-06).

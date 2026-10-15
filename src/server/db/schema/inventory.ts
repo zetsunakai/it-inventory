@@ -29,6 +29,7 @@ import {
   STOCK_MOVE_STATUSES,
   TRANSFER_STATUSES,
   TRANSFER_TYPES,
+  USAGE_TYPES,
 } from "../../../lib/inventory"
 
 import { timestamps } from "./_columns"
@@ -60,6 +61,7 @@ export const interwarehouseStatus = pgEnum("interwarehouse_status", INTERWAREHOU
 export const returnRequestType = pgEnum("return_request_type", RETURN_REQUEST_TYPES)
 export const returnRequestStatus = pgEnum("return_request_status", RETURN_REQUEST_STATUSES)
 export const returnLineAction = pgEnum("return_line_action", RETURN_LINE_ACTIONS)
+export const usageType = pgEnum("usage_type", USAGE_TYPES)
 export const transactionClassification = pgEnum(
   "transaction_classification",
   TRANSACTION_CLASSIFICATIONS,
@@ -126,6 +128,10 @@ export const transfers = pgTable(
     notes: text(),
     // Alasan scrap dan penyesuaian (wajib untuk keduanya, dicek saat validasi).
     reason: text(),
+    // Jenis pemakaian, hanya untuk transfer scrap (kode pu, backlog R-12). Kosong saat insert diisi
+    // database: susut transit bila dari lokasi transit, jenis transfer asal untuk lanjutan, selain
+    // itu scrap.
+    usageType: usageType(),
     returnOfId: uuid().references((): AnyPgColumn => transfers.id, { onDelete: "restrict" }),
     // Penyesuaian hasil stock opname (M2-09).
     stockCountId: uuid().references((): AnyPgColumn => stockCounts.id, { onDelete: "restrict" }),
@@ -174,6 +180,10 @@ export const transfers = pgTable(
     check(
       "transfers_partner_required",
       sql`${table.type} not in ('receipt', 'delivery', 'return') or ${table.partnerId} is not null`,
+    ),
+    check(
+      "transfers_usage_type_scrap_only",
+      sql`(${table.type} = 'scrap') = (${table.usageType} is not null)`,
     ),
     check(
       "transfers_return_has_origin",

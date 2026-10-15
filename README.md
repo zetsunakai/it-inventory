@@ -333,6 +333,11 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Selesai bila tidak ada transfer terbuka lagi; membatalkan pengganti = ditutup tanpa pengganti.
   Batal hanya sebelum ada barang yang diretur (`cancel_return_request()`), transfer retur terbuka
   ikut batal. Transfer retur lama (M2-07) dipindah ke permintaan Selesai/Diproses/Batal oleh migrasi.
+- Pemakaian & scrap (`/inventory/scrap`, kode `pu`, backlog R-12): jenis pemakaian
+  (`transfers.usage_type`: pemakaian, scrap, lainnya; susut transit hanya dari lokasi transit lewat
+  permintaan antar gudang) wajib dipilih dan bisa disaring di daftar. Trigger `transfers_usage_type`
+  mengisi yang kosong (lanjutan mewarisi transfer asalnya, dari transit = susut transit) dan menolak
+  jenis yang tidak cocok dengan lokasi asal. Penyesuaian manual memakai `adj_in`/`adj_out`.
 - Scrap dan penyesuaian (arah tambah/kurangi stok): alasan wajib; admin gudang menandai Siap, lalu
   Manajer menekan "Setujui dan validasi" (`approveTransfer`, izin `inventory:approve`) sehingga
   pergerakan baru tercatat setelah disetujui. `validate_transfer` hanya menerima persetujuan dari

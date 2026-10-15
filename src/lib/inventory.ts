@@ -195,6 +195,24 @@ export const INTERWAREHOUSE_STATUS_TONES: Record<
   cancelled: "neutral",
 }
 
+// Jenis pemakaian transfer kode pu (backlog R-12, usage_type hmx-002). Susut transit hanya dari
+// lokasi transit lewat permintaan transfer antar gudang, jadi tidak bisa dipilih di form.
+export const USAGE_TYPES = ["usage", "scrap", "transit_loss", "other"] as const
+export type UsageType = (typeof USAGE_TYPES)[number]
+
+export const USAGE_TYPE_LABELS: Record<UsageType, string> = {
+  usage: "Pemakaian",
+  scrap: "Scrap",
+  transit_loss: "Susut transit",
+  other: "Lainnya",
+}
+
+export const MANUAL_USAGE_TYPES = [
+  "usage",
+  "scrap",
+  "other",
+] as const satisfies readonly UsageType[]
+
 // Permintaan retur (backlog R-11, return_request hmx-002): retur ke vendor (dari penerimaan) atau
 // dari customer (dari pengiriman), selalu merujuk transfer Selesai. Konfirmasi membuat transfer
 // retur; baris "dengan pengganti" membuat transfer pengganti setelah retur Selesai.

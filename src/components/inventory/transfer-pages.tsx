@@ -14,7 +14,13 @@ import { PageHeader } from "@/components/page-header"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate, formatNumber } from "@/lib/format"
-import { MOVEMENT_CODE_LABELS, TRANSFER_STATUS_LABELS, TRANSFER_STATUSES } from "@/lib/inventory"
+import {
+  MOVEMENT_CODE_LABELS,
+  TRANSFER_STATUS_LABELS,
+  TRANSFER_STATUSES,
+  USAGE_TYPE_LABELS,
+  USAGE_TYPES,
+} from "@/lib/inventory"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import type { TransferKind } from "@/lib/transfer"
@@ -36,6 +42,8 @@ import { TransferView } from "./transfer-view"
 // Halaman daftar, buat, dan detail yang sama untuk semua jenis transfer (penerimaan, pengiriman,
 // dst.). Halaman di app/(app)/inventory/<jenis>/ hanya meneruskan TRANSFER_KINDS miliknya.
 
+const USAGE_FILTER = "jenis"
+const USAGE_OPTIONS = USAGE_TYPES.map((value) => ({ value, label: USAGE_TYPE_LABELS[value] }))
 const STATUS_FILTER = "status"
 const STATUS_OPTIONS = TRANSFER_STATUSES.map((value) => ({
   value,
@@ -75,12 +83,14 @@ async function TransferTable({
   const raw = await searchParams
   const params = parseListParams(raw)
   const status = pickFilter(raw, STATUS_FILTER, TRANSFER_STATUSES)
+  const usageType = kind.usageTypes ? pickFilter(raw, USAGE_FILTER, USAGE_TYPES) : undefined
   const { rows, total } = await listTransfers({
     ...params,
     userId: user.id,
     type: kind.type,
     movementCodes: kind.movementCodes,
     status,
+    usageType,
   })
   const createHref = `${kind.path}/baru`
   const createLabel = `Buat ${kind.noun}`
@@ -90,6 +100,14 @@ async function TransferTable({
       header: "Nomor",
       cell: (row) => <span className="font-mono text-foreground">{row.number}</span>,
     },
+    ...(kind.usageTypes
+      ? [
+          {
+            header: "Jenis",
+            cell: (row: TransferRow) => (row.usageType ? USAGE_TYPE_LABELS[row.usageType] : "—"),
+          },
+        ]
+      : []),
     ...(kind.partnerLabel
       ? [
           {
@@ -143,6 +161,9 @@ async function TransferTable({
               : "Cari nomor atau referensi"
           }
         />
+        {kind.usageTypes && (
+          <DataTableFilter name={USAGE_FILTER} label="Jenis" options={USAGE_OPTIONS} />
+        )}
         <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
         {canWrite && kind.creatable !== false && (
           <Link href={createHref} className={buttonVariants({ className: "sm:ml-auto" })}>
@@ -247,7 +268,13 @@ async function TransferDetail({
   return (
     <div className="space-y-6">
       <PageHeader
-        title={`${fromRequest ? MOVEMENT_CODE_LABELS[transfer.movementCode] : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`} ${transfer.number}`}
+        title={`${
+          fromRequest
+            ? MOVEMENT_CODE_LABELS[transfer.movementCode]
+            : transfer.usageType
+              ? USAGE_TYPE_LABELS[transfer.usageType]
+              : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`
+        } ${transfer.number}`}
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <TransferStatusBadge status={transfer.status} />
@@ -300,6 +327,7 @@ async function TransferDetail({
                 : "increase"
               : undefined,
             reason: transfer.reason,
+            usageType: transfer.usageType,
             otherLocationId: kind.secondLocationLabel ? transfer.destinationLocationId : undefined,
             scheduledDate: transfer.scheduledDate,
             reference: transfer.reference,

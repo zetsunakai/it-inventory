@@ -20,6 +20,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { fieldValue, type FormState } from "@/lib/action-result"
 import { formatDecimal, toDecimalInput } from "@/lib/decimal"
+import { MANUAL_USAGE_TYPES, USAGE_TYPE_LABELS, type UsageType } from "@/lib/inventory"
 import type { TransferKind, TransferLineDraft } from "@/lib/transfer"
 import type {
   LocationOption,
@@ -39,6 +40,7 @@ export type TransferFormValues = {
   reference: string | null
   notes: string | null
   reason?: string | null
+  usageType?: UsageType | null
   direction?: "increase" | "decrease"
   lines: { product: ProductChoice; inputQty: string; uomId: string; lotName: string | null }[]
 }
@@ -59,6 +61,11 @@ const newLine = (key: string): Line => ({
   uomId: "",
   lotName: "",
 })
+
+const USAGE_ITEMS = MANUAL_USAGE_TYPES.map((value) => ({
+  value,
+  label: USAGE_TYPE_LABELS[value],
+}))
 
 const DIRECTION_ITEMS = [
   { value: "decrease", label: "Kurangi stok (hilang, rusak, selisih kurang)" },
@@ -95,6 +102,8 @@ export function TransferForm({
   const [otherLocationId, setOtherLocationId] = useState<string | null>(
     transfer?.otherLocationId ?? null,
   )
+  // Pemakaian & scrap: susut transit tidak dibuat dari form ini (R-12).
+  const [usageType, setUsageType] = useState<string | null>(transfer?.usageType ?? "scrap")
   const [direction, setDirection] = useState<string | null>(transfer?.direction ?? null)
   // Barang keluar dari lokasi gudang: lot dipilih dari stok yang ada.
   const outbound = kind.directional ? direction !== "increase" : kind.locationSide === "source"
@@ -153,6 +162,31 @@ export function TransferForm({
 
       <FormSection title={`Data ${kind.noun}`}>
         <div className="grid gap-4 sm:grid-cols-2">
+          {kind.usageTypes && (
+            <FormField
+              label="Jenis pemakaian"
+              htmlFor={fieldId("transfer-usage")}
+              errors={fieldErrors?.usageType}
+            >
+              <Select
+                name="usageType"
+                items={USAGE_ITEMS}
+                value={usageType}
+                onValueChange={setUsageType}
+              >
+                <SelectTrigger id={fieldId("transfer-usage")} className="w-full">
+                  <SelectValue placeholder="Pilih jenis pemakaian" />
+                </SelectTrigger>
+                <SelectContent>
+                  {USAGE_ITEMS.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          )}
           {kind.directional && (
             <FormField
               label="Arah"

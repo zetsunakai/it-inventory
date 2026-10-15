@@ -4,7 +4,11 @@ import type { ReactNode } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
-import { MOVEMENT_CODE_LABELS, TRANSACTION_CLASSIFICATION_LABELS } from "@/lib/inventory"
+import {
+  MOVEMENT_CODE_LABELS,
+  TRANSACTION_CLASSIFICATION_LABELS,
+  USAGE_TYPE_LABELS,
+} from "@/lib/inventory"
 import type { TransferKind } from "@/lib/transfer"
 import type { TransferDetail, TransferLine } from "@/server/queries/transfers"
 
@@ -152,6 +156,9 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
         ]
       : []),
     ["Catatan", transfer.notes ?? "—"],
+    ...(transfer.usageType
+      ? [["Jenis pemakaian", USAGE_TYPE_LABELS[transfer.usageType]] as [string, ReactNode]]
+      : []),
     ...(kind.needsApproval
       ? [
           ["Alasan", transfer.reason ?? "—"] as [string, ReactNode],

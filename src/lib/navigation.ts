@@ -76,7 +76,7 @@ export const NAVIGATION: NavGroup[] = [
         permission: "inventory:read",
       },
       {
-        title: "Scrap",
+        title: "Pemakaian & scrap",
         href: "/inventory/scrap",
         permission: "inventory:read",
       },

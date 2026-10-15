@@ -14,7 +14,13 @@ import {
   type SQL,
 } from "drizzle-orm"
 
-import type { MovementCode, ProductTracking, TransferStatus, TransferType } from "@/lib/inventory"
+import type {
+  MovementCode,
+  ProductTracking,
+  TransferStatus,
+  TransferType,
+  UsageType,
+} from "@/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import {
@@ -52,6 +58,7 @@ export type TransferRow = {
   number: string
   type: TransferType
   status: TransferStatus
+  usageType: UsageType | null
   partnerName: string | null
   sourcePath: string
   destinationPath: string
@@ -67,6 +74,7 @@ export async function listTransfers({
   type,
   movementCodes,
   status,
+  usageType,
   search,
   pageSize,
   offset,
@@ -75,8 +83,10 @@ export async function listTransfers({
   type: TransferType
   movementCodes?: readonly MovementCode[]
   status?: TransferStatus
+  usageType?: UsageType
 }) {
   const conditions: SQL[] = [eq(transfers.type, type), accessibleBy(userId)]
+  if (usageType) conditions.push(eq(transfers.usageType, usageType))
   if (movementCodes) conditions.push(inArray(transfers.movementCode, [...movementCodes]))
   if (status) conditions.push(eq(transfers.status, status))
   if (search) {
@@ -104,6 +114,7 @@ export async function listTransfers({
         number: transfers.number,
         type: transfers.type,
         status: transfers.status,
+        usageType: transfers.usageType,
         partnerName: partners.name,
         sourcePath: pathOf(source),
         destinationPath: pathOf(destination),

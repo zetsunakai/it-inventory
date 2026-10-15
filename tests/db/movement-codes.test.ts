@@ -203,3 +203,42 @@ test("kode ikut berubah saat lokasi Draft diganti dan disalin ke baris saat vali
     expect(after.code).toBe("gr")
   })
 })
+
+test("jenis pemakaian hanya untuk pu; susut transit hanya dari transit; lanjutan mewarisi jenisnya", async () => {
+  await inRollback(db, async (tx) => {
+    const usage = async (id: string) =>
+      (
+        await tx.execute<{ usage_type: string | null }>(
+          sql`select usage_type from transfers where id = ${id}`,
+        )
+      ).rows[0].usage_type
+    const scrap = await transfer(tx, "scrap", ids.rackA, ids.scrap)
+    const loss = await transfer(tx, "scrap", ids.transit, ids.scrap)
+    const internal = await transfer(tx, "internal", ids.rackA, ids.rackB)
+    expect([await usage(scrap.id), await usage(loss.id), await usage(internal.id)]).toEqual([
+      "scrap",
+      "transit_loss",
+      null,
+    ])
+    expect(
+      await pgErrorInSavepoint(tx, (sp) =>
+        sp.execute(sql`update transfers set usage_type = 'transit_loss' where id = ${scrap.id}`),
+      ),
+    ).toBe(
+      "Susut transit hanya dicatat dari lokasi transit, lewat permintaan transfer antar gudang.",
+    )
+    expect(
+      await pgErrorInSavepoint(tx, (sp) =>
+        sp.execute(sql`update transfers set usage_type = 'usage' where id = ${internal.id}`),
+      ),
+    ).toBe("Jenis pemakaian hanya untuk transfer pemakaian dan scrap.")
+
+    await tx.execute(sql`update transfers set usage_type = 'usage' where id = ${scrap.id}`)
+    const [backorder] = (
+      await tx.execute<{ id: string }>(sql`
+        insert into transfers (type, source_location_id, destination_location_id, backorder_of_id)
+        values ('scrap', ${ids.rackA}, ${ids.scrap}, ${scrap.id}) returning id`)
+    ).rows
+    expect(await usage(backorder.id)).toBe("usage")
+  })
+})
