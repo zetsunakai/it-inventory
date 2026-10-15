@@ -120,6 +120,18 @@ export function TransferForm({
     value: location.id,
     label: `${location.path} · ${location.warehouseName}${location.isBonded ? " (berikat)" : ""}`,
   }))
+  // Pindah lokasi (R-09): tujuan hanya lokasi lain di gudang lokasi asal.
+  const sourceWarehouse = locations.find((location) => location.id === locationId)?.warehouseId
+  const destinationItems = kind.sameWarehouse
+    ? locationItems.filter((item) =>
+        locations.some(
+          (location) =>
+            location.id === item.value &&
+            location.warehouseId === sourceWarehouse &&
+            location.id !== locationId,
+        ),
+      )
+    : locationItems
   const payload: TransferLineDraft[] = lines.map((line) => ({
     productId: line.product?.id ?? "",
     inputQty: line.inputQty,
@@ -211,15 +223,19 @@ export function TransferForm({
             >
               <Select
                 name="otherLocationId"
-                items={locationItems}
+                items={destinationItems}
                 value={otherLocationId}
                 onValueChange={setOtherLocationId}
               >
                 <SelectTrigger id={fieldId("transfer-other-location")} className="w-full">
-                  <SelectValue placeholder="Pilih lokasi gudang" />
+                  <SelectValue
+                    placeholder={
+                      kind.sameWarehouse && !locationId ? "Pilih lokasi asal dulu" : "Pilih lokasi"
+                    }
+                  />
                 </SelectTrigger>
                 <SelectContent>
-                  {locationItems.map((item) => (
+                  {destinationItems.map((item) => (
                     <SelectItem key={item.value} value={item.value}>
                       {item.label}
                     </SelectItem>

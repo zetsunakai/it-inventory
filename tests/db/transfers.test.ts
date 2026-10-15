@@ -38,7 +38,15 @@ vi.mock("@/server/auth/session", () => ({ requireUser: async () => session.user 
 vi.mock("next/cache", () => ({ refresh: vi.fn() }))
 
 const ids = {} as Record<
-  "pcs" | "dozen" | "product" | "lotProduct" | "vendor" | "rack" | "otherRack" | "partner",
+  | "pcs"
+  | "dozen"
+  | "product"
+  | "lotProduct"
+  | "vendor"
+  | "rack"
+  | "otherRack"
+  | "sameRack"
+  | "partner",
   string
 >
 const people = {} as Record<"admin" | "gudang" | "auditor" | "manajer", CurrentUser>
@@ -143,6 +151,11 @@ beforeAll(async () => {
     .values({ code: "ZTRAK2", name: "Rak gudang 2", type: "internal", warehouseId: second.id })
     .returning({ id: locations.id })
   ids.otherRack = otherRack.id
+  const [sameRack] = await db
+    .insert(locations)
+    .values({ code: "ZTRAK3", name: "Rak B", type: "internal", warehouseId: warehouse.id })
+    .returning({ id: locations.id })
+  ids.sameRack = sameRack.id
   const [partner] = await db
     .insert(partners)
     .values({
@@ -509,14 +522,14 @@ describe("penerimaan parsial dan backorder", () => {
   })
 })
 
-describe("transfer internal", () => {
+describe("pindah lokasi", () => {
   function internal(lines: object[], values: Record<string, string> = {}) {
     return saveTransfer(
       null,
       form({
         type: "internal",
         locationId: ids.rack,
-        otherLocationId: ids.otherRack,
+        otherLocationId: ids.sameRack,
         lines: JSON.stringify(lines),
         ...values,
       }),
@@ -526,12 +539,12 @@ describe("transfer internal", () => {
   async function companyStock() {
     const [here, there] = await Promise.all([
       stockAvailability(ids.product, ids.rack),
-      stockAvailability(ids.product, ids.otherRack),
+      stockAvailability(ids.product, ids.sameRack),
     ])
     return [Number(here.qty), Number(there.qty)]
   }
 
-  test("saldo pindah antar gudang tanpa mengubah total stok perusahaan", async () => {
+  test("saldo pindah di dalam gudang; divalidasi langsung dari Draft", async () => {
     loginAs("admin")
     const receiptId = await savedId(
       await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
@@ -548,8 +561,8 @@ describe("transfer internal", () => {
       transfer!.number.slice(0, 4),
       transfer!.partnerId,
       transfer!.destinationLocationId,
-    ]).toEqual(["TRF/", null, ids.otherRack])
-    expect(await confirmTransfer({ id })).toMatchObject({ ok: true })
+    ]).toEqual(["TRF/", null, ids.sameRack])
+    // Tanpa Konfirmasi terpisah (R-09).
     expect(await validateTransfer({ id })).toMatchObject({ ok: true })
 
     const [here, there] = await companyStock()
@@ -566,6 +579,12 @@ describe("transfer internal", () => {
     expect(await internal(line, { otherLocationId: ids.rack })).toMatchObject({
       ok: false,
       errors: ["Lokasi asal dan tujuan harus berbeda."],
+    })
+    expect(await internal(line, { otherLocationId: ids.otherRack })).toMatchObject({
+      ok: false,
+      errors: [
+        "Pindah lokasi hanya di dalam satu gudang. Pilih lokasi tujuan di gudang yang sama.",
+      ],
     })
   })
 })
@@ -656,6 +675,7 @@ describe("retur", () => {
       receipt([{ productId: ids.product, inputQty: "3", uomId: ids.pcs }]),
     )
     const returnId = await newReturn(originId)
+    expect(await confirmTransfer({ id: returnId })).toMatchObject({ ok: true })
     await db
       .update(transferLines)
       .set({ inputQty: "9" })

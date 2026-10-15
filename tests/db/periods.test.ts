@@ -38,6 +38,7 @@ const ids = {} as Record<
   | "vendor"
   | "customer"
   | "adjustment"
+  | "transit"
   | "partner",
   string
 >
@@ -87,11 +88,11 @@ beforeAll(async () => {
       { code: "ZPVEND", name: "Vendor", type: "vendor" as const },
       { code: "ZPCUST", name: "Customer", type: "customer" as const },
       { code: "ZPADJ", name: "Penyesuaian", type: "adjustment" as const },
+      { code: "ZPTRANS", name: "Transit", type: "transit" as const },
     ])
     .returning({ id: locations.id })
-  ;[ids.rackA, ids.rackB, ids.rackOther, ids.vendor, ids.customer, ids.adjustment] = rows.map(
-    (row) => row.id,
-  )
+  ;[ids.rackA, ids.rackB, ids.rackOther, ids.vendor, ids.customer, ids.adjustment, ids.transit] =
+    rows.map((row) => row.id)
   const [partner] = await db
     .insert(partners)
     .values({
@@ -198,8 +199,9 @@ describe("tutup periode", () => {
     await move("internal", ids.rackA, ids.rackB, "30", "2019-01-10T10:00:00+07:00")
     await move("delivery", ids.rackA, ids.customer, "20", "2019-01-20T10:00:00+07:00")
     await move("adjustment", ids.rackB, ids.adjustment, "5", "2019-01-31T23:00:00+07:00")
-    // Februari 2019: pindah 10 ke gudang 2 (keluar dari gudang 1, masuk ke gudang 2).
-    await move("internal", ids.rackA, ids.rackOther, "10", "2019-02-02T10:00:00+07:00")
+    // Februari 2019: pindah 10 ke gudang 2 lewat transit (keluar dari gudang 1, masuk ke gudang 2).
+    await move("internal", ids.rackA, ids.transit, "10", "2019-02-02T10:00:00+07:00")
+    await move("internal", ids.transit, ids.rackOther, "10", "2019-02-02T10:00:00+07:00")
 
     session.user = manajer
     expect(await closePeriod({ year: 2019, month: 2 })).toMatchObject({

@@ -13,7 +13,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, withLine } from "./helpers"
+import { inRollback, pgErrorInSavepoint, withLine } from "./helpers"
 
 // Kode pergerakan (backlog R-04). Semua data uji berawalan ZC.
 
@@ -153,7 +153,6 @@ test("kode dan arah pergerakan diisi database dari jenis dan lokasi transfer", a
       [receipt, "gr", "in"],
       [delivery, "gi", "out"],
       [await transfer(tx, "internal", ids.rackA, ids.rackB), "ilt", "internal"],
-      [await transfer(tx, "internal", ids.rackA, ids.rackOther), "itw_out", "out"],
       [await transfer(tx, "internal", ids.rackA, ids.transit), "itw_out", "out"],
       [await transfer(tx, "internal", ids.transit, ids.rackOther), "itw_in", "in"],
       [await transfer(tx, "scrap", ids.rackA, ids.scrap), "pu", "out"],
@@ -173,10 +172,21 @@ test("kode ikut berubah saat lokasi Draft diganti dan disalin ke baris saat vali
     const draft = await transfer(tx, "internal", ids.rackA, ids.rackB)
     const [moved] = await tx
       .update(transfers)
-      .set({ destinationLocationId: ids.rackOther })
+      .set({ destinationLocationId: ids.transit })
       .where(eq(transfers.id, draft.id))
       .returning({ code: transfers.movementCode })
     expect(moved.code).toBe("itw_out")
+    // Pindah langsung ke lokasi internal gudang lain ditolak (R-09).
+    expect(
+      await pgErrorInSavepoint(tx, (sp) =>
+        sp
+          .update(transfers)
+          .set({ destinationLocationId: ids.rackOther })
+          .where(eq(transfers.id, draft.id)),
+      ),
+    ).toBe(
+      "Pindah lokasi hanya di dalam satu gudang. Barang antar gudang dipindah lewat lokasi transit.",
+    )
 
     const receipt = await transfer(tx, "receipt", ids.vendor, ids.rackA)
     const [before] = await tx

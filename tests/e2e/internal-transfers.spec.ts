@@ -4,11 +4,12 @@ import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
 import { fillInteractive, waitInteractive } from "./interactive"
 
-// Transfer internal (backlog M2-06): saldo pindah tanpa mengubah total stok.
+// Pindah lokasi (backlog M2-06, R-09): saldo pindah di dalam satu gudang, divalidasi langsung dari
+// Draft.
 
 test.use({ storageState: ADMIN_STATE_FILE })
 
-test("transfer internal memindah saldo antar lokasi", async ({ page }) => {
+test("pindah lokasi memindah saldo di dalam gudang tanpa konfirmasi terpisah", async ({ page }) => {
   const fixture = await createInventoryFixture("TRF")
   await receiveStock(fixture, "10")
 
@@ -21,11 +22,10 @@ test("transfer internal memindah saldo antar lokasi", async ({ page }) => {
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("4")
-  await page.getByRole("button", { name: "Simpan transfer internal" }).click()
-  await expect(page.getByRole("heading", { name: /^Transfer internal TRF\// })).toBeVisible()
+  await page.getByRole("button", { name: "Simpan pindah lokasi" }).click()
+  await expect(page.getByRole("heading", { name: /^Pindah lokasi TRF\// })).toBeVisible()
 
-  await page.getByRole("button", { name: "Konfirmasi" }).click()
-  await expect(page.getByRole("status").filter({ hasText: "Transfer dikonfirmasi." })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Konfirmasi" })).toHaveCount(0)
   await page.getByRole("button", { name: "Validasi" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(

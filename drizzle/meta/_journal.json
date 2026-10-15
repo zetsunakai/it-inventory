@@ -358,6 +358,13 @@
       "when": 1792047733592,
       "tag": "0050_backorder_choice_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 51,
+      "version": "7",
+      "when": 1792048119284,
+      "tag": "0051_internal_moves_rules",
+      "breakpoints": true
     }
   ]
 }

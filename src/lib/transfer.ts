@@ -103,6 +103,8 @@ export type TransferKind = {
   directional?: boolean
   // Scrap dan penyesuaian: alasan wajib dan Manajer menyetujui sekaligus memvalidasi.
   needsApproval?: boolean
+  // Pindah lokasi (R-09): kedua lokasi di satu gudang, divalidasi langsung dari Draft.
+  sameWarehouse?: boolean
 }
 
 export const TRANSFER_KINDS = {
@@ -127,10 +129,11 @@ export const TRANSFER_KINDS = {
   internal: {
     type: "internal",
     path: "/inventory/transfer",
-    noun: "transfer internal",
+    noun: "pindah lokasi",
     locationSide: "source",
     locationLabel: "Lokasi asal",
     secondLocationLabel: "Lokasi tujuan",
+    sameWarehouse: true,
   },
   return: {
     type: "return",

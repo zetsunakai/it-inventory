@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import { TransferDetailPage } from "@/components/inventory/transfer-pages"
 import { TRANSFER_KINDS } from "@/lib/transfer"
 
-export const metadata: Metadata = { title: "Detail transfer internal · IT Inventory" }
+export const metadata: Metadata = { title: "Detail pindah lokasi · IT Inventory" }
 
 export default function InternalTransferPage({ params }: PageProps<"/inventory/transfer/[id]">) {
   return (

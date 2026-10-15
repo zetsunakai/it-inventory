@@ -48,6 +48,15 @@ async function warehouseLocationErrors(
   return []
 }
 
+// Kedua lokasi di gudang yang sama (pindah lokasi, R-09; dipaksakan juga di database).
+async function sameWarehouse(tx: Transaction, first: string, second: string) {
+  const rows = await tx
+    .select({ warehouseId: locations.warehouseId })
+    .from(locations)
+    .where(inArray(locations.id, [first, second]))
+  return rows.length === 2 && rows[0].warehouseId === rows[1].warehouseId
+}
+
 const optionalDate = z
   .string()
   .optional()
@@ -103,6 +112,10 @@ export const saveTransfer = defineFormAction({
       if (!input.otherLocationId) errors.push("Pilih lokasi tujuan.")
       else if (input.otherLocationId === input.locationId) {
         errors.push("Lokasi asal dan tujuan harus berbeda.")
+      } else if (!(await sameWarehouse(tx, input.locationId, input.otherLocationId))) {
+        errors.push(
+          "Pindah lokasi hanya di dalam satu gudang. Pilih lokasi tujuan di gudang yang sama.",
+        )
       } else {
         errors.push(
           ...(await warehouseLocationErrors(tx, user.id, input.otherLocationId, {
@@ -359,6 +372,17 @@ export const validateTransfer = defineAction({
   successMessage: "Transfer divalidasi. Stok sudah diperbarui.",
   handler: async ({ input, tx }) => {
     const effectiveAt = effectiveTimestamp(input.effectiveDate)
+    // Pindah lokasi boleh divalidasi langsung dari Draft (R-09): dikonfirmasi dan dipesan dulu
+    // di transaksi yang sama. Transfer lain harus dikonfirmasi lewat tombol Konfirmasi.
+    const [saved] = await tx
+      .select({ status: transfers.status, movementCode: transfers.movementCode })
+      .from(transfers)
+      .where(eq(transfers.id, input.id))
+    if (saved?.status === "draft") {
+      if (saved.movementCode !== "ilt")
+        throw new AppError("Konfirmasi transfer dulu sebelum validasi.")
+      await tx.execute(sql`select confirm_transfer(${input.id})`)
+    }
     let backorder: { id: string; number: string } | null = null
     // Selalu dipanggil: baris yang qty selesainya kurang dari qty diminta (juga yang tidak disebut
     // di quantities) menyisakan qty untuk transfer lanjutan.

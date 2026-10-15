@@ -47,6 +47,7 @@ export function TransferActions({
   needsApproval = false,
   canApprove = false,
   reservable = false,
+  instant = false,
 }: {
   id: string
   number: string
@@ -65,6 +66,8 @@ export function TransferActions({
   canApprove?: boolean
   // Transfer yang mengambil stok gudang memesan stok (R-07); hanya itu yang bisa dilepas.
   reservable?: boolean
+  // Pindah lokasi (R-09): Validasi langsung dari Draft, tanpa Konfirmasi terpisah.
+  instant?: boolean
 }) {
   const [result, setResult] = useState<ActionResult<unknown> | null>(null)
   const [pending, startTransition] = useTransition()
@@ -103,7 +106,8 @@ export function TransferActions({
   const open = status !== "done" && status !== "cancelled"
   const confirmed = open && status !== "draft"
   // Validasi bila stok sudah (sebagian) tersedia; qty yang belum tersedia diisi lebih kecil.
-  const validatable = status === "ready" || status === "partially_available"
+  const validatable =
+    status === "ready" || status === "partially_available" || (instant && status === "draft")
   if (!open && !result) return null
 
   return (
@@ -162,7 +166,7 @@ export function TransferActions({
 
       {open && (
         <div className="flex flex-wrap gap-2">
-          {status === "draft" && (
+          {status === "draft" && !instant && (
             <Button
               disabled={pending}
               onClick={() => run(() => confirmTransfer({ id }))}

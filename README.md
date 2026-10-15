@@ -243,6 +243,12 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   (`transfer_classification()`): `backorder` bila ada transfer lanjutan atau transfer ini sendiri
   lanjutan, `no_backorder` bila sisa dibuang, `backdate` bila tanggal efektif sebelum hari ini (WIB),
   atau gabungannya. Tanggal efektif mundur (Manajer) wajib dicentang konfirmasinya di dialog.
+- Pindah lokasi (backlog R-09, menu "Pindah lokasi" di `/inventory/transfer`): transfer internal
+  antar dua lokasi internal hanya di dalam satu gudang (trigger `transfers_before_write`; transfer
+  lama antar gudang tidak terpengaruh). Barang antar gudang dipindah lewat lokasi transit (R-10).
+  Pindah lokasi (`ilt`) boleh divalidasi langsung dari Draft: aksi `validateTransfer` memanggil
+  `confirm_transfer()` (pesan stok) lalu validasi dalam satu transaksi; transfer lain harus
+  dikonfirmasi dulu.
 - Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate

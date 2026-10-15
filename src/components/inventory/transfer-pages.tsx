@@ -273,6 +273,7 @@ async function TransferDetail({
           needsApproval={Boolean(kind.needsApproval)}
           canApprove={hasPermission(user.roles, "inventory:approve")}
           reservable={Boolean(transfer.sourceWarehouseId)}
+          instant={Boolean(kind.sameWarehouse)}
           lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
             id: line.id,
             sku: line.sku,
