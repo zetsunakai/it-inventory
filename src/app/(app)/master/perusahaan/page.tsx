@@ -11,7 +11,8 @@ import { requirePermission } from "@/server/auth/session"
 import { getCompanyProfile } from "@/server/queries/company"
 
 import { CompanyProfileForm } from "./company-profile-form"
-import { InfoGrid } from "@/components/layout/info-grid"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 
 export const metadata: Metadata = { title: "Profil perusahaan · IT Inventory" }
 
@@ -32,12 +33,11 @@ export default function CompanyProfilePage() {
 async function CompanyProfile() {
   const user = await requirePermission("master:read")
   const profile = await getCompanyProfile()
+  const canEdit = hasPermission(user.roles, "master:write")
 
-  if (hasPermission(user.roles, "master:write")) {
-    return <CompanyProfileForm profile={profile} office={profile?.office ?? null} />
-  }
-
+  // Belum diisi: langsung form bagi yang berhak mengubah.
   if (!profile) {
+    if (canEdit) return <CompanyProfileForm profile={profile} office={null} />
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
         Profil perusahaan belum diisi. Hubungi Administrator.
@@ -45,27 +45,36 @@ async function CompanyProfile() {
     )
   }
 
-  const rows: [string, string][] = [
-    ["Nama perusahaan", profile.name],
-    ["Alamat", profile.address],
-    ["NPWP", profile.npwp],
-    ["NITKU", profile.nitku],
-    ["NIB", profile.nib],
-    ["Jenis fasilitas", FACILITY_TYPE_LABELS[profile.facilityType]],
-    [
-      "Kantor pabean pengawas",
-      profile.office ? formatRefCode(profile.office) : profile.supervisingOfficeCode,
-    ],
-    ["Nomor izin fasilitas", profile.permitNumber],
-    ["Tanggal izin fasilitas", formatDate(new Date(`${profile.permitDate}T00:00:00+07:00`))],
-  ]
   return (
-    <InfoGrid
-      items={rows.map(([label, value]) => ({
-        label,
-        value,
-        wide: label === "Alamat" || label === "Deskripsi" || label === "Catatan",
-      }))}
+    <RecordModes
+      canEdit={canEdit}
+      view={
+        <>
+          <ViewSection title="Identitas perusahaan">
+            <StaticField label="Nama perusahaan" value={profile.name} span={12} />
+            <StaticField label="Alamat" value={profile.address} span={12} />
+            <StaticField label="NPWP" value={profile.npwp} mono span={4} />
+            <StaticField label="NIB" value={profile.nib} mono span={4} />
+            <StaticField label="NITKU" value={profile.nitku} mono span={4} />
+          </ViewSection>
+          <ViewSection title="Fasilitas kawasan berikat">
+            <StaticField
+              label="Jenis fasilitas"
+              value={FACILITY_TYPE_LABELS[profile.facilityType]}
+            />
+            <StaticField
+              label="Kantor pabean pengawas"
+              value={profile.office ? formatRefCode(profile.office) : profile.supervisingOfficeCode}
+            />
+            <StaticField label="Nomor izin fasilitas" value={profile.permitNumber} />
+            <StaticField
+              label="Tanggal izin fasilitas"
+              value={formatDate(new Date(`${profile.permitDate}T00:00:00+07:00`))}
+            />
+          </ViewSection>
+        </>
+      }
+      form={canEdit && <CompanyProfileForm profile={profile} office={profile.office ?? null} />}
     />
   )
 }

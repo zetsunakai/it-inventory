@@ -3,7 +3,8 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
-import { DeleteRecord } from "@/components/delete-record"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 import { Skeleton } from "@/components/ui/skeleton"
 import { IDENTITY_TYPE_LABELS } from "@/lib/partner"
 import { hasPermission } from "@/lib/permissions"
@@ -11,9 +12,7 @@ import { formatRefCode } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
 import { getPartner } from "@/server/queries/partners"
 
-import { deletePartner } from "../actions"
 import { PartnerForm } from "../partner-form"
-import { InfoGrid } from "@/components/layout/info-grid"
 import { recordActivity } from "@/server/queries/activity"
 import { masterNeighbors } from "@/server/queries/neighbors"
 import { ActivityLog } from "@/components/document/activity-log"
@@ -40,15 +39,30 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
     recordActivity("partners", partner.id, PARTNER_ACTIVITY_LABELS),
   ])
 
-  const rows: [string, string][] = [
-    ["Nama partner", partner.name],
-    ["Alamat", partner.address],
-    ["Negara", partner.country ? formatRefCode(partner.country) : partner.countryCode],
-    ["Jenis identitas", IDENTITY_TYPE_LABELS[partner.identityType]],
-    ["NPWP", partner.identityNumber],
-    ["NITKU", partner.nitku ?? "—"],
-    ["Status", partner.active ? "Aktif" : "Diarsipkan"],
-  ]
+  const canEdit = hasPermission(user.roles, "master:write")
+  const view = (
+    <>
+      <ViewSection title="Data partner">
+        <StaticField label="Nama partner" value={partner.name} span={12} />
+        <StaticField label="Alamat" value={partner.address} span={8} />
+        <StaticField
+          label="Negara"
+          value={partner.country ? formatRefCode(partner.country) : partner.countryCode}
+          span={4}
+        />
+        <StaticField label="Status" value={partner.active ? "Aktif" : "Diarsipkan"} />
+      </ViewSection>
+      <ViewSection title="Identitas">
+        <StaticField
+          label="Jenis identitas"
+          value={IDENTITY_TYPE_LABELS[partner.identityType]}
+          span={4}
+        />
+        <StaticField label="NPWP" value={partner.identityNumber} mono span={8} />
+        <StaticField label="NITKU" value={partner.nitku ?? "—"} mono />
+      </ViewSection>
+    </>
+  )
 
   return (
     <DocumentLayout
@@ -58,26 +72,13 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="partner" />}
     >
-      {hasPermission(user.roles, "master:write") ? (
-        <>
-          <PartnerForm partner={partner} />
-          <DeleteRecord
-            action={deletePartner}
-            id={partner.id}
-            noun="partner"
-            label={partner.name}
-            listHref="/master/partner"
-          />
-        </>
-      ) : (
-        <InfoGrid
-          items={rows.map(([label, value]) => ({
-            label,
-            value,
-            wide: label === "Alamat" || label === "Deskripsi" || label === "Catatan",
-          }))}
-        />
-      )}
+      <RecordModes
+        key={partner.id}
+        canEdit={canEdit}
+        createHref="/master/partner/baru"
+        view={view}
+        form={canEdit && <PartnerForm partner={partner} />}
+      />
     </DocumentLayout>
   )
 }

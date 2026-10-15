@@ -2,8 +2,9 @@
 
 import { useActionState } from "react"
 
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +20,7 @@ import { FACILITY_TYPE_LABELS, FACILITY_TYPES, type CompanyProfileInput } from "
 import type { RefCodeOption } from "@/lib/ref-codes"
 
 import { saveCompanyProfile } from "./actions"
-import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const FACILITY_ITEMS = FACILITY_TYPES.map((type) => ({
   value: type,
@@ -38,31 +39,39 @@ export function CompanyProfileForm({
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
-      <FormField label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name}>
-        <Input
-          id="name"
-          name="name"
-          defaultValue={fieldValue(state, "name", profile?.name)}
-          maxLength={200}
-        />
-      </FormField>
-      <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address}>
-        <Input
-          id="address"
-          name="address"
-          defaultValue={fieldValue(state, "address", profile?.address)}
-          maxLength={500}
-        />
-      </FormField>
-      <FormGrid>
+      <FormSection title="Identitas perusahaan">
+        <FormField label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name} span={12}>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={fieldValue(state, "name", profile?.name)}
+            maxLength={200}
+          />
+        </FormField>
+        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={12}>
+          <Input
+            id="address"
+            name="address"
+            defaultValue={fieldValue(state, "address", profile?.address)}
+            maxLength={500}
+          />
+        </FormField>
         <FormField
           label="NPWP"
           htmlFor="npwp"
           errors={fieldErrors?.npwp}
+          span={4}
           hint="15 atau 16 digit, boleh dengan titik dan strip."
         >
           <Input
@@ -72,7 +81,7 @@ export function CompanyProfileForm({
             inputMode="numeric"
           />
         </FormField>
-        <FormField label="NIB" htmlFor="nib" errors={fieldErrors?.nib} hint="13 digit.">
+        <FormField label="NIB" htmlFor="nib" errors={fieldErrors?.nib} hint="13 digit." span={4}>
           <Input
             id="nib"
             name="nib"
@@ -80,21 +89,22 @@ export function CompanyProfileForm({
             inputMode="numeric"
           />
         </FormField>
-      </FormGrid>
-      <FormField
-        label="NITKU"
-        htmlFor="nitku"
-        errors={fieldErrors?.nitku}
-        hint="22 digit. Kosongkan untuk kantor pusat: otomatis NPWP 16 digit + 000000."
-      >
-        <Input
-          id="nitku"
-          name="nitku"
-          defaultValue={fieldValue(state, "nitku", profile?.nitku)}
-          inputMode="numeric"
-        />
-      </FormField>
-      <FormGrid>
+        <FormField
+          label="NITKU"
+          htmlFor="nitku"
+          errors={fieldErrors?.nitku}
+          span={4}
+          hint="22 digit. Kosongkan untuk kantor pusat: otomatis NPWP 16 digit + 000000."
+        >
+          <Input
+            id="nitku"
+            name="nitku"
+            defaultValue={fieldValue(state, "nitku", profile?.nitku)}
+            inputMode="numeric"
+          />
+        </FormField>
+      </FormSection>
+      <FormSection title="Fasilitas kawasan berikat">
         <FormField
           label="Jenis fasilitas"
           htmlFor="facilityType"
@@ -129,8 +139,6 @@ export function CompanyProfileForm({
             defaultValue={office}
           />
         </FormField>
-      </FormGrid>
-      <FormGrid>
         <FormField
           label="Nomor izin fasilitas"
           htmlFor="permitNumber"
@@ -155,17 +163,7 @@ export function CompanyProfileForm({
             defaultValue={fieldValue(state, "permitDate", profile?.permitDate)}
           />
         </FormField>
-      </FormGrid>
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan"}
-        </Button>
-        {state?.ok && state.message && (
-          <p role="status" className="text-control text-muted-foreground">
-            {state.message}
-          </p>
-        )}
-      </FormActions>
+      </FormSection>
     </form>
   )
 }

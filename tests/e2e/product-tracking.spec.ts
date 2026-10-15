@@ -41,7 +41,7 @@ test("barang masuk berpelacakan nomor seri diberi nomor otomatis per unit", asyn
     "placeholder",
     "No. seri (otomatis)",
   )
-  await page.getByRole("button", { name: "Simpan penerimaan" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page).toHaveURL(/\/inventory\/penerimaan\/[0-9a-f-]{36}$/)
   await page.getByRole("button", { name: "Konfirmasi" }).click()
   await expect(page.getByRole("status").filter({ hasText: "Transfer dikonfirmasi." })).toBeVisible()

@@ -155,6 +155,16 @@ export function TransferForm({
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending} className={TOUCH}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+        {state?.ok && transfer && (
+          <p role="status" className="text-control text-success">
+            Perubahan disimpan.
+          </p>
+        )}
+      </FormActions>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
       {transfer && <input type="hidden" name="id" value={transfer.id} />}
       <input type="hidden" name="type" value={kind.type} />
@@ -317,6 +327,7 @@ export function TransferForm({
             htmlFor={fieldId("transfer-reason")}
             errors={fieldErrors?.reason}
             hint="Wajib. Dibaca Manajer saat menyetujui dan tercatat di laporan penyesuaian."
+            span={12}
           >
             <Textarea
               id={fieldId("transfer-reason")}
@@ -326,7 +337,12 @@ export function TransferForm({
             />
           </FormField>
         )}
-        <FormField label="Catatan" htmlFor={fieldId("transfer-notes")} errors={fieldErrors?.notes}>
+        <FormField
+          label="Catatan"
+          htmlFor={fieldId("transfer-notes")}
+          errors={fieldErrors?.notes}
+          span={12}
+        >
           <Textarea
             id={fieldId("transfer-notes")}
             name="notes"
@@ -451,17 +467,6 @@ export function TransferForm({
           </Button>
         </div>
       </FormSection>
-
-      <FormActions>
-        <Button type="submit" disabled={pending} className={TOUCH}>
-          {pending ? "Menyimpan…" : transfer ? "Simpan perubahan" : `Simpan ${kind.noun}`}
-        </Button>
-        {state?.ok && transfer && (
-          <p role="status" className="text-control text-success">
-            Perubahan disimpan.
-          </p>
-        )}
-      </FormActions>
     </form>
   )
 }

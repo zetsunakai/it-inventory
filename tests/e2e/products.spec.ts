@@ -29,6 +29,8 @@ test.describe("Administrator", () => {
 
     await row.getByRole("link", { name: SKU }).click()
     await expect(page.getByText("Belum siap dokumen BC: kode HS belum diisi.")).toBeVisible()
+    // Detail dibuka dalam mode baca; Edit membuka form.
+    await page.getByRole("button", { name: "Edit" }).click()
 
     // exact: halaman daftar (tersimpan tersembunyi oleh router) punya kotak "Cari ... kode HS".
     await page.getByLabel("Kode HS", { exact: true }).fill("laptops")
@@ -55,4 +57,5 @@ test("Auditor melihat detail produk tanpa form ubah", async ({ page }) => {
   await expect(page.getByText("1 PCS = 1 PCE (Piece)")).toBeVisible()
   await expect(page.getByText("1,8 kg per PCS")).toBeVisible()
   await expect(page.getByRole("button", { name: "Simpan" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0)
 })

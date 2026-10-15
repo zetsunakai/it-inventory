@@ -30,7 +30,7 @@ export function StatusSteps({
   const label = outside?.label ?? currentLabel ?? steps[index]?.label ?? "—"
 
   return (
-    <div className="w-full rounded-lg border bg-card lg:w-72">
+    <div className="w-full rounded-2xl border bg-card lg:w-80">
       <button
         type="button"
         onClick={() => setOpen(!open)}

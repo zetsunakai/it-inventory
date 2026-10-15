@@ -22,7 +22,7 @@ import {
   RETURN_LINE_ACTIONS,
   type ReturnLineAction,
 } from "@/lib/inventory"
-import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 export type ReturnRequestFormValues = {
   id: string
@@ -101,42 +101,55 @@ export function ReturnRequestForm({
         )
       }}
     >
+      <FormActions>
+        <Button type="submit" disabled={pending} className={TOUCH}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+        {result?.ok && (
+          <p role="status" className="text-control text-success">
+            {result.message}
+          </p>
+        )}
+      </FormActions>
       <FormErrors errors={result?.ok === false ? result.errors : undefined} />
 
       <FormSection title="Data retur">
-        <FormGrid>
-          <FormField
-            label={locationLabel}
-            htmlFor={fieldId("location")}
-            errors={fieldErrors?.locationId}
-          >
-            <Select items={locations} value={locationId} onValueChange={setLocationId}>
-              <SelectTrigger id={fieldId("location")} className="w-full">
-                <SelectValue placeholder="Pilih lokasi gudang" />
-              </SelectTrigger>
-              <SelectContent>
-                {locations.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField
-            label="Tanggal rencana"
-            htmlFor={fieldId("date")}
-            errors={fieldErrors?.scheduledDate}
-          >
-            <Input
-              id={fieldId("date")}
-              name="scheduledDate"
-              type="date"
-              defaultValue={request.scheduledDate ?? ""}
-            />
-          </FormField>
-        </FormGrid>
-        <FormField label="Alasan retur" htmlFor={fieldId("reason")} errors={fieldErrors?.reason}>
+        <FormField
+          label={locationLabel}
+          htmlFor={fieldId("location")}
+          errors={fieldErrors?.locationId}
+        >
+          <Select items={locations} value={locationId} onValueChange={setLocationId}>
+            <SelectTrigger id={fieldId("location")} className="w-full">
+              <SelectValue placeholder="Pilih lokasi gudang" />
+            </SelectTrigger>
+            <SelectContent>
+              {locations.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+        <FormField
+          label="Tanggal rencana"
+          htmlFor={fieldId("date")}
+          errors={fieldErrors?.scheduledDate}
+        >
+          <Input
+            id={fieldId("date")}
+            name="scheduledDate"
+            type="date"
+            defaultValue={request.scheduledDate ?? ""}
+          />
+        </FormField>
+        <FormField
+          label="Alasan retur"
+          htmlFor={fieldId("reason")}
+          errors={fieldErrors?.reason}
+          span={12}
+        >
           <Textarea
             id={fieldId("reason")}
             name="reason"
@@ -144,7 +157,7 @@ export function ReturnRequestForm({
             defaultValue={request.reason ?? ""}
           />
         </FormField>
-        <FormField label="Catatan" htmlFor={fieldId("notes")} errors={fieldErrors?.notes}>
+        <FormField label="Catatan" htmlFor={fieldId("notes")} errors={fieldErrors?.notes} span={12}>
           <Textarea
             id={fieldId("notes")}
             name="notes"
@@ -206,17 +219,6 @@ export function ReturnRequestForm({
           ))}
         </div>
       </FormSection>
-
-      <FormActions>
-        <Button type="submit" disabled={pending} className={TOUCH}>
-          {pending ? "Menyimpan…" : "Simpan perubahan"}
-        </Button>
-        {result?.ok && (
-          <p role="status" className="text-control text-success">
-            {result.message}
-          </p>
-        )}
-      </FormActions>
     </form>
   )
 }

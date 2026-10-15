@@ -20,19 +20,19 @@ test("produk yang belum dipakai dihapus setelah konfirmasi", async ({ page }) =>
   await page.getByRole("button", { name: "Simpan" }).click()
   await expect(page).toHaveURL(new RegExp(`/master/produk\\?q=${SKU}$`))
 
-  await page.getByRole("link", { name: SKU }).click()
-  await page.getByRole("button", { name: "Hapus produk" }).click()
+  // Hapus dari daftar: pilih baris, lalu Hapus di baris aksi di atas tabel.
+  await page.getByRole("checkbox", { name: `Pilih ${SKU}` }).check()
+  await expect(page.getByText("1 dipilih")).toBeVisible()
+  await page.getByRole("button", { name: "Hapus", exact: true }).click()
   const dialog = page.getByRole("alertdialog")
   await expect(dialog).toContainText(`Hapus produk ${SKU}?`)
   // Batal tidak menghapus apa pun.
   await dialog.getByRole("button", { name: "Batal" }).click()
   await expect(dialog).toBeHidden()
 
-  await page.getByRole("button", { name: "Hapus produk" }).click()
+  await page.getByRole("button", { name: "Hapus", exact: true }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Hapus", exact: true }).click()
-  await expect(page).toHaveURL(/\/master\/produk$/)
-
-  await page.goto(`/master/produk?q=${SKU}`)
+  await expect(page.getByRole("status")).toHaveText("1 produk dihapus.")
   await expect(page.getByText("Tidak ada produk yang cocok")).toBeVisible()
 })
 

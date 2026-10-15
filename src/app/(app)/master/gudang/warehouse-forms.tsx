@@ -3,9 +3,10 @@
 import { useRouter } from "next/navigation"
 import { useActionState, useEffect } from "react"
 
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
 import { CheckboxField } from "@/components/checkbox-field"
-import { FormField, StaticField } from "@/components/form-field"
+import { FormField, FormSection, StaticField } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fieldValue, type FormState } from "@/lib/action-result"
@@ -29,6 +30,8 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
   const checked = (name: string, saved: boolean) =>
     state?.ok === false ? state.values?.[name] === "on" : saved
 
@@ -39,18 +42,24 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {warehouse && <input type="hidden" name="id" value={warehouse.id} />}
-      <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
+      <FormSection title="Data gudang">
         {warehouse ? (
           <StaticField
+            span={4}
             label="Kode gudang"
             value={warehouse.code}
             mono
             reason="Tidak bisa diubah."
           />
         ) : (
-          <FormField label="Kode gudang" htmlFor="code" errors={fieldErrors?.code}>
+          <FormField label="Kode gudang" htmlFor="code" errors={fieldErrors?.code} span={4}>
             <Input
               id="code"
               name="code"
@@ -60,7 +69,7 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
             />
           </FormField>
         )}
-        <FormField label="Nama gudang" htmlFor="name" errors={fieldErrors?.name}>
+        <FormField label="Nama gudang" htmlFor="name" errors={fieldErrors?.name} span={8}>
           <Input
             id="name"
             name="name"
@@ -68,33 +77,23 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
             maxLength={200}
           />
         </FormField>
-      </div>
-      <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address}>
-        <Input
-          id="address"
-          name="address"
-          defaultValue={fieldValue(state, "address", warehouse?.address)}
-          maxLength={500}
-        />
-      </FormField>
-      {warehouse && (
-        <CheckboxField
-          name="active"
-          label="Aktif"
-          description="Gudang yang diarsipkan tidak bisa dipilih untuk transaksi baru."
-          defaultChecked={checked("active", warehouse.active)}
-        />
-      )}
-      {state?.ok && warehouse && state.message && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan"}
-        </Button>
-      </FormActions>
+        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={12}>
+          <Input
+            id="address"
+            name="address"
+            defaultValue={fieldValue(state, "address", warehouse?.address)}
+            maxLength={500}
+          />
+        </FormField>
+        {warehouse && (
+          <CheckboxField
+            name="active"
+            label="Aktif"
+            description="Gudang yang diarsipkan tidak bisa dipilih untuk transaksi baru."
+            defaultChecked={checked("active", warehouse.active)}
+          />
+        )}
+      </FormSection>
     </form>
   )
 }

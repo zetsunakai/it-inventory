@@ -3,7 +3,8 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
-import { DeleteRecord } from "@/components/delete-record"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -13,7 +14,6 @@ import { getProductCategory, listProductCategoryOptions } from "@/server/queries
 import { recordActivity } from "@/server/queries/activity"
 import { productCategoryNeighbors } from "@/server/queries/neighbors"
 
-import { deleteProductCategory } from "../actions"
 import { ProductCategoryForm } from "../category-form"
 
 export const metadata: Metadata = { title: "Ubah kategori produk · IT Inventory" }
@@ -51,13 +51,27 @@ async function EditCategory({ params }: { params: Promise<{ id: string }> }) {
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="kategori produk" />}
     >
-      <ProductCategoryForm category={category} parents={parents} />
-      <DeleteRecord
-        action={deleteProductCategory}
-        id={category.id}
-        noun="kategori produk"
-        label={category.name}
-        listHref="/master/kategori-produk"
+      <RecordModes
+        key={category.id}
+        canEdit
+        createHref="/master/kategori-produk/baru"
+        view={
+          <ViewSection title="Data kategori">
+            <StaticField label="Nama kategori" value={category.name} />
+            <StaticField
+              label="Kategori induk"
+              value={
+                category.parentId
+                  ? category.path.slice(0, category.path.lastIndexOf(" / "))
+                  : "Tanpa induk (kategori teratas)"
+              }
+            />
+            <StaticField label="Prefix kode" value={category.codePrefix ?? "—"} mono span={8} />
+            <StaticField label="Jumlah digit" value={category.codeDigits} span={4} />
+            <StaticField label="Status" value={category.active ? "Aktif" : "Diarsipkan"} />
+          </ViewSection>
+        }
+        form={<ProductCategoryForm category={category} parents={parents} />}
       />
     </DocumentLayout>
   )

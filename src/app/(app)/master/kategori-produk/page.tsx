@@ -25,6 +25,8 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
+import { deleteProductCategory } from "./actions"
+
 export const metadata: Metadata = { title: "Kategori produk · IT Inventory" }
 
 const COLUMNS: DataTableColumn<ProductCategoryRow>[] = [
@@ -102,6 +104,16 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
+        bulkDelete={
+          canEdit
+            ? {
+                action: deleteProductCategory,
+                noun: "kategori produk",
+                id: (row) => row.id,
+                label: (row) => row.path,
+              }
+            : undefined
+        }
         rowHref={canEdit ? (row) => `/master/kategori-produk/${row.id}` : undefined}
         rowMuted={(row) => !row.active}
         empty={listEmptyState({

@@ -100,6 +100,16 @@ export function InterwarehouseForm({
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending} className={TOUCH}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+        {state?.ok && request && (
+          <p role="status" className="text-control text-success">
+            Perubahan disimpan.
+          </p>
+        )}
+      </FormActions>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
       {request && <input type="hidden" name="id" value={request.id} />}
       <input type="hidden" name="lines" value={JSON.stringify(payload)} />
@@ -187,7 +197,7 @@ export function InterwarehouseForm({
             </FormField>
           </FormColumn>
         </FormColumns>
-        <FormField label="Catatan" htmlFor={fieldId("notes")} errors={fieldErrors?.notes}>
+        <FormField label="Catatan" htmlFor={fieldId("notes")} errors={fieldErrors?.notes} span={12}>
           <Textarea
             id={fieldId("notes")}
             name="notes"
@@ -289,17 +299,6 @@ export function InterwarehouseForm({
           </Button>
         </div>
       </FormSection>
-
-      <FormActions>
-        <Button type="submit" disabled={pending} className={TOUCH}>
-          {pending ? "Menyimpan…" : request ? "Simpan perubahan" : "Simpan permintaan"}
-        </Button>
-        {state?.ok && request && (
-          <p role="status" className="text-control text-success">
-            Perubahan disimpan.
-          </p>
-        )}
-      </FormActions>
     </form>
   )
 }

@@ -21,7 +21,7 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
   await fillInteractive(page.getByLabel("Produk baris 1"), origin.product.sku)
   await page.getByRole("option", { name: new RegExp(origin.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("6")
-  await page.getByRole("button", { name: "Simpan permintaan" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByRole("heading", { name: /^Transfer antar gudang ITW\// })).toBeVisible()
 
   await page.getByRole("button", { name: "Konfirmasi" }).click()

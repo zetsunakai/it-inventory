@@ -3,16 +3,17 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
-import { DeleteRecord } from "@/components/delete-record"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
+import { formatDecimal } from "@/lib/decimal"
 import { requirePermission } from "@/server/auth/session"
 import { getUom } from "@/server/queries/uoms"
 import { recordActivity } from "@/server/queries/activity"
 import { uomNeighbors } from "@/server/queries/neighbors"
 
-import { deleteUom } from "../actions"
 import { UomEditForm } from "../uom-forms"
 
 export const metadata: Metadata = { title: "Ubah satuan · IT Inventory" }
@@ -44,17 +45,28 @@ async function EditUom({ params }: { params: Promise<{ id: string }> }) {
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="satuan" />}
     >
-      <UomEditForm uom={uom} />
-      {/* Satuan acuan tidak bisa dihapus (deleteUom), jadi bagian ini tidak ditampilkan. */}
-      {!uom.isReference && (
-        <DeleteRecord
-          action={deleteUom}
-          id={uom.id}
-          noun="satuan"
-          label={uom.code}
-          listHref="/master/satuan"
-        />
-      )}
+      <RecordModes
+        key={uom.id}
+        canEdit
+        createHref="/master/satuan/baru"
+        view={
+          <ViewSection title="Data satuan">
+            <StaticField label="Nama satuan" value={uom.name} span={12} />
+            <StaticField
+              label="Faktor konversi"
+              value={`1 ${uom.code} = ${formatDecimal(uom.factor)} ${uom.referenceCode ?? uom.code}`}
+              reason={
+                uom.isReference
+                  ? `${uom.code} adalah satuan acuan kategorinya, faktornya selalu 1.`
+                  : undefined
+              }
+            />
+            <StaticField label="Pembulatan" value={formatDecimal(uom.rounding)} />
+            <StaticField label="Status" value={uom.active ? "Aktif" : "Diarsipkan"} />
+          </ViewSection>
+        }
+        form={<UomEditForm uom={uom} />}
+      />
     </DocumentLayout>
   )
 }

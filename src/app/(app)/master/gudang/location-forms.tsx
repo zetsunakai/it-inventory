@@ -2,9 +2,10 @@
 
 import { useActionState } from "react"
 
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
 import { CheckboxField } from "@/components/checkbox-field"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -71,12 +72,21 @@ export function LocationCreateForm({
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
 
   return (
-    <form action={formAction} className="space-y-4 rounded-lg border p-4">
+    <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Tambah lokasi"}
+        </Button>
+        {state?.ok && (
+          <p role="status" className="text-control text-muted-foreground">
+            {state.message}
+          </p>
+        )}
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
-      <p className="font-medium">Tambah lokasi</p>
       <input type="hidden" name="warehouseId" value={warehouseId} />
-      <div className="grid gap-4 sm:grid-cols-[10rem_1fr_12rem]">
-        <FormField label="Kode lokasi" htmlFor="location-code" errors={fieldErrors?.code}>
+      <FormSection title="Tambah lokasi">
+        <FormField label="Kode lokasi" htmlFor="location-code" errors={fieldErrors?.code} span={3}>
           <Input
             id="location-code"
             name="code"
@@ -85,7 +95,7 @@ export function LocationCreateForm({
             autoComplete="off"
           />
         </FormField>
-        <FormField label="Nama lokasi" htmlFor="location-name" errors={fieldErrors?.name}>
+        <FormField label="Nama lokasi" htmlFor="location-name" errors={fieldErrors?.name} span={6}>
           <Input
             id="location-name"
             name="name"
@@ -93,7 +103,7 @@ export function LocationCreateForm({
             maxLength={200}
           />
         </FormField>
-        <FormField label="Tipe" htmlFor="location-type" errors={fieldErrors?.type}>
+        <FormField label="Tipe" htmlFor="location-type" errors={fieldErrors?.type} span={3}>
           <Select name="type" items={TYPE_ITEMS} defaultValue="internal">
             <SelectTrigger id="location-type" className="w-full">
               <SelectValue />
@@ -107,20 +117,15 @@ export function LocationCreateForm({
             </SelectContent>
           </Select>
         </FormField>
-      </div>
-      <FormField label="Lokasi induk" htmlFor="location-parentId" errors={fieldErrors?.parentId}>
-        <ParentSelect options={parents} defaultValue={fieldValue(state, "parentId")} />
-      </FormField>
-      {state?.ok && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Tambah lokasi"}
-        </Button>
-      </FormActions>
+        <FormField
+          label="Lokasi induk"
+          htmlFor="location-parentId"
+          errors={fieldErrors?.parentId}
+          span={12}
+        >
+          <ParentSelect options={parents} defaultValue={fieldValue(state, "parentId")} />
+        </FormField>
+      </FormSection>
     </form>
   )
 }
@@ -137,38 +142,37 @@ export function LocationEditForm({
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
 
   return (
     <form action={formAction} className={FORM_CLASS}>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
-      <input type="hidden" name="id" value={location.id} />
-      <FormField label="Nama lokasi" htmlFor="location-name" errors={fieldErrors?.name}>
-        <Input
-          id="location-name"
-          name="name"
-          defaultValue={fieldValue(state, "name", location.name)}
-          maxLength={200}
-        />
-      </FormField>
-      <FormField label="Lokasi induk" htmlFor="location-parentId" errors={fieldErrors?.parentId}>
-        <ParentSelect options={parents} defaultValue={location.parentId} />
-      </FormField>
-      <CheckboxField
-        name="active"
-        label="Aktif"
-        description="Lokasi yang diarsipkan tidak bisa dipilih untuk transaksi baru."
-        defaultChecked={state?.ok === false ? state.values?.active === "on" : location.active}
-      />
-      {state?.ok && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
       <FormActions>
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
       </FormActions>
+      {state?.ok === false && <FormErrors errors={state.errors} />}
+      <input type="hidden" name="id" value={location.id} />
+      <FormSection title="Data lokasi">
+        <FormField label="Nama lokasi" htmlFor="location-name" errors={fieldErrors?.name}>
+          <Input
+            id="location-name"
+            name="name"
+            defaultValue={fieldValue(state, "name", location.name)}
+            maxLength={200}
+          />
+        </FormField>
+        <FormField label="Lokasi induk" htmlFor="location-parentId" errors={fieldErrors?.parentId}>
+          <ParentSelect options={parents} defaultValue={location.parentId} />
+        </FormField>
+        <CheckboxField
+          name="active"
+          label="Aktif"
+          description="Lokasi yang diarsipkan tidak bisa dipilih untuk transaksi baru."
+          defaultChecked={state?.ok === false ? state.values?.active === "on" : location.active}
+        />
+      </FormSection>
     </form>
   )
 }

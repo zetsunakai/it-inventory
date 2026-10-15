@@ -4,7 +4,8 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
-import { DeleteRecord } from "@/components/delete-record"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -18,7 +19,6 @@ import {
 import { recordActivity } from "@/server/queries/activity"
 import { locationNeighbors } from "@/server/queries/neighbors"
 
-import { deleteLocation } from "../../../actions"
 import { LocationEditForm } from "../../../location-forms"
 
 export const metadata: Metadata = { title: "Ubah lokasi · IT Inventory" }
@@ -81,13 +81,23 @@ async function EditLocation({ params }: { params: Promise<{ id: string; lokasiId
         </>
       }
     >
-      <LocationEditForm location={location} parents={parents} />
-      <DeleteRecord
-        action={deleteLocation}
-        id={location.id}
-        noun="lokasi"
-        label={location.code}
-        listHref={`/master/gudang/${warehouse.id}`}
+      <RecordModes
+        key={location.id}
+        canEdit
+        view={
+          <ViewSection title="Data lokasi">
+            <StaticField label="Nama lokasi" value={location.name} />
+            <StaticField
+              label="Lokasi induk"
+              value={
+                parents.find((option) => option.id === location.parentId)?.path ??
+                "Tanpa induk (langsung di bawah gudang)"
+              }
+            />
+            <StaticField label="Status" value={location.active ? "Aktif" : "Diarsipkan"} />
+          </ViewSection>
+        }
+        form={<LocationEditForm location={location} parents={parents} />}
       />
     </DocumentLayout>
   )

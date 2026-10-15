@@ -23,7 +23,7 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await expect(page.getByText("Tersedia 5 PCS")).toBeVisible()
   await page.getByLabel("Qty baris 1").fill("8")
-  await page.getByRole("button", { name: "Simpan pengiriman" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page).toHaveURL(/\/inventory\/pengiriman\/[0-9a-f-]{36}$/)
 
   // Stok baru 5 dari 8: Konfirmasi menandai Sebagian tersedia, validasi menolak (R-06).
@@ -45,7 +45,7 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   await page.getByRole("button", { name: "Kembali ke Draft" }).click()
   // Halaman "buat" sebelumnya masih tersimpan tersembunyi oleh router; pakai yang terlihat.
   await page.getByLabel("Qty baris 1").filter({ visible: true }).fill("3")
-  await page.getByRole("button", { name: "Simpan perubahan" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByText("Perubahan disimpan.")).toBeVisible()
   await page.getByRole("button", { name: "Konfirmasi" }).click()
   await expect(page.getByRole("status").filter({ hasText: "Siap divalidasi." })).toBeVisible()

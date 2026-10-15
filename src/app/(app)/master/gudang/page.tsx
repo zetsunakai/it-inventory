@@ -33,6 +33,8 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
+import { deleteWarehouse } from "./actions"
+
 export const metadata: Metadata = { title: "Gudang & lokasi · IT Inventory" }
 
 const COLUMNS: DataTableColumn<WarehouseRow & { locationCount: number }>[] = [
@@ -125,6 +127,16 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
+        bulkDelete={
+          canEdit
+            ? {
+                action: deleteWarehouse,
+                noun: "gudang",
+                id: (row) => row.id,
+                label: (row) => row.code,
+              }
+            : undefined
+        }
         rowHref={(row) => `/master/gudang/${row.id}`}
         rowMuted={(row) => !row.active}
         empty={

@@ -1,6 +1,12 @@
 import type { ReactNode } from "react"
 
 import { Label } from "@/components/ui/label"
+import { cn } from "@/lib/utils"
+
+// Lebar field dalam grid 12 kolom kartu form (.form-grid, UF-04), berlaku mulai 768px; di HP
+// semua field selebar kartu. 6 = setengah (bawaan), 12 = penuh (deskripsi, alamat, catatan),
+// 3/4/8/9 untuk pasangan field pendek–panjang (kode + nama, nama + kode singkat).
+export type FieldSpan = 3 | 4 | 6 | 8 | 9 | 12
 
 // Satu field form: label, kontrol, petunjuk, dan pesan error dari validasi server.
 // hint hanya untuk aturan yang tidak tertebak (format NITKU, arti faktor), bukan "boleh dikosongkan".
@@ -9,17 +15,21 @@ export function FormField({
   htmlFor,
   errors,
   hint,
+  span = 6,
   children,
 }: {
   label: string
   htmlFor: string
   errors?: string[]
   hint?: string
+  span?: FieldSpan
   children: ReactNode
 }) {
   return (
-    <div className="space-y-2">
-      <Label htmlFor={htmlFor}>{label}</Label>
+    <div className="form-field" data-span={span}>
+      <Label htmlFor={htmlFor} className="min-h-5 text-control leading-5">
+        {label}
+      </Label>
       {children}
       {hint && <p className="text-caption text-muted-foreground">{hint}</p>}
       {errors?.map((message) => (
@@ -32,29 +42,61 @@ export function FormField({
 }
 
 // Nilai yang tidak bisa diubah (kode, SKU, satuan stok): tampil sebagai teks beserta alasannya,
-// bukan input abu-abu yang di-disable.
+// bukan input abu-abu yang di-disable. Tingginya sama dengan kontrol supaya sejajar.
 export function StaticField({
   label,
   value,
   reason,
   mono,
+  span = 6,
 }: {
   label: string
   value: ReactNode
   reason?: string
   mono?: boolean
+  span?: FieldSpan
 }) {
   return (
-    <div className="space-y-1.5">
-      <p className="text-sm leading-none font-medium">{label}</p>
-      <p className={mono ? "py-1.5 font-mono text-sm" : "py-1.5 text-sm"}>{value}</p>
+    <div className="form-field" data-span={span}>
+      <p className="form-field-label">{label}</p>
+      <p className={cn("form-field-static", mono && "font-mono")}>{value}</p>
       {reason && <p className="text-caption text-muted-foreground">{reason}</p>}
     </div>
   )
 }
 
-// Kelompok field dengan judul (mis. "Data produk", "Data kepabeanan").
+// Kartu kelompok field (mis. "Data produk", "Data kepabeanan"): judul + garis pemisah, lalu grid
+// 12 kolom. Di dalam notebook (Tabs) bingkainya hilang. Aksi kelompok (mis. Tambah baris) di kanan
+// judul.
 export function FormSection({
+  title,
+  description,
+  actions,
+  children,
+}: {
+  title: string
+  description?: string
+  actions?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <fieldset className="form-sheet">
+      <legend className="sr-only">{title}</legend>
+      <div className="form-sheet-header">
+        <div aria-hidden className="min-w-0">
+          <p className="form-sheet-title">{title}</p>
+          {description && <p className="form-sheet-description">{description}</p>}
+        </div>
+        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+      </div>
+      <div className="form-grid">{children}</div>
+    </fieldset>
+  )
+}
+
+// Kartu mode baca (RecordModes): bingkai dan grid sama dengan FormSection, isinya StaticField
+// dengan span yang sama seperti form-nya, supaya letak field tidak bergeser saat pindah ke Edit.
+export function ViewSection({
   title,
   description,
   children,
@@ -64,13 +106,14 @@ export function FormSection({
   children: ReactNode
 }) {
   return (
-    <fieldset className="space-y-5 border-t pt-6 first-of-type:border-t-0 first-of-type:pt-0">
-      <legend className="sr-only">{title}</legend>
-      <div aria-hidden>
-        <p className="text-base font-semibold">{title}</p>
-        {description && <p className="mt-0.5 text-control text-muted-foreground">{description}</p>}
+    <section className="form-sheet" aria-label={title}>
+      <div className="form-sheet-header">
+        <div aria-hidden className="min-w-0">
+          <p className="form-sheet-title">{title}</p>
+          {description && <p className="form-sheet-description">{description}</p>}
+        </div>
       </div>
-      {children}
-    </fieldset>
+      <div className="form-grid">{children}</div>
+    </section>
   )
 }

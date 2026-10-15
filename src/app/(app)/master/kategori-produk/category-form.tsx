@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useState } from "react"
 
 import { CheckboxField } from "@/components/checkbox-field"
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection } from "@/components/form-field"
 import { ProductCategorySelect } from "@/components/product-category-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -30,6 +31,8 @@ export function ProductCategoryForm({
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
   const [parentId, setParentId] = useState(category?.parentId ?? "")
   const [prefix, setPrefix] = useState(category?.codePrefix ?? "")
   const [digits, setDigits] = useState(String(category?.codeDigits ?? DEFAULT_CODE_DIGITS))
@@ -48,31 +51,37 @@ export function ProductCategoryForm({
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {category && <input type="hidden" name="id" value={category.id} />}
-      <FormField label="Nama kategori" htmlFor="name" errors={fieldErrors?.name}>
-        <Input
-          id="name"
-          name="name"
-          defaultValue={fieldValue(state, "name", category?.name)}
-          maxLength={100}
-        />
-      </FormField>
-      <FormField label="Kategori induk" htmlFor="parentId" errors={fieldErrors?.parentId}>
-        <ProductCategorySelect
-          id="parentId"
-          name="parentId"
-          options={parents}
-          value={parentId}
-          onValueChange={setParentId}
-          emptyLabel="Tanpa induk (kategori teratas)"
-        />
-      </FormField>
-      <div className="grid gap-4 sm:grid-cols-[1fr_10rem]">
+      <FormSection title="Data kategori">
+        <FormField label="Nama kategori" htmlFor="name" errors={fieldErrors?.name}>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={fieldValue(state, "name", category?.name)}
+            maxLength={100}
+          />
+        </FormField>
+        <FormField label="Kategori induk" htmlFor="parentId" errors={fieldErrors?.parentId}>
+          <ProductCategorySelect
+            id="parentId"
+            name="parentId"
+            options={parents}
+            value={parentId}
+            onValueChange={setParentId}
+            emptyLabel="Tanpa induk (kategori teratas)"
+          />
+        </FormField>
         <FormField
           label="Prefix kode"
           htmlFor="codePrefix"
           errors={fieldErrors?.codePrefix}
+          span={8}
           hint={
             example
               ? `Product code produk baru yang dikosongkan dibuat otomatis, mis. ${example}.`
@@ -89,7 +98,12 @@ export function ProductCategoryForm({
             className="font-mono uppercase"
           />
         </FormField>
-        <FormField label="Jumlah digit" htmlFor="codeDigits" errors={fieldErrors?.codeDigits}>
+        <FormField
+          label="Jumlah digit"
+          htmlFor="codeDigits"
+          errors={fieldErrors?.codeDigits}
+          span={4}
+        >
           <Input
             id="codeDigits"
             name="codeDigits"
@@ -99,25 +113,15 @@ export function ProductCategoryForm({
             autoComplete="off"
           />
         </FormField>
-      </div>
-      {category && (
-        <CheckboxField
-          name="active"
-          label="Aktif"
-          description="Kategori yang diarsipkan tidak bisa dipilih untuk produk baru atau sebagai induk."
-          defaultChecked={state?.ok === false ? state.values?.active === "on" : category.active}
-        />
-      )}
-      {state?.ok && category && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan"}
-        </Button>
-      </FormActions>
+        {category && (
+          <CheckboxField
+            name="active"
+            label="Aktif"
+            description="Kategori yang diarsipkan tidak bisa dipilih untuk produk baru atau sebagai induk."
+            defaultChecked={state?.ok === false ? state.values?.active === "on" : category.active}
+          />
+        )}
+      </FormSection>
     </form>
   )
 }

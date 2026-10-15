@@ -99,6 +99,7 @@ test.describe("Administrator", () => {
     // Arsipkan: tetap ada di daftar, tapi tidak bisa dipilih untuk data baru.
     await page.goto(`/master/referensi?jenis=tps&q=${code}`)
     await page.getByRole("row").filter({ hasText: code }).getByRole("link").first().click()
+    await page.getByRole("button", { name: "Edit" }).click()
     await page.getByRole("checkbox", { name: "Aktif" }).uncheck()
     await page.getByRole("button", { name: "Simpan" }).click()
     await expect(page.getByRole("status")).toHaveText("Perubahan disimpan.")

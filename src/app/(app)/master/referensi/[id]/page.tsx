@@ -11,7 +11,8 @@ import { requirePermission } from "@/server/auth/session"
 import { findRefCode, getRefCode } from "@/server/queries/ref-codes"
 
 import { RefCodeEditForm } from "../ref-code-forms"
-import { InfoGrid } from "@/components/layout/info-grid"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 import { recordActivity } from "@/server/queries/activity"
 import { refCodeNeighbors } from "@/server/queries/neighbors"
 
@@ -48,21 +49,26 @@ async function EditRefCode({ params }: { params: Promise<{ id: string }> }) {
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="referensi kepabeanan" />}
     >
-      <InfoGrid
-        items={[
-          { label: "Jenis", value: REF_CODE_TYPE_LABELS[row.type] },
-          { label: "Kode", value: <span className="font-mono">{row.code}</span> },
-          ...(parentType
-            ? [
-                {
-                  label: REF_CODE_TYPE_LABELS[parentType],
-                  value: parent ? formatRefCode(parent) : row.parentCode,
-                },
-              ]
-            : []),
-        ]}
+      <RecordModes
+        key={row.id}
+        canEdit
+        createHref="/master/referensi/baru"
+        view={
+          <ViewSection title="Data referensi">
+            <StaticField label="Jenis" value={REF_CODE_TYPE_LABELS[row.type]} />
+            {parentType && (
+              <StaticField
+                label={REF_CODE_TYPE_LABELS[parentType]}
+                value={parent ? formatRefCode(parent) : row.parentCode}
+              />
+            )}
+            <StaticField label="Kode" value={row.code} mono span={4} />
+            <StaticField label="Nama" value={row.name} span={8} />
+            <StaticField label="Status" value={row.active ? "Aktif" : "Diarsipkan"} />
+          </ViewSection>
+        }
+        form={<RefCodeEditForm id={row.id} name={row.name} active={row.active} />}
       />
-      <RefCodeEditForm id={row.id} name={row.name} active={row.active} />
     </DocumentLayout>
   )
 }

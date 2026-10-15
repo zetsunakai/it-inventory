@@ -1,46 +1,47 @@
 import type { ReactNode } from "react"
 
-import { cn } from "@/lib/utils"
+import { DiscardButton } from "./record-modes"
 
-// Tata letak form standar (backlog UF-03; aturan urutan field di skill ui-it-inventory):
-//   - satu lebar untuk semua form (FORM_CLASS);
-//   - FormGrid dua kolom di desktop: kolom kiri siapa/di mana (partner, jenis, lokasi), kolom kanan
-//     kapan/rujukan (tanggal, referensi); field panjang (alasan, catatan) memakai FormWide;
-//   - FormActions di bawah: aksi utama dulu, lalu sekunder, aksi berbahaya di kanan; menempel di
-//     bawah layar di HP.
+// Template form standar ala hmx-002 (UF-03 urutan field, UF-04 ukuran; ukuran ada di globals.css):
+//   <form className={FORM_CLASS}>           halaman: satu lebar, kartu berjarak 16px
+//     <FormActions danger={…}>              baris aksi di ATAS: Simpan dulu, aksi sekunder, Buang
+//       Simpan… <p role="status" />          (otomatis dari RecordModes); aksi berbahaya di kanan
+//     </FormActions>
+//     <FormErrors />
+//     <FormSection title="...">             kartu: judul + garis, isi grid 12 kolom
+//       <FormField span={6|12|...} />       field: label 20px, kontrol 40px selebar kolom
+//       <FormColumns>                       dua kolom tetap: kiri siapa/di mana, kanan
+//         <FormColumn>…</FormColumn>        kapan/rujukan
+//       </FormColumns>
+//     </FormSection>
+//   </form>
+// Jangan menulis grid, lebar kolom, atau max-w-* sendiri di form; tambahkan span di sini bila kurang.
 
-export const FORM_CLASS = "w-full max-w-4xl space-y-6"
-
-export function FormGrid({ children, className }: { children: ReactNode; className?: string }) {
-  return <div className={cn("grid gap-x-6 gap-y-5 sm:grid-cols-2", className)}>{children}</div>
-}
-
-export function FormWide({ children }: { children: ReactNode }) {
-  return <div className="sm:col-span-2">{children}</div>
-}
+export const FORM_CLASS = "form-page"
 
 export function FormActions({
   children,
   danger,
 }: {
   children: ReactNode
-  // Aksi berbahaya (Hapus, Batalkan), dipisah di kanan.
+  // Aksi berbahaya (Hapus, Batalkan), dipisah di kanan baris aksi.
   danger?: ReactNode
 }) {
   return (
-    <div className="sticky bottom-0 z-10 -mx-4 flex flex-wrap items-center gap-3 border-t bg-background/95 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/80 sm:static sm:mx-0 sm:bg-transparent sm:px-0 sm:pt-5 sm:pb-0 sm:backdrop-blur-none">
+    <div className="form-actions">
       {children}
+      <DiscardButton />
       {danger && <div className="ml-auto flex flex-wrap gap-2">{danger}</div>}
     </div>
   )
 }
 
 // Dua kolom dengan isi tetap per kolom (bukan mengalir per baris): kiri siapa/di mana, kanan
-// kapan/rujukan. Di HP kolom kiri dulu, lalu kanan.
+// kapan/rujukan. Di HP kolom kiri dulu, lalu kanan. Mengisi satu baris penuh kartu.
 export function FormColumns({ children }: { children: ReactNode }) {
-  return <div className="grid items-start gap-x-6 gap-y-5 sm:grid-cols-2">{children}</div>
+  return <div className="grid items-start gap-x-6 gap-y-4 md:grid-cols-2">{children}</div>
 }
 
 export function FormColumn({ children }: { children: ReactNode }) {
-  return <div className="space-y-5">{children}</div>
+  return <div className="flex min-w-0 flex-col gap-4">{children}</div>
 }

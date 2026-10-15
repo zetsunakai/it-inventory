@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useState } from "react"
 
 import { CheckboxField } from "@/components/checkbox-field"
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection, StaticField } from "@/components/form-field"
 import { ProductCategorySelect } from "@/components/product-category-select"
@@ -33,7 +34,7 @@ import type { ProductCategoryOption } from "@/server/queries/product-categories"
 import type { UomOption } from "@/server/queries/products"
 
 import { createProduct, updateProduct } from "./actions"
-import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const TRACKING_ITEMS = PRODUCT_TRACKINGS.map((tracking) => ({
   value: tracking,
@@ -81,6 +82,8 @@ export function ProductForm({
     FormData
   >(product ? updateProduct : createProduct, null)
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
   const [uomId, setUomId] = useState<string | null>(null)
   const [categoryId, setCategoryId] = useState(product?.categoryId ?? "")
   const [tracking, setTracking] = useState<ProductTracking>(product?.tracking ?? "none")
@@ -113,11 +116,16 @@ export function ProductForm({
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {product && <input type="hidden" name="id" value={product.id} />}
 
       <FormSection title="Data produk">
-        <FormField label="Nama produk" htmlFor="name" errors={fieldErrors?.name}>
+        <FormField label="Nama produk" htmlFor="name" errors={fieldErrors?.name} span={12}>
           <Input
             id="name"
             name="name"
@@ -125,44 +133,42 @@ export function ProductForm({
             maxLength={200}
           />
         </FormField>
-        <div className="grid gap-4 sm:grid-cols-[14rem_1fr]">
-          {product ? (
-            <StaticField
-              label="Product code"
-              value={product.sku}
-              mono
-              reason="Tidak bisa diubah."
-            />
-          ) : (
-            <FormField
-              label="Product code"
-              htmlFor="sku"
-              errors={fieldErrors?.sku}
-              hint={nextSku ? `Kosongkan untuk dibuat otomatis, mis. ${nextSku}.` : undefined}
-            >
-              <Input
-                id="sku"
-                name="sku"
-                value={skuText}
-                onChange={(event) => setSkuText(event.target.value)}
-                maxLength={50}
-                autoComplete="off"
-                className="font-mono"
-              />
-            </FormField>
-          )}
-          <FormField label="Kategori produk" htmlFor="categoryId" errors={fieldErrors?.categoryId}>
-            <ProductCategorySelect
-              id="categoryId"
-              name="categoryId"
-              options={categories}
-              value={categoryId}
-              onValueChange={setCategoryId}
-              emptyLabel="Tanpa kategori produk"
+        {product ? (
+          <StaticField label="Product code" value={product.sku} mono reason="Tidak bisa diubah." />
+        ) : (
+          <FormField
+            label="Product code"
+            htmlFor="sku"
+            errors={fieldErrors?.sku}
+            hint={nextSku ? `Kosongkan untuk dibuat otomatis, mis. ${nextSku}.` : undefined}
+          >
+            <Input
+              id="sku"
+              name="sku"
+              value={skuText}
+              onChange={(event) => setSkuText(event.target.value)}
+              maxLength={50}
+              autoComplete="off"
+              className="font-mono"
             />
           </FormField>
-        </div>
-        <FormField label="Deskripsi" htmlFor="description" errors={fieldErrors?.description}>
+        )}
+        <FormField label="Kategori produk" htmlFor="categoryId" errors={fieldErrors?.categoryId}>
+          <ProductCategorySelect
+            id="categoryId"
+            name="categoryId"
+            options={categories}
+            value={categoryId}
+            onValueChange={setCategoryId}
+            emptyLabel="Tanpa kategori produk"
+          />
+        </FormField>
+        <FormField
+          label="Deskripsi"
+          htmlFor="description"
+          errors={fieldErrors?.description}
+          span={12}
+        >
           <Textarea
             id="description"
             name="description"
@@ -171,18 +177,34 @@ export function ProductForm({
             rows={3}
           />
         </FormField>
-        <FormGrid>
-          <FormField
-            label="Kategori IT Inventory"
-            htmlFor="category"
-            errors={fieldErrors?.category}
-          >
-            <Select name="category" items={CATEGORY_ITEMS} defaultValue={product?.category ?? null}>
-              <SelectTrigger id="category" className="w-full">
-                <SelectValue placeholder="Pilih kategori" />
+        <FormField label="Kategori IT Inventory" htmlFor="category" errors={fieldErrors?.category}>
+          <Select name="category" items={CATEGORY_ITEMS} defaultValue={product?.category ?? null}>
+            <SelectTrigger id="category" className="w-full">
+              <SelectValue placeholder="Pilih kategori" />
+            </SelectTrigger>
+            <SelectContent>
+              {CATEGORY_ITEMS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+        {product ? (
+          <StaticField
+            label="Satuan stok"
+            value={`[${product.uom.code}] ${product.uom.name}`}
+            reason="Tidak bisa diubah: qty di ledger tersimpan dalam satuan ini."
+          />
+        ) : (
+          <FormField label="Satuan stok" htmlFor="uomId" errors={fieldErrors?.uomId}>
+            <Select name="uomId" items={uomItems} value={uomId} onValueChange={setUomId}>
+              <SelectTrigger id="uomId" className="w-full">
+                <SelectValue placeholder="Pilih satuan stok" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORY_ITEMS.map((item) => (
+                {uomItems.map((item) => (
                   <SelectItem key={item.value} value={item.value}>
                     {item.label}
                   </SelectItem>
@@ -190,100 +212,82 @@ export function ProductForm({
               </SelectContent>
             </Select>
           </FormField>
-          {product ? (
-            <StaticField
-              label="Satuan stok"
-              value={`[${product.uom.code}] ${product.uom.name}`}
-              reason="Tidak bisa diubah: qty di ledger tersimpan dalam satuan ini."
-            />
-          ) : (
-            <FormField label="Satuan stok" htmlFor="uomId" errors={fieldErrors?.uomId}>
-              <Select name="uomId" items={uomItems} value={uomId} onValueChange={setUomId}>
-                <SelectTrigger id="uomId" className="w-full">
-                  <SelectValue placeholder="Pilih satuan stok" />
-                </SelectTrigger>
-                <SelectContent>
-                  {uomItems.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-          )}
-        </FormGrid>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand}>
-            <Input
-              id="brand"
-              name="brand"
-              defaultValue={fieldValue(state, "brand", product?.brand)}
-            />
-          </FormField>
-          <FormField label="Tipe" htmlFor="model" errors={fieldErrors?.model}>
-            <Input
-              id="model"
-              name="model"
-              defaultValue={fieldValue(state, "model", product?.model)}
-            />
-          </FormField>
-          <FormField label="Ukuran" htmlFor="size" errors={fieldErrors?.size}>
-            <Input id="size" name="size" defaultValue={fieldValue(state, "size", product?.size)} />
-          </FormField>
-        </div>
+        )}
+        <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand} span={4}>
+          <Input
+            id="brand"
+            name="brand"
+            defaultValue={fieldValue(state, "brand", product?.brand)}
+          />
+        </FormField>
+        <FormField label="Tipe" htmlFor="model" errors={fieldErrors?.model} span={4}>
+          <Input
+            id="model"
+            name="model"
+            defaultValue={fieldValue(state, "model", product?.model)}
+          />
+        </FormField>
+        <FormField label="Ukuran" htmlFor="size" errors={fieldErrors?.size} span={4}>
+          <Input id="size" name="size" defaultValue={fieldValue(state, "size", product?.size)} />
+        </FormField>
+        {product && (
+          <CheckboxField
+            name="active"
+            label="Aktif"
+            description="Produk yang diarsipkan tidak bisa dipilih untuk transaksi baru."
+            defaultChecked={checked("active", product.active)}
+          />
+        )}
       </FormSection>
 
       <FormSection
         title="Lot dan nomor seri"
         description="Produk yang dilacak wajib mencantumkan nomor lot atau nomor seri di setiap barang masuk dan keluar."
       >
-        <div className="grid gap-4 sm:grid-cols-[1fr_12rem]">
-          {product?.trackingLocked ? (
-            <>
-              <StaticField
-                label="Pelacakan"
-                value={PRODUCT_TRACKING_LABELS[product.tracking]}
-                reason="Tidak bisa diubah selama produk punya stok atau transaksi yang belum selesai."
-              />
-              <input type="hidden" name="tracking" value={product.tracking} />
-            </>
-          ) : (
-            <FormField label="Pelacakan" htmlFor="tracking" errors={fieldErrors?.tracking}>
-              <Select
-                name="tracking"
-                items={TRACKING_ITEMS}
-                value={tracking}
-                onValueChange={(value) => setTracking((value as ProductTracking | null) ?? "none")}
-              >
-                <SelectTrigger id="tracking" className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {TRACKING_ITEMS.map((item) => (
-                    <SelectItem key={item.value} value={item.value}>
-                      {item.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FormField>
-          )}
-          {tracking !== "none" && lotAuto ? (
-            <FormField label="Jumlah digit" htmlFor="lotDigits" errors={fieldErrors?.lotDigits}>
-              <Input
-                id="lotDigits"
-                name="lotDigits"
-                value={lotDigits}
-                onChange={(event) => setLotDigits(event.target.value)}
-                inputMode="numeric"
-                autoComplete="off"
-              />
-            </FormField>
-          ) : (
-            <input type="hidden" name="lotDigits" value={lotDigits} />
-          )}
-        </div>
+        {product?.trackingLocked ? (
+          <>
+            <StaticField
+              label="Pelacakan"
+              value={PRODUCT_TRACKING_LABELS[product.tracking]}
+              reason="Tidak bisa diubah selama produk punya stok atau transaksi yang belum selesai."
+            />
+            <input type="hidden" name="tracking" value={product.tracking} />
+          </>
+        ) : (
+          <FormField label="Pelacakan" htmlFor="tracking" errors={fieldErrors?.tracking}>
+            <Select
+              name="tracking"
+              items={TRACKING_ITEMS}
+              value={tracking}
+              onValueChange={(value) => setTracking((value as ProductTracking | null) ?? "none")}
+            >
+              <SelectTrigger id="tracking" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TRACKING_ITEMS.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
+        {tracking !== "none" && lotAuto ? (
+          <FormField label="Jumlah digit" htmlFor="lotDigits" errors={fieldErrors?.lotDigits}>
+            <Input
+              id="lotDigits"
+              name="lotDigits"
+              value={lotDigits}
+              onChange={(event) => setLotDigits(event.target.value)}
+              inputMode="numeric"
+              autoComplete="off"
+            />
+          </FormField>
+        ) : (
+          <input type="hidden" name="lotDigits" value={lotDigits} />
+        )}
         {tracking !== "none" && (
           <CheckboxField
             name="lotAuto"
@@ -299,7 +303,7 @@ export function ProductForm({
         title="Data kepabeanan"
         description="Kode HS wajib diisi sebelum produk bisa dipakai di dokumen BC. Satuan CEISA diisi per barang di dokumen BC."
       >
-        <FormField label="Kode HS" htmlFor="hsCode" errors={fieldErrors?.hsCode}>
+        <FormField label="Kode HS" htmlFor="hsCode" errors={fieldErrors?.hsCode} span={12}>
           <RefCodeSelect
             id="hsCode"
             type="hs_code"
@@ -309,25 +313,6 @@ export function ProductForm({
           />
         </FormField>
       </FormSection>
-
-      {product && (
-        <CheckboxField
-          name="active"
-          label="Aktif"
-          description="Produk yang diarsipkan tidak bisa dipilih untuk transaksi baru."
-          defaultChecked={checked("active", product.active)}
-        />
-      )}
-      {state?.ok && product && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan"}
-        </Button>
-      </FormActions>
     </form>
   )
 }

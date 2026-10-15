@@ -24,7 +24,7 @@ test("pemakaian tercatat dengan jenisnya setelah disetujui", async ({ page }) =>
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("3")
   await page.getByLabel("Alasan").fill("Dipakai untuk perawatan mesin")
-  await page.getByRole("button", { name: "Simpan pemakaian" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByRole("heading", { name: /^Pemakaian SCR\// })).toBeVisible()
 
   await page.getByRole("button", { name: "Konfirmasi" }).click()

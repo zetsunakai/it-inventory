@@ -45,6 +45,15 @@ export function ImportForm({
   return (
     <div className="space-y-6">
       <form action={formAction} className={FORM_CLASS}>
+        <FormActions>
+          <Button type="submit" disabled={pending}>
+            {pending ? "Memeriksa file…" : "Import"}
+          </Button>
+          <a href={exportHref} download className={buttonVariants({ variant: "ghost" })}>
+            <Download />
+            Unduh data sekarang sebagai template
+          </a>
+        </FormActions>
         <FormErrors errors={state?.ok === false ? state.errors : undefined} />
         <FormField
           label="File Excel atau CSV"
@@ -59,15 +68,6 @@ export function ImportForm({
             accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
           />
         </FormField>
-        <FormActions>
-          <Button type="submit" disabled={pending}>
-            {pending ? "Memeriksa file…" : "Import"}
-          </Button>
-          <a href={exportHref} download className={buttonVariants({ variant: "ghost" })}>
-            <Download />
-            Unduh data sekarang sebagai template
-          </a>
-        </FormActions>
       </form>
       {state?.ok && (
         <ImportResultView result={state.data} noun={noun} keyLabel={keyLabel} listHref={listHref} />

@@ -22,7 +22,7 @@ test("pindah lokasi memindah saldo di dalam gudang tanpa konfirmasi terpisah", a
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("4")
-  await page.getByRole("button", { name: "Simpan pindah lokasi" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByRole("heading", { name: /^Pindah lokasi TRF\// })).toBeVisible()
 
   await expect(page.getByRole("button", { name: "Konfirmasi" })).toHaveCount(0)

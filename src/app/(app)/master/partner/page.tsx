@@ -25,6 +25,8 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
+import { deletePartner } from "./actions"
+
 export const metadata: Metadata = { title: "Partner · IT Inventory" }
 
 const COLUMNS: DataTableColumn<PartnerRow>[] = [
@@ -101,6 +103,16 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
+        bulkDelete={
+          canEdit
+            ? {
+                action: deletePartner,
+                noun: "partner",
+                id: (row) => row.id,
+                label: (row) => row.name,
+              }
+            : undefined
+        }
         rowHref={(row) => `/master/partner/${row.id}`}
         rowMuted={(row) => !row.active}
         empty={listEmptyState({

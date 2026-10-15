@@ -27,6 +27,7 @@ test.describe("Administrator", () => {
     await expect(row).toContainText(`1 ${code} = 100 KG`)
 
     await row.getByRole("link").first().click()
+    await page.getByRole("button", { name: "Edit" }).click()
     await expect(page.getByLabel("Faktor konversi")).toHaveValue("100")
     await page.getByLabel("Faktor konversi").fill("100,5")
     await page.getByRole("button", { name: "Simpan" }).click()

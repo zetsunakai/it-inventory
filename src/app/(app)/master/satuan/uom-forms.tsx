@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useState } from "react"
 
 import { CheckboxField } from "@/components/checkbox-field"
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection, StaticField } from "@/components/form-field"
 import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -21,7 +22,7 @@ import { toDecimalInput } from "@/lib/decimal"
 import type { ProductChoice } from "@/server/queries/transfers"
 
 import { createUom, createUomCategory, updateUom } from "./actions"
-import { FORM_CLASS, FormActions, FormGrid } from "@/components/layout/form-layout"
+import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 export type CategoryOption = { id: string; name: string; referenceCode: string | null }
 
@@ -45,52 +46,57 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="productId" value={product?.id ?? ""} />
       {/* Pilihan kategori dikunci ke kategori satuan stok produk; select yang disabled tidak
           ikut terkirim, jadi nilainya lewat sini. */}
       {product && <input type="hidden" name="categoryId" value={categoryId ?? ""} />}
-      <FormField
-        label="Khusus produk"
-        htmlFor="productId"
-        errors={fieldErrors?.productId}
-        hint="Kosongkan untuk satuan umum. Satuan khusus hanya bisa dipakai produk ini, mis. 1 BOX = 24 PCS untuk satu produk saja."
-      >
-        <SearchSelect<ProductChoice>
-          id="productId"
-          endpoint="/api/products"
-          value={product}
-          onValueChange={(next) => {
-            setProduct(next)
-            if (next) setCategoryId(next.uomCategoryId)
-          }}
-          getKey={(item) => item.id}
-          getLabel={(item) => `[${item.sku}] ${item.name}`}
-          placeholder="Cari product code atau nama produk"
-        />
-      </FormField>
-      <FormField label="Kategori" htmlFor="categoryId" errors={fieldErrors?.categoryId}>
-        <Select
-          name="categoryId"
-          items={items}
-          value={categoryId}
-          onValueChange={setCategoryId}
-          disabled={Boolean(product)}
+      <FormSection title="Data satuan">
+        <FormField
+          label="Khusus produk"
+          htmlFor="productId"
+          errors={fieldErrors?.productId}
+          hint="Kosongkan untuk satuan umum. Satuan khusus hanya bisa dipakai produk ini, mis. 1 BOX = 24 PCS untuk satu produk saja."
         >
-          <SelectTrigger id="categoryId" className="w-full">
-            <SelectValue placeholder="Pilih kategori" />
-          </SelectTrigger>
-          <SelectContent>
-            {items.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </FormField>
-      <div className="grid gap-4 sm:grid-cols-[10rem_1fr]">
-        <FormField label="Kode satuan" htmlFor="code" errors={fieldErrors?.code}>
+          <SearchSelect<ProductChoice>
+            id="productId"
+            endpoint="/api/products"
+            value={product}
+            onValueChange={(next) => {
+              setProduct(next)
+              if (next) setCategoryId(next.uomCategoryId)
+            }}
+            getKey={(item) => item.id}
+            getLabel={(item) => `[${item.sku}] ${item.name}`}
+            placeholder="Cari product code atau nama produk"
+          />
+        </FormField>
+        <FormField label="Kategori" htmlFor="categoryId" errors={fieldErrors?.categoryId}>
+          <Select
+            name="categoryId"
+            items={items}
+            value={categoryId}
+            onValueChange={setCategoryId}
+            disabled={Boolean(product)}
+          >
+            <SelectTrigger id="categoryId" className="w-full">
+              <SelectValue placeholder="Pilih kategori" />
+            </SelectTrigger>
+            <SelectContent>
+              {items.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+        <FormField label="Kode satuan" htmlFor="code" errors={fieldErrors?.code} span={4}>
           <Input
             id="code"
             name="code"
@@ -100,25 +106,23 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
             autoComplete="off"
           />
         </FormField>
-        <FormField label="Nama satuan" htmlFor="name" errors={fieldErrors?.name}>
+        <FormField label="Nama satuan" htmlFor="name" errors={fieldErrors?.name} span={8}>
           <Input id="name" name="name" defaultValue={fieldValue(state, "name")} maxLength={100} />
         </FormField>
-      </div>
-      <FactorField
-        errors={fieldErrors?.factor}
-        defaultValue={fieldValue(state, "factor")}
-        hint={
-          reference
-            ? `1 ${code || "satuan ini"} = berapa ${reference}? Contoh: 1 TON = 1000 KG, 1 G = 0,001 KG.`
-            : "Pilih kategori dulu untuk melihat satuan acuannya."
-        }
-      />
-      <RoundingField errors={fieldErrors?.rounding} defaultValue={fieldValue(state, "rounding")} />
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan"}
-        </Button>
-      </FormActions>
+        <FactorField
+          errors={fieldErrors?.factor}
+          defaultValue={fieldValue(state, "factor")}
+          hint={
+            reference
+              ? `1 ${code || "satuan ini"} = berapa ${reference}? Contoh: 1 TON = 1000 KG, 1 G = 0,001 KG.`
+              : "Pilih kategori dulu untuk melihat satuan acuannya."
+          }
+        />
+        <RoundingField
+          errors={fieldErrors?.rounding}
+          defaultValue={fieldValue(state, "rounding")}
+        />
+      </FormSection>
     </form>
   )
 }
@@ -142,52 +146,53 @@ export function UomEditForm({
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
 
   return (
     <form action={formAction} className={FORM_CLASS}>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
-      <input type="hidden" name="id" value={uom.id} />
-      {/* Satuan acuan selalu berfaktor 1, jadi faktornya dikirim tetap. */}
-      {uom.isReference && <input type="hidden" name="factor" value="1" />}
-      <FormField label="Nama satuan" htmlFor="name" errors={fieldErrors?.name}>
-        <Input
-          id="name"
-          name="name"
-          defaultValue={fieldValue(state, "name", uom.name)}
-          maxLength={100}
-        />
-      </FormField>
-      {uom.isReference ? (
-        <p className="text-sm text-muted-foreground">
-          {uom.code} adalah satuan acuan kategorinya, faktornya selalu 1.
-        </p>
-      ) : (
-        <FactorField
-          errors={fieldErrors?.factor}
-          defaultValue={fieldValue(state, "factor", toDecimalInput(uom.factor))}
-          hint={`1 ${uom.code} = berapa ${uom.referenceCode}? Mengubah faktor hanya berlaku untuk input berikutnya.`}
-        />
-      )}
-      <RoundingField
-        errors={fieldErrors?.rounding}
-        defaultValue={fieldValue(state, "rounding", toDecimalInput(uom.rounding))}
-      />
-      <CheckboxField
-        name="active"
-        label="Aktif"
-        description="Satuan yang diarsipkan tidak bisa dipilih untuk produk dan transaksi baru."
-        defaultChecked={state?.ok === false ? state.values?.active === "on" : uom.active}
-      />
-      {state?.ok && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
       <FormActions>
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
       </FormActions>
+      {state?.ok === false && <FormErrors errors={state.errors} />}
+      <input type="hidden" name="id" value={uom.id} />
+      {/* Satuan acuan selalu berfaktor 1, jadi faktornya dikirim tetap. */}
+      {uom.isReference && <input type="hidden" name="factor" value="1" />}
+      <FormSection title="Data satuan">
+        <FormField label="Nama satuan" htmlFor="name" errors={fieldErrors?.name} span={12}>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={fieldValue(state, "name", uom.name)}
+            maxLength={100}
+          />
+        </FormField>
+        {uom.isReference ? (
+          <StaticField
+            label="Faktor konversi"
+            value="1"
+            reason={`${uom.code} adalah satuan acuan kategorinya, faktornya selalu 1.`}
+          />
+        ) : (
+          <FactorField
+            errors={fieldErrors?.factor}
+            defaultValue={fieldValue(state, "factor", toDecimalInput(uom.factor))}
+            hint={`1 ${uom.code} = berapa ${uom.referenceCode}? Mengubah faktor hanya berlaku untuk input berikutnya.`}
+          />
+        )}
+        <RoundingField
+          errors={fieldErrors?.rounding}
+          defaultValue={fieldValue(state, "rounding", toDecimalInput(uom.rounding))}
+        />
+        <CheckboxField
+          name="active"
+          label="Aktif"
+          description="Satuan yang diarsipkan tidak bisa dipilih untuk produk dan transaksi baru."
+          defaultChecked={state?.ok === false ? state.values?.active === "on" : uom.active}
+        />
+      </FormSection>
     </form>
   )
 }
@@ -209,7 +214,6 @@ function FactorField({
         defaultValue={defaultValue}
         inputMode="decimal"
         autoComplete="off"
-        className="sm:w-48"
       />
     </FormField>
   )
@@ -230,7 +234,6 @@ function RoundingField({ errors, defaultValue }: { errors?: string[]; defaultVal
         defaultValue={defaultValue}
         inputMode="decimal"
         autoComplete="off"
-        className="sm:w-48"
       />
     </FormField>
   )
@@ -244,10 +247,19 @@ export function UomCategoryForm() {
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
 
   return (
-    <form action={formAction} className="space-y-4 rounded-lg border p-4">
+    <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Tambah kategori"}
+        </Button>
+        {state?.ok && (
+          <p role="status" className="text-control text-muted-foreground">
+            {state.message}
+          </p>
+        )}
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
-      <p className="font-medium">Tambah kategori</p>
-      <FormGrid>
+      <FormSection title="Tambah kategori">
         <FormField label="Kode kategori" htmlFor="category-code" errors={fieldErrors?.code}>
           <Input
             id="category-code"
@@ -291,17 +303,7 @@ export function UomCategoryForm() {
             maxLength={100}
           />
         </FormField>
-      </FormGrid>
-      {state?.ok && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Tambah kategori"}
-        </Button>
-      </FormActions>
+      </FormSection>
     </form>
   )
 }

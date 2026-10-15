@@ -79,4 +79,5 @@ test("Auditor melihat detail partner tanpa form ubah", async ({ page }) => {
   await expect(page.getByText(`0${NPWP15_DIGITS}000000`)).toBeVisible()
   await expect(page.getByText("[ID] Indonesia")).toBeVisible()
   await expect(page.getByRole("button", { name: "Simpan" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0)
 })

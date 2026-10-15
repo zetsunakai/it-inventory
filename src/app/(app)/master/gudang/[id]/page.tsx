@@ -4,7 +4,8 @@ import { Suspense } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DeleteRecord } from "@/components/delete-record"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 import { ArchivedBadge, NameCell } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ActivityLog } from "@/components/document/activity-log"
@@ -20,7 +21,7 @@ import {
   type LocationRow,
 } from "@/server/queries/warehouses"
 
-import { deleteWarehouse } from "../actions"
+import { deleteLocation } from "../actions"
 import { LocationCreateForm } from "../location-forms"
 import { WarehouseForm } from "../warehouse-forms"
 import { Section } from "@/components/layout/section"
@@ -84,6 +85,21 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
         </span>
       }
     >
+      <RecordModes
+        key={warehouse.id}
+        canEdit={canEdit}
+        createHref="/master/gudang/baru"
+        view={
+          <ViewSection title="Data gudang">
+            <StaticField label="Kode gudang" value={warehouse.code} mono span={4} />
+            <StaticField label="Nama gudang" value={warehouse.name} span={8} />
+            <StaticField label="Alamat" value={warehouse.address} span={12} />
+            <StaticField label="Status" value={warehouse.active ? "Aktif" : "Diarsipkan"} />
+          </ViewSection>
+        }
+        form={canEdit && <WarehouseForm warehouse={warehouse} />}
+      />
+
       <Section title="Lokasi">
         <DataTable
           columns={LOCATION_COLUMNS}
@@ -91,6 +107,16 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
           rowKey={(row) => row.id}
           rowHref={canEdit ? (row) => `/master/gudang/${warehouse.id}/lokasi/${row.id}` : undefined}
           rowMuted={(row) => !row.active}
+          bulkDelete={
+            canEdit
+              ? {
+                  action: deleteLocation,
+                  noun: "lokasi",
+                  id: (row) => row.id,
+                  label: (row) => row.code,
+                }
+              : undefined
+          }
           empty={{
             title: "Belum ada lokasi di gudang ini.",
             description: canEdit
@@ -107,21 +133,6 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
             </p>
           ))}
       </Section>
-
-      {canEdit && (
-        <Section title="Data gudang">
-          <WarehouseForm warehouse={warehouse} />
-        </Section>
-      )}
-      {canEdit && (
-        <DeleteRecord
-          action={deleteWarehouse}
-          id={warehouse.id}
-          noun="gudang"
-          label={warehouse.code}
-          listHref="/master/gudang"
-        />
-      )}
     </DocumentLayout>
   )
 }

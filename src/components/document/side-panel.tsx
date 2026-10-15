@@ -14,7 +14,7 @@ export function SidePanel({ title, children }: { title: string; children: ReactN
     <aside
       aria-label={title}
       className={cn(
-        "min-w-0 rounded-lg border bg-card xl:sticky xl:top-20 xl:max-h-[calc(100svh-6rem)] xl:overflow-y-auto",
+        "min-w-0 rounded-2xl border bg-card xl:sticky xl:top-20 xl:max-h-[calc(100svh-6rem)] xl:overflow-y-auto",
         collapsed ? "xl:w-12" : "xl:w-80",
       )}
     >

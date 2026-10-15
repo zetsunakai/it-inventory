@@ -29,6 +29,8 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
+import { deleteUom } from "./actions"
+
 export const metadata: Metadata = { title: "Satuan · IT Inventory" }
 
 const CATEGORY_FILTER = "kategori"
@@ -137,6 +139,11 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
+        bulkDelete={
+          canEdit
+            ? { action: deleteUom, noun: "satuan", id: (row) => row.id, label: (row) => row.code }
+            : undefined
+        }
         rowHref={canEdit ? (row) => `/master/satuan/${row.id}` : undefined}
         rowMuted={(row) => !row.active}
         empty={listEmptyState({

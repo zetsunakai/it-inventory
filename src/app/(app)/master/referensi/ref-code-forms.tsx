@@ -3,13 +3,13 @@
 import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useState } from "react"
 
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { CheckboxField } from "@/components/checkbox-field"
+import { FormField, FormSection } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
-import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -52,54 +52,6 @@ export function RefCodeCreateForm() {
 
   return (
     <form action={formAction} className={FORM_CLASS}>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
-      <FormField label="Jenis" htmlFor="type" errors={fieldErrors?.type}>
-        <Select
-          name="type"
-          items={TYPE_ITEMS}
-          value={type}
-          onValueChange={(value) => setType(value as RefCodeType | null)}
-        >
-          <SelectTrigger id="type" className="w-full">
-            <SelectValue placeholder="Pilih jenis referensi" />
-          </SelectTrigger>
-          <SelectContent>
-            {TYPE_ITEMS.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </FormField>
-      {parentType && (
-        <FormField
-          label={REF_CODE_TYPE_LABELS[parentType]}
-          htmlFor="parentCode"
-          errors={fieldErrors?.parentCode}
-        >
-          {/* key: pilihan induk dikosongkan saat jenis berganti. */}
-          <RefCodeSelect key={parentType} id="parentCode" type={parentType} name="parentCode" />
-        </FormField>
-      )}
-      <FormField label="Kode" htmlFor="code" errors={fieldErrors?.code}>
-        <Input
-          id="code"
-          name="code"
-          defaultValue={fieldValue(state, "code")}
-          maxLength={50}
-          autoComplete="off"
-        />
-      </FormField>
-      <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name}>
-        <Input
-          id="name"
-          name="name"
-          defaultValue={fieldValue(state, "name")}
-          maxLength={200}
-          autoComplete="off"
-        />
-      </FormField>
       <FormActions>
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
@@ -108,6 +60,56 @@ export function RefCodeCreateForm() {
           Batal
         </Button>
       </FormActions>
+      {state?.ok === false && <FormErrors errors={state.errors} />}
+      <FormSection title="Data referensi">
+        <FormField label="Jenis" htmlFor="type" errors={fieldErrors?.type}>
+          <Select
+            name="type"
+            items={TYPE_ITEMS}
+            value={type}
+            onValueChange={(value) => setType(value as RefCodeType | null)}
+          >
+            <SelectTrigger id="type" className="w-full">
+              <SelectValue placeholder="Pilih jenis referensi" />
+            </SelectTrigger>
+            <SelectContent>
+              {TYPE_ITEMS.map((item) => (
+                <SelectItem key={item.value} value={item.value}>
+                  {item.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FormField>
+        {parentType && (
+          <FormField
+            label={REF_CODE_TYPE_LABELS[parentType]}
+            htmlFor="parentCode"
+            errors={fieldErrors?.parentCode}
+          >
+            {/* key: pilihan induk dikosongkan saat jenis berganti. */}
+            <RefCodeSelect key={parentType} id="parentCode" type={parentType} name="parentCode" />
+          </FormField>
+        )}
+        <FormField label="Kode" htmlFor="code" errors={fieldErrors?.code} span={4}>
+          <Input
+            id="code"
+            name="code"
+            defaultValue={fieldValue(state, "code")}
+            maxLength={50}
+            autoComplete="off"
+          />
+        </FormField>
+        <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name} span={8}>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={fieldValue(state, "name")}
+            maxLength={200}
+            autoComplete="off"
+          />
+        </FormField>
+      </FormSection>
     </form>
   )
 }
@@ -126,44 +128,35 @@ export function RefCodeEditForm({
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
 
   return (
     <form action={formAction} className={FORM_CLASS}>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
-      <input type="hidden" name="id" value={id} />
-      <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name}>
-        <Input
-          id="name"
-          name="name"
-          defaultValue={fieldValue(state, "name", name)}
-          maxLength={200}
-          autoComplete="off"
-        />
-      </FormField>
-      <div className="flex items-start gap-2">
-        <Checkbox
-          id="active"
-          name="active"
-          defaultChecked={state?.ok === false ? state.values?.active === "on" : active}
-        />
-        <div className="grid gap-1 leading-none">
-          <Label htmlFor="active">Aktif</Label>
-          <p className="text-sm text-muted-foreground">
-            Referensi yang diarsipkan tidak bisa dipilih untuk data baru, tapi tetap tampil di data
-            lama.
-          </p>
-        </div>
-      </div>
       <FormActions>
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
-        {state?.ok && state.message && (
-          <p role="status" className="text-control text-muted-foreground">
-            {state.message}
-          </p>
-        )}
       </FormActions>
+      {state?.ok === false && <FormErrors errors={state.errors} />}
+      <input type="hidden" name="id" value={id} />
+      <FormSection title="Data referensi">
+        <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name} span={12}>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={fieldValue(state, "name", name)}
+            maxLength={200}
+            autoComplete="off"
+          />
+        </FormField>
+        <CheckboxField
+          name="active"
+          label="Aktif"
+          description="Referensi yang diarsipkan tidak bisa dipilih untuk data baru, tapi tetap tampil di data lama."
+          defaultChecked={state?.ok === false ? state.values?.active === "on" : active}
+        />
+      </FormSection>
     </form>
   )
 }

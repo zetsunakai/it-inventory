@@ -38,7 +38,10 @@ test.describe("Administrator", () => {
 
     await expect(page.getByRole("status")).toHaveText("Profil perusahaan disimpan.")
 
+    // Setelah tersimpan, profil tampil dalam mode baca; Edit membuka form berisi data tersimpan.
     await page.reload()
+    await expect(page.getByText("0012345678901000000000", { exact: true })).toBeVisible()
+    await page.getByRole("button", { name: "Edit" }).click()
     await expect(page.getByLabel("NPWP")).toHaveValue("0012345678901000")
     await expect(page.getByLabel("NITKU")).toHaveValue("0012345678901000000000")
     await expect(page.getByLabel("Kantor pabean pengawas")).toHaveValue(
@@ -58,4 +61,5 @@ test("Auditor melihat profil tanpa bisa mengubah", async ({ page }) => {
   await expect(page.getByText("[040300] KPU Tanjung Priok")).toBeVisible()
   await expect(page.getByText("15/03/2024")).toBeVisible()
   await expect(page.getByRole("button", { name: "Simpan" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0)
 })

@@ -77,6 +77,7 @@ test("Admin gudang hanya melihat gudang yang diberikan aksesnya", async ({ page 
   await page.getByRole("link", { name: GRANTED }).click()
   await expect(page.getByRole("cell", { name: `${GRANTED}-RAK/${GRANTED}-BIN` })).toBeVisible()
   await expect(page.getByRole("button", { name: "Simpan" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0)
 
   // Gudang tanpa akses diperlakukan seperti tidak ada.
   await page.goto(otherWarehouseUrl)

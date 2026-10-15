@@ -22,7 +22,7 @@ async function createReadyReceipt(page: Page, fixture: Fixture, qty: string) {
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill(qty)
-  await page.getByRole("button", { name: "Simpan penerimaan" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page).toHaveURL(/\/inventory\/penerimaan\/[0-9a-f-]{36}$/)
   await expect(page.getByRole("heading", { name: /^Penerimaan PNR\// })).toBeVisible()
   await page.getByRole("button", { name: "Konfirmasi" }).click()

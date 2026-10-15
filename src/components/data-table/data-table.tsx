@@ -12,6 +12,12 @@ import {
 import { cn } from "@/lib/utils"
 
 import { ColumnMenu, GroupToggle } from "./data-table-client"
+import {
+  RowCheckbox,
+  RowSelection,
+  SelectAllCheckbox,
+  type BulkDeleteAction,
+} from "./data-table-selection"
 
 export type DataTableColumn<Row> = {
   header: string
@@ -34,6 +40,15 @@ const columnId = (header: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
 
+// Pilih baris lalu Hapus (data master, M1-08). id = id data untuk action, label = penandanya di
+// konfirmasi dan pesan tolak (kode/SKU/nama).
+export type DataTableBulkDelete<Row> = {
+  action: BulkDeleteAction
+  noun: string
+  id: (row: Row) => string
+  label: (row: Row) => string
+}
+
 export type DataTableEmpty = {
   title: string
   description?: string
@@ -51,6 +66,7 @@ export function DataTable<Row>({
   rowHref,
   rowMuted,
   group,
+  bulkDelete,
   empty = { title: "Tidak ada data." },
 }: {
   // Wajib bila ada kolom opsional (kunci penyimpanan pilihan kolom).
@@ -63,10 +79,12 @@ export function DataTable<Row>({
   // Baris yang diredupkan, misalnya data yang diarsipkan.
   rowMuted?: (row: Row) => boolean
   group?: DataTableGroup<Row>
+  // Hanya untuk peran yang boleh menghapus.
+  bulkDelete?: DataTableBulkDelete<Row>
   empty?: DataTableEmpty
 }) {
   const optional = id ? columns.filter((column) => column.optional) : []
-  const span = columns.length + (optional.length ? 1 : 0)
+  const span = columns.length + (optional.length ? 1 : 0) + (bulkDelete ? 1 : 0)
   const groups = group ? [...Map.groupBy(rows, (row) => group.key(row)).values()] : [rows]
 
   const renderRow = (row: Row) => {
@@ -79,6 +97,11 @@ export function DataTable<Row>({
           rowMuted?.(row) && "text-muted-foreground",
         )}
       >
+        {bulkDelete && (
+          <TableCell className="relative z-10 w-10 py-3 pr-0 pl-4">
+            <RowCheckbox id={bulkDelete.id(row)} label={bulkDelete.label(row)} />
+          </TableCell>
+        )}
         {columns.map((column, index) => (
           <TableCell
             key={column.header}
@@ -108,7 +131,7 @@ export function DataTable<Row>({
     )
   }
 
-  return (
+  const table = (
     <div id={id} className="overflow-hidden rounded-lg border bg-card">
       {/* Kolom opsional yang tersembunyi dulu, sebelum pilihan user di browser terbaca. */}
       {optional.some((column) => column.optional === "hide") && (
@@ -122,6 +145,11 @@ export function DataTable<Row>({
       <Table>
         <TableHeader className="bg-muted/60">
           <TableRow className="hover:bg-transparent">
+            {bulkDelete && (
+              <TableHead className="h-12 w-10 pr-0 pl-4">
+                {rows.length > 0 && <SelectAllCheckbox />}
+              </TableHead>
+            )}
             {columns.map((column) => (
               <TableHead
                 key={column.header}
@@ -180,5 +208,16 @@ export function DataTable<Row>({
         )}
       </Table>
     </div>
+  )
+
+  if (!bulkDelete) return table
+  return (
+    <RowSelection
+      rows={rows.map((row) => ({ id: bulkDelete.id(row), label: bulkDelete.label(row) }))}
+      action={bulkDelete.action}
+      noun={bulkDelete.noun}
+    >
+      {table}
+    </RowSelection>
   )
 }

@@ -23,11 +23,11 @@ test("penyesuaian kurangi stok tercatat setelah disetujui", async ({ page }) => 
   await page.getByLabel("Qty baris 1").fill("2")
 
   // Tanpa alasan ditolak.
-  await page.getByRole("button", { name: "Simpan penyesuaian" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByRole("alert").filter({ hasText: "Alasan wajib diisi." })).toBeVisible()
 
   await page.getByLabel("Alasan").fill("Kemasan rusak saat penyimpanan")
-  await page.getByRole("button", { name: "Simpan penyesuaian" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByRole("heading", { name: /^Penyesuaian ADJ\// })).toBeVisible()
 
   await page.getByRole("button", { name: "Konfirmasi" }).click()

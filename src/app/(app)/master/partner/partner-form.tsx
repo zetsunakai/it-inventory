@@ -4,8 +4,9 @@ import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useState } from "react"
 
 import { CheckboxField } from "@/components/checkbox-field"
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -57,6 +58,8 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Setelah tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(state)
   const [identityType, setIdentityType] = useState<IdentityType | null>(
     partner?.identityType ?? null,
   )
@@ -75,18 +78,23 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
 
   return (
     <form action={formAction} className={FORM_CLASS}>
+      <FormActions>
+        <Button type="submit" disabled={pending}>
+          {pending ? "Menyimpan…" : "Simpan"}
+        </Button>
+      </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {partner && <input type="hidden" name="id" value={partner.id} />}
-      <FormField label="Nama partner" htmlFor="name" errors={fieldErrors?.name}>
-        <Input
-          id="name"
-          name="name"
-          defaultValue={fieldValue(state, "name", partner?.name)}
-          maxLength={200}
-        />
-      </FormField>
-      <div className="grid gap-4 sm:grid-cols-[1fr_16rem]">
-        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address}>
+      <FormSection title="Data partner">
+        <FormField label="Nama partner" htmlFor="name" errors={fieldErrors?.name} span={12}>
+          <Input
+            id="name"
+            name="name"
+            defaultValue={fieldValue(state, "name", partner?.name)}
+            maxLength={200}
+          />
+        </FormField>
+        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={8}>
           <Input
             id="address"
             name="address"
@@ -94,7 +102,7 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
             maxLength={500}
           />
         </FormField>
-        <FormField label="Negara" htmlFor="countryCode" errors={fieldErrors?.countryCode}>
+        <FormField label="Negara" htmlFor="countryCode" errors={fieldErrors?.countryCode} span={4}>
           <RefCodeSelect
             id="countryCode"
             type="country"
@@ -102,13 +110,22 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
             defaultValue={partner ? partner.country : INDONESIA}
           />
         </FormField>
-      </div>
+        {partner && (
+          <CheckboxField
+            name="active"
+            label="Aktif"
+            description="Partner yang diarsipkan tidak bisa dipilih untuk transaksi dan dokumen baru."
+            defaultChecked={checked("active", partner.active)}
+          />
+        )}
+      </FormSection>
 
-      <div className="grid gap-4 sm:grid-cols-[14rem_1fr]">
+      <FormSection title="Identitas">
         <FormField
           label="Jenis identitas"
           htmlFor="identityType"
           errors={fieldErrors?.identityType}
+          span={4}
         >
           <Select
             name="identityType"
@@ -129,7 +146,12 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
           </Select>
         </FormField>
         {/* Panjang isian mengikuti jenis identitas (RM-03). */}
-        <FormField label="NPWP" htmlFor="identityNumber" errors={fieldErrors?.identityNumber}>
+        <FormField
+          label="NPWP"
+          htmlFor="identityNumber"
+          errors={fieldErrors?.identityNumber}
+          span={8}
+        >
           <Input
             id="identityNumber"
             name="identityNumber"
@@ -141,41 +163,22 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
             className="font-mono"
           />
         </FormField>
-      </div>
-      {isNpwp && (
-        <FormField label="NITKU" htmlFor="nitku" errors={fieldErrors?.nitku}>
-          {/* Kosong = kantor pusat (NPWP 16 digit + 000000), terlihat di placeholder. */}
-          <Input
-            id="nitku"
-            name="nitku"
-            defaultValue={fieldValue(state, "nitku", partner?.nitku)}
-            placeholder={derivedNitku ?? undefined}
-            maxLength={22}
-            inputMode="numeric"
-            autoComplete="off"
-            className="font-mono sm:w-72"
-          />
-        </FormField>
-      )}
-
-      {partner && (
-        <CheckboxField
-          name="active"
-          label="Aktif"
-          description="Partner yang diarsipkan tidak bisa dipilih untuk transaksi dan dokumen baru."
-          defaultChecked={checked("active", partner.active)}
-        />
-      )}
-      {state?.ok && partner && (
-        <p role="status" className="text-control text-muted-foreground">
-          {state.message}
-        </p>
-      )}
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Simpan"}
-        </Button>
-      </FormActions>
+        {isNpwp && (
+          <FormField label="NITKU" htmlFor="nitku" errors={fieldErrors?.nitku}>
+            {/* Kosong = kantor pusat (NPWP 16 digit + 000000), terlihat di placeholder. */}
+            <Input
+              id="nitku"
+              name="nitku"
+              defaultValue={fieldValue(state, "nitku", partner?.nitku)}
+              placeholder={derivedNitku ?? undefined}
+              maxLength={22}
+              inputMode="numeric"
+              autoComplete="off"
+              className="font-mono"
+            />
+          </FormField>
+        )}
+      </FormSection>
     </form>
   )
 }

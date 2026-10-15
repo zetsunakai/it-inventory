@@ -30,7 +30,7 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
 
   const qty = page.getByLabel(`Qty retur ${sku}`)
   await fillInteractive(qty, "11")
-  await page.getByRole("button", { name: "Simpan perubahan" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByRole("alert").filter({ hasText: "melebihi sisa" })).toContainText(
     `Qty retur ${sku} melebihi sisa yang bisa diretur: 10.`,
   )
@@ -39,7 +39,7 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
   await page.getByLabel(`Tindakan ${sku}`).click()
   await page.getByRole("option", { name: "Retur dengan pengganti" }).click()
   await page.getByLabel("Alasan retur").fill("Barang cacat")
-  await page.getByRole("button", { name: "Simpan perubahan" }).click()
+  await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(
     page.getByRole("status").filter({ hasText: "Permintaan retur disimpan." }),
   ).toBeVisible()

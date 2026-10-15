@@ -3,7 +3,8 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
-import { DeleteRecord } from "@/components/delete-record"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { RecordModes } from "@/components/layout/record-modes"
 import { Skeleton } from "@/components/ui/skeleton"
 import { INVENTORY_CATEGORY_LABELS, PRODUCT_TRACKING_LABELS } from "@/lib/inventory"
 import { skuExample } from "@/lib/product-category"
@@ -13,9 +14,7 @@ import { requirePermission } from "@/server/auth/session"
 import { listProductCategoryOptions } from "@/server/queries/product-categories"
 import { getProduct } from "@/server/queries/products"
 
-import { deleteProduct } from "../actions"
 import { ProductForm } from "../product-form"
-import { InfoGrid } from "@/components/layout/info-grid"
 import { recordActivity } from "@/server/queries/activity"
 import { masterNeighbors } from "@/server/queries/neighbors"
 import { ActivityLog } from "@/components/document/activity-log"
@@ -42,23 +41,39 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
     recordActivity("products", product.id, PRODUCT_ACTIVITY_LABELS),
   ])
 
-  const rows: [string, string][] = [
-    ["Product code", product.sku],
-    ["Nama produk", product.name],
-    ["Kategori produk", product.categoryPath ?? "—"],
-    ["Kategori IT Inventory", INVENTORY_CATEGORY_LABELS[product.category]],
-    ["Satuan stok", `[${product.uom.code}] ${product.uom.name}`],
-    ["Deskripsi", product.description ?? "—"],
-    [
-      "Merk / tipe / ukuran",
-      [product.brand, product.model, product.size].map((v) => v ?? "—").join(" / "),
-    ],
-    [
-      "Pelacakan",
-      `${PRODUCT_TRACKING_LABELS[product.tracking]}${product.lotAuto ? ` · nomor otomatis ${skuExample(`${product.sku}-`, product.lotDigits)}` : ""}`,
-    ],
-    ["Kode HS", product.hs ? formatRefCode(product.hs) : (product.hsCode ?? "—")],
-  ]
+  const canEdit = hasPermission(user.roles, "master:write")
+  const view = (
+    <>
+      <ViewSection title="Data produk">
+        <StaticField label="Nama produk" value={product.name} span={12} />
+        <StaticField label="Product code" value={product.sku} mono />
+        <StaticField label="Kategori produk" value={product.categoryPath ?? "—"} />
+        <StaticField label="Deskripsi" value={product.description ?? "—"} span={12} />
+        <StaticField
+          label="Kategori IT Inventory"
+          value={INVENTORY_CATEGORY_LABELS[product.category]}
+        />
+        <StaticField label="Satuan stok" value={`[${product.uom.code}] ${product.uom.name}`} />
+        <StaticField label="Merk" value={product.brand ?? "—"} span={4} />
+        <StaticField label="Tipe" value={product.model ?? "—"} span={4} />
+        <StaticField label="Ukuran" value={product.size ?? "—"} span={4} />
+        <StaticField label="Status" value={product.active ? "Aktif" : "Diarsipkan"} />
+      </ViewSection>
+      <ViewSection title="Lot dan nomor seri">
+        <StaticField
+          label="Pelacakan"
+          value={`${PRODUCT_TRACKING_LABELS[product.tracking]}${product.lotAuto ? ` · nomor otomatis ${skuExample(`${product.sku}-`, product.lotDigits)}` : ""}`}
+        />
+      </ViewSection>
+      <ViewSection title="Data kepabeanan">
+        <StaticField
+          label="Kode HS"
+          value={product.hs ? formatRefCode(product.hs) : (product.hsCode ?? "—")}
+          span={12}
+        />
+      </ViewSection>
+    </>
+  )
 
   return (
     <DocumentLayout
@@ -69,34 +84,24 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
           ? "Siap dipakai di dokumen BC."
           : "Belum siap dokumen BC: kode HS belum diisi."
       }
-
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="produk" />}
     >
-      {hasPermission(user.roles, "master:write") ? (
-        <>
-          <ProductForm
-            product={product}
-            uoms={[]}
-            categories={await listProductCategoryOptions(product.categoryId)}
-          />
-          <DeleteRecord
-            action={deleteProduct}
-            id={product.id}
-            noun="produk"
-            label={product.sku}
-            listHref="/master/produk"
-          />
-        </>
-      ) : (
-        <InfoGrid
-          items={rows.map(([label, value]) => ({
-            label,
-            value,
-            wide: label === "Alamat" || label === "Deskripsi" || label === "Catatan",
-          }))}
-        />
-      )}
+      <RecordModes
+        key={product.id}
+        canEdit={canEdit}
+        createHref="/master/produk/baru"
+        view={view}
+        form={
+          canEdit && (
+            <ProductForm
+              product={product}
+              uoms={[]}
+              categories={await listProductCategoryOptions(product.categoryId)}
+            />
+          )
+        }
+      />
     </DocumentLayout>
   )
 }

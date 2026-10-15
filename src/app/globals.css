@@ -183,3 +183,88 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+/*
+ * Template form ala hmx-002 (UF-04). Ukuran diatur di sini saja, jangan di halaman:
+ *   halaman  .form-page     satu lebar untuk semua form, jarak antar kartu 16px;
+ *   kartu    .form-sheet    kelompok field (FormSection): border, radius 16px, padding 16/24/32,
+ *                           judul 18px + garis pemisah selebar kartu;
+ *   field    .form-grid     12 kolom, jarak 24px × 16px; anak lebar penuh kecuali punya data-span
+ *                           (3, 4, 6, 8, 9) yang berlaku mulai 768px;
+ *            .form-field    label 20px, jarak 6px, kontrol 40px selebar kolom;
+ *   notebook .form-notebook tab 48px dalam kartu, isi berpadding 24/24/32; kartu di dalamnya
+ *                           kehilangan bingkainya.
+ */
+@layer components {
+  .form-page {
+    @apply flex w-full max-w-4xl flex-col gap-4;
+  }
+
+  /* Baris aksi di atas form/mode baca; ikut ter-scroll bersama halaman. */
+  .form-actions {
+    @apply flex flex-wrap items-center gap-4;
+  }
+
+  .form-sheet {
+    @apply min-w-0 rounded-2xl border bg-card px-6 pt-4 pb-8 text-card-foreground;
+  }
+  .form-sheet-header {
+    @apply -mx-6 mb-5 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b px-6 pb-3;
+  }
+  .form-sheet-title {
+    @apply text-lg leading-6 font-semibold;
+  }
+  .form-sheet-description {
+    @apply mt-1 text-caption text-muted-foreground;
+  }
+
+  .form-grid {
+    @apply grid grid-cols-12 items-start gap-x-6 gap-y-4;
+  }
+  .form-grid > * {
+    @apply col-span-full min-w-0;
+  }
+  @media (width >= 48rem) {
+    .form-grid > [data-span="3"] {
+      grid-column: span 3 / span 3;
+    }
+    .form-grid > [data-span="4"] {
+      grid-column: span 4 / span 4;
+    }
+    .form-grid > [data-span="6"] {
+      grid-column: span 6 / span 6;
+    }
+    .form-grid > [data-span="8"] {
+      grid-column: span 8 / span 8;
+    }
+    .form-grid > [data-span="9"] {
+      grid-column: span 9 / span 9;
+    }
+  }
+
+  .form-field {
+    @apply flex min-w-0 flex-col gap-1.5;
+  }
+  .form-field-label {
+    @apply min-h-5 text-control leading-5 font-medium;
+  }
+  /* Nilai tetap (StaticField) setinggi kontrol supaya sejajar dengan field di sebelahnya. */
+  .form-field-static {
+    @apply flex min-h-10 items-center text-control break-words;
+  }
+
+  .form-notebook {
+    @apply min-w-0 rounded-2xl border bg-card text-card-foreground;
+  }
+  .form-notebook .form-sheet {
+    @apply rounded-none border-0 bg-transparent p-0;
+  }
+}
+
+/*
+ * Di luar @layer supaya mengalahkan utilitas bawaan komponen (SelectTrigger w-fit): kontrol di field
+ * form selalu selebar kolomnya, tidak mengikuti panjang teks yang dipilih.
+ */
+.form-field :is([data-slot="select-trigger"], [data-slot="input"], [data-slot="textarea"]) {
+  width: 100%;
+}

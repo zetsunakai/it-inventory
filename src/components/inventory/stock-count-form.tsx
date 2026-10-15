@@ -5,7 +5,7 @@ import { useActionState, useEffect, useState } from "react"
 
 import { createStockCount } from "@/app/(app)/inventory/opname/actions"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import {
   Select,
@@ -71,85 +71,87 @@ export function StockCountForm({
 
   return (
     <form action={formAction} className={FORM_CLASS}>
-      <FormErrors errors={state?.ok === false ? state.errors : undefined} />
-      <FormColumns>
-        <FormColumn>
-          <FormField label="Gudang" htmlFor="count-warehouse" errors={fieldErrors?.warehouseId}>
-            <Select
-              name="warehouseId"
-              items={warehouses}
-              value={warehouseId}
-              onValueChange={(value) => {
-                setWarehouseId(value)
-                setLocationId(WHOLE_WAREHOUSE)
-              }}
-            >
-              <SelectTrigger id="count-warehouse" className="w-full">
-                <SelectValue placeholder="Pilih gudang" />
-              </SelectTrigger>
-              <SelectContent>
-                {warehouses.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-          <FormField label="Lingkup" htmlFor="count-location" errors={fieldErrors?.locationId}>
-            <Select
-              name="locationId"
-              items={locationItems}
-              value={locationId}
-              onValueChange={setLocationId}
-            >
-              <SelectTrigger id="count-location" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {locationItems.map((item) => (
-                  <SelectItem key={item.value || "semua"} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </FormColumn>
-        <FormColumn>
-          <FormField
-            label="Kategori produk"
-            htmlFor="count-category"
-            errors={fieldErrors?.productCategoryId}
-          >
-            <Select
-              name="productCategoryId"
-              items={categoryItems}
-              value={categoryId}
-              onValueChange={setCategoryId}
-            >
-              <SelectTrigger id="count-category" className="w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {categoryItems.map((item) => (
-                  <SelectItem key={item.value || "semua"} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FormField>
-        </FormColumn>
-      </FormColumns>
-      <FormField label="Catatan" htmlFor="count-notes" errors={fieldErrors?.notes}>
-        <Textarea id="count-notes" name="notes" rows={2} />
-      </FormField>
       <FormActions>
         <Button type="submit" disabled={pending || !warehouseId}>
           {pending ? "Membuat sesi…" : "Buat sesi opname"}
         </Button>
       </FormActions>
+      <FormErrors errors={state?.ok === false ? state.errors : undefined} />
+      <FormSection title="Data opname">
+        <FormColumns>
+          <FormColumn>
+            <FormField label="Gudang" htmlFor="count-warehouse" errors={fieldErrors?.warehouseId}>
+              <Select
+                name="warehouseId"
+                items={warehouses}
+                value={warehouseId}
+                onValueChange={(value) => {
+                  setWarehouseId(value)
+                  setLocationId(WHOLE_WAREHOUSE)
+                }}
+              >
+                <SelectTrigger id="count-warehouse" className="w-full">
+                  <SelectValue placeholder="Pilih gudang" />
+                </SelectTrigger>
+                <SelectContent>
+                  {warehouses.map((item) => (
+                    <SelectItem key={item.value} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+            <FormField label="Lingkup" htmlFor="count-location" errors={fieldErrors?.locationId}>
+              <Select
+                name="locationId"
+                items={locationItems}
+                value={locationId}
+                onValueChange={setLocationId}
+              >
+                <SelectTrigger id="count-location" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {locationItems.map((item) => (
+                    <SelectItem key={item.value || "semua"} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </FormColumn>
+          <FormColumn>
+            <FormField
+              label="Kategori produk"
+              htmlFor="count-category"
+              errors={fieldErrors?.productCategoryId}
+            >
+              <Select
+                name="productCategoryId"
+                items={categoryItems}
+                value={categoryId}
+                onValueChange={setCategoryId}
+              >
+                <SelectTrigger id="count-category" className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {categoryItems.map((item) => (
+                    <SelectItem key={item.value || "semua"} value={item.value}>
+                      {item.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FormField>
+          </FormColumn>
+        </FormColumns>
+        <FormField label="Catatan" htmlFor="count-notes" errors={fieldErrors?.notes} span={12}>
+          <Textarea id="count-notes" name="notes" rows={2} />
+        </FormField>
+      </FormSection>
     </form>
   )
 }

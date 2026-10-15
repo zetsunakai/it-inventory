@@ -28,6 +28,8 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
+import { deleteProduct } from "./actions"
+
 export const metadata: Metadata = { title: "Produk · IT Inventory" }
 
 const CATEGORY_FILTER = "kategori"
@@ -130,6 +132,16 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
+        bulkDelete={
+          canEdit
+            ? {
+                action: deleteProduct,
+                noun: "produk",
+                id: (row) => row.id,
+                label: (row) => row.sku,
+              }
+            : undefined
+        }
         rowHref={(row) => `/master/produk/${row.id}`}
         rowMuted={(row) => !row.active}
         empty={listEmptyState({
