@@ -38,8 +38,9 @@ test("produk yang belum dipakai dihapus setelah konfirmasi", async ({ page }) =>
 
 test("filter status menyaring daftar ke data aktif atau arsip", async ({ page }) => {
   await page.goto("/master/satuan")
-  await page.getByRole("combobox").filter({ hasText: "Status: semua" }).click()
-  await page.getByRole("option", { name: "Diarsipkan" }).click()
+  // Filter ada di panel corong kotak cari (RU-22); filter aktif tampil sebagai chip.
+  await page.getByRole("button", { name: "Filter, kelompokkan, dan favorit" }).click()
+  await page.getByRole("button", { name: "Diarsipkan" }).click()
   await expect(page).toHaveURL(/status=arsip/)
-  await expect(page.getByRole("combobox").filter({ hasText: "Diarsipkan" })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Hapus Status: Diarsipkan" })).toBeVisible()
 })

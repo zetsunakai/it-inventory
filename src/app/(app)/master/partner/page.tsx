@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ImportExportActions } from "@/components/import/import-export-actions"
@@ -26,6 +23,8 @@ import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listPartners, type PartnerRow } from "@/server/queries/partners"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Partner · IT Inventory" }
 
@@ -89,16 +88,31 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari kode, nama, NPWP, atau NITKU" />
-        <DataTableFilter name={ROLE_FILTER} label="Peran" options={ROLE_OPTIONS} />
-        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
-        {canEdit && (
-          <Link href="/master/partner/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
-            <Plus />
-            Tambah partner
-          </Link>
-        )}
+      <ListToolbar
+        action={
+          canEdit && (
+            <Link href="/master/partner/baru" className={buttonVariants()}>
+              <Plus />
+              Tambah partner
+            </Link>
+          )
+        }
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari kode, nama, NPWP, atau NITKU"
+          filters={[
+            { name: ROLE_FILTER, label: "Peran", options: ROLE_OPTIONS },
+            { name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS },
+          ]}
+        />
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
@@ -112,12 +126,6 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
           noun: "partner",
           create: canEdit ? { href: "/master/partner/baru", label: "Tambah partner" } : undefined,
         })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

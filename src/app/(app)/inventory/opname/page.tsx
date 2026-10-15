@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { CountStatusBadge } from "@/components/inventory/count-status"
@@ -19,6 +16,8 @@ import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listStockCounts, type StockCountRow } from "@/server/queries/stock-counts"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Stock opname · IT Inventory" }
 
@@ -79,25 +78,37 @@ async function StockCountTable({ searchParams }: { searchParams: Promise<RawSear
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari nomor atau gudang" />
-        <DataTableFilter
-          name={STATUS_FILTER}
-          label="Status"
-          options={STOCK_COUNT_STATUSES.map((value) => ({
-            value,
-            label: STOCK_COUNT_STATUS_LABELS[value],
-          }))}
+      <ListToolbar
+        action={
+          canCreate && (
+            <Link href="/inventory/opname/baru" className={buttonVariants()}>
+              <Plus />
+              Buat sesi opname
+            </Link>
+          )
+        }
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari nomor atau gudang"
+          filters={[
+            {
+              name: STATUS_FILTER,
+              label: "Status",
+              options: STOCK_COUNT_STATUSES.map((value) => ({
+                value,
+                label: STOCK_COUNT_STATUS_LABELS[value],
+              })),
+            },
+          ]}
         />
-        {canCreate && (
-          <Link
-            href="/inventory/opname/baru"
-            className={buttonVariants({ className: "sm:ml-auto" })}
-          >
-            <Plus />
-            Buat sesi opname
-          </Link>
-        )}
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
@@ -113,12 +124,6 @@ async function StockCountTable({ searchParams }: { searchParams: Promise<RawSear
             ? { href: "/inventory/opname/baru", label: "Buat sesi opname" }
             : undefined,
         })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

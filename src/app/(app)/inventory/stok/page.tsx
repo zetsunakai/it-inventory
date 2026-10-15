@@ -3,9 +3,6 @@ import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableDate } from "@/components/data-table/data-table-date"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
@@ -16,6 +13,8 @@ import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-pa
 import { requirePermission } from "@/server/auth/session"
 import { listAccessibleWarehouses, listStock, type StockRow } from "@/server/queries/stock"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Stok · IT Inventory" }
 
@@ -108,16 +107,30 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari SKU atau nama produk" />
-        <DataTableFilter
-          name={WAREHOUSE_FILTER}
-          label="Gudang"
-          options={warehouses.map((warehouse) => ({
-            value: warehouse.id,
-            label: `${warehouse.code} · ${warehouse.name}`,
-          }))}
+      <ListToolbar
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari SKU atau nama produk"
+          filters={[
+            {
+              name: WAREHOUSE_FILTER,
+              label: "Gudang",
+              options: warehouses.map((warehouse) => ({
+                value: warehouse.id,
+                label: `${warehouse.code} · ${warehouse.name}`,
+              })),
+            },
+          ]}
         />
+
         <DataTableDate name={DATE_FILTER} label="Saldo per" max={today()} />
       </ListToolbar>
       {date && (
@@ -139,12 +152,6 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
                 description: "Stok bertambah setelah penerimaan divalidasi.",
               }
         }
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

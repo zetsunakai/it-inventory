@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
@@ -25,6 +22,8 @@ import { skuExample } from "@/lib/product-category"
 import { requirePermission } from "@/server/auth/session"
 import { listProductCategories, type ProductCategoryRow } from "@/server/queries/product-categories"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Kategori produk · IT Inventory" }
 
@@ -76,18 +75,28 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari nama atau prefix kode" />
-        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
-        {canEdit && (
-          <Link
-            href="/master/kategori-produk/baru"
-            className={buttonVariants({ className: "sm:ml-auto" })}
-          >
-            <Plus />
-            Tambah kategori
-          </Link>
-        )}
+      <ListToolbar
+        action={
+          canEdit && (
+            <Link href="/master/kategori-produk/baru" className={buttonVariants()}>
+              <Plus />
+              Tambah kategori
+            </Link>
+          )
+        }
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari nama atau prefix kode"
+          filters={[{ name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS }]}
+        />
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
@@ -103,12 +112,6 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
             ? { href: "/master/kategori-produk/baru", label: "Tambah kategori" }
             : undefined,
         })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

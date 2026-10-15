@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ImportExportActions } from "@/components/import/import-export-actions"
@@ -28,6 +25,8 @@ import { listProducts, type ProductRow } from "@/server/queries/products"
 
 import { CustomsReadiness } from "./customs-readiness"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Produk · IT Inventory" }
 
@@ -90,24 +89,39 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari SKU, nama, atau kode HS" />
-        <DataTableFilter
-          name={CATEGORY_FILTER}
-          label="Kategori"
-          options={INVENTORY_CATEGORIES.map((value) => ({
-            value,
-            label: INVENTORY_CATEGORY_LABELS[value],
-          }))}
+      <ListToolbar
+        action={
+          canEdit && (
+            <Link href="/master/produk/baru" className={buttonVariants()}>
+              <Plus />
+              Tambah produk
+            </Link>
+          )
+        }
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari SKU, nama, atau kode HS"
+          filters={[
+            {
+              name: CATEGORY_FILTER,
+              label: "Kategori",
+              options: INVENTORY_CATEGORIES.map((value) => ({
+                value,
+                label: INVENTORY_CATEGORY_LABELS[value],
+              })),
+            },
+            { name: READINESS_FILTER, label: "Dokumen BC", options: READINESS_OPTIONS },
+            { name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS },
+          ]}
         />
-        <DataTableFilter name={READINESS_FILTER} label="Dokumen BC" options={READINESS_OPTIONS} />
-        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
-        {canEdit && (
-          <Link href="/master/produk/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
-            <Plus />
-            Tambah produk
-          </Link>
-        )}
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
@@ -121,12 +135,6 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
           noun: "produk",
           create: canEdit ? { href: "/master/produk/baru", label: "Tambah produk" } : undefined,
         })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

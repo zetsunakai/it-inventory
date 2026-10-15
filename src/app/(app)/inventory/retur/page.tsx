@@ -2,9 +2,6 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
@@ -21,6 +18,8 @@ import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-pa
 import { requirePermission } from "@/server/auth/session"
 import { listReturnRequests, type ReturnRequestRow } from "@/server/queries/return-requests"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Retur · IT Inventory" }
 
@@ -84,23 +83,36 @@ async function ReturnRequestTable({ searchParams }: { searchParams: Promise<RawS
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari nomor, transfer asal, atau partner" />
-        <DataTableFilter
-          name="jenis"
-          label="Jenis"
-          options={RETURN_REQUEST_TYPES.map((value) => ({
-            value,
-            label: RETURN_REQUEST_TYPE_LABELS[value],
-          }))}
-        />
-        <DataTableFilter
-          name="status"
-          label="Status"
-          options={RETURN_REQUEST_STATUSES.map((value) => ({
-            value,
-            label: RETURN_REQUEST_STATUS_LABELS[value],
-          }))}
+      <ListToolbar
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari nomor, transfer asal, atau partner"
+          filters={[
+            {
+              name: "jenis",
+              label: "Jenis",
+              options: RETURN_REQUEST_TYPES.map((value) => ({
+                value,
+                label: RETURN_REQUEST_TYPE_LABELS[value],
+              })),
+            },
+            {
+              name: "status",
+              label: "Status",
+              options: RETURN_REQUEST_STATUSES.map((value) => ({
+                value,
+                label: RETURN_REQUEST_STATUS_LABELS[value],
+              })),
+            },
+          ]}
         />
       </ListToolbar>
       <DataTable
@@ -110,12 +122,6 @@ async function ReturnRequestTable({ searchParams }: { searchParams: Promise<RawS
         rowHref={(row) => `${PATH}/${row.id}`}
         rowMuted={(row) => row.status === "cancelled"}
         empty={listEmptyState({ searchParams: raw, basePath: PATH, noun: "retur" })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

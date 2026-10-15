@@ -5,9 +5,6 @@ import { Suspense } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
@@ -21,7 +18,13 @@ import {
   USAGE_TYPE_LABELS,
   USAGE_TYPES,
 } from "@/lib/inventory"
-import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
+import {
+  GROUP_PARAM,
+  GROUPED_PAGE_SIZE,
+  parseListParams,
+  pickFilter,
+  type RawSearchParams,
+} from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import type { TransferKind } from "@/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
@@ -39,6 +42,8 @@ import { TransferForm } from "./transfer-form"
 import { TransferStatusBadge } from "./transfer-status"
 import { TransferView } from "./transfer-view"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 // Halaman daftar, buat, dan detail yang sama untuk semua jenis transfer (penerimaan, pengiriman,
 // dst.). Halaman di app/(app)/inventory/<jenis>/ hanya meneruskan TRANSFER_KINDS miliknya.
@@ -46,6 +51,8 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 const USAGE_FILTER = "jenis"
 const USAGE_OPTIONS = USAGE_TYPES.map((value) => ({ value, label: USAGE_TYPE_LABELS[value] }))
 const STATUS_FILTER = "status"
+const GROUPS = ["status"] as const
+const GROUPS_WITH_PARTNER = ["status", "partner"] as const
 const STATUS_OPTIONS = TRANSFER_STATUSES.map((value) => ({
   value,
   label: TRANSFER_STATUS_LABELS[value],
@@ -82,7 +89,9 @@ async function TransferTable({
   const user = await requirePermission("inventory:read")
   const canWrite = hasPermission(user.roles, "inventory:write")
   const raw = await searchParams
-  const params = parseListParams(raw)
+  // Dikelompokkan (RU-22): semua baris dimuat sekaligus supaya jumlah per kelompok benar.
+  const groupBy = pickFilter(raw, GROUP_PARAM, kind.partnerLabel ? GROUPS_WITH_PARTNER : GROUPS)
+  const params = parseListParams(raw, groupBy ? { pageSize: GROUPED_PAGE_SIZE } : undefined)
   const status = pickFilter(raw, STATUS_FILTER, TRANSFER_STATUSES)
   const usageType = kind.usageTypes ? pickFilter(raw, USAGE_FILTER, USAGE_TYPES) : undefined
   const { rows, total } = await listTransfers({
@@ -138,7 +147,7 @@ async function TransferTable({
         </span>
       ),
     },
-    { header: "Referensi", cell: (row) => row.reference ?? "—" },
+    { header: "Referensi", optional: "show", cell: (row) => row.reference ?? "—" },
     {
       header: "Tanggal",
       cell: (row) =>
@@ -148,32 +157,68 @@ async function TransferTable({
             ? formatDate(new Date(`${row.scheduledDate}T00:00:00+07:00`))
             : "—",
     },
-    { header: "Baris", align: "right", cell: (row) => formatNumber(row.lineCount) },
+    {
+      header: "Baris",
+      align: "right",
+      optional: "show",
+      cell: (row) => formatNumber(row.lineCount),
+    },
     { header: "Status", cell: (row) => <TransferStatusBadge status={row.status} /> },
   ]
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch
+      <ListToolbar
+        action={
+          canWrite &&
+          kind.creatable !== false && (
+            <Link href={createHref} className={buttonVariants()}>
+              <Plus />
+              {createLabel}
+            </Link>
+          )
+        }
+        pager={
+          !groupBy && (
+            <ListPager
+              searchParams={raw}
+              page={params.page}
+              pageSize={params.pageSize}
+              total={total}
+            />
+          )
+        }
+      >
+        <ListSearchBar
           placeholder={
             kind.partnerLabel
               ? `Cari nomor, referensi, atau ${kind.partnerLabel.toLowerCase()}`
               : "Cari nomor atau referensi"
           }
+          groupBy={[
+            { value: "status", label: "Status" },
+            ...(kind.partnerLabel ? [{ value: "partner", label: kind.partnerLabel }] : []),
+          ]}
+          filters={[
+            ...(kind.usageTypes
+              ? [{ name: USAGE_FILTER, label: "Jenis", options: USAGE_OPTIONS }]
+              : []),
+            { name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS },
+          ]}
         />
-        {kind.usageTypes && (
-          <DataTableFilter name={USAGE_FILTER} label="Jenis" options={USAGE_OPTIONS} />
-        )}
-        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
-        {canWrite && kind.creatable !== false && (
-          <Link href={createHref} className={buttonVariants({ className: "sm:ml-auto" })}>
-            <Plus />
-            {createLabel}
-          </Link>
-        )}
       </ListToolbar>
       <DataTable
+        id={`daftar-${kind.type}`}
+        group={
+          groupBy === "status"
+            ? { key: (row) => row.status, label: (row) => TRANSFER_STATUS_LABELS[row.status] }
+            : groupBy === "partner"
+              ? {
+                  key: (row) => row.partnerName ?? "",
+                  label: (row) => row.partnerName ?? `Tanpa ${kind.partnerLabel?.toLowerCase()}`,
+                }
+              : undefined
+        }
         columns={columns}
         rows={rows}
         rowKey={(row) => row.id}
@@ -188,12 +233,6 @@ async function TransferTable({
               ? { href: createHref, label: createLabel }
               : undefined,
         })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

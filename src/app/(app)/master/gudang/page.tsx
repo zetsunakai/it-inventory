@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ImportExportActions } from "@/components/import/import-export-actions"
@@ -38,6 +35,8 @@ import {
   type WarehouseRow,
 } from "@/server/queries/warehouses"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Gudang & lokasi · IT Inventory" }
 
@@ -117,16 +116,31 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari kode atau nama gudang" />
-        <DataTableFilter name={CATEGORY_FILTER} label="Kategori" options={CATEGORY_OPTIONS} />
-        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
-        {canEdit && (
-          <Link href="/master/gudang/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
-            <Plus />
-            Tambah gudang
-          </Link>
-        )}
+      <ListToolbar
+        action={
+          canEdit && (
+            <Link href="/master/gudang/baru" className={buttonVariants()}>
+              <Plus />
+              Tambah gudang
+            </Link>
+          )
+        }
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari kode atau nama gudang"
+          filters={[
+            { name: CATEGORY_FILTER, label: "Kategori", options: CATEGORY_OPTIONS },
+            { name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS },
+          ]}
+        />
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
@@ -149,12 +163,6 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
                 description: "Minta Administrator memberi akses di halaman detail gudang.",
               }
         }
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

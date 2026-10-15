@@ -2,9 +2,6 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
@@ -15,6 +12,8 @@ import { requiresMfa, ROLE_LABELS, ROLES } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listUsers, type UserListRow } from "@/server/queries/users"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Pengguna · IT Inventory" }
 
@@ -68,21 +67,26 @@ async function UserTable({ searchParams }: { searchParams: Promise<RawSearchPara
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari nama atau email" />
-        <DataTableFilter name={ROLE_FILTER} label="Peran" options={ROLE_OPTIONS} />
+      <ListToolbar
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari nama atau email"
+          filters={[{ name: ROLE_FILTER, label: "Peran", options: ROLE_OPTIONS }]}
+        />
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
         rows={rows}
         rowKey={(user) => user.id}
         empty={listEmptyState({ searchParams: raw, basePath: "/admin/users", noun: "user" })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

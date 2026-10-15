@@ -7,6 +7,10 @@ export type RawSearchParams = Record<string, string | string[] | undefined>
 
 export const SEARCH_PARAM = "q"
 export const PAGE_PARAM = "page"
+// Kelompokkan baris (RU-22), mis. ?kelompok=status.
+export const GROUP_PARAM = "kelompok"
+// Batas baris saat dikelompokkan: semua baris dimuat sekaligus supaya jumlah per kelompok benar.
+export const GROUPED_PAGE_SIZE = 500
 export const DEFAULT_PAGE_SIZE = 20
 
 const listSchema = z.object({

@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
@@ -29,6 +26,8 @@ import { listUomCategories, listUoms, type UomRow } from "@/server/queries/uoms"
 
 import { UomCategoryForm } from "./uom-forms"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Satuan · IT Inventory" }
 
@@ -104,20 +103,35 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari kode, nama satuan, atau SKU" />
-        <DataTableFilter
-          name={CATEGORY_FILTER}
-          label="Kategori"
-          options={categories.map((category) => ({ value: category.id, label: category.name }))}
+      <ListToolbar
+        action={
+          canEdit && (
+            <Link href="/master/satuan/baru" className={buttonVariants()}>
+              <Plus />
+              Tambah satuan
+            </Link>
+          )
+        }
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari kode, nama satuan, atau SKU"
+          filters={[
+            {
+              name: CATEGORY_FILTER,
+              label: "Kategori",
+              options: categories.map((category) => ({ value: category.id, label: category.name })),
+            },
+            { name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS },
+          ]}
         />
-        <DataTableFilter name={STATUS_FILTER} label="Status" options={STATUS_OPTIONS} />
-        {canEdit && (
-          <Link href="/master/satuan/baru" className={buttonVariants({ className: "sm:ml-auto" })}>
-            <Plus />
-            Tambah satuan
-          </Link>
-        )}
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
@@ -131,12 +145,6 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
           noun: "satuan",
           create: canEdit ? { href: "/master/satuan/baru", label: "Tambah satuan" } : undefined,
         })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

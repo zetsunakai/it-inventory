@@ -4,9 +4,6 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { DataTablePagination } from "@/components/data-table/data-table-pagination"
-import { DataTableSearch } from "@/components/data-table/data-table-search"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
@@ -23,6 +20,8 @@ import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listInterwarehouse, type InterwarehouseRow } from "@/server/queries/interwarehouse"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Transfer antar gudang · IT Inventory" }
 
@@ -83,22 +82,37 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
 
   return (
     <div className="space-y-4">
-      <ListToolbar>
-        <DataTableSearch placeholder="Cari nomor atau referensi" />
-        <DataTableFilter
-          name="status"
-          label="Status"
-          options={INTERWAREHOUSE_STATUSES.map((value) => ({
-            value,
-            label: INTERWAREHOUSE_STATUS_LABELS[value],
-          }))}
+      <ListToolbar
+        action={
+          canWrite && (
+            <Link href={`${PATH}/baru`} className={buttonVariants()}>
+              <Plus />
+              Buat permintaan
+            </Link>
+          )
+        }
+        pager={
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
+        }
+      >
+        <ListSearchBar
+          placeholder="Cari nomor atau referensi"
+          filters={[
+            {
+              name: "status",
+              label: "Status",
+              options: INTERWAREHOUSE_STATUSES.map((value) => ({
+                value,
+                label: INTERWAREHOUSE_STATUS_LABELS[value],
+              })),
+            },
+          ]}
         />
-        {canWrite && (
-          <Link href={`${PATH}/baru`} className={buttonVariants({ className: "sm:ml-auto" })}>
-            <Plus />
-            Buat permintaan
-          </Link>
-        )}
       </ListToolbar>
       <DataTable
         columns={COLUMNS}
@@ -112,12 +126,6 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
           noun: "transfer antar gudang",
           create: canWrite ? { href: `${PATH}/baru`, label: "Buat permintaan" } : undefined,
         })}
-      />
-      <DataTablePagination
-        searchParams={raw}
-        page={params.page}
-        pageSize={params.pageSize}
-        total={total}
       />
     </div>
   )

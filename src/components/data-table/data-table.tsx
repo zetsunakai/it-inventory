@@ -11,13 +11,28 @@ import {
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
 
+import { ColumnMenu, GroupToggle } from "./data-table-client"
+
 export type DataTableColumn<Row> = {
   header: string
   cell: (row: Row) => ReactNode
   // Angka dan aksi rata kanan; teks rata kiri.
   align?: "left" | "right"
   className?: string
+  // Kolom opsional (RU-22): user bisa menyembunyikan/menampilkannya; "hide" = tersembunyi dulu.
+  optional?: "show" | "hide"
 }
+
+export type DataTableGroup<Row> = {
+  key: (row: Row) => string
+  label: (row: Row) => ReactNode
+}
+
+const columnId = (header: string) =>
+  header
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "")
 
 export type DataTableEmpty = {
   title: string
@@ -25,17 +40,21 @@ export type DataTableEmpty = {
   action?: ReactNode
 }
 
-// Tabel untuk halaman daftar (skill ui-it-inventory): padat, angka rata kanan, dan seluruh baris
-// bisa diklik ke detail lewat rowHref. Data sudah dicari, difilter, dan dipotong per halaman
-// di server; komponen ini hanya menampilkan.
+// Tabel untuk halaman daftar (skill ui-it-inventory, pola hmx RU-22): header 48px, baris 44px,
+// angka rata kanan, seluruh baris bisa diklik ke detail lewat rowHref, kolom opsional (perlu id),
+// dan pengelompokan baris (group). Data sudah dicari, difilter, dan dipotong per halaman di server.
 export function DataTable<Row>({
+  id,
   columns,
   rows,
   rowKey,
   rowHref,
   rowMuted,
+  group,
   empty = { title: "Tidak ada data." },
 }: {
+  // Wajib bila ada kolom opsional (kunci penyimpanan pilihan kolom).
+  id?: string
   columns: DataTableColumn<Row>[]
   rows: Row[]
   rowKey: (row: Row) => string
@@ -43,16 +62,70 @@ export function DataTable<Row>({
   rowHref?: (row: Row) => string
   // Baris yang diredupkan, misalnya data yang diarsipkan.
   rowMuted?: (row: Row) => boolean
+  group?: DataTableGroup<Row>
   empty?: DataTableEmpty
 }) {
+  const optional = id ? columns.filter((column) => column.optional) : []
+  const span = columns.length + (optional.length ? 1 : 0)
+  const groups = group ? [...Map.groupBy(rows, (row) => group.key(row)).values()] : [rows]
+
+  const renderRow = (row: Row) => {
+    const href = rowHref?.(row)
+    return (
+      <TableRow
+        key={rowKey(row)}
+        className={cn(
+          href && "relative cursor-pointer",
+          rowMuted?.(row) && "text-muted-foreground",
+        )}
+      >
+        {columns.map((column, index) => (
+          <TableCell
+            key={column.header}
+            data-col={column.optional ? columnId(column.header) : undefined}
+            className={cn(
+              "px-4 py-3",
+              column.align === "right" && "text-right",
+              // Kontrol lain di baris tetap bisa diklik di atas link baris.
+              href && index > 0 && "[&_a]:relative [&_a]:z-10 [&_button]:relative [&_button]:z-10",
+              column.className,
+            )}
+          >
+            {href && index === 0 ? (
+              <Link
+                href={href}
+                className="outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
+              >
+                {column.cell(row)}
+              </Link>
+            ) : (
+              column.cell(row)
+            )}
+          </TableCell>
+        ))}
+        {optional.length > 0 && <TableCell className="w-10" />}
+      </TableRow>
+    )
+  }
+
   return (
-    <div className="overflow-hidden rounded-lg border bg-card">
+    <div id={id} className="overflow-hidden rounded-lg border bg-card">
+      {/* Kolom opsional yang tersembunyi dulu, sebelum pilihan user di browser terbaca. */}
+      {optional.some((column) => column.optional === "hide") && (
+        <style>
+          {optional
+            .filter((column) => column.optional === "hide")
+            .map((column) => `#${id} [data-col="${columnId(column.header)}"]{display:none}`)
+            .join("")}
+        </style>
+      )}
       <Table>
         <TableHeader className="bg-muted/60">
           <TableRow className="hover:bg-transparent">
             {columns.map((column) => (
               <TableHead
                 key={column.header}
+                data-col={column.optional ? columnId(column.header) : undefined}
                 className={cn(
                   "h-12 px-4 text-control font-semibold text-foreground",
                   column.align === "right" && "text-right",
@@ -62,63 +135,49 @@ export function DataTable<Row>({
                 {column.header}
               </TableHead>
             ))}
+            {optional.length > 0 && (
+              <TableHead className="h-12 w-10 px-1 text-right">
+                <ColumnMenu
+                  tableId={id!}
+                  columns={optional.map((column) => ({
+                    id: columnId(column.header),
+                    label: column.header,
+                    hidden: column.optional === "hide",
+                  }))}
+                />
+              </TableHead>
+            )}
           </TableRow>
         </TableHeader>
-        <TableBody>
-          {rows.length === 0 ? (
+        {rows.length === 0 ? (
+          <TableBody>
             <TableRow className="hover:bg-transparent">
-              <TableCell
-                colSpan={columns.length}
-                className="px-3 py-10 text-center whitespace-normal"
-              >
+              <TableCell colSpan={span} className="px-3 py-10 text-center whitespace-normal">
                 <p className="font-medium">{empty.title}</p>
                 {empty.description && (
-                  <p className="mt-1 text-sm text-muted-foreground">{empty.description}</p>
+                  <p className="mt-1 text-control text-muted-foreground">{empty.description}</p>
                 )}
                 {empty.action && <div className="mt-4 flex justify-center">{empty.action}</div>}
               </TableCell>
             </TableRow>
-          ) : (
-            rows.map((row) => {
-              const href = rowHref?.(row)
-              return (
-                <TableRow
-                  key={rowKey(row)}
-                  className={cn(
-                    href && "relative cursor-pointer",
-                    rowMuted?.(row) && "text-muted-foreground",
-                  )}
-                >
-                  {columns.map((column, index) => (
-                    <TableCell
-                      key={column.header}
-                      className={cn(
-                        "px-4 py-3",
-                        column.align === "right" && "text-right",
-                        // Kontrol lain di baris tetap bisa diklik di atas link baris.
-                        href &&
-                          index > 0 &&
-                          "[&_a]:relative [&_a]:z-10 [&_button]:relative [&_button]:z-10",
-                        column.className,
-                      )}
-                    >
-                      {href && index === 0 ? (
-                        <Link
-                          href={href}
-                          className="outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
-                        >
-                          {column.cell(row)}
-                        </Link>
-                      ) : (
-                        column.cell(row)
-                      )}
-                    </TableCell>
-                  ))}
+          </TableBody>
+        ) : (
+          groups.map((groupRows) => (
+            <TableBody
+              key={group ? group.key(groupRows[0]) : "semua"}
+              className="data-collapsed:[&>tr:not(:first-child)]:hidden"
+            >
+              {group && (
+                <TableRow className="bg-muted/40 hover:bg-muted/60">
+                  <TableCell colSpan={span} className="px-4 py-2.5">
+                    <GroupToggle label={group.label(groupRows[0])} count={groupRows.length} />
+                  </TableCell>
                 </TableRow>
-              )
-            })
-          )}
-        </TableBody>
+              )}
+              {groupRows.map(renderRow)}
+            </TableBody>
+          ))
+        )}
       </Table>
     </div>
   )
