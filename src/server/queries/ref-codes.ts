@@ -41,6 +41,22 @@ export async function listRefCodes({
   return { rows, total }
 }
 
+export type RefCodeTypeSummary = { type: RefCodeType; active: number; archived: number }
+
+// Ringkasan per jenis untuk tampilan awal halaman Referensi kepabeanan (RM-04).
+export async function summarizeRefCodes(): Promise<RefCodeTypeSummary[]> {
+  const rows = await db
+    .select({
+      type: refCodes.type,
+      active: sql<number>`count(*) filter (where ${refCodes.active})::int`,
+      archived: sql<number>`count(*) filter (where not ${refCodes.active})::int`,
+    })
+    .from(refCodes)
+    .groupBy(refCodes.type)
+    .orderBy(asc(refCodes.type))
+  return rows
+}
+
 export const REF_CODE_SEARCH_LIMIT = 20
 
 // Pencarian untuk komponen pilihan [kode] nama. Hanya referensi aktif (yang diarsipkan

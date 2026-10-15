@@ -73,6 +73,9 @@ dimatikan: user baru dibuat oleh Administrator.
 
 ## Referensi kepabeanan
 
+- Halaman daftar (RM-04) dibuka sebagai ringkasan per jenis (jumlah aktif dan diarsipkan,
+  `summarizeRefCodes()`); klik jenis untuk melihat isinya. Hasil cari tanpa jenis dikelompokkan per
+  jenis.
 - Tabel `ref_codes` (jenis, kode, nama, `parent_code`, aktif). Daftar jenis dan labelnya di
   `src/lib/ref-codes.ts`. TPS unik per kantor pabean dan pelabuhan luar negeri unik per negara, jadi
   keduanya memakai `parent_code`.

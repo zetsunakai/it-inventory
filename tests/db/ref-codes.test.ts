@@ -7,7 +7,7 @@ import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
 import { auditLogs, refCodes } from "@/server/db/schema"
-import { searchRefCodes } from "@/server/queries/ref-codes"
+import { searchRefCodes, summarizeRefCodes } from "@/server/queries/ref-codes"
 
 import { inRollback, pgErrorMessage } from "./helpers"
 
@@ -119,6 +119,18 @@ describe("searchRefCodes", () => {
     expect(result).toEqual([
       { code: "ZQT1", name: "TPS Satu di kantor lain", parentCode: "ZQ0200" },
     ])
+  })
+})
+
+describe("summarizeRefCodes", () => {
+  test("jumlah referensi aktif dan diarsipkan per jenis, urut jenis (RM-04)", async () => {
+    const summary = await summarizeRefCodes()
+    const offices = summary.find((row) => row.type === "customs_office")
+    // Data uji: ZQ0100 dan ZQ0200 aktif, ZQ9 diarsipkan (ditambah data seed bila ada).
+    expect(offices?.active).toBeGreaterThanOrEqual(2)
+    expect(offices?.archived).toBeGreaterThanOrEqual(1)
+    const order = summary.map((row) => row.type)
+    expect(order.indexOf("document_type")).toBeLessThan(order.indexOf("customs_office"))
   })
 })
 

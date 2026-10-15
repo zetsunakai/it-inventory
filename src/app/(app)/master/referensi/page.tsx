@@ -9,7 +9,9 @@ import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
+import { formatNumber } from "@/lib/format"
 import {
+  hasActiveFilters,
   parseListParams,
   pickFilter,
   type RawSearchParams,
@@ -20,7 +22,12 @@ import {
 import { hasPermission } from "@/lib/permissions"
 import { REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS, REF_CODE_TYPES } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
-import { listRefCodes, type RefCodeRow } from "@/server/queries/ref-codes"
+import {
+  listRefCodes,
+  summarizeRefCodes,
+  type RefCodeRow,
+  type RefCodeTypeSummary,
+} from "@/server/queries/ref-codes"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
@@ -41,7 +48,6 @@ const COLUMNS: DataTableColumn<RefCodeRow>[] = [
     cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
     className: "w-full whitespace-normal",
   },
-  { header: "Jenis", cell: (row) => REF_CODE_TYPE_LABELS[row.type] },
   {
     header: "Induk",
     cell: (row) => {
@@ -54,6 +60,23 @@ const COLUMNS: DataTableColumn<RefCodeRow>[] = [
         </span>
       )
     },
+  },
+]
+
+// Tampilan awal (RM-04): referensi dikelompokkan per jenis; klik jenis untuk melihat isinya.
+const SUMMARY_COLUMNS: DataTableColumn<RefCodeTypeSummary>[] = [
+  {
+    header: "Jenis",
+    cell: (row) => (
+      <span className="font-medium text-foreground">{REF_CODE_TYPE_LABELS[row.type]}</span>
+    ),
+    className: "w-full",
+  },
+  { header: "Aktif", cell: (row) => formatNumber(row.active), align: "right" },
+  {
+    header: "Diarsipkan",
+    cell: (row) => (row.archived ? formatNumber(row.archived) : "—"),
+    align: "right",
   },
 ]
 
@@ -77,7 +100,13 @@ async function RefCodeTable({ searchParams }: { searchParams: Promise<RawSearchP
   const raw = await searchParams
   const params = parseListParams(raw)
   const type = pickFilter(raw, TYPE_FILTER, REF_CODE_TYPES)
-  const { rows, total } = await listRefCodes({ active: pickActive(raw), ...params, type })
+  // Tanpa jenis dan kata kunci: ringkasan per jenis. Hasil cari tanpa jenis dikelompokkan per jenis.
+  const summary = !type && !hasActiveFilters(raw)
+  const [list, summaryRows] = await Promise.all([
+    summary ? null : listRefCodes({ active: pickActive(raw), ...params, type }),
+    summary ? summarizeRefCodes() : null,
+  ])
+  const total = list?.total ?? summaryRows?.length ?? 0
 
   return (
     <div className="space-y-4">
@@ -91,12 +120,14 @@ async function RefCodeTable({ searchParams }: { searchParams: Promise<RawSearchP
           )
         }
         pager={
-          <ListPager
-            searchParams={raw}
-            page={params.page}
-            pageSize={params.pageSize}
-            total={total}
-          />
+          list && (
+            <ListPager
+              searchParams={raw}
+              page={params.page}
+              pageSize={params.pageSize}
+              total={total}
+            />
+          )
         }
       >
         <ListSearchBar
@@ -107,18 +138,38 @@ async function RefCodeTable({ searchParams }: { searchParams: Promise<RawSearchP
           ]}
         />
       </ListToolbar>
-      <DataTable
-        columns={COLUMNS}
-        rows={rows}
-        rowKey={(row) => row.id}
-        rowHref={canEdit ? (row) => `/master/referensi/${row.id}` : undefined}
-        rowMuted={(row) => !row.active}
-        empty={listEmptyState({
-          searchParams: raw,
-          basePath: "/master/referensi",
-          noun: "referensi",
-        })}
-      />
+      {summaryRows && (
+        <DataTable
+          columns={SUMMARY_COLUMNS}
+          rows={summaryRows}
+          rowKey={(row) => row.type}
+          rowHref={(row) => `/master/referensi?${new URLSearchParams({ [TYPE_FILTER]: row.type })}`}
+        />
+      )}
+      {list && (
+        <DataTable
+          // Kolom Induk hanya untuk jenis yang punya induk (TPS, pelabuhan luar negeri).
+          columns={
+            type && !REF_CODE_PARENT_TYPES[type]
+              ? COLUMNS.filter((column) => column.header !== "Induk")
+              : COLUMNS
+          }
+          rows={list.rows}
+          group={
+            type
+              ? undefined
+              : { key: (row) => row.type, label: (row) => REF_CODE_TYPE_LABELS[row.type] }
+          }
+          rowKey={(row) => row.id}
+          rowHref={canEdit ? (row) => `/master/referensi/${row.id}` : undefined}
+          rowMuted={(row) => !row.active}
+          empty={listEmptyState({
+            searchParams: raw,
+            basePath: "/master/referensi",
+            noun: "referensi",
+          })}
+        />
+      )}
     </div>
   )
 }
