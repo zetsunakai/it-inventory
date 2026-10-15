@@ -5,7 +5,8 @@ import { Suspense } from "react"
 import { z } from "zod"
 
 import { DeleteRecord } from "@/components/delete-record"
-import { PageHeader } from "@/components/page-header"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
 import { requirePermission } from "@/server/auth/session"
@@ -14,6 +15,8 @@ import {
   getWarehouseForUser,
   listWarehouseLocations,
 } from "@/server/queries/warehouses"
+import { recordActivity } from "@/server/queries/activity"
+import { locationNeighbors } from "@/server/queries/neighbors"
 
 import { deleteLocation } from "../../../actions"
 import { LocationEditForm } from "../../../location-forms"
@@ -51,28 +54,33 @@ async function EditLocation({ params }: { params: Promise<{ id: string; lokasiId
         !option.path.startsWith(`${location.path}/`),
     )
     .map((option) => ({ id: option.id, path: option.path }))
+  const [neighbors, activity] = await Promise.all([
+    locationNeighbors(warehouse.id, location.path),
+    recordActivity("locations", location.id, LOCATION_ACTIVITY_LABELS),
+  ])
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`Ubah lokasi ${location.code}`}
-        crumbs={[
-          { label: warehouse.code, href: `/master/gudang/${warehouse.id}` },
-          { label: `Lokasi ${location.code}` },
-        ]}
-        description={
-          <>
-            Lokasi {LOCATION_TYPE_LABELS[location.type].toLowerCase()} di gudang{" "}
-            <Link
-              href={`/master/gudang/${warehouse.id}`}
-              className="font-medium text-foreground underline underline-offset-4"
-            >
-              {warehouse.code} · {warehouse.name}
-            </Link>
-            . Kode, tipe, dan gudang tidak bisa diubah.
-          </>
-        }
-      />
+    <DocumentLayout
+      title={`${location.code} · ${location.name}`}
+      crumbs={[
+        { label: warehouse.code, href: `/master/gudang/${warehouse.id}` },
+        { label: `Lokasi ${location.code}` },
+      ]}
+      neighbors={neighbors}
+      activity={<ActivityLog entries={activity} noun="lokasi" />}
+      meta={
+        <>
+          Lokasi {LOCATION_TYPE_LABELS[location.type].toLowerCase()} di gudang{" "}
+          <Link
+            href={`/master/gudang/${warehouse.id}`}
+            className="font-medium text-foreground underline underline-offset-4"
+          >
+            {warehouse.code} · {warehouse.name}
+          </Link>
+          . Kode, tipe, dan gudang tidak bisa diubah.
+        </>
+      }
+    >
       <LocationEditForm location={location} parents={parents} />
       <DeleteRecord
         action={deleteLocation}
@@ -81,6 +89,11 @@ async function EditLocation({ params }: { params: Promise<{ id: string; lokasiId
         label={location.code}
         listHref={`/master/gudang/${warehouse.id}`}
       />
-    </div>
+    </DocumentLayout>
   )
+}
+
+const LOCATION_ACTIVITY_LABELS = {
+  fields: { name: "Nama", parent_id: "Lokasi induk", active: "Aktif" },
+  values: { type: LOCATION_TYPE_LABELS as Record<string, string> },
 }

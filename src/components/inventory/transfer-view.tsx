@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { InfoGrid } from "@/components/layout/info-grid"
-import { Section } from "@/components/layout/section"
+import { TabCount, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
 import {
@@ -173,17 +173,87 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
         ]
       : []),
   ]
-  const wide = new Set(["Catatan", "Alasan"])
+  // Catatan dan alasan pindah ke tab Catatan (notebook hmx, RU-23).
+  const notes = new Set(["Catatan", "Alasan"])
+  const moves = transfer.lines.flatMap((line) =>
+    line.moves.map((move) => ({
+      ...move,
+      sku: line.sku,
+      productName: line.productName,
+      unit: line.stockUomCode,
+    })),
+  )
   return (
-    <div className="space-y-8">
-      <InfoGrid items={rows.map(([label, value]) => ({ label, value, wide: wide.has(label) }))} />
-      <Section title="Barang">
-        <DataTable
-          columns={lineColumns(transfer)}
-          rows={transfer.lines}
-          rowKey={(line) => line.id}
-        />
-      </Section>
+    <div className="space-y-6">
+      <InfoGrid
+        items={rows
+          .filter(([label]) => !notes.has(label))
+          .map(([label, value]) => ({ label, value }))}
+      />
+      <Tabs defaultValue="barang">
+        <TabsList>
+          <TabsTrigger value="barang">
+            Barang <TabCount>{transfer.lines.length}</TabCount>
+          </TabsTrigger>
+          <TabsTrigger value="pergerakan">
+            Detail pergerakan <TabCount>{moves.length}</TabCount>
+          </TabsTrigger>
+          <TabsTrigger value="catatan">Catatan</TabsTrigger>
+        </TabsList>
+        <TabsContent value="barang">
+          <DataTable
+            columns={lineColumns(transfer)}
+            rows={transfer.lines}
+            rowKey={(line) => line.id}
+          />
+        </TabsContent>
+        <TabsContent value="pergerakan">
+          <DataTable
+            columns={MOVE_COLUMNS}
+            rows={moves}
+            rowKey={(move) => move.id}
+            empty={{ title: "Belum ada pergerakan." }}
+          />
+        </TabsContent>
+        <TabsContent value="catatan">
+          <InfoGrid
+            items={rows
+              .filter(([label]) => notes.has(label))
+              .map(([label, value]) => ({ label, value, wide: true }))}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
+
+type MoveRow = TransferLine["moves"][number] & { sku: string; productName: string; unit: string }
+
+// Detail pergerakan per lot/nomor seri (R-05): qty dan qty yang dipesan dalam satuan stok.
+const MOVE_COLUMNS: DataTableColumn<MoveRow>[] = [
+  {
+    header: "Produk",
+    className: "w-full whitespace-normal",
+    cell: (move) => (
+      <span className="flex flex-col">
+        <span className="font-mono text-foreground">{move.sku}</span>
+        <span className="text-muted-foreground">{move.productName}</span>
+      </span>
+    ),
+  },
+  {
+    header: "Lot/seri",
+    cell: (move) => (move.lotName ? <span className="font-mono">{move.lotName}</span> : "—"),
+  },
+  {
+    header: "Qty",
+    align: "right",
+    cell: (move) => `${formatDecimal(move.qty)} ${move.unit}`,
+  },
+  {
+    header: "Dipesan",
+    align: "right",
+    cell: (move) =>
+      Number(move.reservedQty) ? `${formatDecimal(move.reservedQty)} ${move.unit}` : "—",
+  },
+]

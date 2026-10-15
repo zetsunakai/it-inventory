@@ -8,8 +8,6 @@ import { DataTable, type DataTableColumn } from "@/components/data-table/data-ta
 import { ReturnRequestActions } from "@/components/inventory/return-request-actions"
 import { ReturnRequestForm } from "@/components/inventory/return-request-form"
 import { TransferStatusBadge } from "@/components/inventory/transfer-status"
-import { PageHeader } from "@/components/page-header"
-import { StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
@@ -17,7 +15,6 @@ import {
   MOVEMENT_CODE_LABELS,
   RETURN_LINE_ACTION_LABELS,
   RETURN_REQUEST_STATUS_LABELS,
-  RETURN_REQUEST_STATUS_TONES,
   RETURN_REQUEST_TYPE_LABELS,
   type TransferType,
 } from "@/lib/inventory"
@@ -26,7 +23,11 @@ import { requirePermission } from "@/server/auth/session"
 import { getReturnRequest, type ReturnRequestDetail } from "@/server/queries/return-requests"
 import { listInternalLocations } from "@/server/queries/transfers"
 import { InfoGrid } from "@/components/layout/info-grid"
-import { Section } from "@/components/layout/section"
+import { recordActivity } from "@/server/queries/activity"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
+import { StatusSteps } from "@/components/document/status-steps"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const metadata: Metadata = { title: "Detail retur · IT Inventory" }
 
@@ -102,6 +103,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   if (!z.uuid().safeParse(id).success) notFound()
   const request = await getReturnRequest(user.id, id)
   if (!request) notFound()
+  const activity = await recordActivity("return_requests", request.id, RETURN_ACTIVITY_LABELS)
   const canWrite = hasPermission(user.roles, "inventory:write")
   const editable = canWrite && request.status === "draft"
   const locations = editable
@@ -130,39 +132,48 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   ]
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        actions={
-          canWrite && (
-            <ReturnRequestActions
-              id={request.id}
-              number={request.number}
-              status={request.status}
-              cancellable={cancellable}
-            />
-          )
-        }
-        title={`Retur ${request.number}`}
-        crumbs={[{ label: request.number }]}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-            <StatusBadge tone={RETURN_REQUEST_STATUS_TONES[request.status]}>
-              {RETURN_REQUEST_STATUS_LABELS[request.status]}
-            </StatusBadge>
-            <span>{RETURN_REQUEST_TYPE_LABELS[request.type]}</span>
-            <span>{request.partnerName}</span>
-            <span>
-              Dari{" "}
-              <Link
-                href={`${originPath}/${request.originId}`}
-                className="font-mono text-primary underline-offset-4 hover:underline"
-              >
-                {request.originNumber}
-              </Link>
-            </span>
+    <DocumentLayout
+      actions={
+        canWrite && (
+          <ReturnRequestActions
+            id={request.id}
+            number={request.number}
+            status={request.status}
+            cancellable={cancellable}
+          />
+        )
+      }
+      title={`Retur ${request.number}`}
+      crumbs={[{ label: request.number }]}
+      meta={
+        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>{RETURN_REQUEST_TYPE_LABELS[request.type]}</span>
+          <span>{request.partnerName}</span>
+          <span>
+            Dari{" "}
+            <Link
+              href={`${originPath}/${request.originId}`}
+              className="font-mono text-primary underline-offset-4 hover:underline"
+            >
+              {request.originNumber}
+            </Link>
           </span>
-        }
-      />
+        </span>
+      }
+
+      status={
+        <StatusSteps
+          steps={[
+            { code: "draft", label: "Draft" },
+            { code: "in_progress", label: "Diproses" },
+            { code: "done", label: "Selesai" },
+          ]}
+          current={request.status}
+          outside={request.status === "cancelled" ? { label: "Batal", tone: "neutral" } : undefined}
+        />
+      }
+      activity={<ActivityLog entries={activity} noun="permintaan retur" />}
+    >
       {editable ? (
         <ReturnRequestForm
           locations={locations}
@@ -185,18 +196,36 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
               wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
             }))}
           />
-          <Section title="Transfer">
-            <DataTable
-              columns={TRANSFER_COLUMNS}
-              rows={request.transfers}
-              rowKey={(row) => row.id}
-            />
-          </Section>
-          <Section title="Barang">
-            <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
-          </Section>
+          <Tabs defaultValue="transfer">
+            <TabsList>
+              <TabsTrigger value="transfer">Transfer</TabsTrigger>
+              <TabsTrigger value="barang">Barang</TabsTrigger>
+            </TabsList>
+            <TabsContent value="transfer">
+              <DataTable
+                columns={TRANSFER_COLUMNS}
+                rows={request.transfers}
+                rowKey={(row) => row.id}
+              />
+            </TabsContent>
+            <TabsContent value="barang">
+              <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
-    </div>
+    </DocumentLayout>
   )
+}
+
+// Label log aktivitas (RU-23).
+const RETURN_ACTIVITY_LABELS = {
+  fields: {
+    status: "Status",
+    location_id: "Lokasi",
+    scheduled_date: "Tanggal rencana",
+    reason: "Alasan retur",
+    notes: "Catatan",
+  },
+  values: { status: RETURN_REQUEST_STATUS_LABELS as Record<string, string> },
 }

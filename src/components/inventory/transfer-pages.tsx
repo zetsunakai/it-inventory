@@ -15,6 +15,7 @@ import {
   MOVEMENT_CODE_LABELS,
   TRANSFER_STATUS_LABELS,
   TRANSFER_STATUSES,
+  type TransferStatus,
   USAGE_TYPE_LABELS,
   USAGE_TYPES,
 } from "@/lib/inventory"
@@ -26,7 +27,7 @@ import {
   type RawSearchParams,
 } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
-import type { TransferKind } from "@/lib/transfer"
+import { transferHref, type TransferKind } from "@/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
 import {
   getTransfer,
@@ -34,7 +35,12 @@ import {
   listTransfers,
   listUomChoices,
   type TransferRow,
+  transferNeighbors,
 } from "@/server/queries/transfers"
+import { recordActivity } from "@/server/queries/activity"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
+import { StatusSteps } from "@/components/document/status-steps"
 
 import { CreateReturnButton } from "./create-return-button"
 import { TransferActions } from "./transfer-actions"
@@ -304,71 +310,85 @@ async function TransferDetail({
     canWrite &&
     transfer.status === "done" &&
     (transfer.type === "receipt" || transfer.type === "delivery")
+  const [neighbors, activity] = await Promise.all([
+    transferNeighbors(user.id, transfer, kind.movementCodes),
+    recordActivity("transfers", transfer.id, TRANSFER_ACTIVITY_LABELS),
+  ])
+  const neighborHref = (target?: { id: string; number: string }) =>
+    target && { href: transferHref(transfer.type, target.id), label: target.number }
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`${
-          fromRequest
-            ? MOVEMENT_CODE_LABELS[transfer.movementCode]
-            : transfer.usageType
-              ? USAGE_TYPE_LABELS[transfer.usageType]
-              : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`
-        } ${transfer.number}`}
-        crumbs={[
-          // Transfer milik permintaan antar gudang atau retur: permintaannya jadi tingkat induk.
-          ...(transfer.interwarehouseId && transfer.interwarehouseNumber
-            ? [
-                {
-                  label: transfer.interwarehouseNumber,
-                  href: `/inventory/antar-gudang/${transfer.interwarehouseId}`,
-                },
-              ]
-            : []),
-          ...(transfer.returnRequestId && transfer.returnRequestNumber
-            ? [
-                {
-                  label: transfer.returnRequestNumber,
-                  href: `/inventory/retur/${transfer.returnRequestId}`,
-                },
-              ]
-            : []),
-          { label: transfer.number },
-        ]}
-        actions={
-          canWrite && (
-            <>
-              <TransferActions
-                id={transfer.id}
-                number={transfer.number}
-                status={transfer.status}
-                noun={kind.noun}
-                effect={effect}
-                canBackdate={user.roles.includes("manajer")}
-                path={kind.path}
-                needsApproval={Boolean(kind.needsApproval)}
-                canApprove={hasPermission(user.roles, "inventory:approve")}
-                reservable={Boolean(transfer.sourceWarehouseId)}
-                instant={Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"}
-                lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
-                  id: line.id,
-                  sku: line.sku,
-                  inputQty: line.inputQty,
-                  uomCode: line.inputUomCode,
-                }))}
-              />
-              {canReturn && <CreateReturnButton originId={transfer.id} />}
-            </>
-          )
-        }
-        description={
+    <DocumentLayout
+      neighbors={{ prev: neighborHref(neighbors.prev), next: neighborHref(neighbors.next) }}
+      status={
+        <TransferStatusSteps
+          status={transfer.status}
+          reservable={Boolean(transfer.sourceWarehouseId)}
+        />
+      }
+      activity={<ActivityLog entries={activity} noun={kind.noun} />}
+      title={`${
+        fromRequest
+          ? MOVEMENT_CODE_LABELS[transfer.movementCode]
+          : transfer.usageType
+            ? USAGE_TYPE_LABELS[transfer.usageType]
+            : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`
+      } ${transfer.number}`}
+      crumbs={[
+        // Transfer milik permintaan antar gudang atau retur: permintaannya jadi tingkat induk.
+        ...(transfer.interwarehouseId && transfer.interwarehouseNumber
+          ? [
+              {
+                label: transfer.interwarehouseNumber,
+                href: `/inventory/antar-gudang/${transfer.interwarehouseId}`,
+              },
+            ]
+          : []),
+        ...(transfer.returnRequestId && transfer.returnRequestNumber
+          ? [
+              {
+                label: transfer.returnRequestNumber,
+                href: `/inventory/retur/${transfer.returnRequestId}`,
+              },
+            ]
+          : []),
+        { label: transfer.number },
+      ]}
+      actions={
+        canWrite && (
+          <>
+            <TransferActions
+              id={transfer.id}
+              number={transfer.number}
+              status={transfer.status}
+              noun={kind.noun}
+              effect={effect}
+              canBackdate={user.roles.includes("manajer")}
+              path={kind.path}
+              needsApproval={Boolean(kind.needsApproval)}
+              canApprove={hasPermission(user.roles, "inventory:approve")}
+              reservable={Boolean(transfer.sourceWarehouseId)}
+              instant={Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"}
+              lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
+                id: line.id,
+                sku: line.sku,
+                inputQty: line.inputQty,
+                uomCode: line.inputUomCode,
+              }))}
+            />
+            {canReturn && <CreateReturnButton originId={transfer.id} />}
+          </>
+        )
+      }
+      meta={
+        (transfer.partner || transfer.returnOfNumber) && (
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-            <TransferStatusBadge status={transfer.status} />
             {transfer.partner && <span>{transfer.partner.name}</span>}
             {transfer.returnOfNumber && <span>Retur dari {transfer.returnOfNumber}</span>}
           </span>
-        }
-      />
+        )
+      }
+    >
       {editable ? (
         <TransferForm
           kind={kind}
@@ -416,6 +436,54 @@ async function TransferDetail({
       ) : (
         <TransferView kind={kind} transfer={transfer} />
       )}
-    </div>
+    </DocumentLayout>
+  )
+}
+
+// Label log aktivitas transfer (RU-23).
+const TRANSFER_ACTIVITY_LABELS = {
+  fields: {
+    status: "Status",
+    scheduled_date: "Tanggal rencana",
+    done_at: "Tanggal efektif",
+    reference: "Referensi",
+    notes: "Catatan",
+    reason: "Alasan",
+    usage_type: "Jenis pemakaian",
+    partner_id: "Partner",
+    source_location_id: "Lokasi asal",
+    destination_location_id: "Lokasi tujuan",
+    approved_at: "Disetujui",
+  },
+  values: {
+    status: TRANSFER_STATUS_LABELS as Record<string, string>,
+    usage_type: USAGE_TYPE_LABELS as Record<string, string>,
+  },
+}
+
+// Langkah status transfer (RU-23): transfer yang mengambil stok gudang melewati Menunggu stok.
+function TransferStatusSteps({
+  status,
+  reservable,
+}: {
+  status: TransferStatus
+  reservable: boolean
+}) {
+  if (status === "cancelled") {
+    return <StatusSteps steps={[]} outside={{ label: "Batal", tone: "neutral" }} />
+  }
+  const steps = [
+    { code: "draft", label: "Draft" },
+    ...(reservable ? [{ code: "waiting", label: "Menunggu stok" }] : []),
+    { code: "ready", label: "Siap" },
+    { code: "done", label: "Selesai" },
+  ]
+  const current = status === "partially_available" ? "waiting" : status
+  return (
+    <StatusSteps
+      steps={steps}
+      current={steps.some((step) => step.code === current) ? current : "ready"}
+      currentLabel={TRANSFER_STATUS_LABELS[status]}
+    />
   )
 }

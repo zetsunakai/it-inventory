@@ -15,7 +15,12 @@ export function CheckboxField({
 }) {
   return (
     <div className="flex items-start gap-2">
-      <Checkbox id={name} name={name} defaultChecked={defaultChecked} />
+      <Checkbox
+        key={defaultChecked ? "checked" : "unchecked"}
+        id={name}
+        name={name}
+        defaultChecked={defaultChecked}
+      />
       <div className="grid gap-1 leading-none">
         <Label htmlFor={name}>{label}</Label>
         <p className="text-sm text-muted-foreground">{description}</p>

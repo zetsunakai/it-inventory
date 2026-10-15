@@ -465,3 +465,33 @@ export async function stockAvailability(
       .map((row) => ({ name: row.lotName!, qty: row.qty })),
   }
 }
+
+// Transfer sebelum/sesudah dalam urutan daftar (terbaru dulu) untuk tombol record di header
+// dokumen (RU-23): jenis dan kode pergerakan sama, gudang yang boleh diakses.
+export async function transferNeighbors(
+  userId: string,
+  transfer: { id: string; type: TransferType; createdAt: Date },
+  movementCodes?: readonly MovementCode[],
+) {
+  const scope = and(
+    eq(transfers.type, transfer.type),
+    accessibleBy(userId),
+    movementCodes ? inArray(transfers.movementCode, [...movementCodes]) : undefined,
+  )
+  const pick = (where: SQL, order: SQL) =>
+    db
+      .select({ id: transfers.id, number: transfers.number })
+      .from(transfers)
+      .innerJoin(source, eq(source.id, transfers.sourceLocationId))
+      .innerJoin(destination, eq(destination.id, transfers.destinationLocationId))
+      .where(and(scope, where))
+      .orderBy(order)
+      .limit(1)
+  const at = sql`(${transfers.createdAt}, ${transfers.id})`
+  const current = sql`(${transfer.createdAt.toISOString()}::timestamptz, ${transfer.id}::uuid)`
+  const [[prev], [next]] = await Promise.all([
+    pick(sql`${at} > ${current}`, sql`${transfers.createdAt} asc, ${transfers.id} asc`),
+    pick(sql`${at} < ${current}`, sql`${transfers.createdAt} desc, ${transfers.id} desc`),
+  ])
+  return { prev, next }
+}

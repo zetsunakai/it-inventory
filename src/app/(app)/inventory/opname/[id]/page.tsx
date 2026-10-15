@@ -8,15 +8,17 @@ import { z } from "zod"
 import { CountActions } from "@/components/inventory/count-actions"
 import { CountReview } from "@/components/inventory/count-review"
 import { CountSheet } from "@/components/inventory/count-sheet"
-import { CountStatusBadge } from "@/components/inventory/count-status"
-import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDateTime, formatNumber } from "@/lib/format"
-import { FROZEN_STOCK_COUNT_STATUSES } from "@/lib/inventory"
+import { FROZEN_STOCK_COUNT_STATUSES, STOCK_COUNT_STATUS_LABELS } from "@/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { getStockCount } from "@/server/queries/stock-counts"
 import { listInternalLocations } from "@/server/queries/transfers"
+import { recordActivity } from "@/server/queries/activity"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
+import { StatusSteps } from "@/components/document/status-steps"
 
 export const metadata: Metadata = { title: "Sesi opname · IT Inventory" }
 
@@ -34,6 +36,7 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
   if (!z.uuid().safeParse(id).success) notFound()
   const count = await getStockCount(user.id, id)
   if (!count) notFound()
+  const activity = await recordActivity("stock_counts", count.id, STOCK_COUNT_ACTIVITY_LABELS)
 
   const canWrite = hasPermission(user.roles, "inventory:write")
   const canCount = canWrite && count.status === "counting"
@@ -58,34 +61,47 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
     : []
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        actions={
-          <CountActions
-            id={count.id}
-            number={count.number}
-            status={count.status}
-            warehouseCode={count.warehouseCode}
-            differing={differing}
-            completedAt={count.completedAt ? formatDateTime(count.completedAt) : null}
-            canWrite={canWrite}
-            canApprove={canApprove}
-          />
-        }
-        title={`Stock opname ${count.number}`}
-        crumbs={[{ label: count.number }]}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-            <CountStatusBadge status={count.status} />
-            <span>
-              {count.warehouseCode} · {count.locationPath ?? "seluruh gudang"}
-              {count.productCategoryPath && ` · kategori ${count.productCategoryPath}`}
-            </span>
-            {count.status !== "draft" && <span>Mulai {formatDateTime(count.cutOffAt)}</span>}
-            {count.completedAt && <span>Selesai hitung {formatDateTime(count.completedAt)}</span>}
+    <DocumentLayout
+      actions={
+        <CountActions
+          id={count.id}
+          number={count.number}
+          status={count.status}
+          warehouseCode={count.warehouseCode}
+          differing={differing}
+          completedAt={count.completedAt ? formatDateTime(count.completedAt) : null}
+          canWrite={canWrite}
+          canApprove={canApprove}
+        />
+      }
+      title={`Stock opname ${count.number}`}
+      crumbs={[{ label: count.number }]}
+      meta={
+        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+          <span>
+            {count.warehouseCode} · {count.locationPath ?? "seluruh gudang"}
+            {count.productCategoryPath && ` · kategori ${count.productCategoryPath}`}
           </span>
-        }
-      />
+          {count.status !== "draft" && <span>Mulai {formatDateTime(count.cutOffAt)}</span>}
+          {count.completedAt && <span>Selesai hitung {formatDateTime(count.completedAt)}</span>}
+        </span>
+      }
+
+      status={
+        <StatusSteps
+          steps={[
+            { code: "draft", label: "Draft" },
+            { code: "counting", label: "Berjalan" },
+            { code: "counted", label: "Selesai hitung" },
+            { code: "review", label: "Menunggu persetujuan" },
+            { code: "approved", label: "Disetujui" },
+          ]}
+          current={count.status}
+          outside={count.status === "cancelled" ? { label: "Batal", tone: "neutral" } : undefined}
+        />
+      }
+      activity={<ActivityLog entries={activity} noun="sesi opname" />}
+    >
       {frozen && (
         <p className="flex gap-2 rounded-lg bg-warning-soft px-3 py-2.5 text-sm">
           <Snowflake className="mt-0.5 size-4 shrink-0 text-warning" aria-hidden />
@@ -144,6 +160,20 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
           <CountReview lines={count.lines} />
         </>
       )}
-    </div>
+    </DocumentLayout>
   )
+}
+
+// Label log aktivitas (RU-23).
+const STOCK_COUNT_ACTIVITY_LABELS = {
+  fields: {
+    status: "Status",
+    location_id: "Lokasi",
+    product_category_id: "Kategori produk",
+    cut_off_at: "Mulai hitung",
+    completed_at: "Selesai hitung",
+    approved_at: "Disetujui",
+    notes: "Catatan",
+  },
+  values: { status: STOCK_COUNT_STATUS_LABELS as Record<string, string> },
 }

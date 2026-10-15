@@ -8,22 +8,20 @@ import { DataTable, type DataTableColumn } from "@/components/data-table/data-ta
 import { InterwarehouseActions } from "@/components/inventory/interwarehouse-actions"
 import { InterwarehouseForm } from "@/components/inventory/interwarehouse-form"
 import { TransferStatusBadge } from "@/components/inventory/transfer-status"
-import { PageHeader } from "@/components/page-header"
-import { StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
-import {
-  INTERWAREHOUSE_STATUS_LABELS,
-  INTERWAREHOUSE_STATUS_TONES,
-  MOVEMENT_CODE_LABELS,
-} from "@/lib/inventory"
+import { INTERWAREHOUSE_STATUS_LABELS, MOVEMENT_CODE_LABELS } from "@/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { getInterwarehouse, type InterwarehouseDetail } from "@/server/queries/interwarehouse"
 import { listInternalLocations, listUomChoices } from "@/server/queries/transfers"
 import { InfoGrid } from "@/components/layout/info-grid"
-import { Section } from "@/components/layout/section"
+import { recordActivity } from "@/server/queries/activity"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
+import { StatusSteps } from "@/components/document/status-steps"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 export const metadata: Metadata = { title: "Detail transfer antar gudang · IT Inventory" }
 
@@ -108,6 +106,11 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   if (!z.uuid().safeParse(id).success) notFound()
   const request = await getInterwarehouse(user.id, id)
   if (!request) notFound()
+  const activity = await recordActivity(
+    "interwarehouse_transfers",
+    request.id,
+    INTERWAREHOUSE_ACTIVITY_LABELS,
+  )
   const canWrite = hasPermission(user.roles, "inventory:write")
   const editable = canWrite && request.status === "draft"
   const [locations, uoms] = editable
@@ -131,26 +134,34 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   ]
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        actions={
-          canWrite && (
-            <InterwarehouseActions
-              id={request.id}
-              number={request.number}
-              status={request.status}
-              canSettle={canSettle}
-            />
-          )
-        }
-        title={`Transfer antar gudang ${request.number}`}
-        crumbs={[{ label: request.number }]}
-        description={
-          <StatusBadge tone={INTERWAREHOUSE_STATUS_TONES[request.status]}>
-            {INTERWAREHOUSE_STATUS_LABELS[request.status]}
-          </StatusBadge>
-        }
-      />
+    <DocumentLayout
+      actions={
+        canWrite && (
+          <InterwarehouseActions
+            id={request.id}
+            number={request.number}
+            status={request.status}
+            canSettle={canSettle}
+          />
+        )
+      }
+      title={`Transfer antar gudang ${request.number}`}
+      crumbs={[{ label: request.number }]}
+
+      status={
+        <StatusSteps
+          steps={[
+            { code: "draft", label: "Draft" },
+            { code: "confirmed", label: "Dikonfirmasi" },
+            { code: "in_progress", label: "Di perjalanan" },
+            { code: "done", label: "Selesai" },
+          ]}
+          current={request.status}
+          outside={request.status === "cancelled" ? { label: "Batal", tone: "neutral" } : undefined}
+        />
+      }
+      activity={<ActivityLog entries={activity} noun="permintaan" />}
+    >
       {editable ? (
         <InterwarehouseForm
           locations={locations}
@@ -178,27 +189,49 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
               wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
             }))}
           />
-          {request.inTransit.length > 0 && (
-            <Section title="Masih di perjalanan">
+          <Tabs defaultValue={request.inTransit.length > 0 ? "masih-di-perjalanan" : "transfer"}>
+            <TabsList>
+              {request.inTransit.length > 0 && (
+                <TabsTrigger value="masih-di-perjalanan">Masih di perjalanan</TabsTrigger>
+              )}
+              <TabsTrigger value="transfer">Transfer</TabsTrigger>
+              <TabsTrigger value="barang-diminta">Barang diminta</TabsTrigger>
+            </TabsList>
+            {request.inTransit.length > 0 && (
+              <TabsContent value="masih-di-perjalanan">
+                <DataTable
+                  columns={TRANSIT_COLUMNS}
+                  rows={request.inTransit}
+                  rowKey={(row) => `${row.sku}|${row.lot ?? ""}`}
+                />
+              </TabsContent>
+            )}
+            <TabsContent value="transfer">
               <DataTable
-                columns={TRANSIT_COLUMNS}
-                rows={request.inTransit}
-                rowKey={(row) => `${row.sku}|${row.lot ?? ""}`}
+                columns={TRANSFER_COLUMNS}
+                rows={request.transfers}
+                rowKey={(row) => row.id}
               />
-            </Section>
-          )}
-          <Section title="Transfer">
-            <DataTable
-              columns={TRANSFER_COLUMNS}
-              rows={request.transfers}
-              rowKey={(row) => row.id}
-            />
-          </Section>
-          <Section title="Barang diminta">
-            <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
-          </Section>
+            </TabsContent>
+            <TabsContent value="barang-diminta">
+              <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
+            </TabsContent>
+          </Tabs>
         </div>
       )}
-    </div>
+    </DocumentLayout>
   )
+}
+
+// Label log aktivitas (RU-23).
+const INTERWAREHOUSE_ACTIVITY_LABELS = {
+  fields: {
+    status: "Status",
+    source_location_id: "Lokasi asal",
+    destination_location_id: "Lokasi tujuan",
+    scheduled_date: "Tanggal rencana",
+    reference: "Referensi",
+    notes: "Catatan",
+  },
+  values: { status: INTERWAREHOUSE_STATUS_LABELS as Record<string, string> },
 }

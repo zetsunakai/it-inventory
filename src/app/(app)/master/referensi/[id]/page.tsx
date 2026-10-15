@@ -3,7 +3,8 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
-import { PageHeader } from "@/components/page-header"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatRefCode, REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
@@ -11,17 +12,16 @@ import { findRefCode, getRefCode } from "@/server/queries/ref-codes"
 
 import { RefCodeEditForm } from "../ref-code-forms"
 import { InfoGrid } from "@/components/layout/info-grid"
+import { recordActivity } from "@/server/queries/activity"
+import { refCodeNeighbors } from "@/server/queries/neighbors"
 
 export const metadata: Metadata = { title: "Ubah referensi · IT Inventory" }
 
 export default function EditRefCodePage({ params }: PageProps<"/master/referensi/[id]">) {
   return (
-    <>
-      <PageHeader title="Ubah referensi" description="Jenis dan kode tidak bisa diubah." />
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-4xl" />}>
-        <EditRefCode params={params} />
-      </Suspense>
-    </>
+    <Suspense fallback={<Skeleton className="h-64 w-full max-w-4xl" />}>
+      <EditRefCode params={params} />
+    </Suspense>
   )
 }
 
@@ -35,9 +35,19 @@ async function EditRefCode({ params }: { params: Promise<{ id: string }> }) {
 
   const parentType = REF_CODE_PARENT_TYPES[row.type]
   const parent = parentType && row.parentCode ? await findRefCode(parentType, row.parentCode) : null
+  const [neighbors, activity] = await Promise.all([
+    refCodeNeighbors(row.type, row.code, row.parentCode),
+    recordActivity("ref_codes", row.id, REF_ACTIVITY_LABELS),
+  ])
 
   return (
-    <div className="space-y-6">
+    <DocumentLayout
+      title={row.name}
+      meta="Jenis dan kode tidak bisa diubah."
+      crumbs={[{ label: formatRefCode(row) }]}
+      neighbors={neighbors}
+      activity={<ActivityLog entries={activity} noun="referensi kepabeanan" />}
+    >
       <InfoGrid
         items={[
           { label: "Jenis", value: REF_CODE_TYPE_LABELS[row.type] },
@@ -53,6 +63,10 @@ async function EditRefCode({ params }: { params: Promise<{ id: string }> }) {
         ]}
       />
       <RefCodeEditForm id={row.id} name={row.name} active={row.active} />
-    </div>
+    </DocumentLayout>
   )
+}
+
+const REF_ACTIVITY_LABELS = {
+  fields: { name: "Nama", parent_code: "Kode induk", active: "Aktif" },
 }

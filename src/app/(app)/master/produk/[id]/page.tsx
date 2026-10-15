@@ -4,7 +4,6 @@ import { Suspense } from "react"
 import { z } from "zod"
 
 import { DeleteRecord } from "@/components/delete-record"
-import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { INVENTORY_CATEGORY_LABELS, PRODUCT_TRACKING_LABELS } from "@/lib/inventory"
@@ -19,6 +18,10 @@ import { missingCustomsData } from "../customs-readiness"
 import { deleteProduct } from "../actions"
 import { ProductForm } from "../product-form"
 import { InfoGrid } from "@/components/layout/info-grid"
+import { recordActivity } from "@/server/queries/activity"
+import { masterNeighbors } from "@/server/queries/neighbors"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
 
 export const metadata: Metadata = { title: "Detail produk · IT Inventory" }
 
@@ -36,6 +39,10 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
   if (!z.uuid().safeParse(id).success) notFound()
   const product = await getProduct(id)
   if (!product) notFound()
+  const [neighbors, activity] = await Promise.all([
+    masterNeighbors("products", product.sku),
+    recordActivity("products", product.id, PRODUCT_ACTIVITY_LABELS),
+  ])
 
   const missing = missingCustomsData(product)
   const rows: [string, string][] = [
@@ -65,16 +72,18 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
   ]
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`${product.sku} · ${product.name}`}
-        crumbs={[{ label: product.sku }]}
-        description={
-          product.customsReady
-            ? "Siap dipakai di dokumen BC."
-            : `Belum siap dokumen BC: ${missing.join(" dan ")} belum diisi.`
-        }
-      />
+    <DocumentLayout
+      title={`${product.sku} · ${product.name}`}
+      crumbs={[{ label: product.sku }]}
+      meta={
+        product.customsReady
+          ? "Siap dipakai di dokumen BC."
+          : `Belum siap dokumen BC: ${missing.join(" dan ")} belum diisi.`
+      }
+
+      neighbors={neighbors}
+      activity={<ActivityLog entries={activity} noun="produk" />}
+    >
       {hasPermission(user.roles, "master:write") ? (
         <>
           <ProductForm
@@ -99,6 +108,29 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
           }))}
         />
       )}
-    </div>
+    </DocumentLayout>
   )
+}
+
+// Label log aktivitas (RU-23).
+const PRODUCT_ACTIVITY_LABELS = {
+  fields: {
+    name: "Nama",
+    description: "Deskripsi",
+    category: "Kategori IT Inventory",
+    category_id: "Kategori produk",
+    hs_code: "Kode HS",
+    ceisa_unit_code: "Satuan CEISA",
+    ceisa_factor: "Faktor satuan CEISA",
+    net_weight: "Berat netto",
+    brand: "Merk",
+    model: "Tipe",
+    size: "Ukuran",
+    tracking: "Pelacakan",
+    active: "Aktif",
+  },
+  values: {
+    category: INVENTORY_CATEGORY_LABELS as Record<string, string>,
+    tracking: PRODUCT_TRACKING_LABELS as Record<string, string>,
+  },
 }

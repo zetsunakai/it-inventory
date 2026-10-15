@@ -5,9 +5,12 @@ import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DeleteRecord } from "@/components/delete-record"
-import { PageHeader } from "@/components/page-header"
 import { ArchivedBadge, NameCell, StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
+import { recordActivity } from "@/server/queries/activity"
+import { warehouseNeighbors } from "@/server/queries/neighbors"
 import { INVENTORY_CATEGORY_LABELS, LOCATION_TYPE_LABELS } from "@/lib/inventory"
 import { ALL_WAREHOUSE_ROLES, hasPermission, ROLE_LABELS } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
@@ -63,34 +66,36 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
 
   const canEdit = hasPermission(user.roles, "master:write")
   const canManageAccess = hasPermission(user.roles, "user:manage")
-  const [locations, members, candidates] = await Promise.all([
+  const [locations, members, candidates, neighbors, activity] = await Promise.all([
     listWarehouseLocations(warehouse.id),
     canManageAccess ? listWarehouseUsers(warehouse.id) : [],
     canManageAccess ? listAssignableUsers(warehouse.id) : [],
+    warehouseNeighbors(user.id, warehouse.code),
+    recordActivity("warehouses", warehouse.id, WAREHOUSE_ACTIVITY_LABELS),
   ])
   const parentOptions = locations
     .filter((location) => location.active)
     .map((location) => ({ id: location.id, path: location.path }))
 
   return (
-    <div className="space-y-8">
-      <PageHeader
-        title={`${warehouse.code} · ${warehouse.name}`}
-        crumbs={[{ label: warehouse.code }]}
-        description={
-          <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-            {warehouse.isBonded ? (
-              <StatusBadge tone="bonded">Gudang berikat</StatusBadge>
-            ) : (
-              <span>Gudang non-berikat</span>
-            )}
-            <span>{INVENTORY_CATEGORY_LABELS[warehouse.category]}</span>
-            <span>{warehouse.address}</span>
-            {!warehouse.active && <ArchivedBadge />}
-          </span>
-        }
-      />
-
+    <DocumentLayout
+      title={`${warehouse.code} · ${warehouse.name}`}
+      crumbs={[{ label: warehouse.code }]}
+      neighbors={neighbors}
+      activity={<ActivityLog entries={activity} noun="gudang" />}
+      meta={
+        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
+          {warehouse.isBonded ? (
+            <StatusBadge tone="bonded">Gudang berikat</StatusBadge>
+          ) : (
+            <span>Gudang non-berikat</span>
+          )}
+          <span>{INVENTORY_CATEGORY_LABELS[warehouse.category]}</span>
+          <span>{warehouse.address}</span>
+          {!warehouse.active && <ArchivedBadge />}
+        </span>
+      }
+    >
       <Section title="Lokasi">
         <DataTable
           columns={LOCATION_COLUMNS}
@@ -141,6 +146,17 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
           listHref="/master/gudang"
         />
       )}
-    </div>
+    </DocumentLayout>
   )
+}
+
+const WAREHOUSE_ACTIVITY_LABELS = {
+  fields: {
+    name: "Nama",
+    address: "Alamat",
+    is_bonded: "Gudang berikat",
+    category: "Kategori",
+    active: "Aktif",
+  },
+  values: { category: INVENTORY_CATEGORY_LABELS as Record<string, string> },
 }
