@@ -4,10 +4,11 @@ import { Undo2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useState, useTransition } from "react"
 
-import { createReturn } from "@/app/(app)/inventory/actions"
+import { createReturnRequest } from "@/app/(app)/inventory/retur/actions"
 import { Button } from "@/components/ui/button"
 
-// Buat retur Draft dari transfer Selesai, lalu buka halamannya untuk mengatur qty.
+// Buat permintaan retur Draft dari transfer Selesai (R-11), lalu buka halamannya untuk mengatur
+// qty dan tindakannya.
 export function CreateReturnButton({ originId }: { originId: string }) {
   const router = useRouter()
   const [errors, setErrors] = useState<string[]>()
@@ -21,7 +22,7 @@ export function CreateReturnButton({ originId }: { originId: string }) {
         className="pointer-coarse:h-11"
         onClick={() =>
           startTransition(async () => {
-            const result = await createReturn({ originId })
+            const result = await createReturnRequest({ originId })
             if (result.ok) router.push(`/inventory/retur/${result.data.id}`)
             else setErrors(result.errors)
           })

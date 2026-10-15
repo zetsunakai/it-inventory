@@ -113,6 +113,20 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
           ] as [string, ReactNode],
         ]
       : []),
+    ...(transfer.returnRequestId
+      ? [
+          [
+            "Permintaan retur",
+            <Link
+              key="return-request"
+              href={`/inventory/retur/${transfer.returnRequestId}`}
+              className="font-mono text-primary underline-offset-4 hover:underline"
+            >
+              {transfer.returnRequestNumber}
+            </Link>,
+          ] as [string, ReactNode],
+        ]
+      : []),
     ...(transfer.backorderOfNumber
       ? [["Lanjutan dari", transfer.backorderOfNumber] as [string, ReactNode]]
       : []),

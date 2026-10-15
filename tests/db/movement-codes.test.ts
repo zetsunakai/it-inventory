@@ -13,7 +13,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, withLine } from "./helpers"
+import { inRollback, pgErrorInSavepoint, withLine, returnRequestFor } from "./helpers"
 
 // Kode pergerakan (backlog R-04). Semua data uji berawalan ZC.
 
@@ -127,6 +127,7 @@ async function transfer(tx: Tx, type: Type, from: string, to: string, returnOfId
       destinationLocationId: to,
       partnerId: ["receipt", "delivery", "return"].includes(type) ? ids.partner : null,
       returnOfId,
+      returnRequestId: returnOfId ? await returnRequestFor(tx, returnOfId) : null,
     })
     .returning({ id: transfers.id, code: transfers.movementCode, direction: transfers.direction })
   await tx.insert(stockMoves).values(

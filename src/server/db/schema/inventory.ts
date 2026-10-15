@@ -21,6 +21,9 @@ import {
   MOVEMENT_CODES,
   MOVEMENT_DIRECTIONS,
   INTERWAREHOUSE_STATUSES,
+  RETURN_LINE_ACTIONS,
+  RETURN_REQUEST_STATUSES,
+  RETURN_REQUEST_TYPES,
   STOCK_COUNT_STATUSES,
   TRANSACTION_CLASSIFICATIONS,
   STOCK_MOVE_STATUSES,
@@ -54,6 +57,9 @@ export const stockCountStatus = pgEnum("stock_count_status", STOCK_COUNT_STATUSE
 export const movementCode = pgEnum("movement_code", MOVEMENT_CODES)
 export const movementDirection = pgEnum("movement_direction", MOVEMENT_DIRECTIONS)
 export const interwarehouseStatus = pgEnum("interwarehouse_status", INTERWAREHOUSE_STATUSES)
+export const returnRequestType = pgEnum("return_request_type", RETURN_REQUEST_TYPES)
+export const returnRequestStatus = pgEnum("return_request_status", RETURN_REQUEST_STATUSES)
+export const returnLineAction = pgEnum("return_line_action", RETURN_LINE_ACTIONS)
 export const transactionClassification = pgEnum(
   "transaction_classification",
   TRANSACTION_CLASSIFICATIONS,
@@ -130,6 +136,10 @@ export const transfers = pgTable(
     interwarehouseId: uuid().references((): AnyPgColumn => interwarehouseTransfers.id, {
       onDelete: "restrict",
     }),
+    // Permintaan retur yang membuat transfer ini: transfer retur atau transfer pengganti (R-11).
+    returnRequestId: uuid().references((): AnyPgColumn => returnRequests.id, {
+      onDelete: "restrict",
+    }),
     doneAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
     approvedAt: timestamp({ withTimezone: true }),
@@ -147,6 +157,7 @@ export const transfers = pgTable(
     index("transfers_backorder_of_idx").on(table.backorderOfId),
     index("transfers_stock_count_idx").on(table.stockCountId),
     index("transfers_interwarehouse_idx").on(table.interwarehouseId),
+    index("transfers_return_request_idx").on(table.returnRequestId),
     index("transfers_done_at_idx").on(table.doneAt),
     check(
       "transfers_locations_differ",
@@ -460,5 +471,66 @@ export const interwarehouseTransferLines = pgTable(
       "interwarehouse_transfer_lines_qty_positive",
       sql`${table.inputQty} > 0 and ${table.qty} > 0`,
     ),
+  ],
+)
+
+// Permintaan retur (backlog R-11, PRD bagian 6.2, mengikuti return_request hmx-002). Selalu merujuk
+// penerimaan (retur ke vendor) atau pengiriman (retur dari customer) yang Selesai. Konfirmasi
+// membuat transfer retur; setelah retur Selesai, baris "dengan pengganti" membuat transfer
+// pengganti (penerimaan dari vendor atau pengiriman ke customer). Aturan di migrasi
+// return_request_rules.
+export const returnRequests = pgTable(
+  "return_requests",
+  {
+    id: id(),
+    // Diisi trigger saat insert, mis. PRT/2026/00001.
+    number: text().notNull().unique().default(""),
+    // Diisi trigger dari jenis transfer asal.
+    type: returnRequestType().notNull(),
+    status: returnRequestStatus().notNull().default("draft"),
+    originId: uuid()
+      .notNull()
+      .references((): AnyPgColumn => transfers.id, { onDelete: "restrict" }),
+    partnerId: uuid()
+      .notNull()
+      .references(() => partners.id, { onDelete: "restrict" }),
+    // Lokasi gudang asal barang retur ke vendor / tujuan retur dari customer (gudang transfer asal).
+    locationId: uuid()
+      .notNull()
+      .references(() => locations.id, { onDelete: "restrict" }),
+    scheduledDate: date(),
+    reason: text(),
+    notes: text(),
+    createdBy: uuid(),
+    ...timestamps,
+  },
+  (table) => [
+    index("return_requests_origin_idx").on(table.originId),
+    index("return_requests_status_idx").on(table.status),
+  ],
+)
+
+// Baris permintaan retur: satu per produk × lot transfer asal, qty dalam satuan stok.
+export const returnRequestLines = pgTable(
+  "return_request_lines",
+  {
+    id: id(),
+    returnRequestId: uuid()
+      .notNull()
+      .references(() => returnRequests.id, { onDelete: "cascade" }),
+    position: integer().notNull().default(0),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+    lotId: uuid().references(() => lots.id, { onDelete: "restrict" }),
+    qty: qty().notNull(),
+    action: returnLineAction().notNull().default("return"),
+    ...timestamps,
+  },
+  (table) => [
+    unique("return_request_lines_product_lot_unique")
+      .on(table.returnRequestId, table.productId, table.lotId)
+      .nullsNotDistinct(),
+    check("return_request_lines_qty_positive", sql`${table.qty} > 0`),
   ],
 )

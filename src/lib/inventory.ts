@@ -195,6 +195,45 @@ export const INTERWAREHOUSE_STATUS_TONES: Record<
   cancelled: "neutral",
 }
 
+// Permintaan retur (backlog R-11, return_request hmx-002): retur ke vendor (dari penerimaan) atau
+// dari customer (dari pengiriman), selalu merujuk transfer Selesai. Konfirmasi membuat transfer
+// retur; baris "dengan pengganti" membuat transfer pengganti setelah retur Selesai.
+export const RETURN_REQUEST_TYPES = ["vendor", "customer"] as const
+export type ReturnRequestType = (typeof RETURN_REQUEST_TYPES)[number]
+
+export const RETURN_REQUEST_TYPE_LABELS: Record<ReturnRequestType, string> = {
+  vendor: "Ke vendor",
+  customer: "Dari customer",
+}
+
+export const RETURN_REQUEST_STATUSES = ["draft", "in_progress", "done", "cancelled"] as const
+export type ReturnRequestStatus = (typeof RETURN_REQUEST_STATUSES)[number]
+
+export const RETURN_REQUEST_STATUS_LABELS: Record<ReturnRequestStatus, string> = {
+  draft: "Draft",
+  in_progress: "Diproses",
+  done: "Selesai",
+  cancelled: "Batal",
+}
+
+export const RETURN_REQUEST_STATUS_TONES: Record<
+  ReturnRequestStatus,
+  "neutral" | "info" | "success" | "warning"
+> = {
+  draft: "neutral",
+  in_progress: "warning",
+  done: "success",
+  cancelled: "neutral",
+}
+
+export const RETURN_LINE_ACTIONS = ["return", "replace"] as const
+export type ReturnLineAction = (typeof RETURN_LINE_ACTIONS)[number]
+
+export const RETURN_LINE_ACTION_LABELS: Record<ReturnLineAction, string> = {
+  return: "Retur saja",
+  replace: "Retur dengan pengganti",
+}
+
 // Klasifikasi transaksi saat validasi (backlog R-08, transaction_classification hmx-002): tanggal
 // efektif mundur (backdate) dan/atau qty selesai kurang dari qty diminta (dengan transfer lanjutan
 // atau sisanya dibuang). Kosong = transaksi biasa.

@@ -9,6 +9,7 @@ import {
   products,
   stockBalances,
   stockMoves,
+  transferLines,
   transfers,
   uomCategories,
   uoms,
@@ -232,4 +233,25 @@ test("dua transfer yang dikonfirmasi bersamaan tidak memesan stok yang sama", as
     .from(stockBalances)
     .where(and(eq(stockBalances.productId, ids.product), eq(stockBalances.locationId, ids.rack)))
   expect(balance.reserved).toBe("10.0000")
+})
+
+test("validasi parsial transfer yang memesan stok: sisa ke lanjutan, pesanan tidak tertinggal", async () => {
+  await inRollback(db, async (tx) => {
+    await receive(tx, [{ qty: "10" }])
+    const id = await draft(tx, "delivery", [{ qty: "6" }])
+    expect(await fn(tx, "confirm_transfer", id)).toBe("ready")
+    const [line] = await tx
+      .select({ id: transferLines.id })
+      .from(transferLines)
+      .where(eq(transferLines.transferId, id))
+    await tx.execute(
+      sql`select split_backorder(${id}, ${JSON.stringify({ [line.id]: "4" })}::jsonb, true)`,
+    )
+    await tx.execute(sql`select validate_transfer(${id})`)
+    const [balance] = await tx
+      .select({ qty: stockBalances.qty, reserved: stockBalances.reservedQty })
+      .from(stockBalances)
+      .where(and(eq(stockBalances.productId, ids.product), eq(stockBalances.locationId, ids.rack)))
+    expect(balance).toEqual({ qty: "6.0000", reserved: "0.0000" })
+  })
 })

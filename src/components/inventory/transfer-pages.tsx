@@ -24,12 +24,10 @@ import {
   listInternalLocations,
   listTransfers,
   listUomChoices,
-  returnableQuantities,
   type TransferRow,
 } from "@/server/queries/transfers"
 
 import { CreateReturnButton } from "./create-return-button"
-import { ReturnForm } from "./return-form"
 import { TransferActions } from "./transfer-actions"
 import { TransferForm } from "./transfer-form"
 import { TransferStatusBadge } from "./transfer-status"
@@ -234,19 +232,13 @@ async function TransferDetail({
   const transfer = await getTransfer(user.id, id)
   if (!transfer || transfer.type !== kind.type) notFound()
   const canWrite = hasPermission(user.roles, "inventory:write")
-  // Transfer antar gudang dibuat dan diatur permintaannya (R-10), bukan lewat form pindah lokasi.
-  const fromRequest = Boolean(transfer.interwarehouseId)
+  // Transfer antar gudang dan transfer retur dibuat dan diatur permintaannya (R-10, R-11), bukan
+  // lewat form. Transfer pengganti retur (penerimaan/pengiriman) tetap bisa diubah, mis. mengisi lot.
+  const fromRequest = Boolean(transfer.interwarehouseId) || transfer.type === "return"
   const editable = canWrite && transfer.status === "draft" && !fromRequest
-  const isReturn = transfer.type === "return"
-  const [locations, uoms] =
-    editable && !isReturn
-      ? await Promise.all([listInternalLocations(user.id), listUomChoices()])
-      : [[], []]
-  // Retur Draft: batas qty per produk × lot dari transfer asal.
-  const returnable =
-    editable && isReturn && transfer.returnOfId
-      ? await returnableQuantities(transfer.returnOfId)
-      : {}
+  const [locations, uoms] = editable
+    ? await Promise.all([listInternalLocations(user.id), listUomChoices()])
+    : [[], []]
   const canReturn =
     canWrite &&
     transfer.status === "done" &&
@@ -286,20 +278,7 @@ async function TransferDetail({
         />
       )}
       {canReturn && <CreateReturnButton originId={transfer.id} />}
-      {editable && isReturn ? (
-        <ReturnForm
-          id={transfer.id}
-          lines={transfer.lines.map((line) => ({
-            id: line.id,
-            sku: line.sku,
-            productName: line.productName,
-            lotName: line.lotName,
-            qty: line.qty,
-            uomCode: line.stockUomCode,
-            max: returnable[`${line.productId}|${line.lotId ?? ""}`] ?? "0",
-          }))}
-        />
-      ) : editable ? (
+      {editable ? (
         <TransferForm
           kind={kind}
           locations={locations}

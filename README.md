@@ -313,10 +313,26 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   (`pointer-coarse:`).
 - Transfer internal: kedua lokasi dipilih user (gudang yang boleh diakses), tanpa partner; total stok
   perusahaan tidak berubah.
-- Retur dibuat dari penerimaan/pengiriman Selesai (tombol "Buat retur"): arah terbalik, partner sama,
-  baris berisi sisa yang masih bisa diretur (`returnable_lines()`); hanya qty-nya yang bisa diubah.
-  Batasnya (qty asal dikurangi retur Selesai lain) dicek `return_errors()` saat simpan, Siap, dan
-  validasi; transfer asal dikunci saat validasi supaya dua retur tidak lolos bersamaan.
+- Retur adalah dokumen permintaan (`/inventory/retur`, backlog R-11, `return_requests` +
+  `return_request_lines`, nomor `PRT/tahun/urut`): dibuat dari penerimaan (retur ke vendor) atau
+  pengiriman (retur dari customer) yang Selesai lewat tombol "Buat retur". Retur tanpa rujukan
+  tidak ada. Baris berisi sisa per produk × lot (`returnable_lines(asal, kecuali_permintaan)`: qty
+  asal dikurangi retur Selesai dan qty permintaan lain yang transfer returnya masih terbuka); di
+  Draft yang diubah lokasi gudang, tanggal, alasan, qty (0 = tidak diretur), dan tindakan per baris
+  (retur saja / retur dengan pengganti).
+- Konfirmasi (`confirm_return_request()`) mengunci transfer asal, memeriksa qty
+  (`return_request_errors()`), lalu membuat transfer retur (`gr_rtn`/`gi_rtn`, sudah dikonfirmasi,
+  retur ke vendor memesan stok). Transfer retur hanya bisa dibuat lewat permintaan
+  (`transfers.return_request_id`, trigger `transfers_return_request_check`) dan tidak diubah lewat
+  form; parsial memakai pilihan lanjutan/buang sisa biasa (`split_backorder` ikut menyalin
+  permintaannya).
+- Setelah semua transfer retur Selesai/Batal, `refresh_return_request()` membuat transfer pengganti
+  (Draft) untuk baris dengan pengganti sebesar qty yang benar-benar diretur: penerimaan dari vendor
+  atau pengiriman ke customer. Pengganti bisa diubah (mis. mengisi lot) tapi tidak melebihi qty yang
+  diretur (`return_request_transfer_errors()`, dicek saat Konfirmasi dan validasi). Permintaan
+  Selesai bila tidak ada transfer terbuka lagi; membatalkan pengganti = ditutup tanpa pengganti.
+  Batal hanya sebelum ada barang yang diretur (`cancel_return_request()`), transfer retur terbuka
+  ikut batal. Transfer retur lama (M2-07) dipindah ke permintaan Selesai/Diproses/Batal oleh migrasi.
 - Scrap dan penyesuaian (arah tambah/kurangi stok): alasan wajib; admin gudang menandai Siap, lalu
   Manajer menekan "Setujui dan validasi" (`approveTransfer`, izin `inventory:approve`) sehingga
   pergerakan baru tercatat setelah disetujui. `validate_transfer` hanya menerima persetujuan dari

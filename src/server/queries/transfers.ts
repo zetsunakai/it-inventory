@@ -23,6 +23,7 @@ import {
   lots,
   partners,
   products,
+  returnRequests,
   stockBalances,
   stockMoves,
   transferLines,
@@ -193,6 +194,9 @@ export async function getTransfer(userId: string, id: string) {
       interwarehouseNumber: sql<
         string | null
       >`(select i.number from interwarehouse_transfers i where i.id = ${transfers.interwarehouseId})`,
+      returnRequestNumber: sql<
+        string | null
+      >`(select r.number from return_requests r where r.id = ${transfers.returnRequestId})`,
       approvedByName: sql<
         string | null
       >`(select u.name from users u where u.id = ${transfers.approvedBy})`,
@@ -269,13 +273,15 @@ export async function getTransfer(userId: string, id: string) {
     returnOfNumber: header.returnOfNumber,
     approvedByName: header.approvedByName,
     interwarehouseNumber: header.interwarehouseNumber,
+    returnRequestNumber: header.returnRequestNumber,
     sourceWarehouseId: header.sourceWarehouseId,
     destinationWarehouseId: header.destinationWarehouseId,
+    // Permintaan retur yang merujuk transfer ini (R-11).
     returns: await db
-      .select({ id: transfers.id, number: transfers.number, status: transfers.status })
-      .from(transfers)
-      .where(and(eq(transfers.returnOfId, id), eq(transfers.type, "return")))
-      .orderBy(asc(transfers.createdAt)),
+      .select({ id: returnRequests.id, number: returnRequests.number })
+      .from(returnRequests)
+      .where(eq(returnRequests.originId, id))
+      .orderBy(asc(returnRequests.createdAt)),
     lines,
   }
 }
@@ -447,15 +453,4 @@ export async function stockAvailability(
       .filter((row) => row.lotName && Number(row.qty) > 0)
       .map((row) => ({ name: row.lotName!, qty: row.qty })),
   }
-}
-
-// Sisa qty yang masih bisa diretur dari transfer asal, per produk × lot (satuan stok).
-// Kunci: "<produk>|<lot atau kosong>".
-export async function returnableQuantities(originId: string) {
-  const result = await db.execute<{ product_id: string; lot_id: string | null; qty: string }>(
-    sql`select product_id, lot_id, qty::text from returnable_lines(${originId})`,
-  )
-  return Object.fromEntries(
-    result.rows.map((row) => [`${row.product_id}|${row.lot_id ?? ""}`, row.qty]),
-  )
 }

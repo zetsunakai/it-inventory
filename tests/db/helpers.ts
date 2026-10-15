@@ -77,6 +77,17 @@ export async function purgeInventory(db: Db, productIds: string[]) {
     await tx.execute(
       sql`delete from transfer_lines where transfer_id in (select id from purged_transfers)`,
     )
+    // Permintaan retur (R-11) milik transfer yang dihapus. Mode replica mematikan FK cascade,
+    // jadi barisnya dihapus sendiri.
+    await tx.execute(sql`
+      create temporary table purged_returns on commit drop as
+      select id from return_requests where origin_id in (select id from purged_transfers)
+      union
+      select return_request_id from return_request_lines where product_id in (${ids})`)
+    await tx.execute(sql`
+      delete from return_request_lines
+      where return_request_id in (select id from purged_returns)`)
+    await tx.execute(sql`delete from return_requests where id in (select id from purged_returns)`)
     await tx.execute(sql`delete from transfers where id in (select id from purged_transfers)`)
     await tx.execute(sql`delete from lots where product_id in (${ids})`)
     await tx.execute(sql`
@@ -107,4 +118,17 @@ export async function withLine<
     })
     .returning({ id: transferLines.id })
   return { ...move, lineId: line.id }
+}
+
+// Permintaan retur Draft untuk transfer asal (R-11): transfer retur hanya bisa dibuat dengan
+// return_request_id. Lokasinya sisi gudang transfer asal.
+export async function returnRequestFor(tx: Pick<Transaction, "execute">, originId: string) {
+  const result = await tx.execute<{ id: string }>(sql`
+    insert into return_requests (type, origin_id, partner_id, location_id)
+    select case o.type when 'receipt' then 'vendor' else 'customer' end::return_request_type,
+      o.id, o.partner_id,
+      case o.type when 'receipt' then o.destination_location_id else o.source_location_id end
+    from transfers o where o.id = ${originId}
+    returning id`)
+  return result.rows[0].id
 }

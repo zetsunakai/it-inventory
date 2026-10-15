@@ -22,6 +22,7 @@ import {
   pgErrorMessage,
   setAuditUser,
   withLine,
+  returnRequestFor,
 } from "./helpers"
 
 // Skema inventory (backlog M2-01): transfer, ledger pergerakan, lot, dan saldo, dengan aturan
@@ -313,6 +314,7 @@ describe("transfer", () => {
       const [ret] = await receipt(tx, {
         type: "return",
         returnOfId: done.id,
+        returnRequestId: await returnRequestFor(tx, done.id),
         sourceLocationId: ids.rack,
         destinationLocationId: ids.vendor,
       })

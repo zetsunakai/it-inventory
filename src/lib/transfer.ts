@@ -140,7 +140,8 @@ export const TRANSFER_KINDS = {
   },
   return: {
     type: "return",
-    path: "/inventory/retur",
+    // Transfer retur dibuat dari permintaan retur (R-11); daftar /inventory/retur berisi permintaannya.
+    path: "/inventory/retur/transfer",
     noun: "retur",
     partnerLabel: "Partner",
     locationSide: "source",
