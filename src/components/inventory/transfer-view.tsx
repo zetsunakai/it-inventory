@@ -4,7 +4,7 @@ import type { ReactNode } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
-import { MOVEMENT_CODE_LABELS } from "@/lib/inventory"
+import { MOVEMENT_CODE_LABELS, TRANSACTION_CLASSIFICATION_LABELS } from "@/lib/inventory"
 import type { TransferKind } from "@/lib/transfer"
 import type { TransferDetail, TransferLine } from "@/server/queries/transfers"
 
@@ -90,6 +90,14 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
         : "—",
     ],
     ["Tanggal efektif", transfer.doneAt ? formatDate(transfer.doneAt) : "—"],
+    ...(transfer.classification
+      ? [
+          ["Klasifikasi", TRANSACTION_CLASSIFICATION_LABELS[transfer.classification]] as [
+            string,
+            ReactNode,
+          ],
+        ]
+      : []),
     [kind.partnerRole ? "Referensi PO/SO" : "Referensi", transfer.reference ?? "—"],
     ...(transfer.backorderOfNumber
       ? [["Lanjutan dari", transfer.backorderOfNumber] as [string, ReactNode]]

@@ -24,9 +24,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { toDecimalInput } from "@/lib/decimal"
+import { formatDate } from "@/lib/format"
 import type { ActionResult } from "@/lib/action-result"
 import type { TransferStatus } from "@/lib/inventory"
 
@@ -78,6 +80,10 @@ export function TransferActions({
   const partial = lines.some(
     (line) => Number(quantities[line.id].replace(",", ".")) !== Number(line.inputQty),
   )
+  // Sisa qty: transfer lanjutan atau dibuang (R-08). Backdate wajib dikonfirmasi.
+  const [createBackorder, setCreateBackorder] = useState(true)
+  const [backdateConfirmed, setBackdateConfirmed] = useState(false)
+  const backdated = canBackdate && effectiveDate < today
   const messageRef = useRef<HTMLDivElement>(null)
   const verb = needsApproval ? "Setujui dan validasi" : "Validasi"
 
@@ -224,9 +230,29 @@ export function TransferActions({
                         </div>
                       ))}
                       {partial && (
-                        <p className="text-xs text-muted-foreground">
-                          Sisa qty dibuat sebagai {noun} lanjutan berstatus Draft.
-                        </p>
+                        <div role="radiogroup" aria-label="Sisa qty" className="space-y-1.5 pt-1">
+                          <p className="text-sm font-medium">Sisa qty</p>
+                          {(
+                            [
+                              [true, `Buat ${noun} lanjutan (Draft) untuk sisanya`],
+                              [false, "Buang sisa, tidak ada transfer lanjutan"],
+                            ] as const
+                          ).map(([value, label]) => (
+                            <label
+                              key={String(value)}
+                              className="flex items-center gap-2 text-sm pointer-coarse:min-h-11"
+                            >
+                              <input
+                                type="radio"
+                                name="remainder"
+                                checked={createBackorder === value}
+                                onChange={() => setCreateBackorder(value)}
+                                className="size-4 accent-primary"
+                              />
+                              {label}
+                            </label>
+                          ))}
+                        </div>
                       )}
                     </fieldset>
                   )}
@@ -243,12 +269,26 @@ export function TransferActions({
                       <p className="text-xs text-muted-foreground">
                         Isi tanggal sebelumnya hanya bila barang memang bergerak di tanggal itu.
                       </p>
+                      {backdated && (
+                        <div className="flex items-start gap-2 rounded-lg bg-warning-soft px-3 py-2.5">
+                          <Checkbox
+                            id="confirm-backdate"
+                            checked={backdateConfirmed}
+                            onCheckedChange={(checked) => setBackdateConfirmed(checked === true)}
+                          />
+                          <Label htmlFor="confirm-backdate" className="leading-snug font-normal">
+                            Transaksi backdate: stok dan laporan per{" "}
+                            {formatDate(new Date(`${effectiveDate}T12:00:00+07:00`))} ikut berubah.
+                            Saya pastikan barang memang bergerak di tanggal itu.
+                          </Label>
+                        </div>
+                      )}
                     </div>
                   )}
                   <AlertDialogFooter>
                     <AlertDialogCancel disabled={pending}>Batal</AlertDialogCancel>
                     <Button
-                      disabled={pending}
+                      disabled={pending || (backdated && !backdateConfirmed)}
                       onClick={() =>
                         run(
                           () =>
@@ -261,6 +301,7 @@ export function TransferActions({
                                   id,
                                   effectiveDate: canBackdate ? effectiveDate : undefined,
                                   quantities: partial ? quantities : undefined,
+                                  createBackorder,
                                 }),
                           () => setValidateOpen(false),
                         )

@@ -164,6 +164,26 @@ export const CONFIRMED_TRANSFER_STATUSES: readonly TransferStatus[] = [
   "ready",
 ]
 
+// Klasifikasi transaksi saat validasi (backlog R-08, transaction_classification hmx-002): tanggal
+// efektif mundur (backdate) dan/atau qty selesai kurang dari qty diminta (dengan transfer lanjutan
+// atau sisanya dibuang). Kosong = transaksi biasa.
+export const TRANSACTION_CLASSIFICATIONS = [
+  "backdate",
+  "backorder",
+  "no_backorder",
+  "backdate_backorder",
+  "backdate_no_backorder",
+] as const
+export type TransactionClassification = (typeof TRANSACTION_CLASSIFICATIONS)[number]
+
+export const TRANSACTION_CLASSIFICATION_LABELS: Record<TransactionClassification, string> = {
+  backdate: "Backdate",
+  backorder: "Backorder",
+  no_backorder: "Sisa dibuang",
+  backdate_backorder: "Backdate, backorder",
+  backdate_no_backorder: "Backdate, sisa dibuang",
+}
+
 // Status baris pergerakan: mengikuti transfernya, tanpa tahap Siap.
 export const STOCK_MOVE_STATUSES = ["draft", "done", "cancelled"] as const
 export type StockMoveStatus = (typeof STOCK_MOVE_STATUSES)[number]

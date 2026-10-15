@@ -237,6 +237,12 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Kembali ke Draft, Batal, dan di awal validasi; pengecekan stok saat validasi
   (`transfer_stock_errors()`) memakai saldo dikurangi pesanan transfer lain. Gudang non-berikat
   yang boleh stok negatif tidak dipesan. Petunjuk "Tersedia" di form memakai saldo − dipesan.
+- Sisa qty dan klasifikasi (backlog R-08): saat validasi user memilih Buat transfer lanjutan
+  (default) atau Buang sisa (`split_backorder(..., p_create_backorder)`); qty diminta tetap
+  tercatat di baris. `validate_transfer()` mengisi `transfers.classification`
+  (`transfer_classification()`): `backorder` bila ada transfer lanjutan atau transfer ini sendiri
+  lanjutan, `no_backorder` bila sisa dibuang, `backdate` bila tanggal efektif sebelum hari ini (WIB),
+  atau gabungannya. Tanggal efektif mundur (Manajer) wajib dicentang konfirmasinya di dialog.
 - Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate

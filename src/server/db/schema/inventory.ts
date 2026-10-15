@@ -21,6 +21,7 @@ import {
   MOVEMENT_CODES,
   MOVEMENT_DIRECTIONS,
   STOCK_COUNT_STATUSES,
+  TRANSACTION_CLASSIFICATIONS,
   STOCK_MOVE_STATUSES,
   TRANSFER_STATUSES,
   TRANSFER_TYPES,
@@ -51,6 +52,10 @@ export const stockMoveStatus = pgEnum("stock_move_status", STOCK_MOVE_STATUSES)
 export const stockCountStatus = pgEnum("stock_count_status", STOCK_COUNT_STATUSES)
 export const movementCode = pgEnum("movement_code", MOVEMENT_CODES)
 export const movementDirection = pgEnum("movement_direction", MOVEMENT_DIRECTIONS)
+export const transactionClassification = pgEnum(
+  "transaction_classification",
+  TRANSACTION_CLASSIFICATIONS,
+)
 
 // Penghitung nomor per lingkup dan periode, mis. ("transfer:receipt", "2026"). Dipakai fungsi
 // next_number() supaya nomor unik walaupun dibuat bersamaan; nanti juga untuk nomor aju (M3).
@@ -117,6 +122,8 @@ export const transfers = pgTable(
     // Penyesuaian hasil stock opname (M2-09).
     stockCountId: uuid().references((): AnyPgColumn => stockCounts.id, { onDelete: "restrict" }),
     backorderOfId: uuid().references((): AnyPgColumn => transfers.id, { onDelete: "restrict" }),
+    // Diisi validate_transfer() (backlog R-08).
+    classification: transactionClassification(),
     doneAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
     approvedAt: timestamp({ withTimezone: true }),

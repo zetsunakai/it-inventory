@@ -344,6 +344,20 @@
       "when": 1792047163358,
       "tag": "0048_stock_reservation_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "7",
+      "when": 1792047732488,
+      "tag": "0049_transaction_classification",
+      "breakpoints": true
+    },
+    {
+      "idx": 50,
+      "version": "7",
+      "when": 1792047733592,
+      "tag": "0050_backorder_choice_rules",
+      "breakpoints": true
     }
   ]
 }

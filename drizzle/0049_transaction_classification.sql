@@ -1,0 +1,2 @@
+CREATE TYPE "public"."transaction_classification" AS ENUM('backdate', 'backorder', 'no_backorder', 'backdate_backorder', 'backdate_no_backorder');--> statement-breakpoint
+ALTER TABLE "transfers" ADD COLUMN "classification" "transaction_classification";

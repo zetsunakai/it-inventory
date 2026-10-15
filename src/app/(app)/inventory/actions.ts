@@ -350,7 +350,12 @@ const doneQuantities = z
 export const validateTransfer = defineAction({
   name: "validateTransfer",
   permission: "inventory:write",
-  schema: idInput.extend({ effectiveDate: optionalDate, quantities: doneQuantities }),
+  schema: idInput.extend({
+    effectiveDate: optionalDate,
+    quantities: doneQuantities,
+    // Sisa qty: transfer lanjutan (default) atau dibuang (R-08).
+    createBackorder: z.boolean().default(true),
+  }),
   successMessage: "Transfer divalidasi. Stok sudah diperbarui.",
   handler: async ({ input, tx }) => {
     const effectiveAt = effectiveTimestamp(input.effectiveDate)
@@ -358,7 +363,9 @@ export const validateTransfer = defineAction({
     // Selalu dipanggil: baris yang qty selesainya kurang dari qty diminta (juga yang tidak disebut
     // di quantities) menyisakan qty untuk transfer lanjutan.
     const split = await tx.execute<{ id: string | null }>(
-      sql`select split_backorder(${input.id}, ${JSON.stringify(input.quantities ?? {})}::jsonb) as id`,
+      sql`select split_backorder(
+        ${input.id}, ${JSON.stringify(input.quantities ?? {})}::jsonb, ${input.createBackorder}
+      ) as id`,
     )
     const backorderId = split.rows[0]?.id
     if (backorderId) {
