@@ -110,7 +110,18 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
         <SidebarGroupContent id={contentId} hidden={!expanded}>
           {/* Menu anak menjorok sejajar teks induknya (ikon 16px + jarak 8px). */}
           <SidebarMenu className="gap-0">
-            {group.items.map((item) => link(item, "pl-8"))}
+            {group.items.map((item, itemIndex) => [
+              // Subjudul saat bagian berganti (RU-01), mis. Operasi lalu Kontrol.
+              item.section && item.section !== group.items[itemIndex - 1]?.section && (
+                <li
+                  key={`section-${item.section}`}
+                  className="px-2 pt-2 pb-1 pl-8 text-caption font-medium text-muted-foreground"
+                >
+                  {item.section}
+                </li>
+              ),
+              link(item, "pl-8"),
+            ])}
           </SidebarMenu>
         </SidebarGroupContent>
       </SidebarGroup>

@@ -25,13 +25,13 @@ async function Home() {
   const items = await attentionItems(user)
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-4xl">
       <section aria-labelledby="perlu-perhatian" className="space-y-3">
         <h2 id="perlu-perhatian" className="text-lg font-semibold tracking-tight">
           Perlu perhatian
         </h2>
         {items.length === 0 ? (
-          <p className="rounded-lg border bg-card px-4 py-6 text-sm text-muted-foreground">
+          <p className="rounded-lg border bg-card px-4 py-6 text-control text-muted-foreground">
             Tidak ada yang perlu ditindaklanjuti saat ini.
           </p>
         ) : (
@@ -43,11 +43,16 @@ async function Home() {
                   className="group flex items-start gap-3 px-4 py-3 outline-none hover:bg-muted/50 focus-visible:bg-muted/50"
                 >
                   <StatusBadge tone={item.tone} className="mt-0.5">
-                    {item.tone === "danger" ? "Wajib" : "Perhatian"}
+                    {item.label ??
+                      (item.tone === "danger"
+                        ? "Wajib"
+                        : item.tone === "info"
+                          ? "Info"
+                          : "Perhatian")}
                   </StatusBadge>
                   <span className="min-w-0 flex-1">
                     <span className="block font-medium">{item.title}</span>
-                    <span className="block text-sm text-muted-foreground">{item.detail}</span>
+                    <span className="block text-control text-muted-foreground">{item.detail}</span>
                   </span>
                   <ChevronRight
                     aria-hidden
