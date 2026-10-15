@@ -9,7 +9,7 @@ export default function NewDeliveryPage() {
   return (
     <NewTransferPage
       kind={TRANSFER_KINDS.delivery}
-      description="Disimpan sebagai Draft. Ketersediaan stok dicek saat ditandai Siap dan saat divalidasi."
+      description="Disimpan sebagai Draft. Ketersediaan stok dicek saat dikonfirmasi dan saat divalidasi."
     />
   )
 }

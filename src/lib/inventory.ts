@@ -127,16 +127,42 @@ export const MOVEMENT_CODE_LABELS: Record<MovementCode, string> = {
 export const MOVEMENT_DIRECTIONS = ["in", "out", "internal"] as const
 export type MovementDirection = (typeof MOVEMENT_DIRECTIONS)[number]
 
-// Alur status transfer (PRD bagian 6.3): Draft → Siap → Selesai, atau Batal dari Draft/Siap.
-export const TRANSFER_STATUSES = ["draft", "ready", "done", "cancelled"] as const
+// Alur status transfer (PRD bagian 6.3, backlog R-06, mengikuti hmx-002): Draft → Konfirmasi →
+// Menunggu / Sebagian tersedia / Siap → Selesai; Batal dari status mana pun sebelum Selesai.
+// Transfer masuk langsung Siap; transfer yang mengambil stok gudang menunggu stoknya tersedia.
+// Status hanya berubah lewat fungsi database (confirm_transfer, check_transfer_availability,
+// reset_transfer_to_draft, cancel_transfer, validate_transfer).
+export const TRANSFER_STATUSES = [
+  "draft",
+  "waiting",
+  "partially_available",
+  "ready",
+  "done",
+  "cancelled",
+] as const
 export type TransferStatus = (typeof TRANSFER_STATUSES)[number]
 
 export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
   draft: "Draft",
+  waiting: "Menunggu",
+  partially_available: "Sebagian tersedia",
   ready: "Siap",
   done: "Selesai",
   cancelled: "Batal",
 }
+
+// Status yang masih bisa dikerjakan (belum Selesai/Batal) dan yang sudah dikonfirmasi.
+export const OPEN_TRANSFER_STATUSES: readonly TransferStatus[] = [
+  "draft",
+  "waiting",
+  "partially_available",
+  "ready",
+]
+export const CONFIRMED_TRANSFER_STATUSES: readonly TransferStatus[] = [
+  "waiting",
+  "partially_available",
+  "ready",
+]
 
 // Status baris pergerakan: mengikuti transfernya, tanpa tahap Siap.
 export const STOCK_MOVE_STATUSES = ["draft", "done", "cancelled"] as const

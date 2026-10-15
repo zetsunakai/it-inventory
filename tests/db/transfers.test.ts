@@ -5,7 +5,7 @@ import {
   approveTransfer,
   cancelTransfer,
   createReturn,
-  markTransferReady,
+  confirmTransfer,
   reopenTransfer,
   saveReturnQuantities,
   saveTransfer,
@@ -279,7 +279,7 @@ describe("simpan penerimaan", () => {
       ["7.0000"],
     ])
 
-    expect(await markTransferReady({ id })).toMatchObject({ ok: true })
+    expect(await confirmTransfer({ id })).toMatchObject({ ok: true })
     expect(
       await receipt([{ productId: ids.product, inputQty: "9", uomId: ids.pcs }], { id }),
     ).toMatchObject({
@@ -291,12 +291,12 @@ describe("simpan penerimaan", () => {
 })
 
 describe("alur status", () => {
-  test("produk wajib lot tidak bisa ditandai Siap tanpa nomor lot", async () => {
+  test("produk wajib lot tidak bisa dikonfirmasi tanpa nomor lot", async () => {
     loginAs("admin")
     const id = await savedId(
       await receipt([{ productId: ids.lotProduct, inputQty: "1", uomId: ids.pcs }]),
     )
-    expect(await markTransferReady({ id })).toEqual({
+    expect(await confirmTransfer({ id })).toEqual({
       ok: false,
       errors: ["Produk ZTLOT wajib diisi nomor lot."],
     })
@@ -310,7 +310,7 @@ describe("alur status", () => {
         { productId: ids.product, inputQty: "6", uomId: ids.pcs },
       ]),
     )
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     expect(await validateTransfer({ id })).toMatchObject({ ok: true })
 
     const [balance] = await db
@@ -334,7 +334,7 @@ describe("alur status", () => {
     const id = await savedId(
       await receipt([{ productId: ids.product, inputQty: "1", uomId: ids.pcs }]),
     )
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     expect(await validateTransfer({ id, effectiveDate: "2020-01-02" })).toEqual({
       ok: false,
       errors: ["Tanggal efektif mundur (backdate) hanya boleh dilakukan Manajer."],
@@ -365,7 +365,7 @@ test("daftar penerimaan hanya berisi gudang yang boleh dilihat user", async () =
 describe("pengiriman", () => {
   async function receive(lines: object[]) {
     const id = await savedId(await receipt(lines))
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     const result = await validateTransfer({ id })
     if (!result.ok) throw new Error(result.errors.join(" | "))
   }
@@ -386,8 +386,11 @@ describe("pengiriman", () => {
       "Stok ZTLOT lot B-07 di ZTRAK tidak cukup: tersedia 2, dibutuhkan 3.",
       "Stok ZTP1 di ZTRAK tidak cukup: tersedia 5, dibutuhkan 12.",
     ]
-    // Dicek saat Siap dan sekali lagi saat validasi.
-    expect(await markTransferReady({ id })).toEqual({ ok: false, errors: expected })
+    // Konfirmasi menandai stok baru tersedia sebagian (R-06); validasi menolak dengan pesan per produk.
+    expect(await confirmTransfer({ id })).toMatchObject({
+      ok: true,
+      data: { status: "partially_available" },
+    })
     expect(await validateTransfer({ id })).toEqual({ ok: false, errors: expected })
   })
 
@@ -405,7 +408,7 @@ describe("pengiriman", () => {
         { productId: ids.lotProduct, inputQty: "4", uomId: ids.pcs, lotName: "B-07" },
       ]),
     )
-    expect(await markTransferReady({ id })).toMatchObject({ ok: true })
+    expect(await confirmTransfer({ id })).toMatchObject({ ok: true })
     expect(await validateTransfer({ id })).toMatchObject({ ok: true })
     expect((await stockAvailability(ids.lotProduct, ids.rack)).qty).toBe("6.0000")
     const transfer = await getTransfer(people.admin.id, id)
@@ -434,7 +437,7 @@ describe("penerimaan parsial dan backorder", () => {
         { productId: ids.lotProduct, inputQty: "5", uomId: ids.pcs, lotName: "B-07" },
       ]),
     )
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     const lines = (await getTransfer(people.admin.id, id))!.lines
     const result = await validateTransfer({
       id,
@@ -476,7 +479,7 @@ describe("penerimaan parsial dan backorder", () => {
     const id = await savedId(
       await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
     )
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     const [line] = (await getTransfer(people.admin.id, id))!.lines
     expect(await validateTransfer({ id, quantities: { [line.id]: "11" } })).toEqual({
       ok: false,
@@ -498,7 +501,7 @@ describe("penerimaan parsial dan backorder", () => {
     const id = await savedId(
       await receipt([{ productId: ids.product, inputQty: "3", uomId: ids.pcs }]),
     )
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     const [line] = (await getTransfer(people.admin.id, id))!.lines
     expect(await validateTransfer({ id, quantities: { [line.id]: "3,0" } })).toMatchObject({
       ok: true,
@@ -534,7 +537,7 @@ describe("transfer internal", () => {
     const receiptId = await savedId(
       await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
     )
-    await markTransferReady({ id: receiptId })
+    await confirmTransfer({ id: receiptId })
     await validateTransfer({ id: receiptId })
     expect(await companyStock()).toEqual([10, 0])
 
@@ -547,7 +550,7 @@ describe("transfer internal", () => {
       transfer!.partnerId,
       transfer!.destinationLocationId,
     ]).toEqual(["TRF/", null, ids.otherRack])
-    expect(await markTransferReady({ id })).toMatchObject({ ok: true })
+    expect(await confirmTransfer({ id })).toMatchObject({ ok: true })
     expect(await validateTransfer({ id })).toMatchObject({ ok: true })
 
     const [here, there] = await companyStock()
@@ -571,7 +574,7 @@ describe("transfer internal", () => {
 describe("retur", () => {
   async function done(save: ReturnType<typeof receipt>) {
     const id = await savedId(await save)
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     const result = await validateTransfer({ id })
     if (!result.ok) throw new Error(result.errors.join(" | "))
     return id
@@ -610,7 +613,7 @@ describe("retur", () => {
     ).toMatchObject({
       ok: true,
     })
-    await markTransferReady({ id: firstId })
+    await confirmTransfer({ id: firstId })
     expect(await validateTransfer({ id: firstId })).toMatchObject({ ok: true })
     expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("6.0000")
 
@@ -638,7 +641,7 @@ describe("retur", () => {
     expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("0.0000")
 
     const returnId = await newReturn(deliveryId)
-    await markTransferReady({ id: returnId })
+    await confirmTransfer({ id: returnId })
     expect(await validateTransfer({ id: returnId })).toMatchObject({ ok: true })
     expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("5.0000")
 
@@ -703,7 +706,7 @@ describe("scrap dan penyesuaian", () => {
     const id = await savedId(
       await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
     )
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     await validateTransfer({ id })
   }
 
@@ -721,7 +724,7 @@ describe("scrap dan penyesuaian", () => {
     const id = await savedId(
       await adjustment([{ productId: ids.product, inputQty: "2", uomId: ids.pcs }]),
     )
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
 
     // Tanpa persetujuan: validasi biasa ditolak, stok tidak berubah.
     expect(await validateTransfer({ id })).toEqual({
@@ -758,7 +761,7 @@ describe("scrap dan penyesuaian", () => {
     )
     const saved = await getTransfer(people.admin.id, id)
     expect(saved!.destinationLocationId).toBe(ids.rack)
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     loginAs("manajer")
     expect(await approveTransfer({ id })).toMatchObject({ ok: true })
     expect(await stockOnRack(ids.lotProduct)).toBe("3.0000")
@@ -778,7 +781,9 @@ describe("scrap dan penyesuaian", () => {
         }),
       )
     const tooMuch = await savedId(await scrap("12"))
-    await db.update(transfers).set({ status: "ready" }).where(eq(transfers.id, tooMuch))
+    expect(await confirmTransfer({ id: tooMuch })).toMatchObject({
+      data: { status: "partially_available" },
+    })
     loginAs("manajer")
     expect(await approveTransfer({ id: tooMuch })).toEqual({
       ok: false,
@@ -788,7 +793,7 @@ describe("scrap dan penyesuaian", () => {
 
     loginAs("admin")
     const id = await savedId(await scrap("4"))
-    await markTransferReady({ id })
+    await confirmTransfer({ id })
     loginAs("manajer")
     expect(await approveTransfer({ id })).toMatchObject({ ok: true })
     expect(await stockOnRack()).toBe("6.0000")

@@ -67,7 +67,7 @@ export async function getProduct(id: string) {
           where b.product_id = ${products.id} and b.warehouse_id is not null and b.qty <> 0)
         or exists (
           select 1 from stock_moves m join transfers t on t.id = m.transfer_id
-          where m.product_id = ${products.id} and t.status in ('draft', 'ready')
+          where m.product_id = ${products.id} and t.status not in ('done', 'cancelled')
         )
       )`,
       uom: { code: uoms.code, name: uoms.name },

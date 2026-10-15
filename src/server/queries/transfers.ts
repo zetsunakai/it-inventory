@@ -103,7 +103,7 @@ export async function listTransfers({
       .where(where)
       // Yang masih dikerjakan di atas, lalu yang terbaru.
       .orderBy(
-        sql`case ${transfers.status} when 'draft' then 0 when 'ready' then 0 else 1 end`,
+        sql`case when ${transfers.status} in ('done', 'cancelled') then 1 else 0 end`,
         desc(transfers.createdAt),
       )
       .limit(pageSize)

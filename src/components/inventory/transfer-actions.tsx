@@ -7,7 +7,8 @@ import { useEffect, useRef, useState, useTransition } from "react"
 import {
   approveTransfer,
   cancelTransfer,
-  markTransferReady,
+  checkTransferAvailability,
+  confirmTransfer,
   reopenTransfer,
   validateTransfer,
 } from "@/app/(app)/inventory/actions"
@@ -28,7 +29,8 @@ import { toDecimalInput } from "@/lib/decimal"
 import type { ActionResult } from "@/lib/action-result"
 import type { TransferStatus } from "@/lib/inventory"
 
-// Aksi transfer sesuai statusnya (PRD bagian 6.3): Draft → Siap → Selesai, atau Batal.
+// Aksi transfer sesuai statusnya (PRD bagian 6.3, backlog R-06): Draft → Konfirmasi → Menunggu /
+// Sebagian tersedia / Siap → Validasi, Cek stok, Kembali ke Draft, atau Batal.
 // Semua alasan gagal dari server (mis. stok tidak cukup per produk) tampil di sini sekaligus.
 export function TransferActions({
   id,
@@ -88,7 +90,10 @@ export function TransferActions({
   }
 
   // Transfer Selesai/Batal tidak punya aksi lagi, tapi pesan hasil aksi terakhir tetap tampil.
-  const open = status === "draft" || status === "ready"
+  const open = status !== "done" && status !== "cancelled"
+  const confirmed = open && status !== "draft"
+  // Validasi bila stok sudah (sebagian) tersedia; qty yang belum tersedia diisi lebih kecil.
+  const validatable = status === "ready" || status === "partially_available"
   if (!open && !result) return null
 
   return (
@@ -112,7 +117,7 @@ export function TransferActions({
           <div className="space-y-0.5">
             {result.ok ? (
               <p>
-                {result.message}
+                {result.message ?? messageOf(result)}
                 {backorderOf(result) && (
                   <>
                     {" "}
@@ -150,13 +155,23 @@ export function TransferActions({
           {status === "draft" && (
             <Button
               disabled={pending}
-              onClick={() => run(() => markTransferReady({ id }))}
+              onClick={() => run(() => confirmTransfer({ id }))}
               className="pointer-coarse:h-11"
             >
-              Tandai siap
+              Konfirmasi
             </Button>
           )}
-          {status === "ready" && (
+          {(status === "waiting" || status === "partially_available") && (
+            <Button
+              variant={status === "waiting" ? "default" : "outline"}
+              disabled={pending}
+              onClick={() => run(() => checkTransferAvailability({ id }))}
+              className="pointer-coarse:h-11"
+            >
+              Cek stok
+            </Button>
+          )}
+          {validatable && (
             <>
               <AlertDialog open={validateOpen} onOpenChange={setValidateOpen}>
                 {needsApproval && !canApprove ? (
@@ -252,15 +267,17 @@ export function TransferActions({
                   </AlertDialogFooter>
                 </AlertDialogContent>
               </AlertDialog>
-              <Button
-                variant="outline"
-                disabled={pending}
-                onClick={() => run(() => reopenTransfer({ id }))}
-                className="pointer-coarse:h-11"
-              >
-                Kembali ke Draft
-              </Button>
             </>
+          )}
+          {confirmed && (
+            <Button
+              variant="outline"
+              disabled={pending}
+              onClick={() => run(() => reopenTransfer({ id }))}
+              className="pointer-coarse:h-11"
+            >
+              Kembali ke Draft
+            </Button>
           )}
           <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>
             <AlertDialogTrigger
@@ -298,6 +315,12 @@ export function TransferActions({
       )}
     </div>
   )
+}
+
+// Pesan sukses yang ditentukan server (mis. status hasil Konfirmasi).
+function messageOf(result: ActionResult<unknown>) {
+  if (!result.ok || !result.data || typeof result.data !== "object") return null
+  return (result.data as { message?: string }).message ?? null
 }
 
 function backorderOf(result: ActionResult<unknown>) {

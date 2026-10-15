@@ -453,10 +453,7 @@ describe("data Selesai terkunci", () => {
   test("transfer yang dibatalkan ikut membatalkan barisnya dan terkunci", async () => {
     await inRollback(db, async (tx) => {
       const row = await transfer(tx, "receipt", [{ qty: "1" }])
-      await tx
-        .update(transfers)
-        .set({ status: "cancelled", cancelledAt: new Date() })
-        .where(eq(transfers.id, row.id))
+      await tx.execute(sql`select cancel_transfer(${row.id})`)
       const moves = await tx.select().from(stockMoves).where(eq(stockMoves.transferId, row.id))
       expect(moves.map((move) => move.status)).toEqual(["cancelled"])
       expect(await pgErrorMessage(validate(tx, row.id))).toBe(`Transfer ${row.number} sudah Batal.`)

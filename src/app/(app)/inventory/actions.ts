@@ -138,7 +138,8 @@ export const saveTransfer = defineFormAction({
       reason: NEEDS_APPROVAL.includes(input.type) ? input.reason : null,
       sourceLocationId: inbound ? otherId! : input.locationId,
       destinationLocationId: inbound ? input.locationId : otherId!,
-      scheduledDate: input.scheduledDate,
+      // Kosong = hari ini (WIB); Konfirmasi mewajibkan tanggal rencana (R-06).
+      scheduledDate: input.scheduledDate ?? todayWib(),
       reference: input.reference,
       notes: input.notes,
     }
@@ -243,45 +244,40 @@ async function insertLines(
 
 const idInput = z.object({ id: z.uuid("Transfer tidak valid.") })
 
-async function transferStatus(tx: Transaction, id: string) {
-  const [row] = await tx
-    .select({ status: transfers.status })
-    .from(transfers)
-    .where(eq(transfers.id, id))
-  if (!row) throw new AppError("Transfer tidak ditemukan.")
-  return row.status
+// Alur status (PRD bagian 6.3, backlog R-06): semua perubahan status lewat fungsi database, yang
+// juga memeriksa syaratnya dan melaporkan semua alasan sekaligus.
+
+const STATUS_MESSAGES: Record<string, string> = {
+  ready: "Siap divalidasi.",
+  partially_available: "Stok baru tersedia sebagian.",
+  waiting: "Menunggu stok tersedia.",
 }
 
-// Siap: data lengkap (PRD bagian 6.3). Ketersediaan stok dan syarat lain dicek lagi saat validasi.
-export const markTransferReady = defineAction({
-  name: "markTransferReady",
+// Konfirmasi: Draft → Siap (barang masuk) atau Menunggu/Sebagian tersedia/Siap menurut stok.
+export const confirmTransfer = defineAction({
+  name: "confirmTransfer",
   permission: "inventory:write",
   schema: idInput,
-  successMessage: "Transfer ditandai Siap.",
   handler: async ({ input, tx }) => {
-    if ((await transferStatus(tx, input.id)) !== "draft") {
-      throw new AppError("Hanya transfer Draft yang bisa ditandai Siap.")
-    }
-    // Lot/seri wajib dan aturan nomor seri, sama dengan saat validasi.
-    const tracking = await tx.execute<{ errors: string[] }>(
-      sql`select transfer_tracking_errors(${input.id}) as errors`,
+    const result = await tx.execute<{ status: string }>(
+      sql`select confirm_transfer(${input.id}) as status`,
     )
-    const errors = tracking.rows[0]?.errors ?? []
-    const [header] = await tx
-      .select({ type: transfers.type, reason: transfers.reason })
-      .from(transfers)
-      .where(eq(transfers.id, input.id))
-    if (NEEDS_APPROVAL.includes(header.type) && !header.reason?.trim()) {
-      errors.unshift("Alasan wajib diisi.")
-    }
-    // Barang keluar: stok dicek saat Siap dengan aturan yang sama seperti validasi (PRD 6.3).
-    const shortages = await tx.execute<{ errors: string[] }>(
-      sql`select transfer_stock_errors(${input.id}) as errors`,
+    const status = result.rows[0].status
+    return { status, message: `Transfer dikonfirmasi. ${STATUS_MESSAGES[status]}` }
+  },
+})
+
+// Cek stok lagi untuk transfer yang sudah dikonfirmasi.
+export const checkTransferAvailability = defineAction({
+  name: "checkTransferAvailability",
+  permission: "inventory:write",
+  schema: idInput,
+  handler: async ({ input, tx }) => {
+    const result = await tx.execute<{ status: string }>(
+      sql`select check_transfer_availability(${input.id}) as status`,
     )
-    errors.push(...(shortages.rows[0]?.errors ?? []))
-    errors.push(...(await returnErrors(tx, input.id)))
-    if (errors.length) throw new AppError(errors)
-    await tx.update(transfers).set({ status: "ready" }).where(eq(transfers.id, input.id))
+    const status = result.rows[0].status
+    return { status, message: `Stok sudah dicek. ${STATUS_MESSAGES[status]}` }
   },
 })
 
@@ -291,10 +287,7 @@ export const reopenTransfer = defineAction({
   schema: idInput,
   successMessage: "Transfer dikembalikan ke Draft.",
   handler: async ({ input, tx }) => {
-    if ((await transferStatus(tx, input.id)) !== "ready") {
-      throw new AppError("Hanya transfer Siap yang bisa dikembalikan ke Draft.")
-    }
-    await tx.update(transfers).set({ status: "draft" }).where(eq(transfers.id, input.id))
+    await tx.execute(sql`select reset_transfer_to_draft(${input.id})`)
   },
 })
 
@@ -304,20 +297,17 @@ export const cancelTransfer = defineAction({
   schema: idInput,
   successMessage: "Transfer dibatalkan.",
   handler: async ({ input, tx }) => {
-    const status = await transferStatus(tx, input.id)
-    if (status !== "draft" && status !== "ready") {
-      throw new AppError("Hanya transfer Draft atau Siap yang bisa dibatalkan.")
-    }
-    await tx
-      .update(transfers)
-      .set({ status: "cancelled", cancelledAt: new Date() })
-      .where(eq(transfers.id, input.id))
+    await tx.execute(sql`select cancel_transfer(${input.id})`)
   },
 })
 
+function todayWib() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
+}
+
 // Tanggal efektif (YYYY-MM-DD, WIB) → timestamp pukul 12.00 WIB; hari ini atau kosong = sekarang.
 function effectiveTimestamp(date: string | null) {
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
+  const today = todayWib()
   return date && date !== today ? `${date}T12:00:00+07:00` : null
 }
 
@@ -429,6 +419,7 @@ export const createReturn = defineAction({
         returnOfId: input.originId,
         partnerId: origin.partnerId,
         reference: origin.number,
+        scheduledDate: todayWib(),
         ...header,
       })
       .returning({ id: transfers.id })
@@ -540,7 +531,9 @@ export const approveTransfer = defineAction({
     if (!NEEDS_APPROVAL.includes(saved.type)) {
       throw new AppError("Transfer ini tidak memerlukan persetujuan.")
     }
-    if (saved.status !== "ready") throw new AppError("Hanya transfer Siap yang bisa disetujui.")
+    if (saved.status === "draft" || saved.status === "done" || saved.status === "cancelled") {
+      throw new AppError("Hanya transfer yang sudah dikonfirmasi yang bisa disetujui.")
+    }
     await tx
       .update(transfers)
       .set({ approvedAt: new Date(), approvedBy: user.id })

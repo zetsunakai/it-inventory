@@ -26,16 +26,24 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   await page.getByRole("button", { name: "Simpan pengiriman" }).click()
   await expect(page).toHaveURL(/\/inventory\/pengiriman\/[0-9a-f-]{36}$/)
 
-  await page.getByRole("button", { name: "Tandai siap" }).click()
+  // Stok baru 5 dari 8: Konfirmasi menandai Sebagian tersedia, validasi menolak (R-06).
+  await page.getByRole("button", { name: "Konfirmasi" }).click()
+  await expect(
+    page.getByRole("status").filter({ hasText: "Stok baru tersedia sebagian." }),
+  ).toBeVisible()
+  await page.getByRole("button", { name: "Validasi" }).click()
+  await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(page.getByRole("alert").filter({ hasText: "Perlu diselesaikan" })).toContainText(
     `Stok ${fixture.product.sku} di ${fixture.rack.code} tidak cukup: tersedia 5, dibutuhkan 8.`,
   )
 
+  await page.getByRole("button", { name: "Kembali ke Draft" }).click()
   // Halaman "buat" sebelumnya masih tersimpan tersembunyi oleh router; pakai yang terlihat.
   await page.getByLabel("Qty baris 1").filter({ visible: true }).fill("3")
   await page.getByRole("button", { name: "Simpan perubahan" }).click()
   await expect(page.getByText("Perubahan disimpan.")).toBeVisible()
-  await page.getByRole("button", { name: "Tandai siap" }).click()
+  await page.getByRole("button", { name: "Konfirmasi" }).click()
+  await expect(page.getByRole("status").filter({ hasText: "Siap divalidasi." })).toBeVisible()
   await page.getByRole("button", { name: "Validasi" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(

@@ -30,7 +30,7 @@ test("penyesuaian kurangi stok tercatat setelah disetujui", async ({ page }) => 
   await page.getByRole("button", { name: "Simpan penyesuaian" }).click()
   await expect(page.getByRole("heading", { name: /^Penyesuaian ADJ\// })).toBeVisible()
 
-  await page.getByRole("button", { name: "Tandai siap" }).click()
+  await page.getByRole("button", { name: "Konfirmasi" }).click()
   await page.getByRole("button", { name: "Setujui dan validasi" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Setujui dan validasi" }).click()
   await expect(

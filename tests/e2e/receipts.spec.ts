@@ -25,10 +25,8 @@ async function createReadyReceipt(page: Page, fixture: Fixture, qty: string) {
   await page.getByRole("button", { name: "Simpan penerimaan" }).click()
   await expect(page).toHaveURL(/\/inventory\/penerimaan\/[0-9a-f-]{36}$/)
   await expect(page.getByRole("heading", { name: /^Penerimaan PNR\// })).toBeVisible()
-  await page.getByRole("button", { name: "Tandai siap" }).click()
-  await expect(
-    page.getByRole("status").filter({ hasText: "Transfer ditandai Siap." }),
-  ).toBeVisible()
+  await page.getByRole("button", { name: "Konfirmasi" }).click()
+  await expect(page.getByRole("status").filter({ hasText: "Transfer dikonfirmasi." })).toBeVisible()
 }
 
 test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => {

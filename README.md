@@ -218,6 +218,16 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   disalin ke `stock_moves.movement_code` saat validasi; kartu stok dan `warehouse_movements`
   membacanya. Label di `MOVEMENT_CODE_LABELS` (`src/lib/inventory.ts`).
 
+- Alur status (backlog R-06): Draft → `confirm_transfer()` → Menunggu / Sebagian tersedia / Siap
+  → Selesai. Konfirmasi mewajibkan baris, tanggal rencana (kosong di form = hari ini), alasan untuk
+  scrap/penyesuaian, pelacakan, dan batas retur (`transfer_confirm_errors()`). Transfer masuk
+  langsung Siap; transfer yang mengambil stok gudang dinilai `transfer_availability()` (Siap bila
+  stok cukup, Sebagian tersedia bila sebagian ada, Menunggu bila tidak ada) dan bisa dicek ulang
+  lewat `check_transfer_availability()` (tombol Cek stok). `reset_transfer_to_draft()` dan
+  `cancel_transfer()` untuk Kembali ke Draft dan Batal (dari status mana pun sebelum Selesai).
+  Trigger `transfers_status_guard` menolak perubahan status di luar fungsi-fungsi itu; transfer
+  baru selalu Draft. Validasi tetap bisa dipanggil sistem dari Draft (opname, tes); UI menampilkan
+  Validasi untuk Siap dan Sebagian tersedia.
 - Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate
@@ -380,3 +390,9 @@ tests/
   (`src/server/db/delete-record.ts`) supaya pesan penolakannya jelas.
 - Jangan pernah mengubah database secara manual. Setiap tabel yang punya `updated_at` diberi trigger
   `set_updated_at()`.
+- `drizzle-kit migrate` menjalankan semua migrasi yang belum jalan dalam satu transaksi. Nilai enum
+  baru (`ALTER TYPE ... ADD VALUE`) tidak boleh dipakai di transaksi yang sama: jangan pakai di
+  statement migrasi atau di fungsi `LANGUAGE sql`; di fungsi plpgsql aman, atau bandingkan sebagai
+  teks (`status::text`).
+- Mengisi kolom baru di data lama yang terkunci trigger (transfer/baris Selesai): matikan trigger
+  user sementara di migrasi itu (`ALTER TABLE ... DISABLE TRIGGER USER`, lalu `ENABLE`).

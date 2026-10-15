@@ -76,6 +76,8 @@ export const TRANSFER_STATUS_TONES: Record<
   "neutral" | "info" | "success" | "warning"
 > = {
   draft: "neutral",
+  waiting: "warning",
+  partially_available: "warning",
   ready: "info",
   done: "success",
   cancelled: "neutral",

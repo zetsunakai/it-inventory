@@ -27,7 +27,7 @@ test("retur sebagian penerimaan ke vendor mengurangi stok", async ({ page }) => 
   await qty.fill("4")
   await page.getByRole("button", { name: "Simpan qty retur" }).click()
   await expect(page.getByRole("status").filter({ hasText: "Qty retur disimpan." })).toBeVisible()
-  await page.getByRole("button", { name: "Tandai siap" }).click()
+  await page.getByRole("button", { name: "Konfirmasi" }).click()
   await page.getByRole("button", { name: "Validasi" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(

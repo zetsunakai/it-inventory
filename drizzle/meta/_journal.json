@@ -316,6 +316,20 @@
       "when": 1791955390005,
       "tag": "0044_transfer_lines_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "7",
+      "when": 1792046517403,
+      "tag": "0045_transfer_statuses",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "7",
+      "when": 1792046549996,
+      "tag": "0046_transfer_status_rules",
+      "breakpoints": true
     }
   ]
 }

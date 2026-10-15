@@ -24,10 +24,8 @@ test("transfer internal memindah saldo antar lokasi", async ({ page }) => {
   await page.getByRole("button", { name: "Simpan transfer internal" }).click()
   await expect(page.getByRole("heading", { name: /^Transfer internal TRF\// })).toBeVisible()
 
-  await page.getByRole("button", { name: "Tandai siap" }).click()
-  await expect(
-    page.getByRole("status").filter({ hasText: "Transfer ditandai Siap." }),
-  ).toBeVisible()
+  await page.getByRole("button", { name: "Konfirmasi" }).click()
+  await expect(page.getByRole("status").filter({ hasText: "Transfer dikonfirmasi." })).toBeVisible()
   await page.getByRole("button", { name: "Validasi" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(

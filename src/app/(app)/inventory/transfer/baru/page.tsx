@@ -9,7 +9,7 @@ export default function NewInternalTransferPage() {
   return (
     <NewTransferPage
       kind={TRANSFER_KINDS.internal}
-      description="Disimpan sebagai Draft. Stok lokasi asal dicek saat ditandai Siap dan saat divalidasi."
+      description="Disimpan sebagai Draft. Stok lokasi asal dicek saat dikonfirmasi dan saat divalidasi."
     />
   )
 }
