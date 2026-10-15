@@ -44,8 +44,6 @@ export async function createInventoryFixture(prefix: string) {
         name: `PT ${prefix} Mitra ${suffix}`,
         address: "Bekasi",
         countryCode: "ID",
-        isVendor: true,
-        isCustomer: true,
         identityType: "other",
         identityNumber: code("V"),
       })

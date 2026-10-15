@@ -10,7 +10,7 @@ import { listPartners } from "@/server/queries/partners"
 
 import { inRollback, pgErrorMessage } from "./helpers"
 
-// Partner (backlog M1-06).
+// Partner (backlog M1-06, revisi RM-03: tanpa peran, kode dibuat database).
 
 const session = vi.hoisted(() => ({ user: null as CurrentUser | null }))
 vi.mock("@/server/auth/session", () => ({ requireUser: async () => session.user }))
@@ -34,10 +34,9 @@ function form(values: Record<string, string>) {
 }
 
 const VENDOR = {
-  name: "PT Pemasok Uji",
+  name: "ZQ Pemasok Uji",
   address: "Bekasi",
   countryCode: "ZQ",
-  isVendor: "on",
   identityType: "npwp15",
   identityNumber: "01.234.567.8-901.000",
 }
@@ -47,7 +46,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await db.delete(partners).where(like(partners.code, "ZQ%"))
+  await db.delete(partners).where(like(partners.name, "ZQ%"))
   await db.delete(refCodes).where(and(eq(refCodes.type, "country"), eq(refCodes.code, "ZQ")))
   await db.$client.end()
 })
@@ -59,8 +58,6 @@ const ROW = {
   name: "X",
   address: "X",
   countryCode: "ZQ",
-  isVendor: true,
-  isCustomer: false,
   identityType: "npwp16" as const,
   identityNumber: "1234567890123456",
   nitku: "1234567890123456000000",
@@ -87,7 +84,6 @@ describe("aturan tabel partner", () => {
         { identityType: "ktp" as const, identityNumber: "123", nitku: null },
         "partners_identity_number_format",
       ],
-      [{ isVendor: false }, "partners_has_role"],
     ] as const) {
       await inRollback(db, async (tx) => {
         const message = await pgErrorMessage(tx.insert(partners).values({ ...ROW, ...values }))
@@ -107,9 +103,13 @@ describe("aturan tabel partner", () => {
     })
   })
 
-  test("kode partner tidak bisa diubah", async () => {
+  test("kode partner dibuat database (PRT-nnnnnn) dan tidak bisa diubah", async () => {
     await inRollback(db, async (tx) => {
-      const [row] = await tx.insert(partners).values(ROW).returning()
+      const [row] = await tx
+        .insert(partners)
+        .values({ ...ROW, code: undefined })
+        .returning()
+      expect(row.code).toMatch(/^PRT-\d{6}$/)
       expect(
         await pgErrorMessage(
           tx.update(partners).set({ code: "ZQBARU" }).where(eq(partners.id, row.id)),
@@ -122,15 +122,15 @@ describe("aturan tabel partner", () => {
 describe("aksi partner", () => {
   test("NPWP 15 digit menghasilkan NITKU 0 + NPWP + 000000; tercatat di audit", async () => {
     const admin = loginAs(["administrator"])
-    const result = await createPartner(null, form({ ...VENDOR, code: "ZQV1" }))
-    expect(result).toMatchObject({ ok: true, data: { code: "ZQV1" } })
+    const result = await createPartner(null, form(VENDOR))
+    expect(result).toMatchObject({ ok: true })
+    const id = result.ok ? result.data.id : ""
 
-    const [row] = await db.select().from(partners).where(eq(partners.code, "ZQV1"))
+    const [row] = await db.select().from(partners).where(eq(partners.id, id))
     expect(row).toMatchObject({
+      code: expect.stringMatching(/^PRT-\d{6}$/),
       identityNumber: "012345678901000",
       nitku: "0012345678901000000000",
-      isVendor: true,
-      isCustomer: false,
     })
     const [log] = await db
       .select()
@@ -141,52 +141,45 @@ describe("aksi partner", () => {
   })
 
   test("NITKU yang sama tidak boleh dipakai dua partner; cabang dengan NITKU lain boleh", async () => {
-    const duplicate = await createPartner(null, form({ ...VENDOR, code: "ZQV2" }))
+    const duplicate = await createPartner(null, form({ ...VENDOR, name: "ZQ Cabang" }))
     expect(duplicate).toMatchObject({
       ok: false,
-      errors: ["NITKU 0012345678901000000000 sudah dipakai partner ZQV1."],
+      errors: ["NITKU 0012345678901000000000 sudah dipakai partner ZQ Pemasok Uji."],
     })
 
     const branch = await createPartner(
       null,
-      form({ ...VENDOR, code: "ZQV2", nitku: "0012345678901000000001" }),
+      form({ ...VENDOR, name: "ZQ Cabang", nitku: "0012345678901000000001" }),
     )
     expect(branch).toMatchObject({ ok: true })
   })
 
-  test("negara harus ada di referensi; kode partner unik", async () => {
+  test("negara harus ada di referensi", async () => {
     const result = await createPartner(
       null,
-      form({
-        ...VENDOR,
-        code: "ZQV1",
-        countryCode: "XX",
-        identityType: "passport",
-        identityNumber: "E1234567",
-      }),
+      form({ ...VENDOR, countryCode: "XX", identityType: "passport", identityNumber: "E1234567" }),
     )
-    expect(result).toMatchObject({
-      ok: false,
-      errors: ["Kode partner ZQV1 sudah dipakai.", "Negara dengan kode XX tidak ditemukan."],
-    })
+    expect(result).toMatchObject({ ok: false, errors: ["Negara dengan kode XX tidak ditemukan."] })
   })
 
-  test("mengubah partner jadi customer juga; NITKU tetap milik partner sendiri", async () => {
-    const [row] = await db.select().from(partners).where(eq(partners.code, "ZQV1"))
+  test("partner bisa diubah; dicari lewat nama atau NPWP", async () => {
+    const [row] = await db.select().from(partners).where(eq(partners.name, "ZQ Pemasok Uji"))
     const result = await updatePartner(
       null,
-      form({ ...VENDOR, id: row.id, isCustomer: "on", active: "on" }),
+      form({ ...VENDOR, id: row.id, address: "Cikarang", active: "on" }),
     )
     expect(result).toMatchObject({ ok: true })
 
-    const customers = await listPartners({
-      search: "ZQV",
-      role: "customer",
+    const byNpwp = await listPartners({
+      search: "012345678901000",
       page: 1,
       pageSize: 20,
       offset: 0,
     })
-    expect(customers.rows.map((partner) => partner.code)).toEqual(["ZQV1"])
+    expect(byNpwp.rows.map((partner) => partner.name).sort()).toEqual([
+      "ZQ Cabang",
+      "ZQ Pemasok Uji",
+    ])
   })
 
   test("peran selain Administrator tidak bisa menambah partner", async () => {
@@ -194,7 +187,7 @@ describe("aksi partner", () => {
       loginAs([role])
       const result = await createPartner(
         null,
-        form({ ...VENDOR, code: "ZQNO", identityType: "passport", identityNumber: "E7654321" }),
+        form({ ...VENDOR, name: "ZQ No", identityType: "passport", identityNumber: "E7654321" }),
       )
       expect(result.ok).toBe(false)
     }

@@ -10,25 +10,19 @@ import { containsPattern } from "@/server/db/sql-helpers"
 
 export type PartnerRow = typeof partners.$inferSelect
 
-export type PartnerRole = "vendor" | "customer"
-
-// Halaman Partner: cari kode, nama, nomor identitas, atau NITKU; filter peran.
+// Halaman Partner: cari nama, NPWP (nomor identitas), atau NITKU.
 export async function listPartners({
   search,
-  role,
   active,
   pageSize,
   offset,
-}: ListParams & { active?: boolean; role?: PartnerRole }) {
+}: ListParams & { active?: boolean }) {
   const conditions: SQL[] = []
   if (active !== undefined) conditions.push(eq(partners.active, active))
-  if (role === "vendor") conditions.push(eq(partners.isVendor, true))
-  if (role === "customer") conditions.push(eq(partners.isCustomer, true))
   if (search) {
     const pattern = containsPattern(search)
     conditions.push(
       or(
-        ilike(partners.code, pattern),
         ilike(partners.name, pattern),
         ilike(partners.identityNumber, pattern),
         ilike(partners.nitku, pattern),
@@ -42,7 +36,7 @@ export async function listPartners({
       .select()
       .from(partners)
       .where(where)
-      .orderBy(asc(partners.code))
+      .orderBy(asc(partners.name), asc(partners.code))
       .limit(pageSize)
       .offset(offset),
     db.select({ total: count() }).from(partners).where(where),

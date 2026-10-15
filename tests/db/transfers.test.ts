@@ -165,8 +165,6 @@ beforeAll(async () => {
       name: "PT Pemasok Uji",
       address: "Bekasi",
       countryCode: "ID",
-      isVendor: true,
-      isCustomer: true,
       identityType: "other",
       identityNumber: "ZTV",
     })

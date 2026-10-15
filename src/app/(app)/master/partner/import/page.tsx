@@ -17,7 +17,7 @@ export default function ImportPartnersPage() {
     <>
       <PageHeader
         title="Import partner"
-        description="Kode baru ditambahkan, kode yang sudah ada diperbarui. Bila ada satu baris yang salah, tidak ada yang disimpan."
+        description="NPWP baru ditambahkan, NPWP yang sudah ada diperbarui (cabang dipilih lewat NITKU). Bila ada satu baris yang salah, tidak ada yang disimpan."
       />
       <Suspense fallback={<Skeleton className="h-40 w-full max-w-4xl" />}>
         <Guarded />
@@ -33,7 +33,7 @@ async function Guarded() {
     <ImportForm
       action={importPartners}
       noun="partner"
-      keyLabel="Kode"
+      keyLabel="NPWP"
       listHref="/master/partner"
       exportHref="/master/partner/export?format=xlsx"
     />

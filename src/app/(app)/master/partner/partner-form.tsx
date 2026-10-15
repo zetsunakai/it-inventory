@@ -5,7 +5,7 @@ import { useActionState, useEffect, useState } from "react"
 
 import { CheckboxField } from "@/components/checkbox-field"
 import { FormErrors } from "@/components/form-errors"
-import { FormField, StaticField } from "@/components/form-field"
+import { FormField } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,6 +19,7 @@ import {
 import { fieldValue, type FormState } from "@/lib/action-result"
 import { headOfficeNitku } from "@/lib/npwp"
 import {
+  IDENTITY_MAX_LENGTH,
   IDENTITY_TYPE_LABELS,
   IDENTITY_TYPES,
   NPWP_IDENTITY_TYPES,
@@ -39,12 +40,9 @@ const INDONESIA: RefCodeOption = { code: "ID", name: "Indonesia", parentCode: nu
 
 export type PartnerFormValues = {
   id: string
-  code: string
   name: string
   address: string
   country: RefCodeOption | null
-  isVendor: boolean
-  isCustomer: boolean
   identityType: IdentityType
   identityNumber: string
   nitku: string | null
@@ -54,10 +52,10 @@ export type PartnerFormValues = {
 // Form tambah (tanpa partner) dan ubah partner.
 export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
   const router = useRouter()
-  const [state, formAction, pending] = useActionState<
-    FormState<{ id: string; code: string }>,
-    FormData
-  >(partner ? updatePartner : createPartner, null)
+  const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
+    partner ? updatePartner : createPartner,
+    null,
+  )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
   const [identityType, setIdentityType] = useState<IdentityType | null>(
     partner?.identityType ?? null,
@@ -65,42 +63,28 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
   const [identityNumber, setIdentityNumber] = useState(partner?.identityNumber ?? "")
   const isNpwp = identityType !== null && NPWP_IDENTITY_TYPES.includes(identityType)
   const derivedNitku = isNpwp ? headOfficeNitku(identityNumber) : null
+  const maxLength = identityType ? IDENTITY_MAX_LENGTH[identityType] : 50
   const checked = (name: string, saved: boolean) =>
     state?.ok === false ? state.values?.[name] === "on" : saved
 
-  // Partner baru: kembali ke daftar, tersaring ke kode yang baru dibuat.
+  // Partner baru: lanjut ke halaman detailnya.
   useEffect(() => {
     if (partner || !state?.ok) return
-    router.push(`/master/partner?${new URLSearchParams({ q: state.data.code })}`)
+    router.push(`/master/partner/${state.data.id}`)
   }, [partner, state, router])
 
   return (
     <form action={formAction} className={FORM_CLASS}>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {partner && <input type="hidden" name="id" value={partner.id} />}
-      <div className="grid gap-4 sm:grid-cols-[12rem_1fr]">
-        {partner ? (
-          <StaticField label="Kode partner" value={partner.code} mono reason="Tidak bisa diubah." />
-        ) : (
-          <FormField label="Kode partner" htmlFor="code" errors={fieldErrors?.code}>
-            <Input
-              id="code"
-              name="code"
-              defaultValue={fieldValue(state, "code")}
-              maxLength={30}
-              autoComplete="off"
-            />
-          </FormField>
-        )}
-        <FormField label="Nama partner" htmlFor="name" errors={fieldErrors?.name}>
-          <Input
-            id="name"
-            name="name"
-            defaultValue={fieldValue(state, "name", partner?.name)}
-            maxLength={200}
-          />
-        </FormField>
-      </div>
+      <FormField label="Nama partner" htmlFor="name" errors={fieldErrors?.name}>
+        <Input
+          id="name"
+          name="name"
+          defaultValue={fieldValue(state, "name", partner?.name)}
+          maxLength={200}
+        />
+      </FormField>
       <div className="grid gap-4 sm:grid-cols-[1fr_16rem]">
         <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address}>
           <Input
@@ -119,27 +103,6 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
           />
         </FormField>
       </div>
-
-      <fieldset className="space-y-2">
-        <legend className="mb-2 text-sm font-medium">Peran</legend>
-        <CheckboxField
-          name="isVendor"
-          label="Vendor"
-          description="Pemasok atau penjual: muncul di penerimaan dan dokumen masuk."
-          defaultChecked={checked("isVendor", partner?.isVendor ?? false)}
-        />
-        <CheckboxField
-          name="isCustomer"
-          label="Customer"
-          description="Pembeli atau penerima: muncul di pengiriman dan dokumen keluar."
-          defaultChecked={checked("isCustomer", partner?.isCustomer ?? false)}
-        />
-        {fieldErrors?.isVendor?.map((message) => (
-          <p key={message} className="text-sm text-destructive">
-            {message}
-          </p>
-        ))}
-      </fieldset>
 
       <div className="grid gap-4 sm:grid-cols-[14rem_1fr]">
         <FormField
@@ -165,39 +128,32 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
             </SelectContent>
           </Select>
         </FormField>
-        <FormField
-          label="Nomor identitas"
-          htmlFor="identityNumber"
-          errors={fieldErrors?.identityNumber}
-          hint={isNpwp ? "Boleh ditulis dengan titik dan strip." : undefined}
-        >
+        {/* Panjang isian mengikuti jenis identitas (RM-03). */}
+        <FormField label="NPWP" htmlFor="identityNumber" errors={fieldErrors?.identityNumber}>
           <Input
             id="identityNumber"
             name="identityNumber"
-            defaultValue={fieldValue(state, "identityNumber", partner?.identityNumber)}
-            onChange={(event) => setIdentityNumber(event.target.value)}
-            maxLength={50}
+            value={identityNumber}
+            onChange={(event) => setIdentityNumber(event.target.value.slice(0, maxLength))}
+            maxLength={maxLength}
+            inputMode={isNpwp || identityType === "ktp" ? "numeric" : undefined}
             autoComplete="off"
+            className="font-mono"
           />
         </FormField>
       </div>
       {isNpwp && (
-        <FormField
-          label="NITKU"
-          htmlFor="nitku"
-          errors={fieldErrors?.nitku}
-          hint={
-            derivedNitku
-              ? `Kosongkan untuk kantor pusat: ${derivedNitku}. Isi bila partner adalah cabang.`
-              : "Kosongkan untuk kantor pusat (NPWP 16 digit + 000000). Isi bila partner adalah cabang."
-          }
-        >
+        <FormField label="NITKU" htmlFor="nitku" errors={fieldErrors?.nitku}>
+          {/* Kosong = kantor pusat (NPWP 16 digit + 000000), terlihat di placeholder. */}
           <Input
             id="nitku"
             name="nitku"
             defaultValue={fieldValue(state, "nitku", partner?.nitku)}
+            placeholder={derivedNitku ?? undefined}
+            maxLength={22}
             inputMode="numeric"
             autoComplete="off"
+            className="font-mono sm:w-72"
           />
         </FormField>
       )}

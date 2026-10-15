@@ -222,12 +222,11 @@ export function TransferForm({
                 <SearchSelect<PartnerChoice>
                   id={fieldId("transfer-partner")}
                   endpoint="/api/partners"
-                  params={{ role: kind.partnerRole }}
                   value={partner}
                   onValueChange={setPartner}
                   getKey={(item) => item.id}
-                  getLabel={(item) => `[${item.code}] ${item.name}`}
-                  placeholder={`Cari kode atau nama ${kind.partnerRole}`}
+                  getLabel={(item) => `${item.name} · ${item.identityNumber}`}
+                  placeholder={`Cari nama atau NPWP ${kind.partnerRole}`}
                 />
               </FormField>
             )}

@@ -26,8 +26,6 @@ test("dibuat lalu diubah: perubahan per field dengan label, perubahan kolom tekn
       name: "Mitra lama",
       address: "Bekasi",
       countryCode: "ID",
-      isVendor: true,
-      isCustomer: false,
       identityType: "other",
       identityNumber: "ZAC1",
     })

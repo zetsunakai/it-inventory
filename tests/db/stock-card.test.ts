@@ -123,8 +123,6 @@ beforeAll(async () => {
       name: "Mitra kartu stok",
       address: "Bekasi",
       countryCode: "ID",
-      isVendor: true,
-      isCustomer: true,
       identityType: "other",
       identityNumber: "ZKV",
     })

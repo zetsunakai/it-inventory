@@ -96,7 +96,7 @@ export async function listTransfers({
         ilike(transfers.number, pattern),
         ilike(transfers.reference, pattern),
         ilike(partners.name, pattern),
-        ilike(partners.code, pattern),
+        ilike(partners.identityNumber, pattern),
       )!,
     )
   }
@@ -193,7 +193,7 @@ export async function getTransfer(userId: string, id: string) {
   const [header] = await db
     .select({
       transfer: transfers,
-      partner: { id: partners.id, code: partners.code, name: partners.name },
+      partner: { id: partners.id, name: partners.name, identityNumber: partners.identityNumber },
       sourcePath: pathOf(source),
       destinationPath: pathOf(destination),
       backorderOfNumber: sql<
@@ -396,22 +396,20 @@ export async function searchProducts(search: string): Promise<ProductChoice[]> {
     .limit(PRODUCT_SEARCH_LIMIT)
 }
 
-export type PartnerChoice = { id: string; code: string; name: string }
+export type PartnerChoice = { id: string; name: string; identityNumber: string }
 
-// Pencarian partner aktif per peran (/api/partners).
-export async function searchPartners(
-  role: "vendor" | "customer",
-  search: string,
-): Promise<PartnerChoice[]> {
+// Pencarian partner aktif (/api/partners). Semua partner bisa jadi vendor maupun customer (RM-03).
+export async function searchPartners(search: string): Promise<PartnerChoice[]> {
   const pattern = containsPattern(search)
   return db
-    .select({ id: partners.id, code: partners.code, name: partners.name })
+    .select({ id: partners.id, name: partners.name, identityNumber: partners.identityNumber })
     .from(partners)
     .where(
       and(
         eq(partners.active, true),
-        eq(role === "vendor" ? partners.isVendor : partners.isCustomer, true),
-        search ? or(ilike(partners.code, pattern), ilike(partners.name, pattern)) : undefined,
+        search
+          ? or(ilike(partners.name, pattern), ilike(partners.identityNumber, pattern))
+          : undefined,
       ),
     )
     .orderBy(asc(partners.name))

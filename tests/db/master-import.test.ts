@@ -120,7 +120,7 @@ beforeEach(() => loginAs(["administrator"]))
 
 afterEach(async () => {
   await db.delete(products).where(like(products.sku, "ZM%"))
-  await db.delete(partners).where(like(partners.code, "ZM%"))
+  await db.delete(partners).where(like(partners.name, "ZM %"))
   // Lepas induk dulu: foreign key induk lokasi bersifat restrict.
   await db.update(locations).set({ parentId: null }).where(like(locations.code, "ZM%"))
   await db.delete(locations).where(like(locations.code, "ZM%"))
@@ -367,17 +367,29 @@ describe("import produk", () => {
 })
 
 describe("import partner", () => {
-  const HEADER = ["Kode", "Nama", "Alamat", "Negara", "Vendor", "Customer"]
-  const IDENTITY = ["Jenis identitas", "Nomor identitas", "NITKU"]
+  const HEADER = ["NPWP", "NITKU", "Nama", "Alamat", "Negara", "Jenis identitas"]
 
-  test("NITKU kantor pusat dihitung otomatis dari NPWP, jenis identitas boleh label", async () => {
-    await runImport(
+  const saved = () =>
+    db.select().from(partners).where(like(partners.name, "ZM %")).orderBy(partners.name)
+
+  test("file lama (kolom Kode, Vendor, Customer) tetap terbaca; NITKU kantor pusat otomatis", async () => {
+    const result = await runImport(
       importPartners,
       csv([
-        [...HEADER, ...IDENTITY],
+        [
+          "Kode",
+          "Nama",
+          "Alamat",
+          "Negara",
+          "Vendor",
+          "Customer",
+          "Jenis identitas",
+          "Nomor identitas",
+          "NITKU",
+        ],
         [
           "ZMV1",
-          "PT Pemasok",
+          "ZM Pemasok",
           "Bekasi",
           "zm",
           "Ya",
@@ -386,57 +398,82 @@ describe("import partner", () => {
           "01.234.567.8-901.000",
           "",
         ],
-        ["ZMC1", "Buyer Ltd", "Tokyo", "ZM", "", "Ya", "Paspor", "ab 12345", ""],
+        ["ZMC1", "ZM Buyer Ltd", "Tokyo", "ZM", "", "Ya", "Paspor", "ab 12345", ""],
       ]),
     )
-    const rows = await db
-      .select()
-      .from(partners)
-      .where(like(partners.code, "ZM%"))
-      .orderBy(partners.code)
-    expect(rows.map((row) => [row.code, row.identityType, row.identityNumber, row.nitku])).toEqual([
-      ["ZMC1", "passport", "AB12345", null],
-      ["ZMV1", "npwp15", "012345678901000", "0012345678901000000000"],
+    expect(result).toEqual({ status: "imported", total: 2, created: 2, updated: 0, unchanged: 0 })
+    expect(
+      (await saved()).map((row) => [row.name, row.identityType, row.identityNumber, row.nitku]),
+    ).toEqual([
+      ["ZM Buyer Ltd", "passport", "AB12345", null],
+      ["ZM Pemasok", "npwp15", "012345678901000", "0012345678901000000000"],
     ])
   })
 
-  test("NITKU dobel, negara dan jenis identitas tidak dikenal, tanpa peran", async () => {
+  test("NPWP yang sudah ada diperbarui; cabang dipilih lewat NITKU", async () => {
     await runImport(
       importPartners,
       csv([
-        [...HEADER, ...IDENTITY],
-        ["ZMV1", "PT Satu", "Bekasi", "ZM", "Ya", "", "NPWP 16 digit", "0012345678901000", ""],
+        HEADER,
+        ["1111222233334444", "", "ZM Pusat", "Bekasi", "ZM", "NPWP 16 digit"],
+        [
+          "1111222233334444",
+          "1111222233334444000001",
+          "ZM Cabang",
+          "Bekasi",
+          "ZM",
+          "NPWP 16 digit",
+        ],
       ]),
     )
     const result = await runImport(
       importPartners,
       csv([
-        [...HEADER, ...IDENTITY],
-        ["ZMV2", "PT Dua", "Bekasi", "ZM", "Ya", "", "npwp15", "012345678901000", ""],
-        ["ZMV3", "PT Tiga", "Bekasi", "XX", "", "", "SIM", "123", ""],
-        ["ZMV4", "PT Empat", "Bekasi", "ZM", "Ya", "", "NPWP 16 digit", "1111222233334444", ""],
-        ["ZMV5", "PT Lima", "Bekasi", "ZM", "Ya", "", "NPWP 16 digit", "1111222233334444", ""],
+        ["NPWP", "NITKU", "Alamat"],
+        ["1111.2222.3333.4444", "", "Jakarta"],
+        ["1111222233334444", "1111222233334444000001", "Cikarang"],
+      ]),
+    )
+    expect(result).toEqual({ status: "imported", total: 2, created: 0, updated: 2, unchanged: 0 })
+    expect((await saved()).map((row) => [row.name, row.address])).toEqual([
+      ["ZM Cabang", "Cikarang"],
+      ["ZM Pusat", "Jakarta"],
+    ])
+  })
+
+  test("NITKU dobel, negara dan jenis identitas tidak dikenal, NPWP dobel di file", async () => {
+    await runImport(
+      importPartners,
+      csv([HEADER, ["0012345678901000", "", "ZM Satu", "Bekasi", "ZM", "NPWP 16 digit"]]),
+    )
+    const result = await runImport(
+      importPartners,
+      csv([
+        HEADER,
+        ["012345678901000", "", "ZM Dua", "Bekasi", "ZM", "npwp15"],
+        ["123", "", "ZM Tiga", "Bekasi", "XX", "SIM"],
+        ["5555222233334444", "", "ZM Empat", "Bekasi", "ZM", "NPWP 16 digit"],
+        ["5555222233334444", "", "ZM Lima", "Bekasi", "ZM", "NPWP 16 digit"],
       ]),
     )
     expect(invalid(result)).toEqual([
       {
         line: 2,
-        key: "ZMV2",
-        messages: ["NITKU 0012345678901000000000 sudah dipakai partner ZMV1."],
+        key: "012345678901000",
+        messages: ["NITKU 0012345678901000000000 sudah dipakai partner ZM Satu."],
       },
       {
         line: 3,
-        key: "ZMV3",
+        key: "123",
         messages: [
           'Jenis identitas "SIM" tidak dikenal. Pilih NPWP 16 digit, NPWP 15 digit, Paspor, KTP, atau Lainnya.',
-          "Pilih minimal satu peran: vendor atau customer.",
           "Negara dengan kode XX tidak ditemukan.",
         ],
       },
       {
         line: 5,
-        key: "ZMV5",
-        messages: ["NITKU 1111222233334444000000 juga dipakai partner ZMV4 di file ini."],
+        key: "5555222233334444",
+        messages: ["NPWP 5555222233334444 sudah ada di baris 4."],
       },
     ])
   })

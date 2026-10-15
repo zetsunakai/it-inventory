@@ -428,6 +428,13 @@
       "when": 1792080013122,
       "tag": "0060_warehouses_all_bonded",
       "breakpoints": true
+    },
+    {
+      "idx": 61,
+      "version": "7",
+      "when": 1792080463520,
+      "tag": "0061_partners_revision",
+      "breakpoints": true
     }
   ]
 }

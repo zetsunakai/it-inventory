@@ -12,7 +12,6 @@ import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import {
   parseListParams,
-  pickFilter,
   type RawSearchParams,
   pickActive,
   STATUS_FILTER,
@@ -28,27 +27,15 @@ import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Partner · IT Inventory" }
 
-const ROLE_FILTER = "peran"
-const ROLE_OPTIONS = [
-  { value: "vendor", label: "Vendor" },
-  { value: "customer", label: "Customer" },
-]
-
 const COLUMNS: DataTableColumn<PartnerRow>[] = [
-  { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
   {
     header: "Nama",
     cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
     className: "w-full whitespace-normal",
   },
-  {
-    header: "Peran",
-    cell: (row) =>
-      [row.isVendor && "Vendor", row.isCustomer && "Customer"].filter(Boolean).join(", "),
-  },
   { header: "Negara", cell: (row) => row.countryCode },
   {
-    header: "Identitas",
+    header: "NPWP",
     cell: (row) => (
       <span>
         <span className="text-muted-foreground">{IDENTITY_TYPE_LABELS[row.identityType]} </span>
@@ -83,8 +70,7 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
   const canEdit = hasPermission(user.roles, "master:write")
   const raw = await searchParams
   const params = parseListParams(raw)
-  const role = pickFilter(raw, ROLE_FILTER, ["vendor", "customer"] as const)
-  const { rows, total } = await listPartners({ active: pickActive(raw), ...params, role })
+  const { rows, total } = await listPartners({ active: pickActive(raw), ...params })
 
   return (
     <div className="space-y-4">
@@ -107,11 +93,8 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
         }
       >
         <ListSearchBar
-          placeholder="Cari kode, nama, NPWP, atau NITKU"
-          filters={[
-            { name: ROLE_FILTER, label: "Peran", options: ROLE_OPTIONS },
-            { name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS },
-          ]}
+          placeholder="Cari nama, NPWP, atau NITKU"
+          filters={[{ name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS }]}
         />
       </ListToolbar>
       <DataTable

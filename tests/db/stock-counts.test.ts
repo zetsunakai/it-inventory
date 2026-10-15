@@ -119,8 +119,6 @@ beforeAll(async () => {
       name: "Pemasok opname",
       address: "Bekasi",
       countryCode: "ID",
-      isVendor: true,
-      isCustomer: false,
       identityType: "other",
       identityNumber: "ZOV",
     })

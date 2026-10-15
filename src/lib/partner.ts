@@ -1,9 +1,9 @@
 import { z } from "zod"
 
-import { checkbox, optionalText, requiredText } from "./form-fields"
+import { optionalText, requiredText } from "./form-fields"
 import { digitsOnly, headOfficeNitku, npwp16 } from "./npwp"
 
-// Partner: vendor dan customer (PRD bagian 5.1). Dipakai sebagai entitas
+// Partner (PRD bagian 5.1): bisa dipakai sebagai vendor maupun customer. Dipakai sebagai entitas
 // Pemasok/Penjual/Pembeli/Penerima di dokumen BC.
 
 export const IDENTITY_TYPES = ["npwp16", "npwp15", "passport", "ktp", "other"] as const
@@ -47,6 +47,16 @@ const IDENTITY_RULES: Record<IdentityType, { pattern: RegExp; message: string; d
     },
   }
 
+// Panjang maksimal isian NPWP per jenis identitas (RM-03): NPWP bertitik/strip 20 karakter
+// (15 digit) atau 22 karakter (16 digit), KTP 16 digit, paspor 20, lainnya 50.
+export const IDENTITY_MAX_LENGTH: Record<IdentityType, number> = {
+  npwp16: 22,
+  npwp15: 20,
+  ktp: 16,
+  passport: 20,
+  other: 50,
+}
+
 // NITKU partner: hanya untuk NPWP. Kosong = kantor pusat (NPWP 16 digit + 000000);
 // NITKU cabang boleh diisi asal diawali NPWP 16 digit partner.
 export function partnerNitku(type: IdentityType, identityNumber: string, nitku: string) {
@@ -65,9 +75,6 @@ function normalizeIdentityNumber(type: IdentityType, value: string) {
 // semua kesalahan tampil sekaligus; karena itu nilainya diperiksa tipenya lebih dulu.
 function partnerIssues(input: Record<string, unknown>) {
   const issues: { path: string[]; message: string }[] = []
-  if (input.isVendor !== true && input.isCustomer !== true) {
-    issues.push({ path: ["isVendor"], message: "Pilih minimal satu peran: vendor atau customer." })
-  }
   const type = IDENTITY_TYPES.find((value) => value === input.identityType)
   if (!type || typeof input.identityNumber !== "string" || !input.identityNumber) return issues
 
@@ -97,10 +104,8 @@ export const partnerFieldsSchema = z
     name: requiredText("Nama partner", 200),
     address: requiredText("Alamat", 500),
     countryCode: z.string().trim().min(1, "Negara wajib dipilih."),
-    isVendor: checkbox,
-    isCustomer: checkbox,
     identityType: z.enum(IDENTITY_TYPES, "Jenis identitas wajib dipilih."),
-    identityNumber: requiredText("Nomor identitas", 50),
+    identityNumber: requiredText("NPWP", 50),
     nitku: optionalText("NITKU", 30).transform((value) => value ?? ""),
   })
   .superRefine(

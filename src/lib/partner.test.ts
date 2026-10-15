@@ -6,7 +6,6 @@ const BASE = {
   name: "PT Pemasok Uji",
   address: "Jl. Raya No. 2, Bekasi",
   countryCode: "ID",
-  isVendor: "on",
   nitku: "",
 }
 
@@ -41,14 +40,12 @@ describe("NITKU otomatis dari NPWP", () => {
     expect(result.success && result.data).toMatchObject({
       identityNumber: "012345678901000",
       nitku: "0012345678901000000000",
-      isVendor: true,
-      isCustomer: false,
     })
   })
 })
 
 describe("validasi partner", () => {
-  test("semua kesalahan tampil sekaligus, termasuk peran dan nomor identitas", () => {
+  test("semua kesalahan tampil sekaligus, termasuk NPWP", () => {
     const result = partnerFieldsSchema.safeParse({
       name: "",
       address: "",
@@ -62,7 +59,6 @@ describe("validasi partner", () => {
         "Nama partner wajib diisi.",
         "Alamat wajib diisi.",
         "Negara wajib dipilih.",
-        "Pilih minimal satu peran: vendor atau customer.",
         "NPWP harus 16 digit.",
       ]),
     )
@@ -83,21 +79,6 @@ describe("validasi partner", () => {
   test("nomor paspor dirapikan jadi huruf besar tanpa spasi", () => {
     const result = parse({ identityType: "passport", identityNumber: "a 1234567" })
     expect(result.success && result.data.identityNumber).toBe("A1234567")
-  })
-
-  test("minimal satu peran", () => {
-    // Checkbox yang tidak dicentang tidak terkirim sama sekali.
-    const result = partnerFieldsSchema.safeParse({
-      name: BASE.name,
-      address: BASE.address,
-      countryCode: BASE.countryCode,
-      nitku: "",
-      identityType: "npwp16",
-      identityNumber: "1234567890123456",
-    })
-    expect(result.success ? [] : result.error.issues.map((issue) => issue.message)).toEqual([
-      "Pilih minimal satu peran: vendor atau customer.",
-    ])
   })
 
   test("NITKU harus diawali NPWP partner, dan hanya untuk NPWP", () => {

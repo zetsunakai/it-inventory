@@ -124,8 +124,6 @@ beforeAll(async () => {
         name: code,
         address: "Bekasi",
         countryCode: "ID",
-        isVendor: true,
-        isCustomer: true,
         identityType: "other" as const,
         identityNumber: code,
         active,

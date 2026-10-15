@@ -3,7 +3,7 @@
 import { and, eq, ne } from "drizzle-orm"
 import { z } from "zod"
 
-import { checkbox, requiredText } from "@/lib/form-fields"
+import { checkbox } from "@/lib/form-fields"
 import { partnerFieldsSchema, type PartnerFields } from "@/lib/partner"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
@@ -11,10 +11,14 @@ import { deleteUnlessUsed } from "@/server/db/delete-record"
 import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { partners } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
-import { importPartnerRows, PARTNER_COLUMNS } from "@/server/master-io/partners"
+import {
+  importPartnerRows,
+  PARTNER_COLUMNS,
+  RETIRED_PARTNER_COLUMNS,
+} from "@/server/master-io/partners"
 
-// Partner (PRD bagian 5.1): hanya Administrator (izin master:write). Kode partner tidak bisa
-// diubah (trigger partners_guard). NITKU NPWP dihitung otomatis bila dikosongkan.
+// Partner (PRD bagian 5.1): hanya Administrator (izin master:write). Kode partner dibuat database
+// dan tidak ditampilkan (RM-03). NITKU NPWP dihitung otomatis bila dikosongkan.
 
 async function partnerErrors(
   tx: Transaction,
@@ -27,10 +31,10 @@ async function partnerErrors(
   }
   if (input.nitku) {
     const [other] = await tx
-      .select({ code: partners.code })
+      .select({ name: partners.name })
       .from(partners)
       .where(and(eq(partners.nitku, input.nitku), saved ? ne(partners.id, saved.id) : undefined))
-    if (other) errors.push(`NITKU ${input.nitku} sudah dipakai partner ${other.code}.`)
+    if (other) errors.push(`NITKU ${input.nitku} sudah dipakai partner ${other.name}.`)
   }
   return errors
 }
@@ -38,21 +42,13 @@ async function partnerErrors(
 export const createPartner = defineFormAction({
   name: "createPartner",
   permission: "master:write",
-  schema: z.object({ code: requiredText("Kode partner", 30) }).and(partnerFieldsSchema),
+  schema: partnerFieldsSchema,
   successMessage: "Partner ditambahkan.",
   handler: async ({ input, tx }) => {
     const errors = await partnerErrors(tx, input)
-    const [existing] = await tx
-      .select({ id: partners.id })
-      .from(partners)
-      .where(eq(partners.code, input.code))
-    if (existing) errors.unshift(`Kode partner ${input.code} sudah dipakai.`)
     if (errors.length) throw new AppError(errors)
 
-    const [row] = await tx
-      .insert(partners)
-      .values(input)
-      .returning({ id: partners.id, code: partners.code })
+    const [row] = await tx.insert(partners).values(input).returning({ id: partners.id })
     return row
   },
 })
@@ -66,7 +62,7 @@ export const updatePartner = defineFormAction({
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {
     const [saved] = await tx
-      .select({ id: partners.id, code: partners.code, countryCode: partners.countryCode })
+      .select({ id: partners.id, countryCode: partners.countryCode })
       .from(partners)
       .where(eq(partners.id, id))
     if (!saved) throw new AppError("Partner tidak ditemukan.")
@@ -74,7 +70,7 @@ export const updatePartner = defineFormAction({
     if (errors.length) throw new AppError(errors)
 
     await tx.update(partners).set(values).where(eq(partners.id, id))
-    return { id, code: saved.code }
+    return { id }
   },
 })
 
@@ -84,7 +80,10 @@ export const importPartners = defineFormAction({
   permission: "master:write",
   schema: importFileSchema,
   handler: async ({ input, tx }) =>
-    importPartnerRows(tx, await readImportFile(input.file, PARTNER_COLUMNS, "code")),
+    importPartnerRows(
+      tx,
+      await readImportFile(input.file, PARTNER_COLUMNS, "identityNumber", RETIRED_PARTNER_COLUMNS),
+    ),
 })
 
 // Hapus partner (backlog M1-08): hanya partner yang belum dipakai, sama seperti deleteProduct.

@@ -129,8 +129,6 @@ describe("hapus data yang belum dipakai", () => {
         name: "PT Hapus",
         address: "Bekasi",
         countryCode: "ID",
-        isVendor: true,
-        isCustomer: false,
         identityType: "passport",
         identityNumber: "ZD12345",
       })

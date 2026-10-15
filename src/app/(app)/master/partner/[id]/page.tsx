@@ -40,23 +40,21 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
     recordActivity("partners", partner.id, PARTNER_ACTIVITY_LABELS),
   ])
 
-  const roles = [partner.isVendor && "Vendor", partner.isCustomer && "Customer"].filter(Boolean)
   const rows: [string, string][] = [
+    ["Nama partner", partner.name],
     ["Alamat", partner.address],
     ["Negara", partner.country ? formatRefCode(partner.country) : partner.countryCode],
-    ["Peran", roles.join(", ")],
     ["Jenis identitas", IDENTITY_TYPE_LABELS[partner.identityType]],
-    ["Nomor identitas", partner.identityNumber],
+    ["NPWP", partner.identityNumber],
     ["NITKU", partner.nitku ?? "—"],
     ["Status", partner.active ? "Aktif" : "Diarsipkan"],
   ]
 
   return (
     <DocumentLayout
-      title={`${partner.code} · ${partner.name}`}
-      meta={roles.join(" dan ")}
-      crumbs={[{ label: partner.code }]}
-
+      title={partner.name}
+      meta={`${IDENTITY_TYPE_LABELS[partner.identityType]} ${partner.identityNumber}`}
+      crumbs={[{ label: partner.name }]}
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="partner" />}
     >
@@ -67,7 +65,7 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
             action={deletePartner}
             id={partner.id}
             noun="partner"
-            label={partner.code}
+            label={partner.name}
             listHref="/master/partner"
           />
         </>
@@ -90,10 +88,8 @@ const PARTNER_ACTIVITY_LABELS = {
     name: "Nama",
     address: "Alamat",
     country_code: "Negara",
-    is_vendor: "Vendor",
-    is_customer: "Customer",
     identity_type: "Jenis identitas",
-    identity_number: "Nomor identitas",
+    identity_number: "NPWP",
     nitku: "NITKU",
     active: "Aktif",
   },

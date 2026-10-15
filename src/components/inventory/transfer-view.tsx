@@ -79,12 +79,7 @@ function lineColumns({ status, sourceWarehouseId }: TransferDetail) {
 export function TransferView({ kind, transfer }: { kind: TransferKind; transfer: TransferDetail }) {
   const rows: [string, ReactNode][] = [
     ...(kind.partnerLabel
-      ? [
-          [
-            kind.partnerLabel,
-            transfer.partner ? `[${transfer.partner.code}] ${transfer.partner.name}` : "—",
-          ] as [string, ReactNode],
-        ]
+      ? [[kind.partnerLabel, transfer.partner?.name ?? "—"] as [string, ReactNode]]
       : []),
     ["Jenis pergerakan", MOVEMENT_CODE_LABELS[transfer.movementCode]],
     ["Dari", transfer.sourcePath],

@@ -186,8 +186,11 @@ dimatikan: user baru dibuat oleh Administrator.
 
 ## Partner
 
-- Tabel `partners`: kode (tidak bisa diubah), peran vendor dan/atau customer, negara, jenis dan
-  nomor identitas (NPWP 16/15 digit, paspor, KTP, lainnya; kode CEISA 6/5/2/3/4).
+- Tabel `partners`: negara, jenis identitas dan nomornya (label "NPWP" di UI; NPWP 16/15 digit,
+  paspor, KTP, lainnya; kode CEISA 6/5/2/3/4), NITKU. Sejak RM-03 tidak ada peran vendor/customer
+  (semua partner bisa dipilih di penerimaan dan pengiriman) dan kode partner dibuat database
+  (`PRT-000001`, sequence `partners_code_seq`) tanpa ditampilkan. Panjang isian NPWP di form
+  mengikuti jenis identitas (`IDENTITY_MAX_LENGTH`).
 - NITKU hanya untuk NPWP dan otomatis bila dikosongkan: NPWP 16 digit + `000000`, atau `0` + NPWP 15
   digit + `000000`. NITKU cabang boleh diisi asal diawali NPWP 16 digit. Konsistensinya dipaksakan
   di database dan NITKU unik antar partner.
@@ -397,7 +400,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 - Produk, partner, dan lokasi bisa di-export (Excel atau CSV, semua peran dengan `master:read`) dan
   di-import (`master:write`) dari tombol di header halaman daftarnya. Lokasi untuk semua gudang ada
   dalam satu file di halaman Gudang & lokasi.
-- Baris dicocokkan lewat kode/SKU: kode baru menjadi data baru, kode yang sudah ada diperbarui. Kolom
+- Baris dicocokkan lewat kode/product code (partner: NPWP, dan NITKU bila beberapa partner memakai
+  NPWP yang sama): kode baru menjadi data baru, kode yang sudah ada diperbarui. Kolom
   yang tidak ada di file tidak mengubah data tersimpan, jadi file boleh hanya berisi kode dan kolom
   yang ingin diubah (mis. SKU + Kode HS). Baris yang isinya sama dilewati supaya audit log tidak penuh.
 - Semua baris divalidasi dulu dengan schema dan pemeriksaan yang sama dengan form. Bila ada satu
