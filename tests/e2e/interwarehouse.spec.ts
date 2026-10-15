@@ -44,7 +44,12 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
 
   await page.goto(requestUrl)
   await expect(page.getByText("Di perjalanan", { exact: true }).first()).toBeVisible()
-  await expect(page.getByRole("heading", { name: "Masih di perjalanan" })).toBeVisible()
+  // Tab dokumen (RU-23): barang di transit terbuka lebih dulu, transfernya di tab Transfer.
+  await expect(page.getByRole("tab", { name: "Masih di perjalanan" })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  )
+  await page.getByRole("tab", { name: "Transfer" }).click()
 
   // Transfer masuk: transit → gudang tujuan.
   await page.getByRole("row").filter({ hasText: "masuk" }).getByRole("link").click()

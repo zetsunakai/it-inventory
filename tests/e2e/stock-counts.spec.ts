@@ -64,8 +64,9 @@ test("selisih opname yang disetujui tercatat sebagai penyesuaian; gudang beku se
   )
 
   await page.getByRole("button", { name: "Ajukan persetujuan" }).click()
+  // Kartu status langkah (RU-23); teks yang sama juga ada di panel Aktivitas.
   await expect(
-    page.getByText("Menunggu persetujuan", { exact: true }).filter({ visible: true }),
+    page.getByRole("button", { name: /^Langkah \d+ dari \d+ Menunggu persetujuan/ }),
   ).toBeVisible()
 
   await page.getByRole("button", { name: "Setujui hasil opname" }).click()

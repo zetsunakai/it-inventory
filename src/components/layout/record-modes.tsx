@@ -13,7 +13,7 @@ import type { ActionResult } from "@/lib/action-result"
 // berhasil kembali ke mode baca (pesannya di slot pesan halaman), Buang membuang perubahan.
 // Peran tanpa hak ubah hanya melihat mode baca.
 
-type FormMode = { cancel: () => void; saved: (result: ActionResult<unknown>) => void }
+type FormMode = { cancel?: () => void; saved: (result: ActionResult<unknown>) => void }
 
 const FormModeContext = createContext<FormMode | null>(null)
 
@@ -22,24 +22,28 @@ export function RecordModes({
   form,
   canEdit,
   createHref,
+  initialEditing = false,
 }: {
   view: ReactNode
   form: ReactNode
   canEdit: boolean
   // Tombol Buat ke halaman data baru; kosongkan bila data ini tidak bisa dibuat dari sini.
   createHref?: string
+  // Data belum ada (mis. profil perusahaan belum diisi): langsung form, tanpa Buang. Tetap pakai
+  // RecordModes supaya setelah tersimpan pindah ke mode baca dengan pesannya.
+  initialEditing?: boolean
 }) {
-  const [editing, setEditing] = useState(false)
+  const [editing, setEditing] = useState(initialEditing)
   const { show, clear } = usePageMessage()
   const mode = useMemo<FormMode>(
     () => ({
-      cancel: () => setEditing(false),
+      cancel: initialEditing ? undefined : () => setEditing(false),
       saved: (result) => {
         show(result)
         setEditing(false)
       },
     }),
-    [show],
+    [show, initialEditing],
   )
 
   if (canEdit && editing) return <FormModeContext value={mode}>{form}</FormModeContext>
@@ -74,7 +78,7 @@ export function RecordModes({
 // Tombol Buang di FormActions; hanya tampil saat form dibuka dari mode baca.
 export function DiscardButton() {
   const mode = useContext(FormModeContext)
-  if (!mode) return null
+  if (!mode?.cancel) return null
   return (
     <Button type="button" variant="outline" onClick={mode.cancel}>
       Buang

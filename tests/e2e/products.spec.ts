@@ -54,8 +54,9 @@ test("Auditor melihat detail produk tanpa form ubah", async ({ page }) => {
   await expect(page.getByRole("link", { name: "Tambah produk" })).toHaveCount(0)
   await page.getByRole("link", { name: SKU }).click()
 
-  await expect(page.getByText("1 PCS = 1 PCE (Piece)")).toBeVisible()
-  await expect(page.getByText("1,8 kg per PCS")).toBeVisible()
+  // Mode baca: nilai tampil sebagai teks, kode HS dari tes sebelumnya.
+  await expect(page.getByText("Laptop uji E2E", { exact: true })).toBeVisible()
+  await expect(page.getByText(/^\[84713020\]/)).toBeVisible()
   await expect(page.getByRole("button", { name: "Simpan" })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0)
 })

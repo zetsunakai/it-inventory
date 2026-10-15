@@ -37,7 +37,16 @@ async function CompanyProfile() {
 
   // Belum diisi: langsung form bagi yang berhak mengubah.
   if (!profile) {
-    if (canEdit) return <CompanyProfileForm profile={profile} office={null} />
+    if (canEdit) {
+      return (
+        <RecordModes
+          canEdit
+          initialEditing
+          view={null}
+          form={<CompanyProfileForm profile={null} office={null} />}
+        />
+      )
+    }
     return (
       <div className="rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
         Profil perusahaan belum diisi. Hubungi Administrator.
