@@ -67,6 +67,7 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <PageHeader
         title={`${product.sku} · ${product.name}`}
+        crumbs={[{ label: product.sku }]}
         description={
           product.customsReady
             ? "Siap dipakai di dokumen BC."

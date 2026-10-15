@@ -4,6 +4,7 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import type { ReactNode } from "react"
 
+import { usePageCrumbs } from "@/components/breadcrumb-context"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -20,7 +21,11 @@ import { cn } from "@/lib/utils"
 // Menu sidebar sesuai peran user, dikelompokkan per area kerja: menu induk dengan ikon, menu anak
 // menjorok tanpa ikon. Hanya tampilan; setiap halaman tetap mengecek izinnya sendiri di server.
 export function AppSidebarNav({ roles }: { roles: Role[] }) {
-  const pathname = usePathname()
+  // Menu aktif mengikuti modul dokumen induk bila halaman punya (sama dengan breadcrumb), mis.
+  // transfer keluar milik permintaan antar gudang menyalakan Transfer antar gudang.
+  const currentPath = usePathname()
+  const parentHref = usePageCrumbs()[0]?.href
+  const pathname = parentHref ?? currentPath
   const { isMobile, setOpenMobile } = useSidebar()
 
   const link = (item: NavItem, className?: string, icon?: ReactNode) => {

@@ -61,6 +61,7 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
     <div className="space-y-6">
       <PageHeader
         title={`Stock opname ${count.number}`}
+        crumbs={[{ label: count.number }]}
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <CountStatusBadge status={count.status} />

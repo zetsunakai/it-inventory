@@ -132,6 +132,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <PageHeader
         title={`Transfer antar gudang ${request.number}`}
+        crumbs={[{ label: request.number }]}
         description={
           <StatusBadge tone={INTERWAREHOUSE_STATUS_TONES[request.status]}>
             {INTERWAREHOUSE_STATUS_LABELS[request.status]}

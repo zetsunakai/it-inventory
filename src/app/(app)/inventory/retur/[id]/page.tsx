@@ -131,6 +131,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <PageHeader
         title={`Retur ${request.number}`}
+        crumbs={[{ label: request.number }]}
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <StatusBadge tone={RETURN_REQUEST_STATUS_TONES[request.status]}>

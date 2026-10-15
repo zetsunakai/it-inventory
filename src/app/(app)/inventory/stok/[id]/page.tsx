@@ -125,6 +125,7 @@ async function StockCard({
     <div className="space-y-6">
       <PageHeader
         title={`Kartu stok ${product.sku}`}
+        crumbs={[{ label: `Kartu stok ${product.sku}` }]}
         description={`${product.name}. Qty dalam ${unit}; pindah lokasi di dalam gudang yang sama tampil masuk dan keluar sekaligus.`}
       />
       <div className="flex flex-col gap-2 sm:flex-row">

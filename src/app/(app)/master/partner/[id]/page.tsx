@@ -45,7 +45,11 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <div className="space-y-6">
-      <PageHeader title={`${partner.code} · ${partner.name}`} description={roles.join(" dan ")} />
+      <PageHeader
+        title={`${partner.code} · ${partner.name}`}
+        description={roles.join(" dan ")}
+        crumbs={[{ label: partner.code }]}
+      />
       {hasPermission(user.roles, "master:write") ? (
         <>
           <PartnerForm partner={partner} />

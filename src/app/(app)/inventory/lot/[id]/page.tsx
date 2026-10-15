@@ -112,6 +112,7 @@ async function Trace({ params }: { params: Promise<{ id: string }> }) {
     <div className="space-y-6">
       <PageHeader
         title={`${serial ? "Nomor seri" : "Lot"} ${lot.name}`}
+        crumbs={[{ label: lot.name }]}
         description={
           <span>
             <Link

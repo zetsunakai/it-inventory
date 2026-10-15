@@ -56,6 +56,10 @@ async function EditLocation({ params }: { params: Promise<{ id: string; lokasiId
     <div className="space-y-6">
       <PageHeader
         title={`Ubah lokasi ${location.code}`}
+        crumbs={[
+          { label: warehouse.code, href: `/master/gudang/${warehouse.id}` },
+          { label: `Lokasi ${location.code}` },
+        ]}
         description={
           <>
             Lokasi {LOCATION_TYPE_LABELS[location.type].toLowerCase()} di gudang{" "}

@@ -275,6 +275,26 @@ async function TransferDetail({
               ? USAGE_TYPE_LABELS[transfer.usageType]
               : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`
         } ${transfer.number}`}
+        crumbs={[
+          // Transfer milik permintaan antar gudang atau retur: permintaannya jadi tingkat induk.
+          ...(transfer.interwarehouseId && transfer.interwarehouseNumber
+            ? [
+                {
+                  label: transfer.interwarehouseNumber,
+                  href: `/inventory/antar-gudang/${transfer.interwarehouseId}`,
+                },
+              ]
+            : []),
+          ...(transfer.returnRequestId && transfer.returnRequestNumber
+            ? [
+                {
+                  label: transfer.returnRequestNumber,
+                  href: `/inventory/retur/${transfer.returnRequestId}`,
+                },
+              ]
+            : []),
+          { label: transfer.number },
+        ]}
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             <TransferStatusBadge status={transfer.status} />

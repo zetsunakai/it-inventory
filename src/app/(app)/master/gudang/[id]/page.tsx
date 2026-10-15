@@ -75,6 +75,7 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
     <div className="space-y-8">
       <PageHeader
         title={`${warehouse.code} · ${warehouse.name}`}
+        crumbs={[{ label: warehouse.code }]}
         description={
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
             {warehouse.isBonded ? (
