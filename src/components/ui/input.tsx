@@ -1,10 +1,13 @@
 import * as React from "react"
-import { Input as InputPrimitive } from "@base-ui/react/input"
 import { cn } from "cn"
 
+// Input HTML biasa, sama seperti Textarea. Bukan Input Base UI: itu FieldControl yang memperingatkan
+// bila defaultValue berubah setelah dibuat, padahal form di repo ini memang mengganti defaultValue
+// setelah submit (fieldValue: ketikan terakhir saat gagal, nilai tersimpan setelah berhasil). Repo
+// ini tidak memakai Field Base UI, jadi tidak ada fitur yang hilang.
 function Input({ className, type, ...props }: React.ComponentProps<"input">) {
   return (
-    <InputPrimitive
+    <input
       type={type}
       data-slot="input"
       className={cn(
