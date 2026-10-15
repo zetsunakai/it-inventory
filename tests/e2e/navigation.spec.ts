@@ -84,7 +84,7 @@ test("menu anak tersembunyi sampai menu induknya diklik; grup halaman aktif terb
   await login(page, ACCOUNTS.auditor)
   await page.goto("/inventory/stok")
 
-  const inventory = sidebar(page).getByRole("button", { name: "Inventory" })
+  const inventory = sidebar(page).getByRole("button", { name: "Stok & kontrol" })
   const master = sidebar(page).getByRole("button", { name: "Master data" })
   await expect(inventory).toHaveAttribute("aria-expanded", "true")
   await expect(master).toHaveAttribute("aria-expanded", "false")

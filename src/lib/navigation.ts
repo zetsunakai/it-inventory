@@ -1,4 +1,5 @@
 import {
+  ArrowLeftRight,
   Boxes,
   ChartColumn,
   Database,
@@ -20,8 +21,6 @@ export type NavItem = {
   permission?: Permission
   // Tiket backlog yang mengisi modul ini, ditampilkan selama modul masih kosong.
   plannedIn?: string
-  // Subjudul di dalam grup (RU-01), mis. Operasi dan Kontrol di Inventory.
-  section?: string
 }
 
 export type NavGroup = {
@@ -38,72 +37,33 @@ export const NAVIGATION: NavGroup[] = [
     icon: House,
     items: [{ title: "Beranda", href: "/" }],
   },
+  // Inventory dipecah seperti Odoo (RU-01): dokumen yang memindahkan barang, lalu melihat dan
+  // mengoreksi stok.
   {
-    label: "Inventory",
-    icon: Boxes,
-    // Operasi: dokumen yang memindahkan barang. Kontrol: melihat dan mengoreksi stok (RU-01).
+    label: "Operasi gudang",
+    icon: ArrowLeftRight,
     items: [
-      {
-        title: "Penerimaan",
-        href: "/inventory/penerimaan",
-        permission: "inventory:read",
-        section: "Operasi",
-      },
-      {
-        title: "Pengiriman",
-        href: "/inventory/pengiriman",
-        permission: "inventory:read",
-        section: "Operasi",
-      },
-      {
-        title: "Pindah lokasi",
-        href: "/inventory/transfer",
-        permission: "inventory:read",
-        section: "Operasi",
-      },
+      { title: "Penerimaan", href: "/inventory/penerimaan", permission: "inventory:read" },
+      { title: "Pengiriman", href: "/inventory/pengiriman", permission: "inventory:read" },
+      { title: "Pindah lokasi", href: "/inventory/transfer", permission: "inventory:read" },
       {
         title: "Transfer antar gudang",
         href: "/inventory/antar-gudang",
         permission: "inventory:read",
-        section: "Operasi",
       },
-      {
-        title: "Retur",
-        href: "/inventory/retur",
-        permission: "inventory:read",
-        section: "Operasi",
-      },
-      {
-        title: "Pemakaian & scrap",
-        href: "/inventory/scrap",
-        permission: "inventory:read",
-        section: "Operasi",
-      },
-      { title: "Stok", href: "/inventory/stok", permission: "inventory:read", section: "Kontrol" },
-      {
-        title: "Lot & nomor seri",
-        href: "/inventory/lot",
-        permission: "inventory:read",
-        section: "Kontrol",
-      },
-      {
-        title: "Stock opname",
-        href: "/inventory/opname",
-        permission: "inventory:read",
-        section: "Kontrol",
-      },
-      {
-        title: "Penyesuaian",
-        href: "/inventory/penyesuaian",
-        permission: "inventory:read",
-        section: "Kontrol",
-      },
-      {
-        title: "Tutup periode",
-        href: "/inventory/periode",
-        permission: "inventory:approve",
-        section: "Kontrol",
-      },
+      { title: "Retur", href: "/inventory/retur", permission: "inventory:read" },
+      { title: "Pemakaian & scrap", href: "/inventory/scrap", permission: "inventory:read" },
+    ],
+  },
+  {
+    label: "Stok & kontrol",
+    icon: Boxes,
+    items: [
+      { title: "Stok", href: "/inventory/stok", permission: "inventory:read" },
+      { title: "Lot & nomor seri", href: "/inventory/lot", permission: "inventory:read" },
+      { title: "Stock opname", href: "/inventory/opname", permission: "inventory:read" },
+      { title: "Penyesuaian", href: "/inventory/penyesuaian", permission: "inventory:read" },
+      { title: "Tutup periode", href: "/inventory/periode", permission: "inventory:approve" },
     ],
   },
   {
