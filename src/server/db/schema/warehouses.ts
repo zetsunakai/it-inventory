@@ -27,15 +27,14 @@ const id = () =>
 export const inventoryCategory = pgEnum("inventory_category", INVENTORY_CATEGORIES)
 export const locationType = pgEnum("location_type", LOCATION_TYPES)
 
-// Gudang (PRD bagian 5.1). is_bonded menentukan apakah pergerakan di gudang ini
-// wajib punya dokumen BC (bagian 8). Tidak dihapus; yang tidak dipakai diarsipkan.
+// Gudang (PRD bagian 5.1). Semua gudang adalah gudang berikat (revisi RM-02): stok tidak pernah
+// boleh minus dan pergerakannya wajib punya dokumen BC (bagian 8). Tidak dihapus; yang tidak
+// dipakai diarsipkan.
 export const warehouses = pgTable("warehouses", {
   id: id(),
   code: text().notNull().unique(),
   name: text().notNull(),
   address: text().notNull(),
-  isBonded: boolean().notNull(),
-  category: inventoryCategory().notNull(),
   active: boolean().notNull().default(true),
   ...timestamps,
 })

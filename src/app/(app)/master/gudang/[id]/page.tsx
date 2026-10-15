@@ -5,24 +5,21 @@ import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DeleteRecord } from "@/components/delete-record"
-import { ArchivedBadge, NameCell, StatusBadge } from "@/components/status-badge"
+import { ArchivedBadge, NameCell } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { recordActivity } from "@/server/queries/activity"
 import { warehouseNeighbors } from "@/server/queries/neighbors"
-import { INVENTORY_CATEGORY_LABELS, LOCATION_TYPE_LABELS } from "@/lib/inventory"
-import { ALL_WAREHOUSE_ROLES, hasPermission, ROLE_LABELS } from "@/lib/permissions"
+import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
+import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import {
   getWarehouseForUser,
-  listAssignableUsers,
   listWarehouseLocations,
-  listWarehouseUsers,
   type LocationRow,
 } from "@/server/queries/warehouses"
 
-import { AccessManager } from "../access-manager"
 import { deleteWarehouse } from "../actions"
 import { LocationCreateForm } from "../location-forms"
 import { WarehouseForm } from "../warehouse-forms"
@@ -65,11 +62,8 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
   if (!warehouse) notFound()
 
   const canEdit = hasPermission(user.roles, "master:write")
-  const canManageAccess = hasPermission(user.roles, "user:manage")
-  const [locations, members, candidates, neighbors, activity] = await Promise.all([
+  const [locations, neighbors, activity] = await Promise.all([
     listWarehouseLocations(warehouse.id),
-    canManageAccess ? listWarehouseUsers(warehouse.id) : [],
-    canManageAccess ? listAssignableUsers(warehouse.id) : [],
     warehouseNeighbors(user.id, warehouse.code),
     recordActivity("warehouses", warehouse.id, WAREHOUSE_ACTIVITY_LABELS),
   ])
@@ -85,12 +79,6 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
       activity={<ActivityLog entries={activity} noun="gudang" />}
       meta={
         <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-          {warehouse.isBonded ? (
-            <StatusBadge tone="bonded">Gudang berikat</StatusBadge>
-          ) : (
-            <span>Gudang non-berikat</span>
-          )}
-          <span>{INVENTORY_CATEGORY_LABELS[warehouse.category]}</span>
           <span>{warehouse.address}</span>
           {!warehouse.active && <ArchivedBadge />}
         </span>
@@ -120,18 +108,6 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
           ))}
       </Section>
 
-      {canManageAccess && (
-        <section className="space-y-3">
-          <div>
-            <h2 className="text-lg font-semibold tracking-tight">Akses user</h2>
-            <p className="text-sm text-muted-foreground">
-              {ALL_WAREHOUSE_ROLES.map((role) => ROLE_LABELS[role]).join(", ")} otomatis bisa
-              melihat semua gudang. Peran lain hanya melihat gudang yang diberikan di sini.
-            </p>
-          </div>
-          <AccessManager warehouseId={warehouse.id} members={members} candidates={candidates} />
-        </section>
-      )}
       {canEdit && (
         <Section title="Data gudang">
           <WarehouseForm warehouse={warehouse} />
@@ -154,9 +130,6 @@ const WAREHOUSE_ACTIVITY_LABELS = {
   fields: {
     name: "Nama",
     address: "Alamat",
-    is_bonded: "Gudang berikat",
-    category: "Kategori",
     active: "Aktif",
   },
-  values: { category: INVENTORY_CATEGORY_LABELS as Record<string, string> },
 }

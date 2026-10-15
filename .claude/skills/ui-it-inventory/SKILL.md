@@ -20,7 +20,8 @@ domain (dokumen BC, CEISA, laporan, rujukan sistem lama) ada di skill `it-invent
 | Auditor          | Membaca laporan dan menelusuri transaksi, hanya baca                          | Tampilan baca yang rapi (bukan form yang di-disable), angka mudah dicocokkan |
 | Administrator    | Master data, user, konfigurasi                                                | Tabel padat, import/export Excel (M1-07)                                     |
 
-Konsep domain yang harus terlihat jelas di UI: **gudang berikat vs non-berikat**, **status dokumen
+Konsep domain yang harus terlihat jelas di UI (semua gudang berikat sejak RM-02, jadi tidak ada
+penanda berikat per gudang): **status dokumen
 BC** (Draft → Siap ajukan → Diajukan → Terdaftar / Ditolak / Batal), **siap/belum siap dokumen BC**,
 **selisih** (opname, qty dokumen vs transfer), **arsip**, dan **periode tertutup**.
 
@@ -61,7 +62,8 @@ tablet untuk penerimaan/opname dibuat bersama M2.
 - **Warna = makna.** Dasar netral sedikit dingin dengan token semantik di `globals.css` (terang
   dan gelap, kontras WCAG AA; utilitas `text-bonded`, `bg-warning-soft`, dst.), dipakai hanya
   untuk artinya:
-  - `--bonded`: penanda gudang/lokasi berikat (dipakai konsisten di mana pun gudang muncul).
+  - `--bonded`: dulu penanda gudang berikat; sejak RM-02 semua gudang berikat, jadi jangan dipakai
+    untuk membedakan gudang.
   - `--success`, `--warning`, `--destructive`: selesai/terdaftar, perlu perhatian (belum siap,
     menunggu persetujuan, selisih), ditolak/gagal.
   - `--info`: status proses (diajukan, menunggu respon).

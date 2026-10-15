@@ -8,19 +8,14 @@ import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ImportExportActions } from "@/components/import/import-export-actions"
 import { PageHeader } from "@/components/page-header"
-import { NameCell, StatusBadge } from "@/components/status-badge"
+import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatNumber } from "@/lib/format"
-import {
-  INVENTORY_CATEGORIES,
-  INVENTORY_CATEGORY_LABELS,
-  LOCATION_TYPE_LABELS,
-} from "@/lib/inventory"
+import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
 import {
   hasActiveFilters,
   parseListParams,
-  pickFilter,
   type RawSearchParams,
   pickActive,
   STATUS_FILTER,
@@ -40,13 +35,6 @@ import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Gudang & lokasi · IT Inventory" }
 
-const CATEGORY_FILTER = "kategori"
-
-const CATEGORY_OPTIONS = INVENTORY_CATEGORIES.map((category) => ({
-  value: category,
-  label: INVENTORY_CATEGORY_LABELS[category],
-}))
-
 const COLUMNS: DataTableColumn<WarehouseRow & { locationCount: number }>[] = [
   { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
   {
@@ -54,11 +42,7 @@ const COLUMNS: DataTableColumn<WarehouseRow & { locationCount: number }>[] = [
     cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
     className: "w-full whitespace-normal",
   },
-  {
-    header: "Berikat",
-    cell: (row) => (row.isBonded ? <StatusBadge tone="bonded">Berikat</StatusBadge> : "—"),
-  },
-  { header: "Kategori", cell: (row) => INVENTORY_CATEGORY_LABELS[row.category] },
+  { header: "Alamat", cell: (row) => row.address, className: "min-w-64 whitespace-normal" },
   { header: "Lokasi", cell: (row) => formatNumber(row.locationCount), align: "right" },
 ]
 
@@ -73,7 +57,7 @@ export default function WarehousesPage({ searchParams }: PageProps<"/master/guda
     <>
       <PageHeader
         title="Gudang & lokasi"
-        description="Gudang berikat mewajibkan dokumen BC untuk setiap pergerakan barang."
+        description="Semua gudang adalah gudang berikat: stok tidak boleh minus dan setiap pergerakan barang wajib punya dokumen BC."
         actions={
           <ImportExportActions
             exportHref="/master/gudang/lokasi/export"
@@ -89,8 +73,8 @@ export default function WarehousesPage({ searchParams }: PageProps<"/master/guda
         <div>
           <h2 className="text-lg font-semibold tracking-tight">Lokasi virtual</h2>
           <p className="text-sm text-muted-foreground">
-            Asal dan tujuan pergerakan di luar gudang: dari vendor, ke customer, scrap, dan
-            penyesuaian stok.
+            Asal dan tujuan pergerakan di luar gudang: dari vendor, ke customer, scrap, dan transit
+            antar gudang.
           </p>
         </div>
         <Suspense fallback={<Skeleton className="h-40 w-full" />}>
@@ -106,11 +90,9 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
   const canEdit = hasPermission(user.roles, "master:write")
   const raw = await searchParams
   const params = parseListParams(raw)
-  const category = pickFilter(raw, CATEGORY_FILTER, INVENTORY_CATEGORIES)
   const { rows, total } = await listWarehouses({
     active: pickActive(raw),
     ...params,
-    category,
     userId: user.id,
   })
 
@@ -136,10 +118,7 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
       >
         <ListSearchBar
           placeholder="Cari kode atau nama gudang"
-          filters={[
-            { name: CATEGORY_FILTER, label: "Kategori", options: CATEGORY_OPTIONS },
-            { name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS },
-          ]}
+          filters={[{ name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS }]}
         />
       </ListToolbar>
       <DataTable
@@ -160,7 +139,7 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
               })
             : {
                 title: "Anda belum diberi akses ke gudang mana pun.",
-                description: "Minta Administrator memberi akses di halaman detail gudang.",
+                description: "Minta Administrator memberi akses di halaman Pengguna.",
               }
         }
       />

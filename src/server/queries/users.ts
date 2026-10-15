@@ -1,11 +1,11 @@
 import "server-only"
 
-import { and, asc, count, eq, exists, ilike, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, count, eq, exists, ilike, notExists, or, sql, type SQL } from "drizzle-orm"
 
 import type { ListParams } from "@/lib/list-params"
 import type { Role } from "@/lib/permissions"
 import { db } from "@/server/db"
-import { userRoles, users } from "@/server/db/schema"
+import { userRoles, users, userWarehouses, warehouses } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
 
 export type UserListFilters = ListParams & { role?: Role }
@@ -63,4 +63,68 @@ export async function listUsers({ search, role, pageSize, offset }: UserListFilt
   ])
 
   return { rows: rows as UserListRow[], total }
+}
+
+const rolesOf = sql<Role[]>`coalesce(
+  (select json_agg(ur.role order by ur.role) from ${userRoles} ur where ur.user_id = ${users}.id),
+  '[]'
+)`
+
+// Satu user untuk halaman detail Pengguna (RM-02).
+export async function getUser(id: string) {
+  const [row] = await db
+    .select({
+      id: users.id,
+      name: users.name,
+      email: users.email,
+      roles: rolesOf,
+      twoFactorEnabled: users.twoFactorEnabled,
+      createdAt: users.createdAt,
+    })
+    .from(users)
+    .where(eq(users.id, id))
+  return row as UserListRow | undefined
+}
+
+export type UserWarehouse = { id: string; code: string; name: string; active: boolean }
+
+// Gudang yang diberikan khusus ke user ini (PRD bagian 3; diatur dari halaman Pengguna sejak RM-02).
+export async function listUserWarehouses(userId: string): Promise<UserWarehouse[]> {
+  return db
+    .select({
+      id: warehouses.id,
+      code: warehouses.code,
+      name: warehouses.name,
+      active: warehouses.active,
+    })
+    .from(userWarehouses)
+    .innerJoin(warehouses, eq(warehouses.id, userWarehouses.warehouseId))
+    .where(eq(userWarehouses.userId, userId))
+    .orderBy(asc(warehouses.code))
+}
+
+// Gudang aktif yang belum diberikan ke user ini.
+export async function listGrantableWarehouses(userId: string): Promise<UserWarehouse[]> {
+  return db
+    .select({
+      id: warehouses.id,
+      code: warehouses.code,
+      name: warehouses.name,
+      active: warehouses.active,
+    })
+    .from(warehouses)
+    .where(
+      and(
+        eq(warehouses.active, true),
+        notExists(
+          db
+            .select({ one: sql`1` })
+            .from(userWarehouses)
+            .where(
+              and(eq(userWarehouses.warehouseId, warehouses.id), eq(userWarehouses.userId, userId)),
+            ),
+        ),
+      ),
+    )
+    .orderBy(asc(warehouses.code))
 }

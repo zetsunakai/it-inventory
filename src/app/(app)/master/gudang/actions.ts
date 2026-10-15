@@ -1,26 +1,24 @@
 "use server"
 
-import { and, eq } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox, requiredText } from "@/lib/form-fields"
-import { INVENTORY_CATEGORIES, WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
+import { WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
-import { locations, users, userWarehouses, warehouses } from "@/server/db/schema"
+import { locations, userWarehouses, warehouses } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
 import { importLocationRows, LOCATION_COLUMNS } from "@/server/master-io/locations"
 
-// Gudang dan lokasi (PRD bagian 5.1): hanya Administrator (izin master:write).
-// Akses gudang per user: izin user:manage. Kode, tipe, dan gudang sebuah lokasi tidak bisa
+// Gudang dan lokasi (PRD bagian 5.1): hanya Administrator (izin master:write). Akses gudang per
+// user diatur di halaman Pengguna (RM-02). Kode, tipe, dan gudang sebuah lokasi tidak bisa
 // diubah setelah dibuat; aturannya dipaksakan trigger di database (migrasi 0013).
 
 const warehouseFields = {
   name: requiredText("Nama gudang", 200),
   address: requiredText("Alamat", 500),
-  category: z.enum(INVENTORY_CATEGORIES, "Kategori gudang wajib dipilih."),
-  isBonded: checkbox,
 }
 
 export const createWarehouse = defineFormAction({
@@ -177,40 +175,6 @@ export const deleteLocation = defineAction({
       )
     }
     await deleteUnlessUsed(tx, locations, locations.id, input.id, "Lokasi")
-  },
-})
-
-const accessInput = z.object({
-  warehouseId: z.uuid("Gudang tidak valid."),
-  userId: z.uuid("Pilih user terlebih dahulu."),
-})
-
-export const grantWarehouseAccess = defineAction({
-  name: "grantWarehouseAccess",
-  permission: "user:manage",
-  schema: accessInput,
-  successMessage: "Akses diberikan.",
-  handler: async ({ input, tx }) => {
-    const [user] = await tx.select({ id: users.id }).from(users).where(eq(users.id, input.userId))
-    if (!user) throw new AppError("User tidak ditemukan.")
-    await tx.insert(userWarehouses).values(input).onConflictDoNothing()
-  },
-})
-
-export const revokeWarehouseAccess = defineAction({
-  name: "revokeWarehouseAccess",
-  permission: "user:manage",
-  schema: accessInput,
-  successMessage: "Akses dicabut.",
-  handler: async ({ input, tx }) => {
-    await tx
-      .delete(userWarehouses)
-      .where(
-        and(
-          eq(userWarehouses.userId, input.userId),
-          eq(userWarehouses.warehouseId, input.warehouseId),
-        ),
-      )
   },
 })
 

@@ -72,8 +72,6 @@ beforeAll(async () => {
         code,
         name: code,
         address: "Bekasi",
-        isBonded: false,
-        category: "raw_material" as const,
       })),
     )
     .returning({ id: warehouses.id })

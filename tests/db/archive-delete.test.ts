@@ -103,8 +103,6 @@ async function warehouse(code: string, active = true) {
       code,
       name: `Gudang ${code}`,
       address: "Bekasi",
-      isBonded: true,
-      category: "wip",
       active,
     })
     .returning({ id: warehouses.id })

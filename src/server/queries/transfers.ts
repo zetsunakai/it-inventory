@@ -305,7 +305,6 @@ export type LocationOption = {
   warehouseId: string
   warehouseCode: string
   warehouseName: string
-  isBonded: boolean
 }
 
 // Lokasi internal aktif di gudang aktif yang boleh diakses user, untuk sisi gudang transfer.
@@ -317,7 +316,6 @@ export async function listInternalLocations(userId: string): Promise<LocationOpt
       warehouseId: warehouses.id,
       warehouseCode: warehouses.code,
       warehouseName: warehouses.name,
-      isBonded: warehouses.isBonded,
     })
     .from(locations)
     .innerJoin(locationPaths, eq(locationPaths.id, locations.id))

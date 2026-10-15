@@ -87,10 +87,8 @@ beforeAll(async () => {
         code: "ZVGB",
         name: "Berikat",
         address: "Bekasi",
-        isBonded: true,
-        category: "wip" as const,
       },
-      { code: "ZVGN", name: "Biasa", address: "Bekasi", isBonded: false, category: "wip" as const },
+      { code: "ZVGN", name: "Biasa", address: "Bekasi" },
     ])
     .returning({ id: warehouses.id })
   ids.bonded = bonded.id
@@ -286,18 +284,17 @@ describe("validasi berhasil", () => {
     })
   })
 
-  test("gudang non-berikat boleh negatif hanya bila pengaturan mengizinkan", async () => {
+  test("stok minus ditolak di gudang mana pun; pengaturan stok negatif sudah tidak ada (RM-02)", async () => {
     await inRollback(db, async (tx) => {
       const first = await transfer(tx, "plainDelivery", [{ qty: "2" }])
       expect(await pgErrorInSavepoint(tx, (sp) => validate(sp, first.id))).toBe(
         "Stok ZVP1 di ZVRN tidak cukup: tersedia 0, dibutuhkan 2.",
       )
-      await tx
-        .update(systemSettings)
-        .set({ value: true })
+      const settings = await tx
+        .select()
+        .from(systemSettings)
         .where(eq(systemSettings.key, "inventory.allow_negative_stock"))
-      await validate(tx, first.id)
-      expect(await balance(tx, ids.plainRack)).toBe(-2)
+      expect(settings).toEqual([])
     })
   })
 })
@@ -307,11 +304,6 @@ describe("validasi ditolak", () => {
     await inRollback(db, async (tx) => {
       const incoming = await transfer(tx, "receipt", [{ qty: "5" }])
       await validate(tx, incoming.id)
-      // Allow negative stock tidak berlaku untuk gudang berikat.
-      await tx
-        .update(systemSettings)
-        .set({ value: true })
-        .where(eq(systemSettings.key, "inventory.allow_negative_stock"))
       const outgoing = await transfer(tx, "delivery", [{ qty: "3" }, { qty: "4.5" }])
       expect(await pgErrorInSavepoint(tx, (sp) => validate(sp, outgoing.id))).toBe(
         "Stok ZVP1 di ZVRB tidak cukup: tersedia 5, dibutuhkan 7,5.",

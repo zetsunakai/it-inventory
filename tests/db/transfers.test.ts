@@ -126,7 +126,7 @@ beforeAll(async () => {
   ;[ids.product, ids.lotProduct] = productRows.map((row) => row.id)
   const [warehouse] = await db
     .insert(warehouses)
-    .values({ code: "ZTG", name: "Gudang uji", address: "Bekasi", isBonded: true, category: "wip" })
+    .values({ code: "ZTG", name: "Gudang uji", address: "Bekasi" })
     .returning({ id: warehouses.id })
   const [vendor, rack] = await db
     .insert(locations)
@@ -146,8 +146,6 @@ beforeAll(async () => {
       code: "ZTG2",
       name: "Gudang uji 2",
       address: "Bekasi",
-      isBonded: false,
-      category: "wip",
     })
     .returning({ id: warehouses.id })
   const [otherRack] = await db

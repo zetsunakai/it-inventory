@@ -3,8 +3,8 @@ import { expect, test } from "@playwright/test"
 import { ACCOUNTS, ADMIN_STATE_FILE } from "./accounts"
 import { login } from "./login"
 
-// Gudang dan lokasi (backlog M1-03): Administrator mengelola gudang, lokasi, dan akses;
-// Admin gudang hanya melihat gudang yang diberikan. Berurutan karena saling bergantung data.
+// Gudang dan lokasi (backlog M1-03): Administrator mengelola gudang dan lokasi, lalu memberi
+// akses gudang dari halaman Pengguna (RM-02); Admin gudang hanya melihat gudang yang diberikan. Berurutan karena saling bergantung data.
 test.describe.configure({ mode: "serial" })
 
 // Kode unik per run, karena di CI tes bisa diulang tanpa reset database.
@@ -16,22 +16,19 @@ let otherWarehouseUrl = ""
 test.describe("Administrator", () => {
   test.use({ storageState: ADMIN_STATE_FILE })
 
-  test("membuat gudang berikat, lokasi bertingkat, dan memberi akses", async ({ page }) => {
+  test("membuat gudang, lokasi bertingkat, dan memberi akses lewat halaman Pengguna", async ({
+    page,
+  }) => {
     await page.goto("/master/gudang/baru")
     await page.getByLabel("Kode gudang").fill(GRANTED)
     await page.getByLabel("Nama gudang").fill("Gudang Bahan Baku E2E")
     await page.getByLabel("Alamat").fill("Kawasan Industri, Bekasi")
-    await page.getByLabel("Kategori").click()
-    await page.getByRole("option", { name: "Bahan baku" }).click()
-    await page.getByRole("checkbox", { name: "Gudang berikat" }).check()
     await page.getByRole("button", { name: "Simpan" }).click()
 
     // Lanjut ke halaman detail gudang yang baru.
     await expect(
       page.getByRole("heading", { name: `${GRANTED} · Gudang Bahan Baku E2E` }),
     ).toBeVisible()
-    // Pertama = deskripsi di header (label checkbox di form ubah ada di bawah).
-    await expect(page.getByText("Gudang berikat", { exact: true }).first()).toBeVisible()
 
     const addLocation = page.locator("form").filter({ hasText: "Tambah lokasi" })
     await addLocation.getByLabel("Kode lokasi").fill(`${GRANTED}-RAK`)
@@ -46,18 +43,18 @@ test.describe("Administrator", () => {
     await addLocation.getByRole("button", { name: "Tambah lokasi" }).click()
     await expect(page.getByRole("cell", { name: `${GRANTED}-RAK/${GRANTED}-BIN` })).toBeVisible()
 
-    await page.getByLabel("Beri akses ke").click()
-    await page.getByRole("option", { name: /^Demo Admin Gudang/ }).click()
+    await page.goto("/admin/users")
+    await page.getByRole("link", { name: "Demo Admin Gudang" }).click()
+    await page.getByLabel("Beri akses ke gudang").click()
+    await page.getByRole("option", { name: `[${GRANTED}] Gudang Bahan Baku E2E` }).click()
     await page.getByRole("button", { name: "Beri akses" }).click()
-    await expect(page.getByRole("button", { name: "Cabut akses Demo Admin Gudang" })).toBeVisible()
+    await expect(page.getByRole("button", { name: `Cabut akses ${GRANTED}` })).toBeVisible()
 
     // Gudang kedua tanpa akses untuk Admin gudang.
     await page.goto("/master/gudang/baru")
     await page.getByLabel("Kode gudang").fill(OTHER)
     await page.getByLabel("Nama gudang").fill("Gudang Lain E2E")
     await page.getByLabel("Alamat").fill("Cikarang")
-    await page.getByLabel("Kategori").click()
-    await page.getByRole("option", { name: "Barang jadi" }).click()
     await page.getByRole("button", { name: "Simpan" }).click()
     await expect(page.getByRole("heading", { name: `${OTHER} · Gudang Lain E2E` })).toBeVisible()
     otherWarehouseUrl = page.url()
@@ -72,8 +69,9 @@ test("Admin gudang hanya melihat gudang yang diberikan aksesnya", async ({ page 
   await page.goto("/master/gudang")
   await expect(page.getByRole("link", { name: GRANTED })).toBeVisible()
   await expect(page.getByRole("link", { name: OTHER })).toHaveCount(0)
-  // Lokasi virtual hasil seed tampil untuk semua.
-  await expect(page.getByRole("cell", { name: "PENYESUAIAN", exact: true })).toBeVisible()
+  // Lokasi virtual hasil seed tampil untuk semua; lokasi penyesuaian disembunyikan (RM-02).
+  await expect(page.getByRole("cell", { name: "SCRAP", exact: true })).toBeVisible()
+  await expect(page.getByRole("cell", { name: "PENYESUAIAN", exact: true })).toHaveCount(0)
 
   // Tanpa tombol ubah untuk peran selain Administrator.
   await page.getByRole("link", { name: GRANTED }).click()

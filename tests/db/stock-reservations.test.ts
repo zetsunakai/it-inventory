@@ -54,7 +54,7 @@ beforeAll(async () => {
   ids.lotProduct = lotProduct.id
   const [warehouse] = await db
     .insert(warehouses)
-    .values({ code: "ZRVG", name: "Gudang", address: "Bekasi", isBonded: true, category: "wip" })
+    .values({ code: "ZRVG", name: "Gudang", address: "Bekasi" })
     .returning({ id: warehouses.id })
   const [vendor, customer, rack] = await db
     .insert(locations)

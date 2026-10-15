@@ -88,8 +88,6 @@ beforeAll(async () => {
       code: "ZOG",
       name: "Gudang opname",
       address: "Bekasi",
-      isBonded: true,
-      category: "wip",
     })
     .returning({ id: warehouses.id })
   ids.warehouse = warehouse.id

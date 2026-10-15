@@ -4,16 +4,16 @@ import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vit
 import {
   createLocation,
   createWarehouse,
-  grantWarehouseAccess,
-  revokeWarehouseAccess,
   updateLocation,
   updateWarehouse,
 } from "@/app/(app)/master/gudang/actions"
+import { grantWarehouseAccess, revokeWarehouseAccess } from "@/app/(app)/admin/users/actions"
 import { ALL_WAREHOUSE_ROLES, ROLES, type Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
 import { auditLogs, locations, userRoles, users, warehouses } from "@/server/db/schema"
-import { getLocation, listWarehouses, listWarehouseUsers } from "@/server/queries/warehouses"
+import { listUserWarehouses } from "@/server/queries/users"
+import { getLocation, listWarehouses } from "@/server/queries/warehouses"
 
 import { inRollback, pgErrorMessage } from "./helpers"
 
@@ -52,8 +52,6 @@ async function createWarehouseRow(code: string) {
       code,
       name: `Gudang ${code}`,
       address: "Bekasi",
-      isBonded: true,
-      category: "raw_material",
     })
     .returning({ id: warehouses.id })
   return row.id
@@ -200,9 +198,7 @@ describe("can_access_warehouse", () => {
       ok: true,
     })
     expect(await visible()).toEqual(["ZQGB1"])
-    expect(await listWarehouseUsers(gb1)).toEqual([
-      expect.objectContaining({ id: gudang, roles: ["admin_gudang"] }),
-    ])
+    expect((await listUserWarehouses(gudang)).map((row) => row.code)).toEqual(["ZQGB1"])
 
     await revokeWarehouseAccess({ warehouseId: gb1, userId: gudang })
     expect(await visible()).toEqual([])
@@ -219,28 +215,16 @@ describe("can_access_warehouse", () => {
 })
 
 describe("aksi gudang dan lokasi", () => {
-  test("flag berikat tercatat di audit log dengan nilai lama dan baru", async () => {
+  test("perubahan gudang tercatat di audit log dengan nilai lama dan baru", async () => {
     const admin = loginAs(["administrator"])
     const created = await createWarehouse(
       null,
-      form({ code: "ZQGB3", name: "Gudang Tiga", address: "Cikarang", category: "finished_good" }),
+      form({ code: "ZQGB3", name: "Gudang Tiga", address: "Cikarang" }),
     )
     expect(created).toMatchObject({ ok: true })
     const id = created.ok ? created.data.id : ""
-    const [row] = await db.select().from(warehouses).where(eq(warehouses.id, id))
-    expect(row.isBonded).toBe(false)
 
-    await updateWarehouse(
-      null,
-      form({
-        id,
-        name: "Gudang Tiga",
-        address: "Cikarang",
-        category: "finished_good",
-        isBonded: "on",
-        active: "on",
-      }),
-    )
+    await updateWarehouse(null, form({ id, name: "Gudang Tiga", address: "Bekasi", active: "on" }))
 
     const [log] = await db
       .select()
@@ -251,16 +235,13 @@ describe("aksi gudang dan lokasi", () => {
     expect(log).toMatchObject({
       action: "UPDATE",
       userId: admin.id,
-      oldData: expect.objectContaining({ is_bonded: false }),
-      newData: expect.objectContaining({ is_bonded: true }),
+      oldData: expect.objectContaining({ address: "Cikarang" }),
+      newData: expect.objectContaining({ address: "Bekasi" }),
     })
   })
 
   test("kode gudang dan kode lokasi ganda ditolak dengan pesan jelas", async () => {
-    const warehouse = await createWarehouse(
-      null,
-      form({ code: "ZQGB1", name: "X", address: "X", category: "wip" }),
-    )
+    const warehouse = await createWarehouse(null, form({ code: "ZQGB1", name: "X", address: "X" }))
     expect(warehouse).toMatchObject({ ok: false, errors: ["Kode gudang ZQGB1 sudah dipakai."] })
 
     await createLocation(
@@ -329,7 +310,7 @@ describe("aksi gudang dan lokasi", () => {
     for (const role of ["manajer", "staf_exim", "admin_gudang", "auditor"] as const) {
       loginAs([role])
       const results = await Promise.all([
-        createWarehouse(null, form({ code: "ZQNO", name: "X", address: "X", category: "wip" })),
+        createWarehouse(null, form({ code: "ZQNO", name: "X", address: "X" })),
         createLocation(null, form({ warehouseId: gb1, code: "ZQNO", name: "X", type: "internal" })),
       ])
       for (const result of results) expect(result.ok).toBe(false)

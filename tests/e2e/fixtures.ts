@@ -28,8 +28,6 @@ export async function createInventoryFixture(prefix: string) {
         code: code("G"),
         name: `Gudang ${prefix}`,
         address: "Kawasan Berikat, Bekasi",
-        isBonded: true,
-        category: "raw_material",
       })
       .returning({ id: warehouses.id, code: warehouses.code })
     const [rack, rack2] = await db

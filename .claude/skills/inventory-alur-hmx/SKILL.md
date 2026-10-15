@@ -178,7 +178,9 @@ hmx menaruh aturan di kode Python (ORM). Repo ini menaruhnya di database, dan it
 
 - Aturan ledger, saldo, periode, dan perubahan status dipaksakan fungsi/trigger Postgres
   (`validate_transfer`, flag `app.ledger_write`); aksi server hanya memanggil fungsinya.
-- **Stok tidak boleh minus**, selalu (hmx menjadikannya pengaturan `prevent_negative_stock`).
+- **Stok tidak boleh minus**, selalu, di gudang mana pun (hmx menjadikannya pengaturan
+  `prevent_negative_stock`; pengaturan stok negatif repo ini dihapus di RM-02 karena semua gudang
+  berikat).
 - Qty `numeric(18,4)` dalam satuan stok (hmx memakai float); konversi lewat `convert_qty`.
 - Kategori dan gudang disalin ke pergerakan saat Done (PRD 9.2); periode tertutup tidak bisa
   ditulis; zona waktu WIB.

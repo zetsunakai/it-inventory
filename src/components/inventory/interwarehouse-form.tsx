@@ -79,7 +79,7 @@ export function InterwarehouseForm({
 
   const item = (location: LocationOption) => ({
     value: location.id,
-    label: `${location.path} · ${location.warehouseName}${location.isBonded ? " (berikat)" : ""}`,
+    label: `${location.path} · ${location.warehouseName}`,
   })
   const sourceWarehouse = locations.find((location) => location.id === sourceId)?.warehouseId
   const sourceItems = locations.map(item)

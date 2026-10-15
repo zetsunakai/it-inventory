@@ -128,7 +128,7 @@ export function TransferForm({
 
   const locationItems = locations.map((location) => ({
     value: location.id,
-    label: `${location.path} · ${location.warehouseName}${location.isBonded ? " (berikat)" : ""}`,
+    label: `${location.path} · ${location.warehouseName}`,
   }))
   // Pindah lokasi (R-09): tujuan hanya lokasi lain di gudang lokasi asal.
   const sourceWarehouse = locations.find((location) => location.id === locationId)?.warehouseId

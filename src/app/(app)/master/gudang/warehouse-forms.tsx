@@ -8,35 +8,16 @@ import { CheckboxField } from "@/components/checkbox-field"
 import { FormField, StaticField } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import {
-  INVENTORY_CATEGORIES,
-  INVENTORY_CATEGORY_LABELS,
-  type InventoryCategory,
-} from "@/lib/inventory"
 
 import { createWarehouse, updateWarehouse } from "./actions"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
-
-const CATEGORY_ITEMS = INVENTORY_CATEGORIES.map((category) => ({
-  value: category,
-  label: INVENTORY_CATEGORY_LABELS[category],
-}))
 
 type Warehouse = {
   id: string
   code: string
   name: string
   address: string
-  category: InventoryCategory
-  isBonded: boolean
   active: boolean
 }
 
@@ -96,26 +77,6 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
           maxLength={500}
         />
       </FormField>
-      <FormField label="Kategori" htmlFor="category" errors={fieldErrors?.category}>
-        <Select name="category" items={CATEGORY_ITEMS} defaultValue={warehouse?.category ?? null}>
-          <SelectTrigger id="category" className="w-full sm:w-72">
-            <SelectValue placeholder="Pilih kategori" />
-          </SelectTrigger>
-          <SelectContent>
-            {CATEGORY_ITEMS.map((item) => (
-              <SelectItem key={item.value} value={item.value}>
-                {item.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </FormField>
-      <CheckboxField
-        name="isBonded"
-        label="Gudang berikat"
-        description="Pergerakan barang ke atau dari gudang ini wajib punya dokumen BC yang sudah terdaftar."
-        defaultChecked={checked("isBonded", warehouse?.isBonded ?? false)}
-      />
       {warehouse && (
         <CheckboxField
           name="active"

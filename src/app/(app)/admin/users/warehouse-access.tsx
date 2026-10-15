@@ -12,63 +12,57 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ROLE_LABELS, type Role } from "@/lib/permissions"
+import { ArchivedBadge } from "@/components/status-badge"
+import type { UserWarehouse } from "@/server/queries/users"
 
 import { grantWarehouseAccess, revokeWarehouseAccess } from "./actions"
 
-type User = { id: string; name: string; email: string; roles: Role[] }
-
-function roleText(roles: Role[]) {
-  return roles.map((role) => ROLE_LABELS[role]).join(", ") || "Belum punya peran"
-}
-
-// Akses gudang per user (PRD bagian 3). Hanya untuk user dengan izin user:manage.
-export function AccessManager({
-  warehouseId,
-  members,
+// Gudang yang boleh diakses satu user (PRD bagian 3). Hanya untuk user dengan izin user:manage.
+export function WarehouseAccess({
+  userId,
+  granted,
   candidates,
 }: {
-  warehouseId: string
-  members: User[]
-  candidates: User[]
+  userId: string
+  granted: UserWarehouse[]
+  candidates: UserWarehouse[]
 }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [errors, setErrors] = useState<string[]>([])
   const [pending, startTransition] = useTransition()
 
-  function run(action: typeof grantWarehouseAccess, userId: string) {
+  function run(action: typeof grantWarehouseAccess, warehouseId: string) {
     startTransition(async () => {
-      const result = await action({ warehouseId, userId })
+      const result = await action({ userId, warehouseId })
       setErrors(result.ok ? [] : result.errors)
       if (result.ok) setSelected(null)
     })
   }
 
-  const items = candidates.map((user) => ({
-    value: user.id,
-    label: `${user.name} (${roleText(user.roles)})`,
+  const items = candidates.map((warehouse) => ({
+    value: warehouse.id,
+    label: `[${warehouse.code}] ${warehouse.name}`,
   }))
 
   return (
     <div className="space-y-4">
-      {members.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Belum ada user dengan akses khusus.</p>
+      {granted.length === 0 ? (
+        <p className="text-control text-muted-foreground">Belum ada gudang yang diberikan.</p>
       ) : (
-        <ul className="divide-y rounded-lg border">
-          {members.map((user) => (
-            <li key={user.id} className="flex items-center justify-between gap-4 px-4 py-2">
-              <div>
-                <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-caption text-muted-foreground">
-                  {user.email} · {roleText(user.roles)}
-                </p>
-              </div>
+        <ul className="divide-y rounded-lg border bg-card">
+          {granted.map((warehouse) => (
+            <li key={warehouse.id} className="flex items-center justify-between gap-4 px-4 py-2">
+              <p className="flex min-w-0 items-center gap-2 text-control">
+                <span className="font-mono">{warehouse.code}</span>
+                <span className="truncate">{warehouse.name}</span>
+                {!warehouse.active && <ArchivedBadge />}
+              </p>
               <Button
                 variant="outline"
                 size="sm"
                 disabled={pending}
-                onClick={() => run(revokeWarehouseAccess, user.id)}
-                aria-label={`Cabut akses ${user.name}`}
+                onClick={() => run(revokeWarehouseAccess, warehouse.id)}
+                aria-label={`Cabut akses ${warehouse.code}`}
               >
                 Cabut
               </Button>
@@ -79,10 +73,10 @@ export function AccessManager({
       {candidates.length > 0 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="space-y-2">
-            <Label htmlFor="grant-user">Beri akses ke</Label>
+            <Label htmlFor="grant-warehouse">Beri akses ke gudang</Label>
             <Select items={items} value={selected} onValueChange={(value) => setSelected(value)}>
-              <SelectTrigger id="grant-user" className="w-full sm:w-80">
-                <SelectValue placeholder="Pilih user" />
+              <SelectTrigger id="grant-warehouse" className="w-full sm:w-80">
+                <SelectValue placeholder="Pilih gudang" />
               </SelectTrigger>
               <SelectContent>
                 {items.map((item) => (

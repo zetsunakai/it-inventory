@@ -101,15 +101,18 @@ dimatikan: user baru dibuat oleh Administrator.
 
 ## Gudang, lokasi, dan akses gudang
 
-- `warehouses` (flag `is_bonded` = gudang berikat), `locations` (hierarki lewat `parent_id`, jalur
+- `warehouses` (semua gudang adalah gudang berikat sejak RM-02; kolom `is_bonded` dan kategori gudang
+  dihapus), `locations` (hierarki lewat `parent_id`, jalur
   lengkap di view `location_paths`), dan `user_warehouses`.
 - Aturan lokasi dipaksakan trigger dan CHECK di database: lokasi internal wajib di dalam gudang;
   vendor, customer, dan penyesuaian adalah lokasi virtual di luar gudang; induk harus satu gudang dan
   tidak boleh melingkar; kode, tipe, dan gudang lokasi serta kode gudang tidak bisa diubah.
 - Akses gudang hanya lewat fungsi database `can_access_warehouse(user, gudang)`: Administrator,
   Manajer, dan Auditor melihat semua gudang (`ALL_WAREHOUSE_ROLES`), peran lain hanya gudang yang
-  diberikan di halaman detail gudang. Gudang tanpa akses diperlakukan seperti tidak ada (404).
-- Lokasi virtual VENDOR, CUSTOMER, SCRAP, dan PENYESUAIAN dibuat oleh seed.
+  diberikan di halaman detail Pengguna (`/admin/users/[id]`, RM-02). Gudang tanpa akses
+  diperlakukan seperti tidak ada (404).
+- Lokasi virtual VENDOR, CUSTOMER, SCRAP, PENYESUAIAN, dan TRANSIT dibuat oleh seed. PENYESUAIAN
+  tetap dipakai opname dan penyesuaian, tapi tidak ditampilkan di halaman Gudang.
 
 ## Satuan dan konversi
 
@@ -241,8 +244,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   transfer yang dikonfirmasi bersamaan tidak memesan stok yang sama. `unreserve_transfer()`
   dipanggil saat Lepas reservasi (`release_transfer_reservation()`, status kembali Menunggu),
   Kembali ke Draft, Batal, dan di awal validasi; pengecekan stok saat validasi
-  (`transfer_stock_errors()`) memakai saldo dikurangi pesanan transfer lain. Gudang non-berikat
-  yang boleh stok negatif tidak dipesan. Petunjuk "Tersedia" di form memakai saldo − dipesan.
+  (`transfer_stock_errors()`) memakai saldo dikurangi pesanan transfer lain. Petunjuk "Tersedia" di form memakai saldo − dipesan.
 - Sisa qty dan klasifikasi (backlog R-08): saat validasi user memilih Buat transfer lanjutan
   (default) atau Buang sisa (`split_backorder(..., p_create_backorder)`); qty diminta tetap
   tercatat di baris. `validate_transfer()` mengisi `transfers.classification`
@@ -271,8 +273,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate
   hanya Manajer, tidak boleh masa depan), alasan dan persetujuan untuk scrap/penyesuaian, nomor lot
-  untuk produk wajib lot, stok cukup (gudang berikat selalu; non-berikat kecuali pengaturan
-  `inventory.allow_negative_stock`), dan gerbang dokumen BC (`customs_gate_errors()`, diisi di
+  untuk produk wajib lot, stok cukup (selalu; stok di lokasi gudang
+  tidak pernah boleh minus, pengaturan `inventory.allow_negative_stock` dihapus di RM-02), dan gerbang dokumen BC (`customs_gate_errors()`, diisi di
   M4). Bila lolos, baris menjadi Selesai dengan salinan kategori produk, saldo diperbarui, dan
   transfer dikunci, semuanya dalam satu transaksi. Saldo dikunci baris per baris, jadi dua
   validasi bersamaan tidak bisa menghabiskan stok yang sama.
