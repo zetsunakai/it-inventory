@@ -143,8 +143,8 @@ dimatikan: user baru dibuat oleh Administrator.
 
 - `products.tracking` (backlog R-02): `none`, `lot`, atau `serial`; menggantikan `lot_required`
   (data lama: wajib lot = `lot`). Tidak bisa diubah selama produk punya stok di lokasi gudang atau
-  transaksi Draft/Siap (trigger `products_tracking_guard`).
-- Aturan di `transfer_tracking_errors()`, dipakai "Tandai siap" dan validasi: produk berpelacakan
+  transaksi yang belum Selesai (trigger `products_tracking_guard`).
+- Aturan di `transfer_tracking_errors()`, dipakai Konfirmasi dan validasi: produk berpelacakan
   wajib punya lot/nomor seri; nomor seri ber-qty 1 dalam satuan stok dan hanya boleh ada satu di
   seluruh lokasi gudang (boleh masuk lagi setelah keluar).
 - Nomor otomatis: produk dengan `lot_prefix` (+ `lot_digits`) yang diterima dari luar gudang
@@ -190,8 +190,9 @@ dimatikan: user baru dibuat oleh Administrator.
 ## Inventory
 
 - Stok dihitung dari ledger `stock_moves` berstatus `done` (PRD bagian 6). `transfers` adalah
-  dokumen operasionalnya (penerimaan, pengiriman, transfer internal, retur, scrap, penyesuaian)
-  dengan status Draft → Siap → Selesai atau Batal. `stock_balances` hanya ringkasan per produk ×
+  dokumen operasionalnya (penerimaan, pengiriman, pindah lokasi, transfer antar gudang, retur,
+  pemakaian & scrap, penyesuaian) dengan status Draft → Menunggu / Sebagian tersedia / Siap →
+  Selesai atau Batal (R-06), baris permintaan `transfer_lines` (R-05), dan kode pergerakan (R-04). `stock_balances` hanya ringkasan per produk ×
   lokasi × lot; lot kosong dihitung satu nilai (`NULLS NOT DISTINCT`).
 - Nomor transfer dibuat database saat insert, per jenis dan tahun WIB (`PNR/2026/00001`), lewat
   `next_number(lingkup, periode)` yang aman dipanggil bersamaan. Pembuat diisi dari `app.user_id`.
@@ -307,10 +308,11 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   `src/app/(app)/inventory/<jenis>/` hanya meneruskan konfigurasi jenisnya dari `TRANSFER_KINDS`
   (`src/lib/transfer.ts`): sisi gudang yang dipilih user, label partner, dan lokasi virtual lawannya.
 - Server action di `src/app/(app)/inventory/actions.ts`: simpan Draft (baris dikirim sebagai JSON,
-  lot dibuat otomatis per produk), tandai Siap, kembali ke Draft, validasi (memanggil
-  `validate_transfer`, tanggal efektif mundur hanya untuk Manajer), dan batal.
-- Barang keluar (pengiriman, nanti juga transfer internal dan scrap): stok dicek saat ditandai
-  Siap dengan fungsi yang sama seperti validasi (`transfer_stock_errors()`), lot dipilih dari lot
+  lot dibuat otomatis per produk), Konfirmasi, Cek stok, Lepas reservasi, kembali ke Draft,
+  validasi (memanggil `validate_transfer`, tanggal efektif mundur hanya untuk Manajer), dan batal.
+- Barang keluar (pengiriman, pindah lokasi, transfer antar gudang keluar, retur ke vendor, pemakaian):
+  Konfirmasi dan Cek stok memesan stok (`reserve_transfer()`, R-07), validasi memeriksa stok dengan
+  `transfer_stock_errors()`, lot dipilih dari lot
   yang masih ada stoknya di lokasi asal (`/api/stock-availability`, juga menampilkan jumlah
   tersedia), dan lot yang tidak ada ditolak. Barang masuk boleh membawa lot baru.
 - Parsial (backorder): di dialog Validasi qty selesai per baris bisa dikurangi. Fungsi database
@@ -319,8 +321,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 - Produk dan partner dicari lewat `/api/products` dan `/api/partners` dengan komponen
   `SearchSelect`. Input baris barang punya target sentuh 44px di perangkat sentuh
   (`pointer-coarse:`).
-- Transfer internal: kedua lokasi dipilih user (gudang yang boleh diakses), tanpa partner; total stok
-  perusahaan tidak berubah.
+- Pindah lokasi: kedua lokasi dipilih user di satu gudang, tanpa partner; antar gudang selalu lewat
+  permintaan transfer antar gudang dan lokasi transit (R-09, R-10).
 - Retur adalah dokumen permintaan (`/inventory/retur`, backlog R-11, `return_requests` +
   `return_request_lines`, nomor `PRT/tahun/urut`): dibuat dari penerimaan (retur ke vendor) atau
   pengiriman (retur dari customer) yang Selesai lewat tombol "Buat retur". Retur tanpa rujukan
@@ -346,10 +348,13 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   permintaan antar gudang) wajib dipilih dan bisa disaring di daftar. Trigger `transfers_usage_type`
   mengisi yang kosong (lanjutan mewarisi transfer asalnya, dari transit = susut transit) dan menolak
   jenis yang tidak cocok dengan lokasi asal. Penyesuaian manual memakai `adj_in`/`adj_out`.
-- Scrap dan penyesuaian (arah tambah/kurangi stok): alasan wajib; admin gudang menandai Siap, lalu
+- Scrap dan penyesuaian (arah tambah/kurangi stok): alasan wajib; admin gudang mengonfirmasi, lalu
   Manajer menekan "Setujui dan validasi" (`approveTransfer`, izin `inventory:approve`) sehingga
   pergerakan baru tercatat setelah disetujui. `validate_transfer` hanya menerima persetujuan dari
   user berperan Manajer atau Administrator; bila validasi gagal, persetujuan ikut batal.
+- `npm run db:check` (`scripts/check-ledger.ts`, R-15) hanya membaca dan memeriksa: saldo
+  `stock_balances` sama dengan ledger, qty dipesan sama dengan pergerakan transfer terbuka, dan
+  transfer Selesai punya pergerakan Selesai berkode sama. Jalankan setelah migrasi data lama.
 - Stock opname (`/inventory/opname`, backlog M2-09 dan R-13): Manajer membuat sesi Draft per gudang,
   opsional satu lokasi dan/atau satu kategori produk (beserta sub-lokasi/sub-kategorinya).
   `start_stock_count()` mengunci gudang, menolak bila gudang itu sudah punya opname yang berjalan,

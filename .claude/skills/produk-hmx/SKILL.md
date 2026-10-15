@@ -59,6 +59,11 @@ laporan dibuat.
 
 ## Pemetaan ke repo ini
 
+Status 15/10/2026: R-01 (kategori bertingkat + SKU otomatis), R-02 (`products.tracking`, nomor lot
+otomatis, nomor seri per unit), dan R-03 (`uoms.product_id`, `rounding`) sudah dikerjakan; kolom
+"Repo ini sekarang" di bawah adalah keadaan sebelum revisi. Kedaluwarsa, barcode terpisah, dan
+discontinue belum diputuskan.
+
 | hmx                                          | Repo ini sekarang                                                  | Arah revisi                                                                                                                                                                                                          |
 | -------------------------------------------- | ------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `default_code`                               | `sku` (unik, tidak bisa diubah setelah ada transaksi)              | Tetap `sku`. Tambah nomor otomatis per kategori bila user mau.                                                                                                                                                       |

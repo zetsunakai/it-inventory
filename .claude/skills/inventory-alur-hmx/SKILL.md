@@ -68,7 +68,11 @@ mengembalikan ke Draft. `waiting_approval`/`rejected` bila alur persetujuan akti
 - ILT (pindah lokasi di dalam gudang) boleh Validate langsung dari Draft: confirm + assign + validate
   sekaligus.
 
-Repo ini sekarang: `draft` → `ready` → `done` / `cancelled`, tanpa reservasi.
+Repo ini (R-06, R-07, R-09; sebelumnya `draft` → `ready` → `done` tanpa reservasi): status `draft`,
+`waiting`, `partially_available`, `ready`, `done`, `cancelled` lewat `confirm_transfer`,
+`check_transfer_availability`, `release_transfer_reservation`, `reset_transfer_to_draft`,
+`cancel_transfer`; reservasi FIFO lot terlama (`reserve_transfer`, `stock_balances.reserved_qty`);
+pindah lokasi (`ilt`) divalidasi langsung dari Draft.
 
 ### Demand dan move
 
@@ -76,9 +80,8 @@ hmx memisahkan **demand** (`stock_demand`: produk, qty diminta, qty selesai, sat
 **move** (`stock_move`: qty per lot/lokasi/paket, `reserved_quantity`). Satu demand bisa punya
 banyak move (mis. beberapa lot). Saldo hanya berubah dari move saat Done.
 
-Repo ini sekarang: satu tingkat `stock_moves` (satu baris = satu produk/lot), qty diminta = qty
-selesai. Revisi: tambah tabel `transfer_lines` (demand) dan jadikan `stock_moves` detail per
-lot/lokasi milik baris itu. Ledger tetap `stock_moves` berstatus done.
+Repo ini (R-05): `transfer_lines` (demand, `done_qty`) dan `stock_moves.line_id` wajib (detail per
+lot/lokasi). Ledger tetap `stock_moves` berstatus done.
 
 ### Tanggal efektif
 
@@ -86,15 +89,16 @@ lot/lokasi milik baris itu. Ledger tetap `stock_moves` berstatus done.
 "transaksi backdate" dan dicatat di `transaction_classification` (`backdate`, `backorder`,
 `no_backorder`, `backdate_backorder`, `backdate_no_backorder`). Tanggal di periode tertutup ditolak.
 
-Repo ini sekarang: `validate_transfer(id, at)` dengan tanggal efektif dan pemeriksaan periode
-tertutup (M2-10) sudah sesuai; yang kurang hanya klasifikasi dan konfirmasi backdate di UI.
+Repo ini: `validate_transfer(id, at)` dengan tanggal efektif dan periode tertutup (M2-10);
+`transfers.classification` dan konfirmasi backdate di dialog Validasi (R-08).
 
 ### Backorder
 
 Saat Validate dengan qty selesai < qty diminta, user memilih **Buat backorder** (sisa jadi transfer
 baru dengan `origin_transfer`) atau **Buang sisa** (tidak ada backorder; untuk IWT transit, sisa
-di transit dikembalikan lewat `itw_rtn`). Repo ini: `split_backorder` (M2-05) membuat backorder
-saja; tambahkan pilihan buang sisa dan klasifikasinya.
+di transit dikembalikan lewat `itw_rtn`). Repo ini (R-08): `split_backorder(transfer, done,
+create_backorder)` dengan pilihan Buat lanjutan / Buang sisa; lanjutan menyalin permintaan antar
+gudang dan retur. Pesanan stok dilepas dulu sebelum qty selesai diterapkan (perbaikan R-11).
 
 ### Transfer antar gudang (IWT)
 
@@ -107,9 +111,11 @@ dengan `transfer_type`:
   disinkronkan dari TRF-OUT; TRF-IN hanya bisa divalidasi setelah TRF-OUT selesai
   (`_validate_iwt_in_lifecycle`); sisa yang tidak diterima → `itw_rtn` atau transit loss (`pu`).
 
-Repo ini: satu transfer `internal` langsung dari lokasi gudang A ke lokasi gudang B. Revisi:
-pakai lokasi `transit` yang sudah ada sebagai perantara. Penting untuk kawasan berikat karena
-barang di perjalanan antar gudang berikat bukan stok gudang mana pun.
+Repo ini (R-10, tipe transit): `interwarehouse_transfers` (ITW/…), `confirm_interwarehouse`,
+transfer masuk dibuat otomatis saat keluar Selesai (`interwarehouse_after_transfer_done`), sisa
+diselesaikan `settle_interwarehouse` (kembali `itw_rtn` atau susut transit = scrap `transit_loss`).
+Barang di perjalanan tercatat di lokasi `TRANSIT`, bukan stok gudang mana pun. Transfer `internal`
+antar dua gudang langsung ditolak (R-09).
 
 ### Retur
 
@@ -120,15 +126,18 @@ dengan pengganti); qty tidak melebihi sisa yang bisa diretur (`_check_qty_not_ex
 lot yang diretur tidak melebihi lot yang dikirim. Menghasilkan transfer `gr_rtn`/`gi_rtn` dan,
 bila ada pengganti, transfer pengganti setelah retur selesai.
 
-Repo ini: transfer `return` dengan `return_of_id` dan `returnable_lines` (M2-07). Retur tanpa
-rujukan sebaiknya **tidak** diambil untuk gudang berikat (dokumen asal wajib, PRD 8.5).
+Repo ini (R-11): `return_requests` + `return_request_lines` (PRT/…), tindakan `return`/`replace`,
+`confirm_return_request` membuat transfer retur, `refresh_return_request` membuat pengganti
+(penerimaan/pengiriman Draft) setelah retur Selesai. Transfer `return` hanya lewat permintaan.
+Retur tanpa rujukan **tidak** diambil (dokumen asal wajib, PRD 8.5).
 
 ### Scrap dan pemakaian
 
 `product_usage` (`draft` → `confirmed` → `waiting_approval` → `validated`, `rejected`,
 `cancelled`) dengan `usage_type` berkategori usage/scrap/custom/transit_loss, baris per lokasi asal,
-kode pergerakan `pu`. Repo ini: transfer `scrap` dengan alasan dan persetujuan Manajer (M2-08);
-revisi menambah jenis pemakaian dan memakai satu kode `pu`.
+kode pergerakan `pu`. Repo ini (R-12): transfer `scrap` (kode `pu`) dengan
+`transfers.usage_type` usage/scrap/transit_loss/other, alasan dan persetujuan Manajer; susut transit
+hanya dari lokasi transit (trigger `transfers_usage_type`).
 
 ### Stock opname
 
@@ -142,15 +151,16 @@ revisi menambah jenis pemakaian dan memakai satu kode `pu`.
 - Selisih menjadi demand `adj_in`/`adj_out` bertanggal `completed_date`.
 - Nomor `ADJ/yy/mm/…`.
 
-Repo ini (M2-09): `counting` → `review` → `approved`, qty sistem diambil per cut-off saat submit,
-tanpa pembekuan gudang. Revisi: tambah pembekuan gudang (lebih sederhana dan sesuai praktik
-opname di kawasan berikat) atau pertahankan cut-off; putuskan dulu bersama user.
+Repo ini (R-13): `draft` → `counting` (Berjalan, gudang dibekukan) → `counted` → `review` →
+`approved`; `reject_stock_count` kembali ke `counted`; `cancel_stock_count`. Pembekuan dicek
+`stock_count_freeze_errors` di validasi transfer; penyesuaian bertanggal `completed_at`.
 
 ### Kartu stok
 
 Masuk: `gr`, `adj_in`, `gi_rtn`, `itw_in`, `itw_rtn`. Keluar: `gi`, `pu`, `adj_out`,
-`gr_rtn`, `itw_out`. ILT (di dalam gudang) tidak mengubah saldo gudang. Repo ini (M2-11) sudah
-menghitung per gudang; revisi tinggal menampilkan kode/jenis pergerakan sesuai daftar ini.
+`gr_rtn`, `itw_out`. ILT (di dalam gudang) tidak mengubah saldo gudang. Repo ini (R-14): kartu stok
+per gudang memakai `movementLabel()` dan `MOVEMENT_CODE_DIRECTIONS`; tampilan stok menampilkan
+dipesan/tersedia; penelusuran lot di `/inventory/lot`.
 
 ### Gudang, lokasi, produk
 
@@ -200,6 +210,12 @@ hmx menaruh aturan di kode Python (ORM). Repo ini menaruhnya di database, dan it
 5. Label UI berbahasa Indonesia mengikuti skill `ui-it-inventory` (mis. Konfirmasi, Cek stok,
    Lepas reservasi, Validasi, Buat backorder, Buang sisa); kode pergerakan tampil sebagai label,
    bukan kode mentah.
+
+## Status (15/10/2026)
+
+Revisi alur R-01–R-15 sudah dikerjakan dan berstatus Review di Backlog (migrasi 0034–0058). Data
+lama M2 terbukti termigrasi tanpa selisih saldo (`npm run db:check` setelah migrasi). Paragraf
+"Repo ini" di atas menggambarkan keadaan sesudah revisi. Polesan tampilan per menu ada di tiket RU.
 
 ## Keputusan user (14/10/2026)
 
