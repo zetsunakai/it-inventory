@@ -33,10 +33,12 @@ test("auditor bisa login lalu logout", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/)
   await expect(page.getByRole("heading", { name: "Perlu perhatian" })).toBeVisible()
   await expect(
-    page.locator('[data-slot="sidebar-inner"]').getByText(ACCOUNTS.auditor.name),
+    page.getByRole("button", { name: `Menu akun ${ACCOUNTS.auditor.name}` }),
   ).toBeVisible()
 
-  await page.getByRole("button", { name: "Keluar" }).click()
+  // Keluar ada di menu akun (bar atas, RU-21).
+  await page.getByRole("button", { name: `Menu akun ${ACCOUNTS.auditor.name}` }).click()
+  await page.getByRole("menuitem", { name: "Keluar" }).click()
   await expect(page).toHaveURL(/\/login$/)
 
   await page.goto("/")
@@ -79,7 +81,5 @@ test("user dengan MFA aktif wajib memasukkan kode TOTP saat login", async ({ pag
   await page.getByLabel("Kode autentikasi").fill(totp(secret))
   await page.getByRole("button", { name: "Verifikasi" }).click()
   await expect(page).toHaveURL(/\/$/)
-  await expect(
-    page.locator('[data-slot="sidebar-inner"]').getByText(ACCOUNTS.admin.name).first(),
-  ).toBeVisible()
+  await expect(page.getByRole("button", { name: `Menu akun ${ACCOUNTS.admin.name}` })).toBeVisible()
 })

@@ -3,26 +3,20 @@ import Link from "next/link"
 import { Suspense } from "react"
 
 import { Skeleton } from "@/components/ui/skeleton"
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarRail,
-} from "@/components/ui/sidebar"
+import { Sidebar, SidebarContent, SidebarHeader, SidebarRail } from "@/components/ui/sidebar"
 import { MFA_SETUP_PATH } from "@/lib/auth-config"
 import { ROLE_LABELS } from "@/lib/permissions"
-import { signOut } from "@/server/auth/actions"
 import { requireUser } from "@/server/auth/session"
 
 import { AppSidebarNav } from "./app-sidebar-nav"
+import { AppUserMenu } from "./app-user-menu"
 
-// Kerangka sidebar statis (ikut di-prerender). Bagian yang bergantung pada user,
-// yaitu menu per peran dan info akun, dimuat di balik <Suspense>.
+// Kerangka sidebar statis (ikut di-prerender), mengikuti hmx-002 (RU-21): bisa diciutkan jadi
+// ikon. Menu per peran dimuat di balik <Suspense>; menu akun ada di bar atas.
 export function AppSidebar() {
   return (
-    <Sidebar collapsible="offcanvas">
-      <SidebarHeader className="px-3 pt-4 pb-3">
+    <Sidebar collapsible="icon">
+      <SidebarHeader className="h-16 justify-center border-b border-sidebar-border px-3 group-data-[collapsible=icon]:px-1.5">
         <Link
           href="/"
           className="flex items-center gap-3 rounded-md p-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
@@ -34,9 +28,9 @@ export function AppSidebar() {
             width={256}
             height={201}
             preload
-            className="h-10 w-auto shrink-0"
+            className="h-9 w-auto shrink-0"
           />
-          <span className="min-w-0 leading-tight">
+          <span className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
             <span className="block truncate text-control font-semibold tracking-tight">
               IT Inventory
             </span>
@@ -46,16 +40,11 @@ export function AppSidebar() {
           </span>
         </Link>
       </SidebarHeader>
-      <SidebarContent className="gap-0 px-1">
+      <SidebarContent className="gap-0 px-1 pt-3">
         <Suspense fallback={<NavSkeleton />}>
           <RoleNav />
         </Suspense>
       </SidebarContent>
-      <SidebarFooter className="border-t border-sidebar-border px-4 py-3">
-        <Suspense fallback={<Skeleton className="h-14 w-full" />}>
-          <AccountMenu />
-        </Suspense>
-      </SidebarFooter>
       <SidebarRail />
     </Sidebar>
   )
@@ -66,33 +55,15 @@ async function RoleNav() {
   return <AppSidebarNav roles={user.roles} />
 }
 
-async function AccountMenu() {
+// Menu user di bar atas (RU-21); sesi dibaca di balik <Suspense> di layout.
+export async function AccountMenu() {
   const user = await requireUser()
   return (
-    <div className="space-y-2 text-sm">
-      <div className="min-w-0">
-        <p className="truncate font-medium">{user.name}</p>
-        <p className="truncate text-caption text-muted-foreground">
-          {user.roles.map((role) => ROLE_LABELS[role]).join(", ") || "Belum punya peran"}
-        </p>
-      </div>
-      <div className="flex items-center gap-3 text-caption">
-        <Link
-          href={MFA_SETUP_PATH}
-          className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Keamanan akun
-        </Link>
-        <form action={signOut}>
-          <button
-            type="submit"
-            className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-          >
-            Keluar
-          </button>
-        </form>
-      </div>
-    </div>
+    <AppUserMenu
+      name={user.name}
+      roles={user.roles.map((role) => ROLE_LABELS[role]).join(", ") || "Belum punya peran"}
+      securityHref={MFA_SETUP_PATH}
+    />
   )
 }
 

@@ -1,5 +1,5 @@
 import * as React from "react"
-import { cn } from "cn"
+import { cn } from "@/lib/utils"
 
 // Input HTML biasa, sama seperti Textarea. Bukan Input Base UI: itu FieldControl yang memperingatkan
 // bila defaultValue berubah setelah dibuat, padahal form di repo ini memang mengganti defaultValue
