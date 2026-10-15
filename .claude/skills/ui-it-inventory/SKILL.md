@@ -63,10 +63,16 @@ tablet untuk penerimaan/opname dibuat bersama M2.
   - `--success`, `--warning`, `--destructive`: selesai/terdaftar, perlu perhatian (belum siap,
     menunggu persetujuan, selisih), ditolak/gagal.
   - `--info`: status proses (diajukan, menunggu respon).
-  - Aksen merek teal (`--primary`) hanya untuk aksi utama, menu aktif, dan fokus; jangan pakai
-    warna untuk dekorasi.
-- **Tipografi**: IBM Plex Sans untuk UI dan IBM Plex Mono untuk kode (diatur di
-  `src/app/layout.tsx`); angka dengan
+  - Aksen biru hmx (`--primary` #2a5ea2, tombol utama bergradasi ke `--primary-dark`) hanya untuk
+    aksi utama, menu aktif, dan fokus; jangan pakai warna untuk dekorasi.
+- **Acuan tampilan: hmx-002** (`~/hmx/hmx-002/hmx/module/basic/webx/static`, keputusan user
+  15/10/2026, backlog RU-20–RU-23): token shell di `css/layout/layout.css`, tombol di
+  `css/buttons.css`, sidebar di `css/layout/sidebar/`, action bar dan pencarian di
+  `css/layout/action-manager/` dan `css/views/search/`, form di `vue/views/form/`. Ambil susunan,
+  ukuran, dan perilakunya; tetap pakai komponen shadcn base-ui repo ini.
+- **Tipografi**: Plus Jakarta Sans untuk UI (seperti hmx) dan IBM Plex Mono untuk kode (diatur di
+  `src/app/layout.tsx`); teks kontrol dan tabel 14px (`text-control`), teks kecil 12px
+  (`text-caption`), kontrol 40px, header tabel 48px, baris 44px; angka dengan
   `tabular-nums`; font mono hanya untuk kode resmi yang dicocokkan karakter per karakter (nomor aju,
   NPWP/NITKU, kode HS, SKU). Hierarki dari ukuran dan bobot, bukan dari warna abu-abu bertingkat.
 - **Kepadatan**: desktop padat (baris tabel ~36px, `text-sm`), area kerja tablet longgar

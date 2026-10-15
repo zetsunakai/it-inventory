@@ -54,7 +54,7 @@ export function DataTable<Row>({
               <TableHead
                 key={column.header}
                 className={cn(
-                  "h-10 px-3 text-caption font-medium text-muted-foreground",
+                  "h-12 px-4 text-control font-semibold text-foreground",
                   column.align === "right" && "text-right",
                   column.className,
                 )}
@@ -93,7 +93,7 @@ export function DataTable<Row>({
                     <TableCell
                       key={column.header}
                       className={cn(
-                        "px-3 py-2.5",
+                        "px-4 py-3",
                         column.align === "right" && "text-right",
                         // Kontrol lain di baris tetap bisa diklik di atas link baris.
                         href &&

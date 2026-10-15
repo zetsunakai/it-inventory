@@ -6,8 +6,8 @@ export function DataTableSkeleton({ rows = 8 }: { rows?: number }) {
   return (
     <div className="space-y-3" aria-busy="true" aria-label="Memuat data">
       <div className="flex gap-2">
-        <Skeleton className="h-9 w-full sm:max-w-xs" />
-        <Skeleton className="hidden h-9 w-48 sm:block" />
+        <Skeleton className="h-10 w-full sm:max-w-xs" />
+        <Skeleton className="hidden h-10 w-48 sm:block" />
       </div>
       <div className="overflow-hidden rounded-lg border">
         <div className="h-9 border-b bg-muted/60" />

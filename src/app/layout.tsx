@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
-import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google"
+import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
 
-// IBM Plex: karakter dokumen/instrumen yang cocok untuk kepabeanan, angka tabular, dan Plex Mono
-// untuk kode resmi (nomor aju, NPWP, kode HS). shadcn/ui membaca --font-sans (lihat globals.css).
-const plexSans = IBM_Plex_Sans({
+// Plus Jakarta Sans mengikuti hmx-002 (backlog RU-20); IBM Plex Mono untuk kode resmi yang dicocokkan
+// karakter per karakter (nomor aju, NPWP, kode HS, SKU). shadcn/ui membaca --font-sans.
+const jakartaSans = Plus_Jakarta_Sans({
   variable: "--font-sans",
   subsets: ["latin"],
 })
@@ -24,7 +24,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="id" className={`${plexSans.variable} ${plexMono.variable} h-full antialiased`}>
+    <html lang="id" className={`${jakartaSans.variable} ${plexMono.variable} h-full antialiased`}>
       <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
       </body>
