@@ -81,7 +81,7 @@ async function StockCard({
           >
             {line.transferNumber}
           </Link>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-caption text-muted-foreground">
             {movementLabel(line.movementCode, line.usageType)}
           </span>
         </span>
@@ -91,7 +91,7 @@ async function StockCard({
       header: "Dari → ke",
       className: "w-full whitespace-normal",
       cell: (line) => (
-        <span className="font-mono text-xs">
+        <span className="font-mono text-caption">
           {line.sourcePath} → {line.destinationPath}
           {line.lotId && (
             <Link
@@ -149,7 +149,7 @@ async function StockCard({
               ["Saldo akhir", card.closing],
             ].map(([label, value]) => (
               <div key={label} className="rounded-lg border bg-card px-3 py-2">
-                <dt className="text-xs text-muted-foreground">{label}</dt>
+                <dt className="text-caption text-muted-foreground">{label}</dt>
                 <dd className="text-lg font-semibold tabular-nums">
                   {formatDecimal(value)} <span className="text-sm font-normal">{unit}</span>
                 </dd>

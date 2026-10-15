@@ -59,7 +59,7 @@ export function ClosePeriodButton({
         </AlertDialogContent>
       </AlertDialog>
       {errors?.length ? (
-        <p role="alert" className="max-w-xs text-right text-xs font-medium text-destructive">
+        <p role="alert" className="max-w-xs text-right text-caption font-medium text-destructive">
           {errors.join(" ")}
         </p>
       ) : null}

@@ -29,7 +29,7 @@ const COLUMNS: DataTableColumn<StockCountLine>[] = [
   {
     header: "Lokasi",
     cell: (line) => (
-      <span className="font-mono text-xs">
+      <span className="font-mono text-caption">
         {line.locationPath}
         {line.lotName && <span className="block">lot {line.lotName}</span>}
       </span>

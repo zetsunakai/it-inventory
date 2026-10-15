@@ -37,10 +37,12 @@ export function AppSidebar() {
             className="h-10 w-auto shrink-0"
           />
           <span className="min-w-0 leading-tight">
-            <span className="block truncate text-[0.9375rem] font-semibold tracking-tight">
+            <span className="block truncate text-control font-semibold tracking-tight">
               IT Inventory
             </span>
-            <span className="block truncate text-xs text-muted-foreground">Kawasan Berikat</span>
+            <span className="block truncate text-caption text-muted-foreground">
+              Kawasan Berikat
+            </span>
           </span>
         </Link>
       </SidebarHeader>
@@ -70,11 +72,11 @@ async function AccountMenu() {
     <div className="space-y-2 text-sm">
       <div className="min-w-0">
         <p className="truncate font-medium">{user.name}</p>
-        <p className="truncate text-xs text-muted-foreground">
+        <p className="truncate text-caption text-muted-foreground">
           {user.roles.map((role) => ROLE_LABELS[role]).join(", ") || "Belum punya peran"}
         </p>
       </div>
-      <div className="flex items-center gap-3 text-xs">
+      <div className="flex items-center gap-3 text-caption">
         <Link
           href={MFA_SETUP_PATH}
           className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"

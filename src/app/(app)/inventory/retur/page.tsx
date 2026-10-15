@@ -37,7 +37,7 @@ const COLUMNS: DataTableColumn<ReturnRequestRow>[] = [
     cell: (row) => (
       <span className="flex flex-col">
         <span className="text-foreground">{row.partnerName}</span>
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="font-mono text-caption text-muted-foreground">
           {row.originNumber} · {row.warehouseCode}
         </span>
       </span>

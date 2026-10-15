@@ -58,7 +58,7 @@ async function Home() {
             ))}
           </ul>
         )}
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           Pengecualian transaksi (dokumen BC belum terdaftar, selisih qty) tampil di sini mulai M4.
         </p>
       </section>

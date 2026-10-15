@@ -36,7 +36,7 @@ const COLUMNS: DataTableColumn<StockCountRow>[] = [
         <span className="font-medium text-foreground">
           {row.warehouseCode} · {row.warehouseName}
         </span>
-        <span className="font-mono text-xs text-muted-foreground">
+        <span className="font-mono text-caption text-muted-foreground">
           {row.locationPath ?? "Seluruh gudang"}
         </span>
       </span>

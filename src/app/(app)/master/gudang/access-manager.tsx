@@ -59,7 +59,7 @@ export function AccessManager({
             <li key={user.id} className="flex items-center justify-between gap-4 px-4 py-2">
               <div>
                 <p className="text-sm font-medium">{user.name}</p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-muted-foreground">
                   {user.email} · {roleText(user.roles)}
                 </p>
               </div>

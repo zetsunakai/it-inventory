@@ -128,7 +128,7 @@ async function TransferTable({
             : "Dari",
       className: kind.partnerLabel ? undefined : "w-full",
       cell: (row) => (
-        <span className="font-mono text-xs">
+        <span className="font-mono text-caption">
           {kind.secondLocationLabel || kind.directional
             ? `${row.sourcePath} → ${row.destinationPath}`
             : kind.locationSide === "destination"

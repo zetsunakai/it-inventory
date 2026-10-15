@@ -32,7 +32,7 @@ async function SettingList() {
         <li key={row.key} className="space-y-2">
           <div>
             <p className="font-medium">{row.description ?? row.key}</p>
-            <p className="font-mono text-xs text-muted-foreground">{row.key}</p>
+            <p className="font-mono text-caption text-muted-foreground">{row.key}</p>
           </div>
           <SettingForm settingKey={row.key} value={String(row.value)} />
         </li>

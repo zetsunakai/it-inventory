@@ -167,12 +167,12 @@ export function CountSheet({
               <div className="min-w-0 flex-1">
                 <p className="font-mono font-medium text-foreground">{line.sku}</p>
                 <p className="text-sm text-muted-foreground">{line.productName}</p>
-                <p className="font-mono text-xs text-muted-foreground">
+                <p className="font-mono text-caption text-muted-foreground">
                   {line.locationPath}
                   {line.lotName && ` · lot ${line.lotName}`}
                 </p>
                 {errors[line.id] && (
-                  <p role="alert" className="mt-1 text-xs font-medium text-destructive">
+                  <p role="alert" className="mt-1 text-caption font-medium text-destructive">
                     {errors[line.id]}
                   </p>
                 )}
@@ -203,7 +203,7 @@ export function CountSheet({
                 <span className="w-10 text-sm text-muted-foreground">{line.uomCode}</span>
                 <span className="flex w-5 justify-center" aria-live="polite">
                   {state === "saving" ? (
-                    <span className="text-xs text-muted-foreground">…</span>
+                    <span className="text-caption text-muted-foreground">…</span>
                   ) : state === "error" ? (
                     <CircleAlert className="size-4 text-destructive" aria-label="Gagal disimpan" />
                   ) : done ? (

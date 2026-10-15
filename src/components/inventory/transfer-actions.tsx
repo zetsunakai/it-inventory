@@ -270,7 +270,7 @@ export function TransferActions({
                         value={effectiveDate}
                         onChange={(event) => setEffectiveDate(event.target.value)}
                       />
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-caption text-muted-foreground">
                         Isi tanggal sebelumnya hanya bila barang memang bergerak di tanggal itu.
                       </p>
                       {backdated && (

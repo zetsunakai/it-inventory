@@ -29,7 +29,7 @@ const COLUMNS: DataTableColumn<StockRow>[] = [
     cell: (row) => (
       <span className="flex flex-col">
         <span className="font-medium text-foreground">{row.productName}</span>
-        <span className="text-xs text-muted-foreground">
+        <span className="text-caption text-muted-foreground">
           {INVENTORY_CATEGORY_LABELS[row.category]}
         </span>
       </span>
@@ -38,7 +38,7 @@ const COLUMNS: DataTableColumn<StockRow>[] = [
   {
     header: "Lokasi",
     cell: (row) => (
-      <span className="font-mono text-xs">
+      <span className="font-mono text-caption">
         {row.warehouseCode} · {row.locationPath}
       </span>
     ),

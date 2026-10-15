@@ -4,6 +4,15 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Skala ukuran UI (backlog UF-01): teks kontrol (input, select, tombol, menu) 15px, teks kecil
+   (judul kolom, petunjuk, pesan field) 13px. Ubah di sini, bukan per halaman. */
+@theme {
+  --text-control: 0.9375rem;
+  --text-control--line-height: 1.375rem;
+  --text-caption: 0.8125rem;
+  --text-caption--line-height: 1.125rem;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);

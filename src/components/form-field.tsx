@@ -18,12 +18,12 @@ export function FormField({
   children: ReactNode
 }) {
   return (
-    <div className="space-y-1.5">
+    <div className="space-y-2">
       <Label htmlFor={htmlFor}>{label}</Label>
       {children}
-      {hint && <p className="text-xs text-muted-foreground">{hint}</p>}
+      {hint && <p className="text-caption text-muted-foreground">{hint}</p>}
       {errors?.map((message) => (
-        <p key={message} className="text-xs font-medium text-destructive">
+        <p key={message} className="text-caption font-medium text-destructive">
           {message}
         </p>
       ))}
@@ -48,7 +48,7 @@ export function StaticField({
     <div className="space-y-1.5">
       <p className="text-sm leading-none font-medium">{label}</p>
       <p className={mono ? "py-1.5 font-mono text-sm" : "py-1.5 text-sm"}>{value}</p>
-      {reason && <p className="text-xs text-muted-foreground">{reason}</p>}
+      {reason && <p className="text-caption text-muted-foreground">{reason}</p>}
     </div>
   )
 }

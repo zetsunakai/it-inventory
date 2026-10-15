@@ -36,7 +36,7 @@ const COLUMNS: DataTableColumn<InterwarehouseRow>[] = [
     header: "Dari → ke",
     className: "w-full",
     cell: (row) => (
-      <span className="font-mono text-xs">
+      <span className="font-mono text-caption">
         {row.sourceWarehouse} → {row.destinationWarehouse}
       </span>
     ),

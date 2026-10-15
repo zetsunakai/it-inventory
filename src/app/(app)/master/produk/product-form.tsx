@@ -317,7 +317,7 @@ export function ProductForm({
           )}
         </div>
         {tracking !== "none" && (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-caption text-muted-foreground">
             {lotExample
               ? `Barang masuk yang ${trackingNoun}nya dikosongkan diberi nomor otomatis saat validasi, mis. ${lotExample}.`
               : `Kosongkan prefix bila ${trackingNoun} selalu diisi manual.`}

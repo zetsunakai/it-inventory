@@ -44,7 +44,7 @@ async function Trace({ params }: { params: Promise<{ id: string }> }) {
       header: "Lokasi",
       className: "w-full",
       cell: (row) => (
-        <span className="font-mono text-xs">{place(row.locationPath, row.warehouseCode)}</span>
+        <span className="font-mono text-caption">{place(row.locationPath, row.warehouseCode)}</span>
       ),
     },
     { header: "Saldo", align: "right", cell: (row) => `${formatDecimal(row.qty)} ${unit}` },
@@ -76,7 +76,7 @@ async function Trace({ params }: { params: Promise<{ id: string }> }) {
           >
             {row.transferNumber}
           </Link>
-          <span className="text-xs text-muted-foreground">
+          <span className="text-caption text-muted-foreground">
             {movementLabel(row.movementCode, row.usageType)}
           </span>
         </span>
@@ -87,12 +87,12 @@ async function Trace({ params }: { params: Promise<{ id: string }> }) {
       className: "w-full whitespace-normal",
       cell: (row) => (
         <span className="flex flex-col">
-          <span className="font-mono text-xs">
+          <span className="font-mono text-caption">
             {place(row.sourcePath, row.sourceWarehouse)} →{" "}
             {place(row.destinationPath, row.destinationWarehouse)}
           </span>
           {row.partnerName && (
-            <span className="text-xs text-muted-foreground">{row.partnerName}</span>
+            <span className="text-caption text-muted-foreground">{row.partnerName}</span>
           )}
         </span>
       ),

@@ -48,7 +48,7 @@ const LOCATION_COLUMNS: DataTableColumn<LocationRow>[] = [
     cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
     className: "w-full whitespace-normal",
   },
-  { header: "Jalur", cell: (row) => <span className="font-mono text-xs">{row.path}</span> },
+  { header: "Jalur", cell: (row) => <span className="font-mono text-caption">{row.path}</span> },
   { header: "Tipe", cell: (row) => LOCATION_TYPE_LABELS[row.type] },
 ]
 

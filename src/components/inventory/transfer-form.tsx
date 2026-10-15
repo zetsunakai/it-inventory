@@ -334,7 +334,7 @@ export function TransferForm({
         <div className="space-y-3">
           <div
             aria-hidden
-            className="hidden grid-cols-[minmax(0,1fr)_7rem_8rem_10rem_2.25rem] gap-2 text-xs font-medium text-muted-foreground md:grid"
+            className="hidden grid-cols-[minmax(0,1fr)_7rem_8rem_10rem_2.25rem] gap-2 text-caption font-medium text-muted-foreground md:grid"
           >
             <span>Produk</span>
             <span>Qty</span>
@@ -529,7 +529,7 @@ function OutboundLot({
         </SelectContent>
       </Select>
       {current && (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-caption text-muted-foreground">
           Tersedia {formatDecimal(current.qty)} {current.uomCode}
         </p>
       )}

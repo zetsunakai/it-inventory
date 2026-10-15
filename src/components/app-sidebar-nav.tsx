@@ -40,7 +40,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
           // Modul yang belum dikerjakan diredupkan; tiketnya muncul saat kursor diarahkan.
           title={item.plannedIn ? `Belum tersedia, dijadwalkan di ${item.plannedIn}` : undefined}
           className={cn(
-            "h-8 text-[0.9375rem] data-active:font-medium data-active:shadow-[inset_2px_0_0_var(--sidebar-primary)]",
+            "h-9 text-control data-active:font-medium data-active:shadow-[inset_2px_0_0_var(--sidebar-primary)]",
             item.plannedIn && "text-muted-foreground",
             className,
           )}
@@ -68,7 +68,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
     }
     return (
       <SidebarGroup key={group.label} className="py-1">
-        <SidebarGroupLabel className="h-8 gap-2 text-[0.9375rem] font-semibold text-sidebar-foreground">
+        <SidebarGroupLabel className="h-9 gap-2 text-control font-semibold text-sidebar-foreground">
           <Icon className="text-muted-foreground" aria-hidden />
           {group.label}
         </SidebarGroupLabel>

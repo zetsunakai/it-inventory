@@ -10,7 +10,9 @@ const COLUMNS: DataTableColumn<ImportColumn>[] = [
       <span className="flex flex-col">
         <span className="font-medium text-foreground">{column.header}</span>
         {column.required && (
-          <span className="text-xs text-muted-foreground">{REQUIRED_LABEL[column.required]}</span>
+          <span className="text-caption text-muted-foreground">
+            {REQUIRED_LABEL[column.required]}
+          </span>
         )}
       </span>
     ),
