@@ -22,7 +22,10 @@ const WAREHOUSE_FILTER = "gudang"
 const DATE_FILTER = "tanggal"
 
 const COLUMNS: DataTableColumn<StockRow>[] = [
-  { header: "SKU", cell: (row) => <span className="font-mono text-foreground">{row.sku}</span> },
+  {
+    header: "Product code",
+    cell: (row) => <span className="font-mono text-foreground">{row.sku}</span>,
+  },
   {
     header: "Produk",
     className: "w-full whitespace-normal",
@@ -118,7 +121,7 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
         }
       >
         <ListSearchBar
-          placeholder="Cari SKU atau nama produk"
+          placeholder="Cari product code atau nama produk"
           filters={[
             {
               name: WAREHOUSE_FILTER,

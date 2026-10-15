@@ -85,9 +85,10 @@ discontinue belum diputuskan.
 
 ## Yang tetap dari repo ini
 
-- Data kepabeanan produk: `hs_code`, `ceisa_unit_code`, faktor CEISA, `customs_ready` yang dihitung
-  database (PRD 5.3). hmx tidak punya data ini di produk (data ini diisi di baris dokumen BC).
-  Pertahankan di produk supaya dokumen BC terisi otomatis.
+- Data kepabeanan produk: hanya `hs_code` dan `customs_ready` (= ada kode HS) yang dihitung
+  database (PRD 5.3). Keputusan user 15/10/2026 (RM-01): satuan CEISA dan faktornya diisi per baris
+  dokumen BC seperti hmx, berat netto dihapus, dan nomor lot/seri otomatis memakai product code
+  sebagai prefix (`lot_auto`). Label UI untuk `sku` adalah "Product code".
 - Satuan stok, SKU, dan kategori laporan tidak bisa diubah setelah produk punya transaksi (aturan
   database). Ini sama semangatnya dengan kunci `tracking` hmx; perluas ke `tracking`.
 - Qty dan rasio `numeric`, bukan float. Konversi dan pembulatan dilakukan database.

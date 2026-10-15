@@ -51,7 +51,6 @@ export async function listProducts({
 }
 
 const hs = aliasedTable(refCodes, "hs")
-const ceisaUnit = aliasedTable(refCodes, "ceisa_unit")
 
 // Produk beserta satuan stok dan referensi kepabeanannya, untuk form ubah.
 export async function getProduct(id: string) {
@@ -72,19 +71,10 @@ export async function getProduct(id: string) {
       )`,
       uom: { code: uoms.code, name: uoms.name },
       hs: { code: hs.code, name: hs.name, parentCode: hs.parentCode },
-      ceisaUnit: { code: ceisaUnit.code, name: ceisaUnit.name, parentCode: ceisaUnit.parentCode },
     })
     .from(products)
     .innerJoin(uoms, eq(uoms.id, products.uomId))
     .leftJoin(hs, and(eq(hs.type, "hs_code"), eq(hs.code, products.hsCode), isNull(hs.parentCode)))
-    .leftJoin(
-      ceisaUnit,
-      and(
-        eq(ceisaUnit.type, "ceisa_unit"),
-        eq(ceisaUnit.code, products.ceisaUnitCode),
-        isNull(ceisaUnit.parentCode),
-      ),
-    )
     .where(eq(products.id, id))
   if (!row) return undefined
   return {
@@ -93,7 +83,6 @@ export async function getProduct(id: string) {
     trackingLocked: row.trackingLocked,
     uom: row.uom,
     hs: row.hs as RefCodeOption | null,
-    ceisaUnit: row.ceisaUnit as RefCodeOption | null,
   }
 }
 

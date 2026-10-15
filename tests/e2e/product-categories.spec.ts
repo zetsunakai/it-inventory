@@ -43,7 +43,9 @@ test("kategori dengan prefix kode membuat SKU otomatis untuk produk baru", async
   await expect(
     page
       .getByRole("alert")
-      .filter({ hasText: "SKU wajib diisi karena kategori produk Logam tidak punya prefix kode." }),
+      .filter({
+        hasText: "Product code wajib diisi karena kategori produk Logam tidak punya prefix kode.",
+      }),
   ).toBeVisible()
 
   await page.getByLabel("Kategori produk").click()

@@ -7,11 +7,13 @@ export function CheckboxField({
   label,
   description,
   defaultChecked,
+  onCheckedChange,
 }: {
   name: string
   label: string
   description: string
   defaultChecked: boolean
+  onCheckedChange?: (checked: boolean) => void
 }) {
   return (
     <div className="flex items-start gap-2">
@@ -20,6 +22,7 @@ export function CheckboxField({
         id={name}
         name={name}
         defaultChecked={defaultChecked}
+        onCheckedChange={onCheckedChange}
       />
       <div className="grid gap-1 leading-none">
         <Label htmlFor={name}>{label}</Label>

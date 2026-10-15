@@ -66,7 +66,7 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
           }}
           getKey={(item) => item.id}
           getLabel={(item) => `[${item.sku}] ${item.name}`}
-          placeholder="Cari SKU atau nama produk"
+          placeholder="Cari product code atau nama produk"
         />
       </FormField>
       <FormField label="Kategori" htmlFor="categoryId" errors={fieldErrors?.categoryId}>

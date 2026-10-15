@@ -31,8 +31,11 @@ export async function readImportFile<Key extends string>(
   file: File,
   columns: readonly ImportColumn<Key>[],
   keyColumn: Key,
+  // Judul kolom yang sudah dihapus dari master data; file export lama tetap bisa diimport.
+  retired: readonly string[] = [],
 ): Promise<ImportRow<Key>[]> {
   const sheet = await readSpreadsheet(file)
+  const retiredHeaders = new Set(retired.map(normalizeHeader))
 
   const byHeader = new Map<string, ImportColumn<Key>>()
   for (const column of columns) {
@@ -47,7 +50,7 @@ export async function readImportFile<Key extends string>(
   const errors: string[] = []
   sheet.headers.forEach((header, index) => {
     // Kolom tanpa judul (sering tersisa di Excel) diabaikan.
-    if (!header.trim()) return
+    if (!header.trim() || retiredHeaders.has(normalizeHeader(header))) return
     const column = byHeader.get(normalizeHeader(header))
     if (!column) return void unknown.push(`"${header}"`)
     if (seen.has(column.key)) return void errors.push(`Kolom ${column.header} muncul dua kali.`)

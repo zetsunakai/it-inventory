@@ -138,6 +138,7 @@ afterAll(async () => {
   await db.$client.end()
 })
 
+// Termasuk kolom lama Satuan CEISA dan Faktor CEISA (dihapus di RM-01): diabaikan saat import.
 const PRODUCT_HEADER = [
   "SKU",
   "Nama",
@@ -166,9 +167,9 @@ describe("import produk", () => {
       .from(products)
       .where(like(products.sku, "ZMP%"))
       .orderBy(products.sku)
-    expect(rows.map((row) => [row.sku, row.category, row.hsCode, row.ceisaUnitCode])).toEqual([
-      ["ZMP1", "raw_material", "99990201", "ZMU"],
-      ["ZMP2", "finished_good", null, null],
+    expect(rows.map((row) => [row.sku, row.category, row.hsCode])).toEqual([
+      ["ZMP1", "raw_material", "99990201"],
+      ["ZMP2", "finished_good", null],
     ])
     // Kolom lama "Wajib lot" tetap terbaca: Ya = per lot, kosong = tanpa pelacakan.
     expect(rows.map((row) => [row.tracking, row.active, row.customsReady])).toEqual([
@@ -225,7 +226,6 @@ describe("import produk", () => {
         messages: [
           'Pelacakan "mungkin" tidak dikenal. Pilih Tanpa pelacakan, Per lot, atau Per nomor seri.',
           "Nama produk wajib diisi.",
-          "Faktor satuan CEISA wajib diisi bila satuan CEISA dipilih.",
           "Satuan stok ZMOLD tidak ditemukan atau sudah diarsipkan.",
           "Kode HS 99990299 tidak ada di referensi kepabeanan.",
         ],
@@ -234,7 +234,7 @@ describe("import produk", () => {
         line: 6,
         key: "ZMP1",
         messages: [
-          "SKU ZMP1 sudah ada di baris 2.",
+          "Product code ZMP1 sudah ada di baris 2.",
           "Kode HS 99990203 tidak ada di referensi kepabeanan.",
         ],
       },
@@ -328,7 +328,7 @@ describe("import produk", () => {
       ok: false,
       errors: [
         'Kolom tidak dikenal: "Harga". Gunakan judul kolom dari file export.',
-        "Kolom SKU wajib ada.",
+        "Kolom Product code wajib ada.",
       ],
     })
   })

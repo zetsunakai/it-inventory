@@ -46,7 +46,7 @@ async function EditCategory({ params }: { params: Promise<{ id: string }> }) {
   return (
     <DocumentLayout
       title={category.path}
-      meta={`${formatNumber(category.productCount)} produk, ${formatNumber(category.childCount)} sub-kategori. Prefix kode hanya berlaku untuk SKU produk baru.`}
+      meta={`${formatNumber(category.productCount)} produk, ${formatNumber(category.childCount)} sub-kategori. Prefix kode hanya berlaku untuk product code produk baru.`}
       crumbs={[{ label: category.path }]}
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="kategori produk" />}

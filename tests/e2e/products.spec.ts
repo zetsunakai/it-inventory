@@ -13,17 +13,14 @@ const SKU = `LTP-${Date.now().toString(36).slice(-5).toUpperCase()}`
 test.describe("Administrator", () => {
   test.use({ storageState: ADMIN_STATE_FILE })
 
-  test("produk baru belum siap dokumen BC sampai kode HS dan satuan CEISA lengkap", async ({
-    page,
-  }) => {
+  test("produk baru belum siap dokumen BC sampai kode HS diisi", async ({ page }) => {
     await page.goto("/master/produk/baru")
-    await page.getByLabel("SKU").fill(SKU)
+    await page.getByLabel("Product code").fill(SKU)
     await page.getByLabel("Nama produk").fill("Laptop uji E2E")
     await page.getByLabel("Kategori IT Inventory").click()
     await page.getByRole("option", { name: "Bahan baku" }).click()
     await page.getByLabel("Satuan stok").click()
     await page.getByRole("option", { name: /^\[PCS\]/ }).click()
-    await page.getByLabel("Berat netto (kg)").fill("1,8")
     await page.getByRole("button", { name: "Simpan" }).click()
 
     await expect(page).toHaveURL(new RegExp(`/master/produk\\?q=${SKU}$`))
@@ -31,17 +28,11 @@ test.describe("Administrator", () => {
     await expect(row).toContainText("Belum siap")
 
     await row.getByRole("link", { name: SKU }).click()
-    await expect(
-      page.getByText("Belum siap dokumen BC: kode HS dan satuan CEISA belum diisi."),
-    ).toBeVisible()
+    await expect(page.getByText("Belum siap dokumen BC: kode HS belum diisi.")).toBeVisible()
 
     // exact: halaman daftar (tersimpan tersembunyi oleh router) punya kotak "Cari ... kode HS".
     await page.getByLabel("Kode HS", { exact: true }).fill("laptops")
     await page.getByRole("option", { name: /^\[84713020\]/ }).click()
-    await page.getByLabel("Satuan CEISA", { exact: true }).fill("PCE")
-    await page.getByRole("option", { name: "[PCE] Piece" }).click()
-    await expect(page.getByText("1 PCS = berapa PCE?")).toBeVisible()
-    await page.getByLabel("Faktor satuan CEISA").fill("1")
     await page.getByRole("button", { name: "Simpan" }).click()
     await expect(page.getByRole("status")).toHaveText("Perubahan disimpan.")
 

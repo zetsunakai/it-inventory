@@ -17,7 +17,7 @@ export default function ImportProductsPage() {
     <>
       <PageHeader
         title="Import produk"
-        description="SKU baru ditambahkan, SKU yang sudah ada diperbarui. Bila ada satu baris yang salah, tidak ada yang disimpan."
+        description="Product code baru ditambahkan, product code yang sudah ada diperbarui. Bila ada satu baris yang salah, tidak ada yang disimpan."
       />
       <Suspense fallback={<Skeleton className="h-40 w-full max-w-4xl" />}>
         <Guarded />
@@ -33,7 +33,7 @@ async function Guarded() {
     <ImportForm
       action={importProducts}
       noun="produk"
-      keyLabel="SKU"
+      keyLabel="Product code"
       listHref="/master/produk"
       exportHref="/master/produk/export?format=xlsx"
     />

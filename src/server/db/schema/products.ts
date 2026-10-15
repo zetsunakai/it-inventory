@@ -3,7 +3,6 @@ import {
   boolean,
   index,
   pgEnum,
-  numeric,
   pgTable,
   smallint,
   text,
@@ -44,8 +43,8 @@ export const productCategories = pgTable(
 export const productTracking = pgEnum("product_tracking", PRODUCT_TRACKINGS)
 
 // Produk (PRD bagian 5.1). Qty selalu disimpan dalam satuan stok (uom_id). Untuk dokumen BC
-// produk butuh kode HS dan satuan CEISA beserta faktornya: 1 satuan stok = ceisa_factor
-// satuan CEISA. customs_ready dihitung database dari ketiganya (PRD bagian 5.3).
+// produk cukup punya kode HS; satuan CEISA diisi per baris dokumen BC (revisi RM-01).
+// customs_ready dihitung database (PRD bagian 5.3).
 export const products = pgTable(
   "products",
   {
@@ -61,27 +60,21 @@ export const products = pgTable(
     uomId: uuid()
       .notNull()
       .references(() => uoms.id, { onDelete: "restrict" }),
-    // Kode ref_codes jenis hs_code dan ceisa_unit.
+    // Kode ref_codes jenis hs_code.
     hsCode: text(),
-    ceisaUnitCode: text(),
-    ceisaFactor: numeric({ precision: 24, scale: 10 }),
-    // Kilogram per satuan stok.
-    netWeight: numeric({ precision: 18, scale: 6 }),
     brand: text(),
     model: text(),
     size: text(),
     // Pelacakan lot/nomor seri (backlog R-02). Tidak bisa diubah selama produk punya stok atau
     // transaksi belum selesai (trigger products_tracking_guard).
     tracking: productTracking().notNull().default("none"),
-    // Nomor lot/seri otomatis untuk barang masuk yang nomornya dikosongkan: prefix + nomor urut
-    // produk, dibuat saat validasi (assign_auto_lots). Kosong = selalu diisi manual.
-    lotPrefix: text(),
+    // Nomor lot/seri otomatis untuk barang masuk yang nomornya dikosongkan: product code + "-" +
+    // nomor urut produk, dibuat saat validasi (assign_auto_lots). Tidak = selalu diisi manual.
+    lotAuto: boolean().notNull().default(false),
     lotDigits: smallint().notNull().default(6),
     customsReady: boolean()
       .notNull()
-      .generatedAlwaysAs(
-        sql`hs_code is not null and ceisa_unit_code is not null and ceisa_factor is not null`,
-      ),
+      .generatedAlwaysAs(sql`hs_code is not null`),
     active: boolean().notNull().default(true),
     ...timestamps,
   },

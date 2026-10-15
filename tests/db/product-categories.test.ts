@@ -244,12 +244,14 @@ describe("SKU otomatis", () => {
   test("SKU kosong ditolak bila kategori tidak dipilih atau tidak punya prefix", async () => {
     expect(await newProduct({ sku: "" })).toMatchObject({
       ok: false,
-      errors: ["SKU wajib diisi bila kategori produk tidak dipilih."],
+      errors: ["Product code wajib diisi bila kategori produk tidak dipilih."],
     })
     const manual = await category({ name: "ZK Manual" })
     expect(await newProduct({ sku: "", categoryId: manual })).toMatchObject({
       ok: false,
-      errors: ["SKU wajib diisi karena kategori produk ZK Manual tidak punya prefix kode."],
+      errors: [
+        "Product code wajib diisi karena kategori produk ZK Manual tidak punya prefix kode.",
+      ],
     })
     // Database menolak juga bila aplikasi melewatkan pemeriksaan.
     await inRollback(db, async (tx) => {

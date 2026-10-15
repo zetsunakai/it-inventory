@@ -125,14 +125,17 @@ dimatikan: user baru dibuat oleh Administrator.
   boleh sama dengan kode satuan khusus mana pun, dua produk boleh punya satuan khusus berkode sama.
   Satuan stok produk selalu satuan umum.
 - Kode, kategori, status acuan, dan produk satuan tidak bisa diubah. Satuan dasar (PCS, KG, L, M, M2, dan
-  turunannya) dibuat oleh seed. Satuan CEISA (kode resmi, faktornya per produk) ada di referensi kepabeanan.
+  turunannya) dibuat oleh seed. Satuan CEISA (kode resmi) ada di referensi kepabeanan dan dipilih per
+  baris dokumen BC (M3).
 
 ## Produk
 
-- Tabel `products`. Qty selalu dalam satuan stok (`uom_id`); SKU dan satuan stok tidak bisa diubah.
-- Untuk dokumen BC produk butuh kode HS dan satuan CEISA beserta faktornya (1 satuan stok = faktor
-  satuan CEISA). Kolom `customs_ready` dihitung database dari ketiganya; dokumen BC (M3) hanya boleh
-  memilih produk dengan `customs_ready = true`.
+- Tabel `products`. Qty selalu dalam satuan stok (`uom_id`); product code (kolom `sku`) dan satuan
+  stok tidak bisa diubah. Di UI, import, dan export kolom `sku` berlabel "Product code".
+- Untuk dokumen BC produk cukup punya kode HS: `customs_ready` = `hs_code is not null`; dokumen BC
+  (M3) hanya boleh memilih produk dengan `customs_ready = true`. Satuan CEISA beserta konversinya
+  diisi per baris dokumen BC. Berat netto, satuan CEISA, dan faktornya dihapus dari produk di RM-01;
+  import mengabaikan kolom lama itu.
 - Kode HS (11.555, BTKI 8 digit) dan satuan CEISA (1.513, UN/ECE Rec 20) adalah jenis referensi
   `hs_code` dan `ceisa_unit`, dari data Odoo lama. Data HS Odoo kehilangan nol di depan pada sebagian
   kode; script impor mengembalikannya. Sebagian besar uraian HS berbahasa Inggris dan disingkat.
@@ -147,14 +150,16 @@ dimatikan: user baru dibuat oleh Administrator.
 - Aturan di `transfer_tracking_errors()`, dipakai Konfirmasi dan validasi: produk berpelacakan
   wajib punya lot/nomor seri; nomor seri ber-qty 1 dalam satuan stok dan hanya boleh ada satu di
   seluruh lokasi gudang (boleh masuk lagi setelah keluar).
-- Nomor otomatis: produk dengan `lot_prefix` (+ `lot_digits`) yang diterima dari luar gudang
+- Nomor otomatis: produk dengan `lot_auto` (nomor = product code + "-" + nomor urut sepanjang
+  `lot_digits`, mis. `BRG-0001-000001`; RM-01) yang diterima dari luar gudang
   (penerimaan, penyesuaian tambah) dengan lot kosong diberi nomor saat validasi oleh
   `assign_auto_lots()`: per lot satu lot baru per baris, per nomor seri baris qty n dipecah jadi n
   baris ber-qty 1. Nomor urut `next_number('lot:<id produk>', '')` ikut batal bila validasi gagal.
 - `validate_transfer()` sekarang memanggil `transfer_validation_errors()` untuk semua syarat
   (akses, tanggal, periode, persetujuan, pelacakan, stok, retur, gerbang dokumen BC).
 - Import/export produk: kolom Pelacakan (judul lama "Wajib lot" dengan Ya/Tidak tetap diterima),
-  Prefix nomor lot/seri, Digit nomor lot/seri.
+  Nomor lot/seri otomatis (Ya/Tidak; kolom lama "Prefix nomor lot/seri" yang terisi dianggap Ya),
+  Digit nomor lot/seri.
 
 ## Kategori produk dan SKU otomatis
 

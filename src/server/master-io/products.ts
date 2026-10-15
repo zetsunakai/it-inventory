@@ -3,7 +3,6 @@ import "server-only"
 import { asc, eq, inArray, isNull, sql } from "drizzle-orm"
 import { z } from "zod"
 
-import { sameDecimal, toDecimalInput } from "@/lib/decimal"
 import { checkbox } from "@/lib/form-fields"
 import {
   flagText,
@@ -14,7 +13,7 @@ import {
   type ImportResult,
 } from "@/lib/import"
 import { INVENTORY_CATEGORY_LABELS, PRODUCT_TRACKING_LABELS } from "@/lib/inventory"
-import { ALWAYS, pairCeisaUnit, prefixNeedsTracking, productFields, skuField } from "@/lib/product"
+import { ALWAYS, autoLotNeedsTracking, productFields, skuField } from "@/lib/product"
 import type { Transaction } from "@/server/db/audit"
 import { db } from "@/server/db"
 import { refCodeStates } from "@/server/db/ref-code-checks"
@@ -37,10 +36,11 @@ import {
 export const PRODUCT_COLUMNS = [
   {
     key: "sku",
-    header: "SKU",
+    header: "Product code",
+    aliases: ["SKU"],
     width: 18,
     required: "always",
-    description: "Kode unik produk. SKU yang sudah ada berarti produk itu diperbarui.",
+    description: "Kode unik produk. Product code yang sudah ada berarti produk itu diperbarui.",
   },
   { key: "name", header: "Nama", width: 40, required: "new", description: "Nama produk." },
   { key: "description", header: "Deskripsi", width: 40, description: "Boleh kosong." },
@@ -72,24 +72,6 @@ export const PRODUCT_COLUMNS = [
     width: 12,
     description: "8 digit (titik boleh), harus ada di referensi kepabeanan.",
   },
-  {
-    key: "ceisaUnitCode",
-    header: "Satuan CEISA",
-    width: 14,
-    description: "Kode satuan CEISA, misalnya PCE atau KGM. Diisi bersama faktornya.",
-  },
-  {
-    key: "ceisaFactor",
-    header: "Faktor CEISA",
-    width: 14,
-    description: "Jumlah satuan CEISA dalam 1 satuan stok, misalnya 1 atau 0,001.",
-  },
-  {
-    key: "netWeight",
-    header: "Berat netto (kg)",
-    width: 16,
-    description: "Kilogram per satuan stok.",
-  },
   { key: "brand", header: "Merk", width: 16, description: "Boleh kosong." },
   { key: "model", header: "Tipe", width: 16, description: "Boleh kosong." },
   { key: "size", header: "Ukuran", width: 16, description: "Boleh kosong." },
@@ -102,10 +84,13 @@ export const PRODUCT_COLUMNS = [
     description: `${optionList(PRODUCT_TRACKING_LABELS)}. Kosong berarti Tanpa pelacakan. Tidak bisa diubah selama produk punya stok atau transaksi yang belum selesai.`,
   },
   {
-    key: "lotPrefix",
-    header: "Prefix nomor lot/seri",
+    key: "lotAuto",
+    header: "Nomor lot/seri otomatis",
+    // File export sebelum RM-01 berisi prefix; prefix terisi dianggap Ya.
+    aliases: ["Prefix nomor lot/seri"],
     width: 18,
-    description: "Prefix nomor lot/seri otomatis untuk barang masuk, mis. LOT-. Boleh kosong.",
+    description:
+      "Ya: barang masuk yang nomornya dikosongkan diberi nomor product code + nomor urut, mis. BRG-0001-000001. Kosong berarti Tidak.",
   },
   {
     key: "lotDigits",
@@ -121,6 +106,9 @@ export const PRODUCT_COLUMNS = [
   },
 ] as const satisfies readonly ImportColumn[]
 
+// Kolom yang dihapus di RM-01 (satuan CEISA pindah ke dokumen BC); diabaikan saat import.
+export const RETIRED_PRODUCT_COLUMNS = ["Satuan CEISA", "Faktor CEISA", "Berat netto (kg)"]
+
 type ProductKey = (typeof PRODUCT_COLUMNS)[number]["key"]
 type SheetValues = Partial<Record<ProductKey, string>>
 type SavedProduct = typeof products.$inferSelect & { uomCode: string; categoryPath: string | null }
@@ -134,14 +122,11 @@ function sheetValues(product: SavedProduct): Record<ProductKey, string> {
     category: INVENTORY_CATEGORY_LABELS[product.category],
     uom: product.uomCode,
     hsCode: product.hsCode ?? "",
-    ceisaUnitCode: product.ceisaUnitCode ?? "",
-    ceisaFactor: product.ceisaFactor ? toDecimalInput(product.ceisaFactor) : "",
-    netWeight: product.netWeight ? toDecimalInput(product.netWeight) : "",
     brand: product.brand ?? "",
     model: product.model ?? "",
     size: product.size ?? "",
     tracking: PRODUCT_TRACKING_LABELS[product.tracking],
-    lotPrefix: product.lotPrefix ?? "",
+    lotAuto: flagText(product.lotAuto),
     lotDigits: String(product.lotDigits),
     active: flagText(product.active),
   }
@@ -170,8 +155,7 @@ export async function exportProducts(format: SpreadsheetFormat) {
 
 const rowSchema = z
   .object({ sku: skuField, ...productFields, active: checkbox })
-  .superRefine(pairCeisaUnit, ALWAYS)
-  .superRefine(prefixNeedsTracking, ALWAYS)
+  .superRefine(autoLotNeedsTracking, ALWAYS)
 
 type ProductInput = z.output<typeof rowSchema>
 
@@ -217,7 +201,7 @@ export async function importProductRows(
     // Kolom yang kesalahannya sudah dilaporkan dengan pesan yang lebih jelas dari schema.
     const reported = new Set<string>()
 
-    const duplicate = duplicates.check(sku, row.line, "SKU")
+    const duplicate = duplicates.check(sku, row.line, "Product code")
     if (duplicate) messages.push(duplicate)
 
     const category = sheet.category ? matchOption(sheet.category, INVENTORY_CATEGORY_LABELS) : ""
@@ -244,6 +228,8 @@ export async function importProductRows(
         `Pelacakan "${sheet.tracking}" tidak dikenal. Pilih ${optionList(PRODUCT_TRACKING_LABELS)}.`,
       )
     }
+    // Kolom lama berisi prefix: terisi berarti Ya.
+    const lotAuto = parseFlag(sheet.lotAuto ?? "", false) ?? Boolean(sheet.lotAuto?.trim())
     const active = parseFlag(sheet.active ?? "", true)
     if (active === undefined) messages.push("Aktif harus Ya atau Tidak.")
 
@@ -252,9 +238,8 @@ export async function importProductRows(
       categoryId: productCategory?.id,
       category: category || undefined,
       hsCode: hsCodeValue(sheet.hsCode),
-      ceisaUnitCode: sheet.ceisaUnitCode?.toUpperCase(),
       tracking,
-      lotPrefix: sheet.lotPrefix?.toUpperCase(),
+      lotAuto: lotAuto ? "on" : undefined,
       lotDigits: sheet.lotDigits?.trim() || "6",
       active: active === false ? undefined : "on",
     })
@@ -279,15 +264,6 @@ export async function importProductRows(
     if (/^\d{8}$/.test(hsCode) && hsCode !== saved?.hsCode && !lookups.hsCodes.get(hsCode)) {
       messages.push(`Kode HS ${hsCode} tidak ada di referensi kepabeanan.`)
     }
-    const ceisaUnitCode = sheet.ceisaUnitCode?.toUpperCase()
-    if (
-      ceisaUnitCode &&
-      ceisaUnitCode !== saved?.ceisaUnitCode &&
-      !lookups.ceisaUnits.get(ceisaUnitCode)
-    ) {
-      messages.push(`Satuan CEISA ${ceisaUnitCode} tidak ada di referensi kepabeanan.`)
-    }
-
     if (messages.length || !parsed.success) {
       errors.add(row.line, sku, messages)
       continue
@@ -295,7 +271,7 @@ export async function importProductRows(
     if (!saved) {
       creates.push({ ...parsed.data, uomId: uom!.id })
     } else {
-      // SKU ikut di-set dengan nilai yang sama; trigger products_guard hanya menolak perubahan.
+      // Product code ikut di-set dengan nilai yang sama; trigger products_guard hanya menolak perubahan.
       if (changed(saved, parsed.data)) updates.push({ id: saved.id, values: parsed.data })
       else unchanged++
     }
@@ -323,14 +299,11 @@ function changed(saved: SavedProduct, values: ProductInput) {
     saved.categoryId !== values.categoryId ||
     saved.category !== values.category ||
     saved.hsCode !== values.hsCode ||
-    saved.ceisaUnitCode !== values.ceisaUnitCode ||
-    !sameDecimal(saved.ceisaFactor, values.ceisaFactor) ||
-    !sameDecimal(saved.netWeight, values.netWeight) ||
     saved.brand !== values.brand ||
     saved.model !== values.model ||
     saved.size !== values.size ||
     saved.tracking !== values.tracking ||
-    saved.lotPrefix !== values.lotPrefix ||
+    saved.lotAuto !== values.lotAuto ||
     saved.lotDigits !== values.lotDigits ||
     saved.active !== values.active
   )
@@ -365,11 +338,6 @@ async function loadLookups(tx: Transaction, rows: ImportRow<ProductKey>[]) {
     "hs_code",
     unique(rows.map((row) => hsCodeValue(row.values.hsCode))),
   )
-  const ceisaUnits = await refCodeStates(
-    tx,
-    "ceisa_unit",
-    unique(rows.map((row) => row.values.ceisaUnitCode?.toUpperCase())),
-  )
 
   const categoryRows = await tx.execute<{ id: string; path: string; active: boolean }>(sql`
     select c.id, p.path, c.active
@@ -385,6 +353,5 @@ async function loadLookups(tx: Transaction, rows: ImportRow<ProductKey>[]) {
     categories: new Map(categoryRows.rows.map((row) => [normalizePath(row.path), row])),
     uoms: new Map(uomRows.map((uom) => [uom.code.toUpperCase(), uom])),
     hsCodes,
-    ceisaUnits,
   }
 }

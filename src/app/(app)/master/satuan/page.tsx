@@ -122,7 +122,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
         }
       >
         <ListSearchBar
-          placeholder="Cari kode, nama satuan, atau SKU"
+          placeholder="Cari kode, nama satuan, atau product code"
           filters={[
             {
               name: CATEGORY_FILTER,

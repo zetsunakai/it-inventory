@@ -75,8 +75,8 @@ export function ProductCategoryForm({
           errors={fieldErrors?.codePrefix}
           hint={
             example
-              ? `SKU produk baru yang dikosongkan dibuat otomatis, mis. ${example}.`
-              : "Kosongkan bila SKU produk di kategori ini selalu diisi manual."
+              ? `Product code produk baru yang dikosongkan dibuat otomatis, mis. ${example}.`
+              : "Kosongkan bila product code produk di kategori ini selalu diisi manual."
           }
         >
           <Input

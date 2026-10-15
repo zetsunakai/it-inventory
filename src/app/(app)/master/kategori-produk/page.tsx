@@ -39,7 +39,7 @@ const COLUMNS: DataTableColumn<ProductCategoryRow>[] = [
     className: "w-full whitespace-normal",
   },
   {
-    header: "Format SKU",
+    header: "Format product code",
     cell: (row) =>
       row.codePrefix ? (
         <span className="font-mono">{skuExample(row.codePrefix, row.codeDigits)}</span>
@@ -57,7 +57,7 @@ export default function ProductCategoriesPage({
     <>
       <PageHeader
         title="Kategori produk"
-        description="Kategori dengan prefix kode membuat SKU otomatis untuk produk baru yang SKU-nya dikosongkan."
+        description="Kategori dengan prefix kode membuat product code otomatis untuk produk baru yang product code-nya dikosongkan."
       />
       <Suspense fallback={<DataTableSkeleton />}>
         <CategoryTable searchParams={searchParams} />

@@ -58,7 +58,7 @@ beforeAll(async () => {
         sku: "ZRLOT",
         name: "Cat",
         tracking: "lot" as const,
-        lotPrefix: "ZRL-",
+        lotAuto: true,
         lotDigits: 4,
       },
       { ...base, sku: "ZRLOTM", name: "Lem", tracking: "lot" as const },
@@ -67,7 +67,7 @@ beforeAll(async () => {
         sku: "ZRSN",
         name: "Laptop",
         tracking: "serial" as const,
-        lotPrefix: "ZRS",
+        lotAuto: true,
         lotDigits: 3,
       },
       { ...base, sku: "ZRSNM", name: "Mesin", tracking: "serial" as const },
@@ -191,8 +191,8 @@ describe("nomor otomatis saat validasi", () => {
         { product: ids.lot, qty: "2" },
       ])
       expect(await movedLots(tx, first)).toEqual([
-        ["ZRL-0001", "5.0000"],
-        ["ZRL-0002", "2.0000"],
+        ["ZRLOT-0001", "5.0000"],
+        ["ZRLOT-0002", "2.0000"],
       ])
       // Lot yang diisi manual tetap dipakai.
       const second = await receive(tx, [{ product: ids.lot, qty: "1", lot: "MANUAL-1" }])
@@ -209,8 +209,8 @@ describe("nomor otomatis saat validasi", () => {
       ])
       const serials = await movedLots(tx, id)
       expect(serials).toHaveLength(15)
-      expect(serials[0]).toEqual(["ZRS001", "1.0000"])
-      expect(serials.at(-1)).toEqual(["ZRS015", "1.0000"])
+      expect(serials[0]).toEqual(["ZRSN-001", "1.0000"])
+      expect(serials.at(-1)).toEqual(["ZRSN-015", "1.0000"])
     })
   })
 
@@ -225,7 +225,7 @@ describe("nomor otomatis saat validasi", () => {
       )
       await tx.delete(stockMoves).where(eq(stockMoves.productId, ids.lotManual))
       await validate(tx, id)
-      expect(await movedLots(tx, id)).toEqual([["ZRL-0001", "1.0000"]])
+      expect(await movedLots(tx, id)).toEqual([["ZRLOT-0001", "1.0000"]])
     })
   })
 })
@@ -308,7 +308,7 @@ describe("aturan pelacakan", () => {
     })
   })
 
-  test("prefix nomor otomatis hanya untuk produk yang dilacak", async () => {
+  test("nomor otomatis hanya untuk produk yang dilacak", async () => {
     await inRollback(db, async (tx) => {
       expect(
         await pgErrorMessage(
@@ -317,10 +317,10 @@ describe("aturan pelacakan", () => {
             name: "X",
             category: "wip",
             uomId: ids.pcs,
-            lotPrefix: "X-",
+            lotAuto: true,
           }),
         ),
-      ).toContain("products_lot_prefix_needs_tracking")
+      ).toContain("products_lot_auto_needs_tracking")
     })
   })
 })

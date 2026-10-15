@@ -228,7 +228,7 @@ export async function getTransfer(userId: string, id: string) {
       sku: products.sku,
       productName: products.name,
       tracking: products.tracking,
-      lotAuto: sql<boolean>`${products.lotPrefix} is not null`,
+      lotAuto: products.lotAuto,
       inputQty: transferLines.inputQty,
       inputUomId: transferLines.inputUomId,
       inputUomCode: uoms.code,
@@ -384,7 +384,7 @@ export async function searchProducts(search: string): Promise<ProductChoice[]> {
       uomCode: uoms.code,
       uomCategoryId: uoms.categoryId,
       tracking: products.tracking,
-      lotAuto: sql<boolean>`${products.lotPrefix} is not null`,
+      lotAuto: products.lotAuto,
     })
     .from(products)
     .innerJoin(uoms, eq(uoms.id, products.uomId))

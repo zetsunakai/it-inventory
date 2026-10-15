@@ -226,7 +226,7 @@ export function InterwarehouseForm({
                     }
                     getKey={(choice) => choice.id}
                     getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
-                    placeholder="Cari SKU atau nama produk"
+                    placeholder="Cari product code atau nama produk"
                   />
                   <label htmlFor={fieldId(`product-${line.key}`)} className="sr-only">
                     Produk {label}

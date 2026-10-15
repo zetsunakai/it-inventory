@@ -38,7 +38,10 @@ const READINESS_OPTIONS = [
 ]
 
 const COLUMNS: DataTableColumn<ProductRow>[] = [
-  { header: "SKU", cell: (row) => <span className="font-mono text-foreground">{row.sku}</span> },
+  {
+    header: "Product code",
+    cell: (row) => <span className="font-mono text-foreground">{row.sku}</span>,
+  },
   {
     header: "Nama",
     cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
@@ -108,7 +111,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
         }
       >
         <ListSearchBar
-          placeholder="Cari SKU, nama, atau kode HS"
+          placeholder="Cari product code, nama, atau kode HS"
           filters={[
             {
               name: CATEGORY_FILTER,

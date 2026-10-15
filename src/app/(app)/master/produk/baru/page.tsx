@@ -16,7 +16,7 @@ export default function NewProductPage() {
     <>
       <PageHeader
         title="Tambah produk"
-        description="SKU dan satuan stok tidak bisa diubah setelah disimpan. SKU boleh dikosongkan bila kategori produknya punya prefix kode."
+        description="Product code dan satuan stok tidak bisa diubah setelah disimpan. Product code boleh dikosongkan bila kategori produknya punya prefix kode."
       />
       <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
         <Guarded />

@@ -11,7 +11,7 @@ test.use({ storageState: ADMIN_STATE_FILE })
 
 test("produk yang belum dipakai dihapus setelah konfirmasi", async ({ page }) => {
   await page.goto("/master/produk/baru")
-  await page.getByLabel("SKU").fill(SKU)
+  await page.getByLabel("Product code").fill(SKU)
   await page.getByLabel("Nama produk").fill("Produk salah input")
   await page.getByLabel("Kategori IT Inventory").click()
   await page.getByRole("option", { name: "WIP" }).click()

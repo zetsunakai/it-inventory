@@ -89,7 +89,7 @@ export function CountSheet({
     if (!matches.length) {
       setFeedback({
         tone: "error",
-        text: `SKU ${code.trim()} tidak ada di daftar hitung. Tambahkan lewat "Barang tidak ada di daftar".`,
+        text: `Product code ${code.trim()} tidak ada di daftar hitung. Tambahkan lewat "Barang tidak ada di daftar".`,
       })
       return
     }
@@ -110,7 +110,7 @@ export function CountSheet({
   return (
     <div className="max-w-3xl space-y-5">
       <div className="space-y-2">
-        <Label htmlFor="count-scan">Scan atau ketik SKU</Label>
+        <Label htmlFor="count-scan">Scan atau ketik product code</Label>
         <div className="relative">
           <ScanLine
             className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground"
@@ -122,7 +122,7 @@ export function CountSheet({
             autoFocus
             autoComplete="off"
             enterKeyHint="search"
-            placeholder="SKU lalu Enter"
+            placeholder="Product code lalu Enter"
             className="h-12 pl-10 font-mono text-base"
             onKeyDown={(event) => {
               if (event.key !== "Enter") return
@@ -255,7 +255,7 @@ function AddFoundItem({
             onValueChange={setProduct}
             getKey={(item) => item.id}
             getLabel={(item) => `[${item.sku}] ${item.name}`}
-            placeholder="Cari SKU atau nama produk"
+            placeholder="Cari product code atau nama produk"
           />
         </div>
         <div className="space-y-1.5">

@@ -119,7 +119,7 @@ export async function getInterwarehouse(userId: string, id: string) {
     }>(sql`
       select l.id, p.id as product_id, p.sku, p.name, l.input_qty, l.input_uom_id as uom_id,
         u.code as uom_code, su.id as stock_uom_id, su.code as stock_uom_code,
-        su.category_id as uom_category_id, p.tracking, p.lot_prefix is not null as lot_auto
+        su.category_id as uom_category_id, p.tracking, p.lot_auto
       from interwarehouse_transfer_lines l
       join products p on p.id = l.product_id
       join uoms u on u.id = l.input_uom_id

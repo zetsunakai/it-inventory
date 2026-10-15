@@ -22,7 +22,7 @@ test.describe("Administrator", () => {
     await page.getByRole("link", { name: "Import", exact: true }).click()
     await expect(page.getByRole("heading", { name: "Import produk" })).toBeVisible()
 
-    const header = "SKU;Nama;Kategori;Satuan stok;Kode HS"
+    const header = "Product code;Nama;Kategori;Satuan stok;Kode HS"
     await page
       .getByLabel("File Excel atau CSV")
       .setInputFiles(

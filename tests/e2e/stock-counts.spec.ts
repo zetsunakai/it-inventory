@@ -42,7 +42,7 @@ test("selisih opname yang disetujui tercatat sebagai penyesuaian; gudang beku se
 
   // Qty sistem tidak tampil selama penghitungan.
   await expect(page.getByText("Qty sistem")).toHaveCount(0)
-  const scan = page.getByLabel("Scan atau ketik SKU")
+  const scan = page.getByLabel("Scan atau ketik product code")
   await fillInteractive(scan, fixture.product.sku)
   await scan.press("Enter")
   const qty = page.getByLabel(new RegExp(`^Qty fisik ${fixture.product.sku}`))

@@ -59,10 +59,7 @@ beforeAll(async () => {
     .values({ code: "ZQOLD", name: "Lama", categoryId: category.id, factor: "2", active: false })
     .returning({ id: uoms.id })
   archivedUom = archived.id
-  await db.insert(refCodes).values([
-    { type: "hs_code", code: HS, name: "Barang uji" },
-    { type: "ceisa_unit", code: "ZQU", name: "Satuan uji" },
-  ])
+  await db.insert(refCodes).values([{ type: "hs_code", code: HS, name: "Barang uji" }])
 })
 
 afterAll(async () => {
@@ -79,7 +76,7 @@ beforeEach(() => loginAs(["administrator"]))
 const BASE = { name: "Produk uji", category: "raw_material" }
 
 describe("customs_ready", () => {
-  test("dihitung database dari kode HS, satuan CEISA, dan faktornya", async () => {
+  test("dihitung database dari kode HS", async () => {
     await inRollback(db, async (tx) => {
       const [row] = await tx
         .insert(products)
@@ -89,7 +86,7 @@ describe("customs_ready", () => {
 
       const [ready] = await tx
         .update(products)
-        .set({ hsCode: HS, ceisaUnitCode: "ZQU", ceisaFactor: "1" })
+        .set({ hsCode: HS })
         .where(eq(products.id, row.id))
         .returning()
       expect(ready.customsReady).toBe(true)
@@ -105,12 +102,8 @@ describe("customs_ready", () => {
 })
 
 describe("aturan tabel produk", () => {
-  test("kode HS 8 digit; satuan CEISA dan faktor berpasangan; faktor positif", async () => {
-    for (const [values, constraint] of [
-      [{ hsCode: "1234" }, "products_hs_code_format"],
-      [{ ceisaUnitCode: "ZQU" }, "products_ceisa_unit_with_factor"],
-      [{ ceisaUnitCode: "ZQU", ceisaFactor: "0" }, "products_ceisa_factor_positive"],
-    ] as const) {
+  test("kode HS 8 digit", async () => {
+    for (const [values, constraint] of [[{ hsCode: "1234" }, "products_hs_code_format"]] as const) {
       await inRollback(db, async (tx) => {
         const message = await pgErrorMessage(
           tx
@@ -150,10 +143,8 @@ describe("aksi produk", () => {
         sku: "ZQP1",
         uomId: pcs,
         hsCode: HS,
-        ceisaUnitCode: "ZQU",
-        ceisaFactor: "1",
-        netWeight: "0,25",
         tracking: "lot",
+        lotAuto: "on",
       }),
     )
     expect(ready).toMatchObject({ ok: true, data: { sku: "ZQP1" } })
@@ -166,7 +157,7 @@ describe("aksi produk", () => {
       ZQP2: false,
     })
     expect(rows.find((row) => row.sku === "ZQP1")).toMatchObject({
-      netWeight: "0.250000",
+      lotAuto: true,
       tracking: "lot",
     })
 
@@ -188,7 +179,7 @@ describe("aksi produk", () => {
     expect(await list(false)).toEqual(["ZQP2"])
   })
 
-  test("kode HS dan satuan CEISA harus ada di referensi; satuan stok harus aktif; SKU unik", async () => {
+  test("kode HS harus ada di referensi; satuan stok harus aktif; product code unik", async () => {
     const result = await createProduct(
       null,
       form({
@@ -196,47 +187,36 @@ describe("aksi produk", () => {
         sku: "ZQP1",
         uomId: archivedUom,
         hsCode: "99990999",
-        ceisaUnitCode: "ZQTIDAK",
-        ceisaFactor: "1",
       }),
     )
     expect(result).toMatchObject({
       ok: false,
       errors: [
-        "SKU ZQP1 sudah dipakai.",
+        "Product code ZQP1 sudah dipakai.",
         "Kode HS 99990999 tidak ada di referensi kepabeanan.",
-        "Satuan CEISA ZQTIDAK tidak ada di referensi kepabeanan.",
         "Satuan stok tidak ditemukan atau sudah diarsipkan.",
       ],
     })
   })
 
-  test("satuan CEISA tanpa faktor (dan sebaliknya) ditolak di validasi form", async () => {
-    const missingFactor = await createProduct(
+  test("nomor lot/seri otomatis hanya untuk produk yang dilacak", async () => {
+    const result = await createProduct(
       null,
-      form({ ...BASE, sku: "ZQP3", uomId: pcs, ceisaUnitCode: "ZQU" }),
+      form({ ...BASE, sku: "ZQP3", uomId: pcs, lotAuto: "on" }),
     )
-    expect(missingFactor).toMatchObject({
+    expect(result).toMatchObject({
       ok: false,
-      fieldErrors: { ceisaFactor: ["Faktor satuan CEISA wajib diisi bila satuan CEISA dipilih."] },
-    })
-
-    const missingUnit = await createProduct(
-      null,
-      form({ ...BASE, sku: "ZQP3", uomId: pcs, ceisaFactor: "2" }),
-    )
-    expect(missingUnit).toMatchObject({
-      ok: false,
-      fieldErrors: { ceisaUnitCode: ["Pilih satuan CEISA untuk faktor yang diisi."] },
+      fieldErrors: {
+        lotAuto: [
+          "Nomor lot/seri otomatis hanya untuk produk yang dilacak per lot atau nomor seri.",
+        ],
+      },
     })
   })
 
   test("mengosongkan kode HS membuat produk kembali belum siap", async () => {
     const [row] = await db.select().from(products).where(eq(products.sku, "ZQP1"))
-    const result = await updateProduct(
-      null,
-      form({ ...BASE, id: row.id, ceisaUnitCode: "ZQU", ceisaFactor: "1", active: "on" }),
-    )
+    const result = await updateProduct(null, form({ ...BASE, id: row.id, active: "on" }))
     expect(result).toMatchObject({ ok: true, data: { sku: "ZQP1" } })
     const [after] = await db.select().from(products).where(eq(products.id, row.id))
     expect(after).toMatchObject({ hsCode: null, customsReady: false })

@@ -11,10 +11,11 @@ test("barang masuk berpelacakan nomor seri diberi nomor otomatis per unit", asyn
   const fixture = await createInventoryFixture("TRK")
   const run = fixture.product.sku.split("-").at(-1)!
   const sku = `SN-${run}`
-  const prefix = `S${run}-`
+  // Nomor otomatis = product code + "-" + nomor urut (RM-01).
+  const prefix = `${sku}-`
 
   await page.goto("/master/produk/baru")
-  await page.getByLabel("SKU").fill(sku)
+  await page.getByLabel("Product code").fill(sku)
   await page.getByLabel("Nama produk").fill("Laptop berseri E2E")
   await page.getByLabel("Kategori IT Inventory").click()
   await page.getByRole("option", { name: "Mesin & peralatan" }).click()
@@ -22,7 +23,7 @@ test("barang masuk berpelacakan nomor seri diberi nomor otomatis per unit", asyn
   await page.getByRole("option", { name: /^\[PCS\]/ }).click()
   await page.getByLabel("Pelacakan").click()
   await page.getByRole("option", { name: "Per nomor seri" }).click()
-  await page.getByLabel("Prefix nomor otomatis").fill(prefix)
+  await page.getByRole("checkbox", { name: "Nomor seri otomatis" }).click()
   await page.getByLabel("Jumlah digit").fill("3")
   await expect(page.getByText(`mis. ${prefix}001. Setiap nomor seri ber-qty 1.`)).toBeVisible()
   await page.getByRole("button", { name: "Simpan" }).click()

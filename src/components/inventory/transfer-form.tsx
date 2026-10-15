@@ -375,7 +375,7 @@ export function TransferForm({
                     }
                     getKey={(item) => item.id}
                     getLabel={(item) => `[${item.sku}] ${item.name}`}
-                    placeholder="Cari SKU atau nama produk"
+                    placeholder="Cari product code atau nama produk"
                   />
                   <label htmlFor={fieldId(`product-${line.key}`)} className="sr-only">
                     Produk {label}

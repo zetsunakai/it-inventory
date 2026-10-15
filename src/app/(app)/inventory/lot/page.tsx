@@ -79,7 +79,7 @@ async function LotTable({ searchParams }: { searchParams: Promise<RawSearchParam
           />
         }
       >
-        <ListSearchBar placeholder="Cari nomor lot/seri, SKU, atau nama produk" />
+        <ListSearchBar placeholder="Cari nomor lot/seri, product code, atau nama produk" />
       </ListToolbar>
       <DataTable
         columns={COLUMNS}

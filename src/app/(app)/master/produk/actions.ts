@@ -4,61 +4,46 @@ import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox } from "@/lib/form-fields"
-import {
-  ALWAYS,
-  newSkuField,
-  pairCeisaUnit,
-  prefixNeedsTracking,
-  productFields,
-} from "@/lib/product"
+import { ALWAYS, autoLotNeedsTracking, newSkuField, productFields } from "@/lib/product"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
 import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { productCategories, products, uomCategories, uoms } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
-import { importProductRows, PRODUCT_COLUMNS } from "@/server/master-io/products"
+import {
+  importProductRows,
+  PRODUCT_COLUMNS,
+  RETIRED_PRODUCT_COLUMNS,
+} from "@/server/master-io/products"
 
-// Produk (PRD bagian 5.1): hanya Administrator (izin master:write). SKU dan satuan stok tidak
-// bisa diubah setelah dibuat (trigger products_guard). SKU produk baru boleh dikosongkan bila
-// kategori produknya punya prefix kode; database yang membuatnya (backlog R-01). Kode HS dan
-// satuan CEISA boleh menyusul; selama belum lengkap produk berstatus "belum siap dokumen BC"
-// (kolom customs_ready).
+// Produk (PRD bagian 5.1): hanya Administrator (izin master:write). Product code (kolom sku) dan
+// satuan stok tidak bisa diubah setelah dibuat (trigger products_guard). Product code produk baru
+// boleh dikosongkan bila kategori produknya punya prefix kode; database yang membuatnya (backlog
+// R-01). Kode HS boleh menyusul; selama kosong produk berstatus "belum siap dokumen BC" (kolom
+// customs_ready). Satuan CEISA diisi per baris dokumen BC (RM-01).
 
-type ProductFields = {
-  hsCode: string | null
-  ceisaUnitCode: string | null
-}
-
-// Kode HS dan satuan CEISA harus ada di referensi kepabeanan dan aktif
-// (kecuali sudah tersimpan sebelumnya).
+// Kode HS harus ada di referensi kepabeanan dan aktif (kecuali sudah tersimpan sebelumnya).
 async function customsCodeErrors(
   tx: Transaction,
-  input: ProductFields,
-  saved?: { hsCode: string | null; ceisaUnitCode: string | null },
+  input: { hsCode: string | null },
+  saved?: { hsCode: string | null },
 ) {
-  const errors: string[] = []
   if (input.hsCode && !(await refCodeIsUsable(tx, "hs_code", input.hsCode, saved?.hsCode))) {
-    errors.push(`Kode HS ${input.hsCode} tidak ada di referensi kepabeanan.`)
+    return [`Kode HS ${input.hsCode} tidak ada di referensi kepabeanan.`]
   }
-  if (
-    input.ceisaUnitCode &&
-    !(await refCodeIsUsable(tx, "ceisa_unit", input.ceisaUnitCode, saved?.ceisaUnitCode))
-  ) {
-    errors.push(`Satuan CEISA ${input.ceisaUnitCode} tidak ada di referensi kepabeanan.`)
-  }
-  return errors
+  return []
 }
 
 // Kategori produk harus ada dan aktif (kecuali sudah tersimpan sebelumnya). Untuk produk baru
-// dengan SKU kosong, kategorinya juga harus punya prefix kode.
+// dengan product code kosong, kategorinya juga harus punya prefix kode.
 async function categoryErrors(
   tx: Transaction,
   categoryId: string | null,
   { saved, needsPrefix = false }: { saved?: string | null; needsPrefix?: boolean } = {},
 ) {
   if (!categoryId) {
-    return needsPrefix ? ["SKU wajib diisi bila kategori produk tidak dipilih."] : []
+    return needsPrefix ? ["Product code wajib diisi bila kategori produk tidak dipilih."] : []
   }
   const [category] = await tx
     .select({
@@ -72,7 +57,9 @@ async function categoryErrors(
     return ["Kategori produk tidak ditemukan atau sudah diarsipkan."]
   }
   if (needsPrefix && !category.codePrefix) {
-    return [`SKU wajib diisi karena kategori produk ${category.name} tidak punya prefix kode.`]
+    return [
+      `Product code wajib diisi karena kategori produk ${category.name} tidak punya prefix kode.`,
+    ]
   }
   return []
 }
@@ -86,8 +73,7 @@ export const createProduct = defineFormAction({
       uomId: z.uuid("Satuan stok wajib dipilih."),
       ...productFields,
     })
-    .superRefine(pairCeisaUnit, ALWAYS)
-    .superRefine(prefixNeedsTracking, ALWAYS),
+    .superRefine(autoLotNeedsTracking, ALWAYS),
   successMessage: "Produk ditambahkan.",
   handler: async ({ input, tx }) => {
     const errors = await categoryErrors(tx, input.categoryId, { needsPrefix: !input.sku })
@@ -97,7 +83,7 @@ export const createProduct = defineFormAction({
         .select({ id: products.id })
         .from(products)
         .where(eq(products.sku, input.sku))
-      if (existing) errors.unshift(`SKU ${input.sku} sudah dipakai.`)
+      if (existing) errors.unshift(`Product code ${input.sku} sudah dipakai.`)
     }
     const [uom] = await tx
       .select({ id: uoms.id })
@@ -120,8 +106,7 @@ export const updateProduct = defineFormAction({
   permission: "master:write",
   schema: z
     .object({ id: z.uuid("Produk tidak valid."), ...productFields, active: checkbox })
-    .superRefine(pairCeisaUnit, ALWAYS)
-    .superRefine(prefixNeedsTracking, ALWAYS),
+    .superRefine(autoLotNeedsTracking, ALWAYS),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {
     const [saved] = await tx
@@ -129,7 +114,6 @@ export const updateProduct = defineFormAction({
         sku: products.sku,
         categoryId: products.categoryId,
         hsCode: products.hsCode,
-        ceisaUnitCode: products.ceisaUnitCode,
       })
       .from(products)
       .where(eq(products.id, id))
@@ -150,7 +134,10 @@ export const importProducts = defineFormAction({
   permission: "master:write",
   schema: importFileSchema,
   handler: async ({ input, tx }) =>
-    importProductRows(tx, await readImportFile(input.file, PRODUCT_COLUMNS, "sku")),
+    importProductRows(
+      tx,
+      await readImportFile(input.file, PRODUCT_COLUMNS, "sku", RETIRED_PRODUCT_COLUMNS),
+    ),
 })
 
 // Hapus produk (backlog M1-08): hanya produk yang belum dipakai. Database menolak bila produk

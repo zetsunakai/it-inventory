@@ -5,7 +5,6 @@ import { z } from "zod"
 
 import { DeleteRecord } from "@/components/delete-record"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatDecimal } from "@/lib/decimal"
 import { INVENTORY_CATEGORY_LABELS, PRODUCT_TRACKING_LABELS } from "@/lib/inventory"
 import { skuExample } from "@/lib/product-category"
 import { hasPermission } from "@/lib/permissions"
@@ -14,7 +13,6 @@ import { requirePermission } from "@/server/auth/session"
 import { listProductCategoryOptions } from "@/server/queries/product-categories"
 import { getProduct } from "@/server/queries/products"
 
-import { missingCustomsData } from "../customs-readiness"
 import { deleteProduct } from "../actions"
 import { ProductForm } from "../product-form"
 import { InfoGrid } from "@/components/layout/info-grid"
@@ -44,8 +42,9 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
     recordActivity("products", product.id, PRODUCT_ACTIVITY_LABELS),
   ])
 
-  const missing = missingCustomsData(product)
   const rows: [string, string][] = [
+    ["Product code", product.sku],
+    ["Nama produk", product.name],
     ["Kategori produk", product.categoryPath ?? "—"],
     ["Kategori IT Inventory", INVENTORY_CATEGORY_LABELS[product.category]],
     ["Satuan stok", `[${product.uom.code}] ${product.uom.name}`],
@@ -55,20 +54,10 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
       [product.brand, product.model, product.size].map((v) => v ?? "—").join(" / "),
     ],
     [
-      "Berat netto",
-      product.netWeight ? `${formatDecimal(product.netWeight)} kg per ${product.uom.code}` : "—",
-    ],
-    [
       "Pelacakan",
-      `${PRODUCT_TRACKING_LABELS[product.tracking]}${product.lotPrefix ? ` · nomor otomatis ${skuExample(product.lotPrefix, product.lotDigits)}` : ""}`,
+      `${PRODUCT_TRACKING_LABELS[product.tracking]}${product.lotAuto ? ` · nomor otomatis ${skuExample(`${product.sku}-`, product.lotDigits)}` : ""}`,
     ],
     ["Kode HS", product.hs ? formatRefCode(product.hs) : (product.hsCode ?? "—")],
-    [
-      "Satuan CEISA",
-      product.ceisaUnitCode && product.ceisaFactor
-        ? `1 ${product.uom.code} = ${formatDecimal(product.ceisaFactor)} ${product.ceisaUnitCode}${product.ceisaUnit ? ` (${product.ceisaUnit.name})` : ""}`
-        : "—",
-    ],
   ]
 
   return (
@@ -78,7 +67,7 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
       meta={
         product.customsReady
           ? "Siap dipakai di dokumen BC."
-          : `Belum siap dokumen BC: ${missing.join(" dan ")} belum diisi.`
+          : "Belum siap dokumen BC: kode HS belum diisi."
       }
 
       neighbors={neighbors}
@@ -120,13 +109,11 @@ const PRODUCT_ACTIVITY_LABELS = {
     category: "Kategori IT Inventory",
     category_id: "Kategori produk",
     hs_code: "Kode HS",
-    ceisa_unit_code: "Satuan CEISA",
-    ceisa_factor: "Faktor satuan CEISA",
-    net_weight: "Berat netto",
     brand: "Merk",
     model: "Tipe",
     size: "Ukuran",
     tracking: "Pelacakan",
+    lot_auto: "Nomor lot/seri otomatis",
     active: "Aktif",
   },
   values: {
