@@ -1,7 +1,7 @@
 import { eq, inArray, like, sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 
-import { MOVEMENT_CODE_DIRECTIONS, type MovementCode } from "@/lib/inventory"
+import { MOVEMENT_CODE_DIRECTIONS, type MovementCode } from "@/modules/inventory/lib/inventory"
 import { db } from "@/server/db"
 import {
   interwarehouseTransferLines,
@@ -18,8 +18,8 @@ import {
   uoms,
   warehouses,
 } from "@/server/db/schema"
-import { getLotTrace } from "@/server/queries/lots"
-import { listStock, stockCard } from "@/server/queries/stock"
+import { getLotTrace } from "@/modules/inventory/server/queries/lots"
+import { listStock, stockCard } from "@/modules/inventory/server/queries/stock"
 
 import { purgeInventory, returnRequestFor, withLine } from "./helpers"
 

@@ -16,7 +16,11 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { FACILITY_TYPE_LABELS, FACILITY_TYPES, type CompanyProfileInput } from "@/lib/company"
+import {
+  FACILITY_TYPE_LABELS,
+  FACILITY_TYPES,
+  type CompanyProfileInput,
+} from "@/modules/it-inventory/lib/company"
 import type { RefCodeOption } from "@/lib/ref-codes"
 
 import { saveCompanyProfile } from "./actions"

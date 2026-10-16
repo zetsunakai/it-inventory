@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core"
 
 // Path relatif (bukan alias @/) karena schema juga dibaca oleh drizzle-kit dan script CLI.
-import { INVENTORY_CATEGORIES, LOCATION_TYPES } from "../../../lib/inventory"
+import { INVENTORY_CATEGORIES, LOCATION_TYPES } from "../../../modules/inventory/lib/inventory"
 
 import { timestamps } from "./_columns"
 import { users } from "./auth"

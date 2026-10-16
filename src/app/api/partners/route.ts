@@ -2,7 +2,7 @@ import type { NextRequest } from "next/server"
 
 import { SEARCH_PARAM } from "@/lib/list-params"
 import { getApiUser } from "@/server/auth/session"
-import { searchPartners } from "@/server/queries/transfers"
+import { searchPartners } from "@/modules/inventory/server/queries/transfers"
 
 // Pencarian partner aktif: GET /api/partners?q=pt (nama atau NPWP).
 export async function GET(request: NextRequest) {

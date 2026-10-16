@@ -4,8 +4,8 @@ import { Suspense } from "react"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
-import { listProductCategoryOptions } from "@/server/queries/product-categories"
-import { listActiveUoms } from "@/server/queries/products"
+import { listProductCategoryOptions } from "@/modules/inventory/server/queries/product-categories"
+import { listActiveUoms } from "@/modules/inventory/server/queries/products"
 
 import { ProductForm } from "../product-form"
 

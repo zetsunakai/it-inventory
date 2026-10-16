@@ -28,6 +28,32 @@ export const PERMISSIONS = [
 ] as const
 export type Permission = (typeof PERMISSIONS)[number]
 
+// Modul app (S-01): base (login, peran, pengguna, pengaturan, master data bersama), inventory, dan
+// IT Inventory (dokumen BC, laporan, referensi kepabeanan).
+export const APP_MODULES = ["base", "inventory", "it-inventory"] as const
+export type AppModule = (typeof APP_MODULES)[number]
+
+export const APP_MODULE_LABELS: Record<AppModule, string> = {
+  base: "Base",
+  inventory: "Inventory",
+  "it-inventory": "IT Inventory",
+}
+
+// Pemilik setiap izin. Izin master data dipakai bersama modul inventory dan IT Inventory.
+export const PERMISSION_MODULES: Record<Permission, AppModule> = {
+  "inventory:read": "inventory",
+  "inventory:write": "inventory",
+  "inventory:approve": "inventory",
+  "bc:read": "it-inventory",
+  "bc:write": "it-inventory",
+  "report:read": "it-inventory",
+  "master:read": "base",
+  "master:write": "base",
+  "ref:write": "it-inventory",
+  "user:manage": "base",
+  "settings:write": "base",
+}
+
 const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
   // Akses penuh.
   administrator: PERMISSIONS,

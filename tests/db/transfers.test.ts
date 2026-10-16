@@ -8,14 +8,14 @@ import {
   reopenTransfer,
   saveTransfer,
   validateTransfer,
-} from "@/app/(app)/inventory/actions"
+} from "@/modules/inventory/actions/transfers"
 import {
   cancelReturnRequest,
   closeReturnRequest,
   confirmReturnRequest,
   createReturnRequest,
   saveReturnRequest,
-} from "@/app/(app)/inventory/retur/actions"
+} from "@/modules/inventory/actions/returns"
 import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
@@ -33,7 +33,11 @@ import {
   uoms,
   warehouses,
 } from "@/server/db/schema"
-import { getTransfer, listTransfers, stockAvailability } from "@/server/queries/transfers"
+import {
+  getTransfer,
+  listTransfers,
+  stockAvailability,
+} from "@/modules/inventory/server/queries/transfers"
 
 import { pgErrorMessage, purgeInventory } from "./helpers"
 

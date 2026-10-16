@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
-import { listProductCategoryOptions } from "@/server/queries/product-categories"
+import { listProductCategoryOptions } from "@/modules/inventory/server/queries/product-categories"
 
 import { ProductCategoryForm } from "../category-form"
 

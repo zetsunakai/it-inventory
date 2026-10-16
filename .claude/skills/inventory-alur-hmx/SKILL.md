@@ -174,6 +174,9 @@ dipesan/tersedia; penelusuran lot di `/inventory/lot`.
 
 ## Yang tetap dari repo ini (jangan ikut hmx)
 
+- Kode inventory ada di `src/modules/inventory` (S-01) dan tidak boleh mengimpor
+  `src/modules/it-inventory` (dijaga ESLint); hal kepabeanan dipasang lewat `src/app`.
+
 hmx menaruh aturan di kode Python (ORM). Repo ini menaruhnya di database, dan itu tetap:
 
 - Aturan ledger, saldo, periode, dan perubahan status dipaksakan fungsi/trigger Postgres

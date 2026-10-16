@@ -3,12 +3,12 @@ import { Suspense } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
-import { ClosePeriodButton } from "@/components/inventory/close-period-button"
+import { ClosePeriodButton } from "@/modules/inventory/components/close-period-button"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { formatDate, formatNumber } from "@/lib/format"
 import { requirePermission } from "@/server/auth/session"
-import { listPeriods, type PeriodRow } from "@/server/queries/periods"
+import { listPeriods, type PeriodRow } from "@/modules/inventory/server/queries/periods"
 
 export const metadata: Metadata = { title: "Tutup periode · IT Inventory" }
 

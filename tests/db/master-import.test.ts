@@ -22,8 +22,8 @@ import {
   uoms,
   warehouses,
 } from "@/server/db/schema"
-import { exportLocations } from "@/server/master-io/locations"
-import { exportProducts } from "@/server/master-io/products"
+import { exportLocations } from "@/modules/inventory/server/master-io/locations"
+import { exportProducts } from "@/modules/it-inventory/server/master-io/products"
 import { writeSpreadsheet } from "@/server/spreadsheet"
 
 // Import/export master data dari Excel/CSV (backlog M1-07). Semua data uji berawalan ZM.

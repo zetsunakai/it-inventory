@@ -6,7 +6,7 @@ import { ImportForm } from "@/components/import/import-form"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
-import { LOCATION_COLUMNS } from "@/server/master-io/locations"
+import { LOCATION_COLUMNS } from "@/modules/inventory/server/master-io/locations"
 
 import { importLocations } from "../../actions"
 

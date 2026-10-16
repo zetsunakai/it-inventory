@@ -17,10 +17,10 @@ import {
   STATUS_FILTER,
   STATUS_OPTIONS,
 } from "@/lib/list-params"
-import { IDENTITY_TYPE_LABELS } from "@/lib/partner"
+import { IDENTITY_TYPE_LABELS } from "@/modules/inventory/lib/partner"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
-import { listPartners, type PartnerRow } from "@/server/queries/partners"
+import { listPartners, type PartnerRow } from "@/modules/inventory/server/queries/partners"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"

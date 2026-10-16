@@ -1,7 +1,7 @@
 import { and, eq, inArray, like, sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
 
-import { closePeriod } from "@/app/(app)/inventory/periode/actions"
+import { closePeriod } from "@/modules/inventory/actions/periods"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
 import {

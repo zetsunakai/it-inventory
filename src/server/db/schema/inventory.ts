@@ -30,7 +30,7 @@ import {
   TRANSFER_STATUSES,
   TRANSFER_TYPES,
   USAGE_TYPES,
-} from "../../../lib/inventory"
+} from "../../../modules/inventory/lib/inventory"
 
 import { timestamps } from "./_columns"
 import { partners } from "./partners"

@@ -14,7 +14,7 @@ import {
   uoms,
   warehouses,
 } from "@/server/db/schema"
-import { listStock, stockCard } from "@/server/queries/stock"
+import { listStock, stockCard } from "@/modules/inventory/server/queries/stock"
 
 import { purgeInventory, withLine } from "./helpers"
 

@@ -4,36 +4,30 @@ import { and, eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox } from "@/lib/form-fields"
-import { ALWAYS, autoLotNeedsTracking, newSkuField, productFields } from "@/lib/product"
+import {
+  ALWAYS,
+  autoLotNeedsTracking,
+  newSkuField,
+  productFields,
+} from "@/modules/inventory/lib/product"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
-import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { productCategories, products, uomCategories, uoms } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
 import {
   importProductRows,
   PRODUCT_COLUMNS,
   RETIRED_PRODUCT_COLUMNS,
-} from "@/server/master-io/products"
+} from "@/modules/it-inventory/server/master-io/products"
+import { productCustomsFields } from "@/modules/it-inventory/lib/product-customs"
+import { customsCodeErrors } from "@/modules/it-inventory/server/product-customs"
 
 // Produk (PRD bagian 5.1): hanya Administrator (izin master:write). Product code (kolom sku) dan
 // satuan stok tidak bisa diubah setelah dibuat (trigger products_guard). Product code produk baru
 // boleh dikosongkan bila kategori produknya punya prefix kode; database yang membuatnya (backlog
 // R-01). Kode HS boleh menyusul; selama kosong produk berstatus "belum siap dokumen BC" (kolom
 // customs_ready). Satuan CEISA diisi per baris dokumen BC (RM-01).
-
-// Kode HS harus ada di referensi kepabeanan dan aktif (kecuali sudah tersimpan sebelumnya).
-async function customsCodeErrors(
-  tx: Transaction,
-  input: { hsCode: string | null },
-  saved?: { hsCode: string | null },
-) {
-  if (input.hsCode && !(await refCodeIsUsable(tx, "hs_code", input.hsCode, saved?.hsCode))) {
-    return [`Kode HS ${input.hsCode} tidak ada di referensi kepabeanan.`]
-  }
-  return []
-}
 
 // Kategori produk harus ada dan aktif (kecuali sudah tersimpan sebelumnya). Untuk produk baru
 // dengan product code kosong, kategorinya juga harus punya prefix kode.
@@ -72,6 +66,7 @@ export const createProduct = defineFormAction({
       sku: newSkuField,
       uomId: z.uuid("Satuan stok wajib dipilih."),
       ...productFields,
+      ...productCustomsFields,
     })
     .superRefine(autoLotNeedsTracking, ALWAYS),
   successMessage: "Produk ditambahkan.",
@@ -105,7 +100,12 @@ export const updateProduct = defineFormAction({
   name: "updateProduct",
   permission: "master:write",
   schema: z
-    .object({ id: z.uuid("Produk tidak valid."), ...productFields, active: checkbox })
+    .object({
+      id: z.uuid("Produk tidak valid."),
+      ...productFields,
+      ...productCustomsFields,
+      active: checkbox,
+    })
     .superRefine(autoLotNeedsTracking, ALWAYS),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {

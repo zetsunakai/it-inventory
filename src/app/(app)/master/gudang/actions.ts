@@ -4,13 +4,16 @@ import { eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox, requiredText } from "@/lib/form-fields"
-import { WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
+import { WAREHOUSE_LOCATION_TYPES } from "@/modules/inventory/lib/inventory"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
 import { locations, userWarehouses, warehouses } from "@/server/db/schema"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
-import { importLocationRows, LOCATION_COLUMNS } from "@/server/master-io/locations"
+import {
+  importLocationRows,
+  LOCATION_COLUMNS,
+} from "@/modules/inventory/server/master-io/locations"
 
 // Gudang dan lokasi (PRD bagian 5.1): hanya Administrator (izin master:write). Akses gudang per
 // user diatur di halaman Pengguna (RM-02). Kode, tipe, dan gudang sebuah lokasi tidak bisa

@@ -1,7 +1,7 @@
 import { boolean, date, pgEnum, pgTable, text } from "drizzle-orm/pg-core"
 
 // Path relatif (bukan alias @/) karena schema juga dibaca oleh drizzle-kit dan script CLI.
-import { FACILITY_TYPES } from "../../../lib/company"
+import { FACILITY_TYPES } from "../../../modules/it-inventory/lib/company"
 
 import { timestamps } from "./_columns"
 

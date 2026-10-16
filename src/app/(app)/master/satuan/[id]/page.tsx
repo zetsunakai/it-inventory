@@ -10,7 +10,7 @@ import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { requirePermission } from "@/server/auth/session"
-import { getUom } from "@/server/queries/uoms"
+import { getUom } from "@/modules/inventory/server/queries/uoms"
 import { recordActivity } from "@/server/queries/activity"
 import { uomNeighbors } from "@/server/queries/neighbors"
 

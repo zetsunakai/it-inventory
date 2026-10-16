@@ -9,10 +9,10 @@ import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDateTime } from "@/lib/format"
-import { MOVEMENT_CODE_DIRECTIONS, movementLabel } from "@/lib/inventory"
-import { transferHref } from "@/lib/transfer"
+import { MOVEMENT_CODE_DIRECTIONS, movementLabel } from "@/modules/inventory/lib/inventory"
+import { transferHref } from "@/modules/inventory/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
-import { getLotTrace, type LotMove, type LotTrace } from "@/server/queries/lots"
+import { getLotTrace, type LotMove, type LotTrace } from "@/modules/inventory/server/queries/lots"
 import { Section } from "@/components/layout/section"
 
 export const metadata: Metadata = { title: "Penelusuran lot · IT Inventory" }

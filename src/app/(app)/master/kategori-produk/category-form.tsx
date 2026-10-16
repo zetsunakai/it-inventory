@@ -7,12 +7,19 @@ import { CheckboxField } from "@/components/checkbox-field"
 import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection } from "@/components/form-field"
-import { ProductCategorySelect } from "@/components/product-category-select"
+import { ProductCategorySelect } from "@/modules/inventory/components/product-category-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { CODE_PREFIX_PATTERN, DEFAULT_CODE_DIGITS, skuExample } from "@/lib/product-category"
-import type { ProductCategoryOption, ProductCategoryRow } from "@/server/queries/product-categories"
+import {
+  CODE_PREFIX_PATTERN,
+  DEFAULT_CODE_DIGITS,
+  skuExample,
+} from "@/modules/inventory/lib/product-category"
+import type {
+  ProductCategoryOption,
+  ProductCategoryRow,
+} from "@/modules/inventory/server/queries/product-categories"
 
 import { createProductCategory, updateProductCategory } from "./actions"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"

@@ -14,11 +14,14 @@ import {
   INTERWAREHOUSE_STATUS_LABELS,
   INTERWAREHOUSE_STATUS_TONES,
   INTERWAREHOUSE_STATUSES,
-} from "@/lib/inventory"
+} from "@/modules/inventory/lib/inventory"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
-import { listInterwarehouse, type InterwarehouseRow } from "@/server/queries/interwarehouse"
+import {
+  listInterwarehouse,
+  type InterwarehouseRow,
+} from "@/modules/inventory/server/queries/interwarehouse"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"

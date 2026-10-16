@@ -18,9 +18,12 @@ import {
   STATUS_OPTIONS,
 } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
-import { skuExample } from "@/lib/product-category"
+import { skuExample } from "@/modules/inventory/lib/product-category"
 import { requirePermission } from "@/server/auth/session"
-import { listProductCategories, type ProductCategoryRow } from "@/server/queries/product-categories"
+import {
+  listProductCategories,
+  type ProductCategoryRow,
+} from "@/modules/inventory/server/queries/product-categories"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"

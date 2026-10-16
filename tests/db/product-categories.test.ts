@@ -17,8 +17,8 @@ import {
   uomCategories,
   uoms,
 } from "@/server/db/schema"
-import { exportProducts } from "@/server/master-io/products"
-import { listProductCategories } from "@/server/queries/product-categories"
+import { exportProducts } from "@/modules/it-inventory/server/master-io/products"
+import { listProductCategories } from "@/modules/inventory/server/queries/product-categories"
 
 import { inRollback, pgErrorMessage } from "./helpers"
 

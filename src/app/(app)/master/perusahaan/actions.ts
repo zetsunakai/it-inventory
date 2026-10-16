@@ -1,6 +1,6 @@
 "use server"
 
-import { companyProfileSchema } from "@/lib/company"
+import { companyProfileSchema } from "@/modules/it-inventory/lib/company"
 import { AppError, defineFormAction } from "@/server/actions/define-action"
 import { refCodeIsUsable } from "@/server/db/ref-code-checks"
 import { company } from "@/server/db/schema"

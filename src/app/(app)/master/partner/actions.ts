@@ -4,7 +4,7 @@ import { and, eq, ne } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox } from "@/lib/form-fields"
-import { partnerFieldsSchema, type PartnerFields } from "@/lib/partner"
+import { partnerFieldsSchema, type PartnerFields } from "@/modules/inventory/lib/partner"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
@@ -15,7 +15,7 @@ import {
   importPartnerRows,
   PARTNER_COLUMNS,
   RETIRED_PARTNER_COLUMNS,
-} from "@/server/master-io/partners"
+} from "@/modules/inventory/server/master-io/partners"
 
 // Partner (PRD bagian 5.1): hanya Administrator (izin master:write). Kode partner dibuat database
 // dan tidak ditampilkan (RM-03). NITKU NPWP dihitung otomatis bila dikosongkan.

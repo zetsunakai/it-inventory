@@ -1,7 +1,14 @@
 import { describe, expect, test } from "vitest"
 
 import { matchOption, normalizeHeader, optionList, parseFlag } from "./import"
-import { INVENTORY_CATEGORY_LABELS } from "./inventory"
+
+// Contoh label pilihan (kode → label) untuk matchOption; sengaja lokal supaya base tidak bergantung
+// pada modul domain.
+const INVENTORY_CATEGORY_LABELS = {
+  raw_material: "Bahan baku",
+  wip: "Barang dalam proses (WIP)",
+  finished_good: "Barang jadi",
+}
 
 describe("parseFlag", () => {
   test("Ya/Tidak dan variasinya, kosong memakai nilai default", () => {

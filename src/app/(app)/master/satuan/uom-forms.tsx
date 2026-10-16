@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
 import { toDecimalInput } from "@/lib/decimal"
-import type { ProductChoice } from "@/server/queries/transfers"
+import type { ProductChoice } from "@/modules/inventory/server/queries/transfers"
 
 import { createUom, createUomCategory, updateUom } from "./actions"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"

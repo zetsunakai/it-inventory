@@ -11,16 +11,16 @@ import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDateTime } from "@/lib/format"
-import { movementLabel } from "@/lib/inventory"
+import { movementLabel } from "@/modules/inventory/lib/inventory"
 import { pickFilter, type RawSearchParams } from "@/lib/list-params"
-import { transferHref } from "@/lib/transfer"
+import { transferHref } from "@/modules/inventory/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
 import {
   getStockProduct,
   listAccessibleWarehouses,
   stockCard,
   type StockCardLine,
-} from "@/server/queries/stock"
+} from "@/modules/inventory/server/queries/stock"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Kartu stok · IT Inventory" }

@@ -25,7 +25,7 @@ import {
   userWarehouses,
   warehouses,
 } from "@/server/db/schema"
-import { listProducts } from "@/server/queries/products"
+import { listProducts } from "@/modules/inventory/server/queries/products"
 
 // Arsip vs hapus (backlog M1-08): data yang sudah dipakai hanya bisa diarsipkan, dan data arsip
 // tidak bisa dipilih untuk data baru. Semua data uji berawalan ZD.

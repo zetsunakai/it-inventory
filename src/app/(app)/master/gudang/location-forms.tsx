@@ -16,7 +16,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { LOCATION_TYPE_LABELS, WAREHOUSE_LOCATION_TYPES } from "@/lib/inventory"
+import { LOCATION_TYPE_LABELS, WAREHOUSE_LOCATION_TYPES } from "@/modules/inventory/lib/inventory"
 
 import { createLocation, updateLocation } from "./actions"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"

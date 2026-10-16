@@ -1,4 +1,4 @@
 import { exportRoute } from "@/server/master-io/export-route"
-import { exportPartners } from "@/server/master-io/partners"
+import { exportPartners } from "@/modules/inventory/server/master-io/partners"
 
 export const GET = exportRoute("partner", (format) => exportPartners(format))

@@ -8,10 +8,14 @@ import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
-import { INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
+import { INVENTORY_CATEGORY_LABELS } from "@/modules/inventory/lib/inventory"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { requirePermission } from "@/server/auth/session"
-import { listAccessibleWarehouses, listStock, type StockRow } from "@/server/queries/stock"
+import {
+  listAccessibleWarehouses,
+  listStock,
+  type StockRow,
+} from "@/modules/inventory/server/queries/stock"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"

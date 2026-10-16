@@ -5,17 +5,23 @@ import { Suspense, type ReactNode } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { InterwarehouseActions } from "@/components/inventory/interwarehouse-actions"
-import { InterwarehouseForm } from "@/components/inventory/interwarehouse-form"
-import { TransferStatusBadge } from "@/components/inventory/transfer-status"
+import { InterwarehouseActions } from "@/modules/inventory/components/interwarehouse-actions"
+import { InterwarehouseForm } from "@/modules/inventory/components/interwarehouse-form"
+import { TransferStatusBadge } from "@/modules/inventory/components/transfer-status"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
-import { INTERWAREHOUSE_STATUS_LABELS, MOVEMENT_CODE_LABELS } from "@/lib/inventory"
+import {
+  INTERWAREHOUSE_STATUS_LABELS,
+  MOVEMENT_CODE_LABELS,
+} from "@/modules/inventory/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
-import { getInterwarehouse, type InterwarehouseDetail } from "@/server/queries/interwarehouse"
-import { listInternalLocations, listUomChoices } from "@/server/queries/transfers"
+import {
+  getInterwarehouse,
+  type InterwarehouseDetail,
+} from "@/modules/inventory/server/queries/interwarehouse"
+import { listInternalLocations, listUomChoices } from "@/modules/inventory/server/queries/transfers"
 import { InfoGrid } from "@/components/layout/info-grid"
 import { recordActivity } from "@/server/queries/activity"
 import { ActivityLog } from "@/components/document/activity-log"

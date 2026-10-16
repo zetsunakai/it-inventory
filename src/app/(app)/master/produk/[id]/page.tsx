@@ -6,13 +6,16 @@ import { z } from "zod"
 import { StaticField, ViewSection } from "@/components/form-field"
 import { RecordModes } from "@/components/layout/record-modes"
 import { Skeleton } from "@/components/ui/skeleton"
-import { INVENTORY_CATEGORY_LABELS, PRODUCT_TRACKING_LABELS } from "@/lib/inventory"
-import { skuExample } from "@/lib/product-category"
+import {
+  INVENTORY_CATEGORY_LABELS,
+  PRODUCT_TRACKING_LABELS,
+} from "@/modules/inventory/lib/inventory"
+import { skuExample } from "@/modules/inventory/lib/product-category"
 import { hasPermission } from "@/lib/permissions"
 import { formatRefCode } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
-import { listProductCategoryOptions } from "@/server/queries/product-categories"
-import { getProduct } from "@/server/queries/products"
+import { listProductCategoryOptions } from "@/modules/inventory/server/queries/product-categories"
+import { getProduct } from "@/modules/inventory/server/queries/products"
 
 import { ProductForm } from "../product-form"
 import { recordActivity } from "@/server/queries/activity"

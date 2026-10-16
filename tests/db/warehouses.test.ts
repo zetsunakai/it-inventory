@@ -13,7 +13,7 @@ import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
 import { auditLogs, locations, userRoles, users, warehouses } from "@/server/db/schema"
 import { listUserWarehouses } from "@/server/queries/users"
-import { getLocation, listWarehouses } from "@/server/queries/warehouses"
+import { getLocation, listWarehouses } from "@/modules/inventory/server/queries/warehouses"
 
 import { inRollback, pgErrorMessage } from "./helpers"
 

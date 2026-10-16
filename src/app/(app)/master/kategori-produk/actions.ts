@@ -3,7 +3,7 @@
 import { and, eq, isNull, ne, sql } from "drizzle-orm"
 import { z } from "zod"
 
-import { productCategoryFields } from "@/lib/product-category"
+import { productCategoryFields } from "@/modules/inventory/lib/product-category"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"

@@ -4,7 +4,7 @@ import { z } from "zod"
 
 import { getApiUser } from "@/server/auth/session"
 import { db } from "@/server/db"
-import { stockAvailability } from "@/server/queries/transfers"
+import { stockAvailability } from "@/modules/inventory/server/queries/transfers"
 
 // Saldo produk di satu lokasi untuk form barang keluar:
 //   GET /api/stock-availability?product=<id>&location=<id>

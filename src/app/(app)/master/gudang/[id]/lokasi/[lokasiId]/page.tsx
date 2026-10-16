@@ -9,13 +9,13 @@ import { RecordModes } from "@/components/layout/record-modes"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
-import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
+import { LOCATION_TYPE_LABELS } from "@/modules/inventory/lib/inventory"
 import { requirePermission } from "@/server/auth/session"
 import {
   getLocation,
   getWarehouseForUser,
   listWarehouseLocations,
-} from "@/server/queries/warehouses"
+} from "@/modules/inventory/server/queries/warehouses"
 import { recordActivity } from "@/server/queries/activity"
 import { locationNeighbors } from "@/server/queries/neighbors"
 

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 
-import { TransferListPage } from "@/components/inventory/transfer-pages"
-import { TRANSFER_KINDS } from "@/lib/transfer"
+import { TransferListPage } from "@/modules/inventory/components/transfer-pages"
+import { TRANSFER_KINDS } from "@/modules/inventory/lib/transfer"
 
 export const metadata: Metadata = { title: "Pengiriman · IT Inventory" }
 

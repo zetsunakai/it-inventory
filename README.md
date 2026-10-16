@@ -231,7 +231,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   lain, `gr_rtn`/`gi_rtn` retur ke vendor/dari customer, `pu` scrap/pemakaian, `adj_in`/`adj_out`
   penyesuaian (`itw_rtn` dipakai mulai R-10). `direction` (in/out/internal) kolom turunan. Kode
   disalin ke `stock_moves.movement_code` saat validasi; kartu stok dan `warehouse_movements`
-  membacanya. Label di `MOVEMENT_CODE_LABELS` (`src/lib/inventory.ts`).
+  membacanya. Label di `MOVEMENT_CODE_LABELS` (`src/modules/inventory/lib/inventory.ts`).
 
 - Alur status (backlog R-06): Draft → `confirm_transfer()` → Menunggu / Sebagian tersedia / Siap
   → Selesai. Konfirmasi mewajibkan baris, tanggal rencana (kosong di form = hari ini), alasan untuk
@@ -309,18 +309,18 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Tersedia; saldo per tanggal hanya saldo. Jenis pergerakan di kartu stok dibaca dari kode
   (`movementLabel()`, kode `pu` dirinci per jenis pemakaian) dan arahnya sama dengan
   `movement_direction()` (`MOVEMENT_CODE_DIRECTIONS`). Penelusuran lot/nomor seri
-  (`/inventory/lot`, `src/server/queries/lots.ts`): saldo per lokasi (dipesan, tersedia) dan riwayat
+  (`/inventory/lot`, `src/modules/inventory/server/queries/lots.ts`): saldo per lokasi (dipesan, tersedia) dan riwayat
   masuk-keluar di semua gudang yang boleh diakses, dengan partner dan tautan transfer.
   `tests/db/stock-card.test.ts` memastikan saldo kartu stok sama dengan saldo per tanggal untuk
   setiap kode pergerakan.
 
 ## Layar transaksi inventory
 
-- Halaman daftar, buat, dan detail sama untuk semua jenis transfer: `src/components/inventory/`
+- Halaman daftar, buat, dan detail sama untuk semua jenis transfer: `src/modules/inventory/components/`
   (`transfer-pages.tsx`, `transfer-form.tsx`, `transfer-actions.tsx`). Halaman di
   `src/app/(app)/inventory/<jenis>/` hanya meneruskan konfigurasi jenisnya dari `TRANSFER_KINDS`
-  (`src/lib/transfer.ts`): sisi gudang yang dipilih user, label partner, dan lokasi virtual lawannya.
-- Server action di `src/app/(app)/inventory/actions.ts`: simpan Draft (baris dikirim sebagai JSON,
+  (`src/modules/inventory/lib/transfer.ts`): sisi gudang yang dipilih user, label partner, dan lokasi virtual lawannya.
+- Server action di `src/modules/inventory/actions/transfers.ts`: simpan Draft (baris dikirim sebagai JSON,
   lot dibuat otomatis per produk), Konfirmasi, Cek stok, Lepas reservasi, kembali ke Draft,
   validasi (memanggil `validate_transfer`, tanggal efektif mundur hanya untuk Manajer), dan batal.
 - Barang keluar (pengiriman, pindah lokasi, transfer antar gudang keluar, retur ke vendor, pemakaian):
@@ -413,8 +413,10 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   NPWP tidak kehilangan angka 0 di depan). CSV boleh memakai koma atau titik koma. Batas 5 MB dan
   20.000 baris per file (`src/server/spreadsheet.ts`); `serverActions.bodySizeLimit` di
   `next.config.ts` harus sedikit di atas batas itu.
-- Kode: kolom dan aturan per modul di `src/server/master-io/` (`products.ts`, `partners.ts`,
-  `locations.ts`), baca/tulis file di `src/server/spreadsheet.ts`, UI di `src/components/import/`.
+- Kode: kolom dan aturan per master di `src/modules/inventory/server/master-io/` (`partners.ts`,
+  `locations.ts`) dan `src/modules/it-inventory/server/master-io/products.ts` (produk memuat kolom
+  kepabeanan); bagian bersama di `src/server/master-io/`, baca/tulis file di
+  `src/server/spreadsheet.ts`, UI di `src/components/import/`.
   `defineFormAction` meneruskan file dari form ke schema (`importFileSchema`).
 - Import 5.000 produk baru sekitar 1,5 detik, 5.000 perubahan sekitar 2,5 detik (tes
   `tests/db/master-import.test.ts`).
@@ -443,20 +445,52 @@ dimigrasi ulang setiap kali tes jalan. Database development tidak tersentuh. Gan
 CI (`.github/workflows/ci.yml`) menjalankan lint, typecheck, format, `npm test`, dan `npm run test:e2e`
 di setiap push dan pull request.
 
+## Modul
+
+Satu app dan satu database, dibagi tiga modul (backlog S-01, persiapan memisah app):
+
+| Modul        | Isi                                                                                                                                             | Lokasi kode                                                                                    |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| Base         | Login, MFA, peran, audit log, pengguna, pengaturan, komponen UI bersama, infrastruktur server action dan database, referensi kode (`ref_codes`) | `src/components`, `src/lib`, `src/hooks`, `src/server`                                         |
+| Inventory    | Gudang, lokasi, produk, kategori, satuan, partner, transfer, stok, opname, periode                                                              | `src/modules/inventory` (`components`, `lib`, `actions`, `server/queries`, `server/master-io`) |
+| IT Inventory | Data kepabeanan produk (kategori IT Inventory, kode HS, siap BC), profil perusahaan, referensi kepabeanan, dokumen BC, laporan                  | `src/modules/it-inventory`                                                                     |
+
+Aturan (dipaksakan ESLint `no-restricted-imports` di `eslint.config.mjs`, `npm run lint`):
+
+- Base tidak boleh mengimpor modul mana pun atau `src/app`.
+- Inventory tidak boleh mengimpor IT Inventory atau `src/app`, seperti `core_inventory` hmx yang
+  tidak mengenal `core_it_inventory`.
+- IT Inventory boleh mengimpor inventory dan base, tapi tidak `src/app`.
+- `src/app` (halaman dan route handler) merakit modul: mis. form produk memakai field inventory
+  dan field kepabeanan (`it-inventory/components/product-customs-fields.tsx`), aksi produk
+  menggabungkan `productFields` dengan `productCustomsFields`.
+- Skema Drizzle (`src/server/db/schema`) adalah lapisan data bersama karena databasenya satu;
+  boleh membaca konstanta enum dari modul. Kolom kepabeanan tetap di tabel yang sama (seperti
+  `inherit` di hmx), tapi field form dan aturannya milik IT Inventory. Kode inventory boleh membaca
+  kolom tabel bersama (mis. filter daftar produk), selama tidak mengimpor kode IT Inventory.
+- Menu dikelompokkan per modul (`NavGroup.module` di `src/lib/navigation.ts`), izin punya modul
+  pemilik (`PERMISSION_MODULES` di `src/lib/permissions.ts`).
+- Fitur baru: taruh di modul pemiliknya (komponen, lib, aksi server, query), halaman di `src/app`
+  hanya merakit. Kalau inventory butuh sesuatu dari IT Inventory, balik arahnya: IT Inventory yang
+  memasang bagiannya lewat `src/app`.
+
 ## Struktur folder
 
 ```
 drizzle/                 migrasi SQL (hasil generate + file SQL kustom)
 src/
-  app/                   route Next.js (halaman, layout, route handler)
+  app/                   route Next.js (halaman, layout, route handler); merakit modul
   app/(app)/             halaman setelah login (layout dengan sidebar)
+  modules/
+    inventory/           modul inventory: components, lib, actions, server/queries, server/master-io
+    it-inventory/        modul IT Inventory: components, lib, server
   components/ui/         komponen shadcn/ui
   components/data-table/ tabel daftar dengan cari, filter, pagination di server
   components/            komponen bersama (sidebar, header halaman, placeholder modul)
   hooks/                 React hooks untuk client
   lib/                   utilitas yang aman dipakai di client maupun server
   server/                kode khusus server, tidak boleh diimpor dari client
-    queries/             query baca per modul
+    queries/             query baca bersama (aktivitas, pengguna, referensi kode)
     db/
       seed-data/         CSV data awal (referensi kepabeanan)
       schema/            schema Drizzle per kelompok tabel

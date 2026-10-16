@@ -5,9 +5,9 @@ import { Suspense, type ReactNode } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { ReturnRequestActions } from "@/components/inventory/return-request-actions"
-import { ReturnRequestForm } from "@/components/inventory/return-request-form"
-import { TransferStatusBadge } from "@/components/inventory/transfer-status"
+import { ReturnRequestActions } from "@/modules/inventory/components/return-request-actions"
+import { ReturnRequestForm } from "@/modules/inventory/components/return-request-form"
+import { TransferStatusBadge } from "@/modules/inventory/components/transfer-status"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
@@ -16,11 +16,14 @@ import {
   RETURN_REQUEST_STATUS_LABELS,
   RETURN_REQUEST_TYPE_LABELS,
   type TransferType,
-} from "@/lib/inventory"
+} from "@/modules/inventory/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
-import { getReturnRequest, type ReturnRequestDetail } from "@/server/queries/return-requests"
-import { listInternalLocations } from "@/server/queries/transfers"
+import {
+  getReturnRequest,
+  type ReturnRequestDetail,
+} from "@/modules/inventory/server/queries/return-requests"
+import { listInternalLocations } from "@/modules/inventory/server/queries/transfers"
 import { InfoGrid } from "@/components/layout/info-grid"
 import { recordActivity } from "@/server/queries/activity"
 import { ActivityLog } from "@/components/document/activity-log"

@@ -12,14 +12,14 @@ import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { recordActivity } from "@/server/queries/activity"
 import { warehouseNeighbors } from "@/server/queries/neighbors"
-import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
+import { LOCATION_TYPE_LABELS } from "@/modules/inventory/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import {
   getWarehouseForUser,
   listWarehouseLocations,
   type LocationRow,
-} from "@/server/queries/warehouses"
+} from "@/modules/inventory/server/queries/warehouses"
 
 import { deleteLocation } from "../actions"
 import { LocationCreateForm } from "../location-forms"

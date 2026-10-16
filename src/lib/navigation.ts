@@ -9,7 +9,7 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import { hasPermission, type Permission, type Role } from "./permissions"
+import { type AppModule, hasPermission, type Permission, type Role } from "./permissions"
 
 // Satu sumber untuk menu sidebar dan halaman modul. Menu hanya menyembunyikan
 // yang tidak boleh dibuka; pengecekan izin yang menentukan tetap di setiap halaman.
@@ -25,6 +25,8 @@ export type NavItem = {
 
 export type NavGroup = {
   label: string
+  // Modul pemilik area kerja ini (S-01).
+  module: AppModule
   // Ikon area kerja, hanya di tingkat grup (menu anak tanpa ikon). Grup Umum memakai ikon
   // untuk Beranda.
   icon: LucideIcon
@@ -34,6 +36,7 @@ export type NavGroup = {
 export const NAVIGATION: NavGroup[] = [
   {
     label: "Umum",
+    module: "base",
     icon: House,
     items: [{ title: "Beranda", href: "/" }],
   },
@@ -41,6 +44,7 @@ export const NAVIGATION: NavGroup[] = [
   // mengoreksi stok.
   {
     label: "Operasi gudang",
+    module: "inventory",
     icon: ArrowLeftRight,
     items: [
       { title: "Penerimaan", href: "/inventory/penerimaan", permission: "inventory:read" },
@@ -57,6 +61,7 @@ export const NAVIGATION: NavGroup[] = [
   },
   {
     label: "Stok & kontrol",
+    module: "inventory",
     icon: Boxes,
     items: [
       { title: "Stok", href: "/inventory/stok", permission: "inventory:read" },
@@ -68,6 +73,7 @@ export const NAVIGATION: NavGroup[] = [
   },
   {
     label: "Kepabeanan",
+    module: "it-inventory",
     icon: Landmark,
     items: [
       {
@@ -76,10 +82,21 @@ export const NAVIGATION: NavGroup[] = [
         permission: "bc:read",
         plannedIn: "M3",
       },
+      {
+        title: "Referensi kepabeanan",
+        href: "/master/referensi",
+        permission: "master:read",
+      },
+      {
+        title: "Profil perusahaan",
+        href: "/master/perusahaan",
+        permission: "master:read",
+      },
     ],
   },
   {
     label: "Laporan",
+    module: "it-inventory",
     icon: ChartColumn,
     items: [
       {
@@ -92,6 +109,7 @@ export const NAVIGATION: NavGroup[] = [
   },
   {
     label: "Master data",
+    module: "inventory",
     icon: Database,
     items: [
       {
@@ -119,20 +137,11 @@ export const NAVIGATION: NavGroup[] = [
         href: "/master/partner",
         permission: "master:read",
       },
-      {
-        title: "Referensi kepabeanan",
-        href: "/master/referensi",
-        permission: "master:read",
-      },
-      {
-        title: "Profil perusahaan",
-        href: "/master/perusahaan",
-        permission: "master:read",
-      },
     ],
   },
   {
     label: "Administrasi",
+    module: "base",
     icon: Settings,
     items: [
       { title: "Pengguna", href: "/admin/users", permission: "user:manage" },

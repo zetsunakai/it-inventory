@@ -12,7 +12,7 @@ import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatNumber } from "@/lib/format"
-import { LOCATION_TYPE_LABELS } from "@/lib/inventory"
+import { LOCATION_TYPE_LABELS } from "@/modules/inventory/lib/inventory"
 import {
   hasActiveFilters,
   parseListParams,
@@ -28,7 +28,7 @@ import {
   listWarehouses,
   type LocationRow,
   type WarehouseRow,
-} from "@/server/queries/warehouses"
+} from "@/modules/inventory/server/queries/warehouses"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"

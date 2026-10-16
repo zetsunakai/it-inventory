@@ -22,7 +22,7 @@ import {
 } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
-import { listUomCategories, listUoms, type UomRow } from "@/server/queries/uoms"
+import { listUomCategories, listUoms, type UomRow } from "@/modules/inventory/server/queries/uoms"
 
 import { UomCategoryForm } from "./uom-forms"
 import { ListToolbar } from "@/components/layout/list-toolbar"

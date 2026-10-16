@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
-import { listUomCategories } from "@/server/queries/uoms"
+import { listUomCategories } from "@/modules/inventory/server/queries/uoms"
 
 import { UomCreateForm } from "../uom-forms"
 

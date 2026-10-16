@@ -13,10 +13,13 @@ import {
   RETURN_REQUEST_STATUSES,
   RETURN_REQUEST_TYPE_LABELS,
   RETURN_REQUEST_TYPES,
-} from "@/lib/inventory"
+} from "@/modules/inventory/lib/inventory"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { requirePermission } from "@/server/auth/session"
-import { listReturnRequests, type ReturnRequestRow } from "@/server/queries/return-requests"
+import {
+  listReturnRequests,
+  type ReturnRequestRow,
+} from "@/modules/inventory/server/queries/return-requests"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"

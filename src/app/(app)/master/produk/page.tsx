@@ -10,7 +10,7 @@ import { ImportExportActions } from "@/components/import/import-export-actions"
 import { PageHeader } from "@/components/page-header"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
-import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS } from "@/lib/inventory"
+import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS } from "@/modules/inventory/lib/inventory"
 import {
   parseListParams,
   pickFilter,
@@ -21,9 +21,9 @@ import {
 } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
-import { listProducts, type ProductRow } from "@/server/queries/products"
+import { listProducts, type ProductRow } from "@/modules/inventory/server/queries/products"
 
-import { CustomsReadiness } from "./customs-readiness"
+import { CustomsReadiness } from "@/modules/it-inventory/components/customs-readiness"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"

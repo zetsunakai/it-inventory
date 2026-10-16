@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { InterwarehouseForm } from "@/components/inventory/interwarehouse-form"
+import { InterwarehouseForm } from "@/modules/inventory/components/interwarehouse-form"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
-import { listInternalLocations, listUomChoices } from "@/server/queries/transfers"
+import { listInternalLocations, listUomChoices } from "@/modules/inventory/server/queries/transfers"
 
 export const metadata: Metadata = { title: "Buat transfer antar gudang · IT Inventory" }
 

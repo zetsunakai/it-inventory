@@ -12,7 +12,7 @@ import {
   reopenStockCount,
   startStockCount,
   submitStockCount,
-} from "@/app/(app)/inventory/opname/actions"
+} from "@/modules/inventory/actions/stock-counts"
 import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"

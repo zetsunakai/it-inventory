@@ -7,8 +7,7 @@ import { CheckboxField } from "@/components/checkbox-field"
 import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection, StaticField } from "@/components/form-field"
-import { ProductCategorySelect } from "@/components/product-category-select"
-import { RefCodeSelect } from "@/components/ref-code-select"
+import { ProductCategorySelect } from "@/modules/inventory/components/product-category-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -21,17 +20,20 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { fieldValue, type FormState } from "@/lib/action-result"
 import {
-  INVENTORY_CATEGORIES,
-  INVENTORY_CATEGORY_LABELS,
   PRODUCT_TRACKING_LABELS,
   PRODUCT_TRACKINGS,
   type ProductTracking,
   type InventoryCategory,
-} from "@/lib/inventory"
-import { DEFAULT_CODE_DIGITS, skuExample } from "@/lib/product-category"
+} from "@/modules/inventory/lib/inventory"
+import { DEFAULT_CODE_DIGITS, skuExample } from "@/modules/inventory/lib/product-category"
 import type { RefCodeOption } from "@/lib/ref-codes"
-import type { ProductCategoryOption } from "@/server/queries/product-categories"
-import type { UomOption } from "@/server/queries/products"
+import type { ProductCategoryOption } from "@/modules/inventory/server/queries/product-categories"
+import type { UomOption } from "@/modules/inventory/server/queries/products"
+
+import {
+  CustomsCategoryField,
+  ProductCustomsSection,
+} from "@/modules/it-inventory/components/product-customs-fields"
 
 import { createProduct, updateProduct } from "./actions"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
@@ -39,11 +41,6 @@ import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 const TRACKING_ITEMS = PRODUCT_TRACKINGS.map((tracking) => ({
   value: tracking,
   label: PRODUCT_TRACKING_LABELS[tracking],
-}))
-
-const CATEGORY_ITEMS = INVENTORY_CATEGORIES.map((category) => ({
-  value: category,
-  label: INVENTORY_CATEGORY_LABELS[category],
 }))
 
 export type ProductFormValues = {
@@ -177,20 +174,10 @@ export function ProductForm({
             rows={3}
           />
         </FormField>
-        <FormField label="Kategori IT Inventory" htmlFor="category" errors={fieldErrors?.category}>
-          <Select name="category" items={CATEGORY_ITEMS} defaultValue={product?.category ?? null}>
-            <SelectTrigger id="category" className="w-full">
-              <SelectValue placeholder="Pilih kategori" />
-            </SelectTrigger>
-            <SelectContent>
-              {CATEGORY_ITEMS.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
+        <CustomsCategoryField
+          defaultValue={product?.category ?? null}
+          errors={fieldErrors?.category}
+        />
         {product ? (
           <StaticField
             label="Satuan stok"
@@ -299,20 +286,7 @@ export function ProductForm({
         )}
       </FormSection>
 
-      <FormSection
-        title="Data kepabeanan"
-        description="Kode HS wajib diisi sebelum produk bisa dipakai di dokumen BC. Satuan CEISA diisi per barang di dokumen BC."
-      >
-        <FormField label="Kode HS" htmlFor="hsCode" errors={fieldErrors?.hsCode} span={12}>
-          <RefCodeSelect
-            id="hsCode"
-            type="hs_code"
-            name="hsCode"
-            defaultValue={product?.hs ?? null}
-            placeholder="Cari kode HS atau uraian"
-          />
-        </FormField>
-      </FormSection>
+      <ProductCustomsSection hs={product?.hs ?? null} errors={fieldErrors?.hsCode} />
     </form>
   )
 }

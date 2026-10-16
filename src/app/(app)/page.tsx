@@ -5,7 +5,7 @@ import { Suspense } from "react"
 import { StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requireUser } from "@/server/auth/session"
-import { attentionItems } from "@/server/queries/home"
+import { attentionItems } from "@/modules/inventory/server/queries/home"
 
 // Beranda berisi pekerjaan, bukan sapaan (skill ui-it-inventory): hal yang perlu
 // ditindaklanjuti. Navigasi modul cukup di sidebar.

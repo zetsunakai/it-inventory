@@ -1,7 +1,7 @@
 import { describe, expect, test } from "vitest"
 
 import { findNavItem, isActivePath, NAVIGATION, navigationFor, navigationTrail } from "./navigation"
-import { PERMISSIONS } from "./permissions"
+import { APP_MODULES, PERMISSION_MODULES, PERMISSIONS } from "./permissions"
 
 function hrefs(groups: ReturnType<typeof navigationFor>) {
   return groups.flatMap((group) => group.items.map((item) => item.href))
@@ -65,5 +65,22 @@ describe("navigationTrail", () => {
   test("beranda dan path tak dikenal", () => {
     expect(navigationTrail("/")?.item.title).toBe("Beranda")
     expect(navigationTrail("/tidak-ada")).toBeNull()
+  })
+})
+
+describe("modul (S-01)", () => {
+  test("setiap area kerja punya modul, dan izin menunya milik modul itu atau base", () => {
+    for (const group of NAVIGATION) {
+      expect(APP_MODULES).toContain(group.module)
+      for (const item of group.items) {
+        if (!item.permission) continue
+        expect([group.module, "base"]).toContain(PERMISSION_MODULES[item.permission])
+      }
+    }
+  })
+
+  test("referensi kepabeanan dan profil perusahaan ada di area Kepabeanan", () => {
+    expect(navigationTrail("/master/referensi")?.group.label).toBe("Kepabeanan")
+    expect(navigationTrail("/master/perusahaan")?.group.module).toBe("it-inventory")
   })
 })

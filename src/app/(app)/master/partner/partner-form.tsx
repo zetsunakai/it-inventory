@@ -25,7 +25,7 @@ import {
   IDENTITY_TYPES,
   NPWP_IDENTITY_TYPES,
   type IdentityType,
-} from "@/lib/partner"
+} from "@/modules/inventory/lib/partner"
 import type { RefCodeOption } from "@/lib/ref-codes"
 
 import { createPartner, updatePartner } from "./actions"

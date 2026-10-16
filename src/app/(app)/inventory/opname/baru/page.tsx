@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { StockCountForm } from "@/components/inventory/stock-count-form"
+import { StockCountForm } from "@/modules/inventory/components/stock-count-form"
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
-import { listProductCategoryOptions } from "@/server/queries/product-categories"
-import { listInternalLocations } from "@/server/queries/transfers"
+import { listProductCategoryOptions } from "@/modules/inventory/server/queries/product-categories"
+import { listInternalLocations } from "@/modules/inventory/server/queries/transfers"
 
 export const metadata: Metadata = { title: "Buat sesi opname · IT Inventory" }
 

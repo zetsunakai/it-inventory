@@ -10,7 +10,10 @@ import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatNumber } from "@/lib/format"
 import { requirePermission } from "@/server/auth/session"
-import { getProductCategory, listProductCategoryOptions } from "@/server/queries/product-categories"
+import {
+  getProductCategory,
+  listProductCategoryOptions,
+} from "@/modules/inventory/server/queries/product-categories"
 import { recordActivity } from "@/server/queries/activity"
 import { productCategoryNeighbors } from "@/server/queries/neighbors"
 

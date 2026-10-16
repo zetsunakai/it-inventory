@@ -6,7 +6,7 @@ import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
 import { auditLogs, products, refCodes, uomCategories, uoms } from "@/server/db/schema"
-import { listProducts } from "@/server/queries/products"
+import { listProducts } from "@/modules/inventory/server/queries/products"
 
 import { inRollback, pgErrorMessage } from "./helpers"
 

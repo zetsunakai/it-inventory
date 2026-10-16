@@ -15,7 +15,7 @@ import {
   uoms,
   warehouses,
 } from "@/server/db/schema"
-import { attentionItems } from "@/server/queries/home"
+import { attentionItems } from "@/modules/inventory/server/queries/home"
 
 import { purgeInventory, withLine } from "./helpers"
 

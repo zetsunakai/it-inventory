@@ -2,7 +2,7 @@ import { sql } from "drizzle-orm"
 import { boolean, index, pgEnum, pgTable, text, uniqueIndex, uuid } from "drizzle-orm/pg-core"
 
 // Path relatif (bukan alias @/) karena schema juga dibaca oleh drizzle-kit dan script CLI.
-import { IDENTITY_TYPES } from "../../../lib/partner"
+import { IDENTITY_TYPES } from "../../../modules/inventory/lib/partner"
 
 import { timestamps } from "./_columns"
 
