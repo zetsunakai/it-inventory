@@ -29,7 +29,7 @@ export type ReturnRequestRow = {
 }
 
 const header = sql`
-  r.id, r.number, r.type, r.status, r.scheduled_date::text as scheduled_date, r.reason, r.notes,
+  r.id, r.number, r.type, r.status, r.scheduled_date::text as scheduled_date, r.reason, r.notes, r.close_reason,
   r.origin_id, o.number as origin_number, o.type as origin_type, r.location_id,
   lp.path as location_path, w.id as warehouse_id, w.code as warehouse_code,
   p.name as partner_name`
@@ -54,6 +54,7 @@ type RawHeader = {
   scheduled_date: string | null
   reason: string | null
   notes: string | null
+  close_reason: string | null
   origin_id: string
   origin_number: string
   origin_type: "receipt" | "delivery"
@@ -162,6 +163,7 @@ export async function getReturnRequest(userId: string, id: string) {
     scheduledDate: row.scheduled_date,
     reason: row.reason,
     notes: row.notes,
+    closeReason: row.close_reason,
     originId: row.origin_id,
     originNumber: row.origin_number,
     originType: row.origin_type,

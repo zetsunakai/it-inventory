@@ -2,7 +2,11 @@
 
 import { useState, useTransition } from "react"
 
-import { cancelReturnRequest, confirmReturnRequest } from "@/app/(app)/inventory/retur/actions"
+import {
+  cancelReturnRequest,
+  closeReturnRequest,
+  confirmReturnRequest,
+} from "@/app/(app)/inventory/retur/actions"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -14,26 +18,32 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
 import type { ActionResult } from "@/lib/action-result"
 import type { ReturnRequestStatus } from "@/lib/inventory"
 import { usePageMessage } from "@/components/layout/page-message"
 
-// Aksi permintaan retur sesuai statusnya (backlog R-11): Konfirmasi saat Draft, Batal selama
-// belum ada barang yang diretur.
+// Aksi permintaan retur sesuai statusnya (backlog R-11, I-02): Konfirmasi saat Draft, Batal selama
+// belum ada barang yang diretur, Tutup tanpa pengganti setelah barangnya diretur.
 export function ReturnRequestActions({
   id,
   number,
   status,
   cancellable,
+  closable = false,
 }: {
   id: string
   number: string
   status: ReturnRequestStatus
   cancellable: boolean
+  closable?: boolean
 }) {
   const { show } = usePageMessage()
   const [pending, startTransition] = useTransition()
   const [cancelOpen, setCancelOpen] = useState(false)
+  const [closeOpen, setCloseOpen] = useState(false)
+  const [closeReason, setCloseReason] = useState("")
 
   function run(action: () => Promise<ActionResult<unknown>>, close?: () => void) {
     startTransition(async () => {
@@ -43,7 +53,7 @@ export function ReturnRequestActions({
     })
   }
 
-  if (status !== "draft" && !cancellable) return null
+  if (status !== "draft" && !cancellable && !closable) return null
 
   return (
     <>
@@ -56,6 +66,49 @@ export function ReturnRequestActions({
           >
             Konfirmasi
           </Button>
+        )}
+        {closable && (
+          <AlertDialog open={closeOpen} onOpenChange={setCloseOpen}>
+            <AlertDialogTrigger
+              render={
+                <Button variant="outline" disabled={pending} className="pointer-coarse:h-11" />
+              }
+            >
+              Tutup tanpa pengganti
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Tutup {number} tanpa pengganti?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Barang yang sudah diretur tetap tercatat. Transfer pengganti yang belum Selesai
+                  dibatalkan dan permintaan menjadi Selesai.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <div className="space-y-1.5">
+                <Label htmlFor="close-reason">Alasan</Label>
+                <Textarea
+                  id="close-reason"
+                  value={closeReason}
+                  onChange={(event) => setCloseReason(event.target.value)}
+                  placeholder="Mis. vendor mengganti dengan nota kredit"
+                />
+              </div>
+              <AlertDialogFooter>
+                <AlertDialogCancel disabled={pending}>Kembali</AlertDialogCancel>
+                <Button
+                  disabled={pending || !closeReason.trim()}
+                  onClick={() =>
+                    run(
+                      () => closeReturnRequest({ id, reason: closeReason }),
+                      () => setCloseOpen(false),
+                    )
+                  }
+                >
+                  Tutup tanpa pengganti
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         )}
         {cancellable && (
           <AlertDialog open={cancelOpen} onOpenChange={setCancelOpen}>

@@ -520,6 +520,8 @@ export const returnRequests = pgTable(
     scheduledDate: date(),
     reason: text(),
     notes: text(),
+    // Diisi saat permintaan ditutup tanpa pengganti (I-02): alasannya.
+    closeReason: text(),
     createdBy: uuid(),
     ...timestamps,
   },

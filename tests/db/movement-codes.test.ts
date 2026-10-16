@@ -155,8 +155,9 @@ test("kode dan arah pergerakan diisi database dari jenis dan lokasi transfer", a
       [await transfer(tx, "scrap", ids.rackA, ids.scrap), "pu", "out"],
       [await transfer(tx, "adjustment", ids.adjustment, ids.rackA), "adj_in", "in"],
       [await transfer(tx, "adjustment", ids.rackA, ids.adjustment), "adj_out", "out"],
-      [await transfer(tx, "return", ids.rackA, ids.vendor, receipt.id), "gr_rtn", "out"],
-      [await transfer(tx, "return", ids.customer, ids.rackA, delivery.id), "gi_rtn", "in"],
+      // Mengikuti hmx (I-02): retur ke vendor gi_rtn (keluar), retur dari customer gr_rtn (masuk).
+      [await transfer(tx, "return", ids.rackA, ids.vendor, receipt.id), "gi_rtn", "out"],
+      [await transfer(tx, "return", ids.customer, ids.rackA, delivery.id), "gr_rtn", "in"],
     ] as const
     expect(cases.map(([row]) => [row.code, row.direction])).toEqual(
       cases.map(([, code, direction]) => [code, direction]),

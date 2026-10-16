@@ -247,8 +247,8 @@ async function buildLedger() {
   const receipt = await move("receipt", ids.vendor, ids.rackA, "20", 1) // gr
   await move("internal", ids.rackA, ids.rackB, "5", 2) // ilt
   const delivery = await move("delivery", ids.rackA, ids.customer, "3", 3) // gi
-  await move("return", ids.customer, ids.rackA, "1", 4, delivery) // gi_rtn
-  await move("return", ids.rackA, ids.vendor, "2", 5, receipt) // gr_rtn
+  await move("return", ids.customer, ids.rackA, "1", 4, delivery) // gr_rtn
+  await move("return", ids.rackA, ids.vendor, "2", 5, receipt) // gi_rtn
 
   // Antar gudang: keluar 4 ke transit, masuk 3 ke gudang 2, sisa 1 kembali ke gudang 1.
   const [request] = await db
@@ -332,8 +332,8 @@ describe("kartu stok", () => {
       "gr",
       "ilt",
       "gi",
-      "gi_rtn",
       "gr_rtn",
+      "gi_rtn",
       "itw_out",
       "itw_rtn",
       "pu",
@@ -355,8 +355,8 @@ describe("penelusuran lot", () => {
       "gr",
       "ilt",
       "gi",
-      "gi_rtn",
       "gr_rtn",
+      "gi_rtn",
       "itw_out",
       "itw_in",
       "itw_rtn",

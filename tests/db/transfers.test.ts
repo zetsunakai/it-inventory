@@ -11,6 +11,7 @@ import {
 } from "@/app/(app)/inventory/actions"
 import {
   cancelReturnRequest,
+  closeReturnRequest,
   confirmReturnRequest,
   createReturnRequest,
   saveReturnRequest,
@@ -22,6 +23,7 @@ import {
   locations,
   partners,
   products,
+  returnRequests,
   stockBalances,
   stockMoves,
   transferLines,
@@ -654,7 +656,7 @@ describe("retur", () => {
     const confirmed = await request(firstId)
     expect(confirmed.status).toBe("in_progress")
     expect(confirmed.transfers).toEqual([
-      expect.objectContaining({ type: "return", status: "ready", movement_code: "gr_rtn" }),
+      expect.objectContaining({ type: "return", status: "ready", movement_code: "gi_rtn" }),
     ])
     const returnTransfer = await getTransfer(people.admin.id, confirmed.transfers[0].id)
     expect(returnTransfer).toMatchObject({
@@ -682,6 +684,42 @@ describe("retur", () => {
     expect(after!.returns.map((item) => item.number)).toEqual([first.number, second.number])
   })
 
+  test("tutup tanpa pengganti: pengganti yang terbuka dibatalkan dan alasannya tercatat", async () => {
+    loginAs("admin")
+    const originId = await done(
+      receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
+    )
+    const id = await newRequest(originId)
+    const [line] = (await request(id)).lines
+    await save(id, { [line.id]: { qty: "2", action: "replace" } })
+    await confirmReturnRequest({ id })
+    // Belum bisa ditutup selama transfer returnya belum Selesai.
+    expect(await closeReturnRequest({ id, reason: "Vendor memberi nota kredit" })).toEqual({
+      ok: false,
+      errors: ["Transfer retur harus Selesai dulu sebelum permintaan ditutup tanpa pengganti."],
+    })
+    const returnId = (await request(id)).transfers[0].id
+    await validateTransfer({ id: returnId })
+    expect(await closeReturnRequest({ id, reason: " " })).toEqual({
+      ok: false,
+      errors: ["Alasan menutup tanpa pengganti wajib diisi."],
+    })
+    expect(await closeReturnRequest({ id, reason: "Vendor memberi nota kredit" })).toMatchObject({
+      ok: true,
+    })
+    const closed = await request(id)
+    expect(closed.status).toBe("done")
+    expect(closed.transfers.map((row) => [row.type, row.status])).toEqual([
+      ["return", "done"],
+      ["receipt", "cancelled"],
+    ])
+    const [saved] = await db
+      .select({ closeReason: returnRequests.closeReason })
+      .from(returnRequests)
+      .where(eq(returnRequests.id, id))
+    expect(saved.closeReason).toBe("Vendor memberi nota kredit")
+  })
+
   test("retur dengan pengganti: pengganti dibuat setelah retur Selesai sebesar qty yang diretur", async () => {
     loginAs("admin")
     const originId = await done(
@@ -706,8 +744,9 @@ describe("retur", () => {
     const afterReturn = await request(id)
     expect(afterReturn.status).toBe("in_progress")
     expect(afterReturn.transfers.map((row) => [row.type, row.status, row.movement_code])).toEqual([
-      ["return", "done", "gr_rtn"],
-      ["receipt", "draft", "gr"],
+      ["return", "done", "gi_rtn"],
+      // Pengganti dari vendor memakai kode retur masuk, seperti hmx (I-02).
+      ["receipt", "draft", "gr_rtn"],
     ])
     const replacement = await getTransfer(people.admin.id, afterReturn.transfers[1].id)
     expect(replacement).toMatchObject({
@@ -757,7 +796,7 @@ describe("retur", () => {
     expect((await request(id)).type).toBe("customer")
     await confirmReturnRequest({ id })
     const [returnTransfer] = (await request(id)).transfers
-    expect(returnTransfer).toMatchObject({ status: "ready", movement_code: "gi_rtn" })
+    expect(returnTransfer).toMatchObject({ status: "ready", movement_code: "gr_rtn" })
     expect(await validateTransfer({ id: returnTransfer.id })).toMatchObject({ ok: true })
     expect((await stockAvailability(ids.product, ids.rack)).qty).toBe("5.0000")
 

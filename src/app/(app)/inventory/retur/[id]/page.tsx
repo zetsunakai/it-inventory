@@ -12,7 +12,6 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
 import {
-  MOVEMENT_CODE_LABELS,
   RETURN_LINE_ACTION_LABELS,
   RETURN_REQUEST_STATUS_LABELS,
   RETURN_REQUEST_TYPE_LABELS,
@@ -56,7 +55,13 @@ const TRANSFER_COLUMNS: DataTableColumn<LinkedTransfer>[] = [
   {
     header: "Jenis",
     className: "w-full",
-    cell: (row) => (row.type === "return" ? MOVEMENT_CODE_LABELS[row.movementCode] : "Pengganti"),
+    // Kode hmx (I-02): gi_rtn keluar (ke vendor), gr_rtn masuk (dari customer).
+    cell: (row) =>
+      row.type === "return"
+        ? row.movementCode === "gi_rtn"
+          ? "Retur ke vendor"
+          : "Retur dari customer"
+        : "Pengganti",
   },
   { header: "Tanggal", cell: (row) => (row.doneAt ? formatDate(row.doneAt) : "—") },
   { header: "Status", cell: (row) => <TransferStatusBadge status={row.status} /> },
@@ -117,6 +122,19 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
     (request.status === "draft" ||
       (request.status === "in_progress" &&
         !request.transfers.some((transfer) => transfer.status === "done")))
+  // Tutup tanpa pengganti (I-02): barang sudah diretur, transfer retur tidak ada yang terbuka, dan
+  // ada baris dengan pengganti. Aturannya juga di database.
+  const closable =
+    canWrite &&
+    request.status === "in_progress" &&
+    request.lines.some((line) => line.action === "replace") &&
+    request.transfers.some(
+      (transfer) => transfer.type === "return" && transfer.status === "done",
+    ) &&
+    !request.transfers.some(
+      (transfer) =>
+        transfer.type === "return" && transfer.status !== "done" && transfer.status !== "cancelled",
+    )
   const locationLabel = request.type === "vendor" ? "Lokasi asal" : "Lokasi tujuan"
   const originPath =
     request.originType === "receipt" ? "/inventory/penerimaan" : "/inventory/pengiriman"
@@ -129,6 +147,9 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
     ],
     ["Alasan retur", request.reason ?? "—"],
     ["Catatan", request.notes ?? "—"],
+    ...(request.closeReason
+      ? [["Ditutup tanpa pengganti", request.closeReason] as [string, ReactNode]]
+      : []),
   ]
 
   return (
@@ -140,6 +161,7 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
             number={request.number}
             status={request.status}
             cancellable={cancellable}
+            closable={closable}
           />
         )
       }
@@ -193,7 +215,11 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
             items={rows.map(([label, value]) => ({
               label,
               value,
-              wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
+              wide:
+                label === "Catatan" ||
+                label === "Alasan" ||
+                label === "Alasan retur" ||
+                label === "Ditutup tanpa pengganti",
             }))}
           />
           <Tabs defaultValue="transfer">

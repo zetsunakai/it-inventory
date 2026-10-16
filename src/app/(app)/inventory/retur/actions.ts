@@ -195,3 +195,19 @@ export const cancelReturnRequest = defineAction({
     await tx.execute(sql`select cancel_return_request(${input.id})`)
   },
 })
+
+// Tutup tanpa pengganti (I-02): barang sudah diretur, penggantinya tidak akan ada. Transfer
+// pengganti yang masih terbuka dibatalkan; aturannya di close_return_request_without_replacement().
+export const closeReturnRequest = defineAction({
+  name: "closeReturnRequest",
+  permission: "inventory:write",
+  schema: idInput.extend({ reason: optionalText("Alasan", 500) }),
+  successMessage: "Permintaan retur ditutup tanpa pengganti.",
+  handler: async ({ input, user, tx }) => {
+    const errors = await locationErrors(tx, user.id, await requestLocation(tx, input.id))
+    if (errors.length) throw new AppError(errors)
+    await tx.execute(
+      sql`select close_return_request_without_replacement(${input.id}, ${input.reason ?? ""})`,
+    )
+  },
+})

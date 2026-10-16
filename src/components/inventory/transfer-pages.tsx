@@ -336,11 +336,20 @@ async function TransferDetail({
       }
       activity={<ActivityLog entries={activity} noun={kind.noun} />}
       title={`${
-        fromRequest
-          ? MOVEMENT_CODE_LABELS[transfer.movementCode]
-          : transfer.usageType
-            ? USAGE_TYPE_LABELS[transfer.usageType]
-            : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`
+        transfer.type === "return"
+          ? // Kode retur hmx (gi_rtn keluar, gr_rtn masuk) dipakai juga oleh pengganti (I-02).
+            transfer.movementCode === "gi_rtn"
+            ? "Retur ke vendor"
+            : "Retur dari customer"
+          : transfer.returnRequestId
+            ? transfer.type === "receipt"
+              ? "Pengganti dari vendor"
+              : "Pengganti ke customer"
+            : fromRequest
+              ? MOVEMENT_CODE_LABELS[transfer.movementCode]
+              : transfer.usageType
+                ? USAGE_TYPE_LABELS[transfer.usageType]
+                : `${kind.noun.charAt(0).toUpperCase()}${kind.noun.slice(1)}`
       } ${transfer.number}`}
       crumbs={[
         // Transfer milik permintaan antar gudang atau retur: permintaannya jadi tingkat induk.

@@ -241,9 +241,11 @@ lama M2 terbukti termigrasi tanpa selisih saldo (`npm run db:check` setelah migr
 - **Purchase order, sales order, dan akuntansi (termasuk valuasi stok) tidak masuk inventory.**
   Referensi PO/SO cukup teks. Juga tidak diambil: pick/pack, paket, batch picking, POD,
   konsinyasi, cost center, batas qty terima/kirim, antrean validasi background.
-- Kode retur di repo ini terbalik dibanding hmx (`return_request.py`: vendor → `gi_rtn`, customer →
-  `gr_rtn`, pengganti juga `*_rtn`). Tabel di atas sudah memakai kode hmx; perbaikan data dan kode
-  ada di tiket I-02. Sampai I-02 selesai, database masih memakai pemetaan lama.
+- Kode retur mengikuti hmx sejak I-02 (migrasi 0064, `return_request.py`): `gi_rtn` = barang keluar
+  karena retur (retur ke vendor, pengganti ke customer), `gr_rtn` = barang masuk (retur dari
+  customer, pengganti dari vendor). `transfer_movement_code()` memakai `return_request_id` untuk
+  transfer pengganti. Retur bisa ditutup tanpa pengganti dengan alasan
+  (`close_return_request_without_replacement`, `return_requests.close_reason`).
 - Sisa pekerjaan inventory ada di tab Backlog bagian **I** (I-01–I-08, satu tiket per area yang
   menggabungkan alur dan tampilan; menggantikan R2 dan RU-04–RU-19): pengiriman dengan reservasi
   dari sub-lokasi (FIFO tanggal masuk) dan qty selesai dicatat user, retur, pemakaian/penyesuaian

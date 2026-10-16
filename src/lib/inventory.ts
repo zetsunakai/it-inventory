@@ -116,8 +116,10 @@ export const MOVEMENT_CODE_LABELS: Record<MovementCode, string> = {
   itw_out: "Transfer antar gudang keluar",
   itw_in: "Transfer antar gudang masuk",
   itw_rtn: "Kembali dari transit",
-  gr_rtn: "Retur ke vendor",
-  gi_rtn: "Retur dari customer",
+  // Mengikuti hmx (I-02): gr_rtn = barang masuk karena retur (retur dari customer, pengganti dari
+  // vendor), gi_rtn = barang keluar karena retur (retur ke vendor, pengganti ke customer).
+  gr_rtn: "Retur masuk",
+  gi_rtn: "Retur keluar",
   pu: "Pemakaian & scrap",
   adj_in: "Penyesuaian tambah",
   adj_out: "Penyesuaian kurang",
@@ -130,13 +132,13 @@ export type MovementDirection = (typeof MOVEMENT_DIRECTIONS)[number]
 // Sama dengan fungsi database movement_direction() (migrasi movement_codes).
 export const MOVEMENT_CODE_DIRECTIONS: Record<MovementCode, MovementDirection> = {
   gr: "in",
-  gi_rtn: "in",
+  gr_rtn: "in",
   itw_in: "in",
   itw_rtn: "in",
   adj_in: "in",
   ilt: "internal",
   gi: "out",
-  gr_rtn: "out",
+  gi_rtn: "out",
   itw_out: "out",
   pu: "out",
   adj_out: "out",
