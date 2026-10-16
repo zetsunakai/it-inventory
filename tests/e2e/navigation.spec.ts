@@ -31,14 +31,39 @@ async function expandMenus(page: Page) {
   }
 }
 
+// Menu per modul (S-02): pemilih modul di atas sidebar.
+async function moduleOptions(page: Page) {
+  await sidebar(page)
+    .getByRole("button", { name: /^Ganti modul/ })
+    .click()
+  const options = await page.getByRole("menuitemradio").allTextContents()
+  await page.keyboard.press("Escape")
+  return options.map((option) => option.trim())
+}
+
+async function switchModule(page: Page, label: string) {
+  await sidebar(page)
+    .getByRole("button", { name: /^Ganti modul/ })
+    .click()
+  await page.getByRole("menuitemradio", { name: label }).click()
+}
+
+// Semua menu yang boleh dilihat, dari semua modul di pemilih.
 async function menuLinks(page: Page) {
-  await expandMenus(page)
-  const links = sidebar(page).locator('[data-sidebar="content"]').getByRole("link")
-  await expect(links.first()).toBeVisible()
-  // Teks pertama tiap menu adalah nama modulnya (label "segera" menyusul).
-  return links.evaluateAll((elements) =>
-    elements.map((element) => element.querySelector("span")?.textContent ?? ""),
-  )
+  const all: string[] = []
+  for (const option of await moduleOptions(page)) {
+    await switchModule(page, option)
+    await expandMenus(page)
+    const links = sidebar(page).locator('[data-sidebar="content"]').getByRole("link")
+    await expect(links.first()).toBeVisible()
+    // Teks pertama tiap menu adalah nama modulnya (label "segera" menyusul).
+    all.push(
+      ...(await links.evaluateAll((elements) =>
+        elements.map((element) => element.querySelector("span")?.textContent ?? ""),
+      )),
+    )
+  }
+  return all
 }
 
 test("menu Auditor: bisa melihat modul baca, tanpa Administrasi dan Tutup periode", async ({
@@ -54,6 +79,7 @@ test("menu Auditor: bisa melihat modul baca, tanpa Administrasi dan Tutup period
   expect(links).not.toContain("Pengaturan")
   expect(links).not.toContain("Tutup periode")
   await expect(sidebar(page).getByText("Administrasi", { exact: true })).toHaveCount(0)
+  expect(await moduleOptions(page)).toEqual(["Inventory", "IT Inventory"])
 })
 
 test("menu Admin gudang: tanpa Dokumen BC; membuka URL-nya langsung ditolak", async ({ page }) => {
@@ -70,7 +96,8 @@ test("menu Admin gudang: tanpa Dokumen BC; membuka URL-nya langsung ditolak", as
 test("klik menu membuka modul dan menandai menu yang aktif", async ({ page }) => {
   await loginAs(page, ACCOUNTS.auditor)
 
-  // Modul yang masih berupa placeholder; grupnya dibuka dulu.
+  // Modul yang masih berupa placeholder, di modul IT Inventory; grupnya dibuka dulu.
+  await switchModule(page, "IT Inventory")
   await expandMenus(page)
   await sidebar(page).getByRole("link", { name: "Dokumen BC" }).click()
 
@@ -85,9 +112,19 @@ test("klik menu membuka modul dan menandai menu yang aktif", async ({ page }) =>
     "aria-current",
     "page",
   )
-  await expect(sidebar(page).getByRole("link", { name: "Beranda" })).not.toHaveAttribute(
-    "aria-current",
-  )
+  // Beranda milik modul Inventory, jadi tidak tampil saat modul IT Inventory aktif.
+  await expect(sidebar(page).getByRole("link", { name: "Beranda" })).toHaveCount(0)
+})
+
+test("tautan langsung ke halaman modul lain memindahkan menu ke modul itu", async ({ page }) => {
+  await loginAs(page, ACCOUNTS.auditor)
+  await expect(
+    sidebar(page).getByRole("button", { name: /^Ganti modul, sekarang Inventory/ }),
+  ).toBeVisible()
+  await page.goto("/master/referensi")
+  await expect(
+    sidebar(page).getByRole("button", { name: /^Ganti modul, sekarang IT Inventory/ }),
+  ).toBeVisible()
 })
 
 test("menu anak tersembunyi sampai menu induknya diklik; grup halaman aktif terbuka", async ({

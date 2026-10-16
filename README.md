@@ -468,8 +468,12 @@ Aturan (dipaksakan ESLint `no-restricted-imports` di `eslint.config.mjs`, `npm r
   boleh membaca konstanta enum dari modul. Kolom kepabeanan tetap di tabel yang sama (seperti
   `inherit` di hmx), tapi field form dan aturannya milik IT Inventory. Kode inventory boleh membaca
   kolom tabel bersama (mis. filter daftar produk), selama tidak mengimpor kode IT Inventory.
-- Menu dikelompokkan per modul (`NavGroup.module` di `src/lib/navigation.ts`), izin punya modul
-  pemilik (`PERMISSION_MODULES` di `src/lib/permissions.ts`).
+- Menu per modul (S-02, seperti active-section webx hmx): pemilih modul di atas sidebar
+  (Inventory, IT Inventory, Pengaturan), sidebar hanya menampilkan area kerja modul aktif. Modul
+  aktif mengikuti halaman yang dibuka (`moduleForPath`); pemilih hanya menampilkan modul yang punya
+  menu untuk peran user (`modulesFor`); pencarian menu mencari ke semua modul. Area kerja punya
+  modul pemilik (`NavGroup.module` di `src/lib/navigation.ts`), izin juga (`PERMISSION_MODULES` di
+  `src/lib/permissions.ts`).
 - Fitur baru: taruh di modul pemiliknya (komponen, lib, aksi server, query), halaman di `src/app`
   hanya merakit. Kalau inventory butuh sesuatu dari IT Inventory, balik arahnya: IT Inventory yang
   memasang bagiannya lewat `src/app`.

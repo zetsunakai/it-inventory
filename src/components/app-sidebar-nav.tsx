@@ -1,6 +1,6 @@
 "use client"
 
-import { ChevronRight, Search, X } from "lucide-react"
+import { ArrowLeftRight, ChevronRight, Search, X } from "lucide-react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useId, useState, type ReactNode } from "react"
@@ -12,6 +12,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -22,14 +24,26 @@ import {
   SidebarMenuItem,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { isActivePath, navigationFor, type NavGroup, type NavItem } from "@/lib/navigation"
-import type { Role } from "@/lib/permissions"
+import {
+  isActivePath,
+  MODULE_MENUS,
+  moduleForPath,
+  modulesFor,
+  navigationFor,
+  type NavGroup,
+  type NavItem,
+} from "@/lib/navigation"
+import type { AppModule, Role } from "@/lib/permissions"
 import { cn } from "@/lib/utils"
 
 // Menu sidebar mengikuti hmx-002 (backlog RU-21): kotak cari menu, bagian (menu induk berikon)
 // yang dibuka-tutup dengan garis pemisah, item aktif berlatar biru. Saat sidebar diciutkan, bagian
 // tampil sebagai ikon dengan tooltip; klik membuka panel melayang berisi menunya. Hanya tampilan;
 // setiap halaman tetap mengecek izinnya sendiri di server.
+//
+// Menu per modul (S-02, seperti active-section webx hmx): pemilih modul di atas sidebar; sidebar
+// hanya menampilkan area kerja modul aktif. Modul aktif mengikuti halaman yang dibuka; pencarian
+// menu tetap mencari ke semua modul.
 
 const ITEM =
   "h-10 rounded-md px-3 text-control text-sidebar-foreground hover:bg-sidebar-accent data-active:bg-linear-to-r data-active:from-primary data-active:from-40% data-active:to-primary-dark data-active:font-medium data-active:text-primary-foreground data-active:hover:text-primary-foreground"
@@ -43,7 +57,17 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
   const { isMobile, setOpenMobile, state } = useSidebar()
   const collapsed = state === "collapsed" && !isMobile
   const [query, setQuery] = useState("")
-  const groups = navigationFor(roles)
+  const allGroups = navigationFor(roles)
+  const modules = modulesFor(allGroups)
+  const pathModule = moduleForPath(pathname)
+  const [module, setModule] = useState<AppModule | undefined>(pathModule ?? modules[0])
+  // Pindah ke halaman milik modul lain (mis. tautan langsung): menu ikut berpindah.
+  const [shownPathModule, setShownPathModule] = useState(pathModule)
+  if (pathModule !== shownPathModule) {
+    setShownPathModule(pathModule)
+    if (pathModule) setModule(pathModule)
+  }
+  const groups = allGroups.filter((group) => group.module === module)
   const activeGroup = groups.find((group) =>
     group.items.some((item) => item.href !== "/" && isActivePath(pathname, item.href)),
   )?.label
@@ -114,9 +138,13 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
     </div>
   )
 
-  // Hasil cari: daftar menu yang cocok beserta nama bagiannya.
+  const switcher = modules.length > 1 && (
+    <ModuleSwitcher modules={modules} value={module} onChange={setModule} collapsed={collapsed} />
+  )
+
+  // Hasil cari: daftar menu yang cocok beserta nama bagiannya, dari semua modul.
   if (term) {
-    const matches = groups.flatMap((group) =>
+    const matches = allGroups.flatMap((group) =>
       group.items
         .filter(
           (item) =>
@@ -126,6 +154,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
     )
     return (
       <>
+        {switcher}
         {search}
         <SidebarGroup className="py-0">
           {matches.length ? (
@@ -139,7 +168,9 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
                   >
                     <span className="flex min-w-0 flex-col">
                       <span className="truncate">{item.title}</span>
-                      <span className="truncate text-caption opacity-75">{group.label}</span>
+                      <span className="truncate text-caption opacity-75">
+                        {MODULE_MENUS[group.module].label} · {group.label}
+                      </span>
                     </span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
@@ -157,6 +188,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
 
   return (
     <>
+      {switcher}
       {search}
       {groups.map((group, index) => {
         const Icon = group.icon
@@ -253,6 +285,78 @@ function CollapsedGroup({ group, pathname }: { group: NavGroup; pathname: string
                     </DropdownMenuItem>
                   )
                 })}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </SidebarMenuItem>
+      </SidebarMenu>
+    </SidebarGroup>
+  )
+}
+
+// Pemilih modul (S-02): nama dan ikon modul aktif dengan ikon tukar; pilihannya hanya modul yang
+// punya menu untuk peran user. Memilih modul hanya mengganti menu, bukan membuka halaman.
+function ModuleSwitcher({
+  modules,
+  value,
+  onChange,
+  collapsed,
+}: {
+  modules: AppModule[]
+  value: AppModule | undefined
+  onChange: (module: AppModule) => void
+  collapsed: boolean
+}) {
+  const current = value ? MODULE_MENUS[value] : undefined
+  const Icon = current?.icon
+  return (
+    <SidebarGroup className={cn("pb-2", collapsed ? "pt-0" : "px-2 pt-0")}>
+      <SidebarMenu>
+        <SidebarMenuItem>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <SidebarMenuButton
+                  tooltip={collapsed ? `Modul: ${current?.label ?? "-"}` : undefined}
+                  aria-label={`Ganti modul, sekarang ${current?.label ?? "belum dipilih"}`}
+                  className={cn(
+                    "h-11 rounded-lg border border-sidebar-border bg-background px-3 text-control font-semibold text-sidebar-foreground hover:bg-sidebar-accent",
+                    // Sidebar ciut: ikon modul saja, seukuran ikon menu lain.
+                    collapsed && "justify-center px-0",
+                  )}
+                />
+              }
+            >
+              {Icon && <Icon className="size-[18px] shrink-0 text-primary" aria-hidden />}
+              {!collapsed && (
+                <>
+                  <span className="flex-1 truncate text-left">{current?.label}</span>
+                  <ArrowLeftRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                </>
+              )}
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              side={collapsed ? "right" : "bottom"}
+              align="start"
+              sideOffset={6}
+              className="w-56"
+            >
+              <DropdownMenuGroup>
+                <DropdownMenuLabel className="text-caption">Pilih modul</DropdownMenuLabel>
+                <DropdownMenuRadioGroup
+                  value={value}
+                  onValueChange={(next) => onChange(next as AppModule)}
+                >
+                  {modules.map((module) => {
+                    const ModuleIcon = MODULE_MENUS[module].icon
+                    return (
+                      <DropdownMenuRadioItem key={module} value={module} className="h-10">
+                        <ModuleIcon className="size-4 text-muted-foreground" aria-hidden />
+                        {MODULE_MENUS[module].label}
+                      </DropdownMenuRadioItem>
+                    )
+                  })}
+                </DropdownMenuRadioGroup>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>

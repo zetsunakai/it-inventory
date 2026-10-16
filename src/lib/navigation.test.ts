@@ -1,6 +1,14 @@
 import { describe, expect, test } from "vitest"
 
-import { findNavItem, isActivePath, NAVIGATION, navigationFor, navigationTrail } from "./navigation"
+import {
+  findNavItem,
+  isActivePath,
+  moduleForPath,
+  modulesFor,
+  NAVIGATION,
+  navigationFor,
+  navigationTrail,
+} from "./navigation"
 import { APP_MODULES, PERMISSION_MODULES, PERMISSIONS } from "./permissions"
 
 function hrefs(groups: ReturnType<typeof navigationFor>) {
@@ -82,5 +90,26 @@ describe("modul (S-01)", () => {
   test("referensi kepabeanan dan profil perusahaan ada di area Kepabeanan", () => {
     expect(navigationTrail("/master/referensi")?.group.label).toBe("Kepabeanan")
     expect(navigationTrail("/master/perusahaan")?.group.module).toBe("it-inventory")
+  })
+})
+
+describe("menu per modul (S-02)", () => {
+  test("modul yang tampil di pemilih mengikuti peran", () => {
+    expect(modulesFor(navigationFor(["administrator"]))).toEqual([
+      "inventory",
+      "it-inventory",
+      "base",
+    ])
+    expect(modulesFor(navigationFor(["auditor"]))).toEqual(["inventory", "it-inventory"])
+    // Admin gudang tetap melihat Laporan (report:read) di IT Inventory, tanpa Pengaturan.
+    expect(modulesFor(navigationFor(["admin_gudang"]))).not.toContain("base")
+  })
+
+  test("modul aktif mengikuti halaman yang dibuka", () => {
+    expect(moduleForPath("/")).toBe("inventory")
+    expect(moduleForPath("/inventory/pengiriman/123")).toBe("inventory")
+    expect(moduleForPath("/master/referensi/abc")).toBe("it-inventory")
+    expect(moduleForPath("/admin/users")).toBe("base")
+    expect(moduleForPath("/tidak-ada")).toBeNull()
   })
 })

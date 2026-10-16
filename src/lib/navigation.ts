@@ -1,15 +1,24 @@
 import {
   ArrowLeftRight,
   Boxes,
+  ClipboardList,
+  FileCheck2,
   ChartColumn,
   Database,
   House,
   Landmark,
   Settings,
+  SlidersHorizontal,
   type LucideIcon,
 } from "lucide-react"
 
-import { type AppModule, hasPermission, type Permission, type Role } from "./permissions"
+import {
+  APP_MODULES,
+  type AppModule,
+  hasPermission,
+  type Permission,
+  type Role,
+} from "./permissions"
 
 // Satu sumber untuk menu sidebar dan halaman modul. Menu hanya menyembunyikan
 // yang tidak boleh dibuka; pengecekan izin yang menentukan tetap di setiap halaman.
@@ -36,7 +45,8 @@ export type NavGroup = {
 export const NAVIGATION: NavGroup[] = [
   {
     label: "Umum",
-    module: "base",
+    // Beranda berisi pekerjaan inventory yang perlu perhatian (RU-01).
+    module: "inventory",
     icon: House,
     items: [{ title: "Beranda", href: "/" }],
   },
@@ -185,4 +195,28 @@ export function navigationTrail(pathname: string): { group: NavGroup; item: NavI
     }
   }
   return best
+}
+
+// Menu per modul (backlog S-02), seperti active-section webx hmx: pemilih modul di atas sidebar,
+// sidebar hanya menampilkan area kerja modul aktif.
+// Ikon modul sengaja berbeda dari ikon area kerja, supaya pemilih tidak tertukar dengan menu saat
+// sidebar diciutkan.
+export const MODULE_MENUS: Record<AppModule, { label: string; icon: LucideIcon }> = {
+  inventory: { label: "Inventory", icon: ClipboardList },
+  "it-inventory": { label: "IT Inventory", icon: FileCheck2 },
+  base: { label: "Pengaturan", icon: SlidersHorizontal },
+}
+
+// Modul yang punya menu untuk peran ini, urut seperti APP_MODULES tapi Inventory dulu.
+const MODULE_ORDER: AppModule[] = ["inventory", "it-inventory", "base"]
+
+export function modulesFor(groups: NavGroup[]): AppModule[] {
+  return MODULE_ORDER.filter(
+    (module) => APP_MODULES.includes(module) && groups.some((group) => group.module === module),
+  )
+}
+
+// Modul pemilik halaman ini (dari menu yang cocok), atau null bila tidak ada menunya.
+export function moduleForPath(pathname: string): AppModule | null {
+  return navigationTrail(pathname)?.group.module ?? null
 }
