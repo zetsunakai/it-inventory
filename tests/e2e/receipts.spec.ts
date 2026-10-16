@@ -34,6 +34,8 @@ test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => 
   await createReadyReceipt(page, fixture, "12,5")
 
   await page.getByRole("button", { name: "Validasi" }).click()
+  // Qty selesai mulai kosong (I-01): isi semua qty diminta.
+  await page.getByRole("alertdialog").getByRole("button", { name: "Isi semua" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),

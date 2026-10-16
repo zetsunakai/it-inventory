@@ -35,6 +35,7 @@ import {
   listInternalLocations,
   listTransfers,
   listUomChoices,
+  type TransferDetail,
   type TransferLine,
   type TransferRow,
   transferNeighbors,
@@ -45,7 +46,7 @@ import { DocumentLayout } from "@/components/document/document-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 
 import { CreateReturnButton } from "./create-return-button"
-import { ReceiptLotEditor, type ReceiptLotLine } from "./receipt-lot-editor"
+import { LineLotEditor, type LotLine } from "./line-lot-editor"
 import { TransferActions } from "./transfer-actions"
 import { TransferForm } from "./transfer-form"
 import { TransferStatusBadge } from "./transfer-status"
@@ -308,7 +309,7 @@ async function TransferDetail({
   const editable = canWrite && transfer.status === "draft" && !fromRequest
   const instant = Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"
   // Penerimaan Siap: barang diterima per lot/nomor seri (RU-03), lewat detail atau layar scan.
-  const receiving = canWrite && transfer.type === "receipt" && transfer.status === "ready"
+  const recording = canRecordLots(transfer, canWrite)
   const [locations, uoms] = editable
     ? await Promise.all([listInternalLocations(user.id), listUomChoices()])
     : [[], []]
@@ -384,7 +385,8 @@ async function TransferDetail({
                 inputQty: line.inputQty,
                 uomCode: line.inputUomCode,
                 detailed:
-                  transfer.type === "receipt" && hasLotDetail(line)
+                  (transfer.type === "receipt" || transfer.type === "delivery") &&
+                  hasLotDetail(line)
                     ? {
                         qty: line.moves.reduce((sum, move) => sum + Number(move.qty), 0).toFixed(4),
                         requested: line.qty,
@@ -393,7 +395,7 @@ async function TransferDetail({
                     : undefined,
               }))}
             />
-            {receiving && (
+            {recording && (
               <Link
                 href={`${kind.path}/${transfer.id}/scan`}
                 className={buttonVariants({ variant: "outline", className: "pointer-coarse:h-11" })}
@@ -464,8 +466,8 @@ async function TransferDetail({
           kind={kind}
           transfer={transfer}
           lotEditor={
-            receiving
-              ? (line) => <ReceiptLotEditor transferId={transfer.id} line={receiptLotLine(line)} />
+            recording
+              ? (line) => <LineLotEditor transferId={transfer.id} line={lotLine(transfer, line)} />
               : undefined
           }
         />
@@ -529,18 +531,57 @@ export function hasLotDetail(line: TransferLine) {
 
 // Rincian awal editor: pergerakan yang sudah ada. Satu pergerakan bawaan tanpa lot untuk produk
 // berpelacakan belum berarti apa-apa, jadi editornya mulai kosong.
-export function receiptLotLine(line: TransferLine): ReceiptLotLine {
+// Rincian lot/nomor seri bisa diisi user (RU-03, I-01): penerimaan Siap, atau pengiriman yang sudah
+// dikonfirmasi dan belum Selesai.
+export function canRecordLots(
+  transfer: { type: TransferDetail["type"]; status: TransferStatus },
+  canWrite: boolean,
+) {
+  if (!canWrite) return false
+  if (transfer.type === "receipt") return transfer.status === "ready"
+  if (transfer.type === "delivery") {
+    return ["waiting", "partially_available", "ready"].includes(transfer.status)
+  }
+  return false
+}
+
+// Rincian awal editor: pergerakan yang sudah ada. Satu pergerakan bawaan tanpa lot untuk produk
+// berpelacakan belum berarti apa-apa, jadi editornya mulai kosong.
+export function lotLine(transfer: { type: TransferDetail["type"] }, line: TransferLine): LotLine {
   const blank = !hasLotDetail(line) && !line.moves[0]?.lotName && line.tracking !== "none"
   return {
     id: line.id,
+    direction: transfer.type === "delivery" ? "out" : "in",
     sku: line.sku,
     productName: line.productName,
     tracking: line.tracking,
     lotAuto: line.lotAuto,
     requested: line.qty,
     uomCode: line.stockUomCode,
-    rows: blank
-      ? []
-      : line.moves.map((move) => ({ lot: move.lotName ?? "", qty: toDecimalInput(move.qty) })),
+    stock: line.stock ?? undefined,
+    rows: blank ? [] : initialLotRows(transfer.type === "delivery", line),
   }
+}
+
+// Pengiriman: hanya stok yang sudah dipesan (pergerakan tanpa pesanan belum pasti ada barangnya).
+// Produk tanpa pelacakan: satu baris qty saja, walaupun pergerakannya dipecah per lokasi.
+function initialLotRows(outbound: boolean, line: TransferLine) {
+  const moves = outbound ? line.moves.filter((move) => Number(move.reservedQty) > 0) : line.moves
+  const qtyOf = (move: TransferLine["moves"][number]) =>
+    outbound ? Number(move.reservedQty) : Number(move.qty)
+  if (line.tracking === "none") {
+    const total = moves.reduce((sum, move) => sum + qtyOf(move), 0)
+    return total > 0 ? [{ lot: "", qty: toDecimalInput(total.toFixed(4)) }] : []
+  }
+  // Penerimaan: apa adanya, termasuk rincian tanpa lot (nomor otomatis).
+  if (!outbound) {
+    return moves.map((move) => ({ lot: move.lotName ?? "", qty: toDecimalInput(move.qty) }))
+  }
+  // Satu lot bisa dipesan dari beberapa rak: digabung jadi satu rincian per lot.
+  const byLot = new Map<string, number>()
+  for (const move of moves) {
+    if (!move.lotName) continue
+    byLot.set(move.lotName, (byLot.get(move.lotName) ?? 0) + qtyOf(move))
+  }
+  return [...byLot].map(([lot, qty]) => ({ lot, qty: toDecimalInput(qty.toFixed(4)) }))
 }

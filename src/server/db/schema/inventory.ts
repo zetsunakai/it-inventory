@@ -308,6 +308,8 @@ export const stockBalances = pgTable(
     qty: qty().notNull().default("0"),
     // Qty yang dipesan transfer yang sudah dikonfirmasi (backlog R-07). Tersedia = qty − ini.
     reservedQty: qty().notNull().default("0"),
+    // Tanggal stok masuk (saldo jadi positif), urutan FIFO reservasi (I-01). Diisi trigger.
+    inDate: timestamp({ withTimezone: true }),
     updatedAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
   },
   (table) => [

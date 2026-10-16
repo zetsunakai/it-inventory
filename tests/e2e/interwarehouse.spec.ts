@@ -36,6 +36,8 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
     page.getByRole("heading", { name: /^Transfer antar gudang keluar TRF\// }),
   ).toBeVisible()
   await page.getByRole("button", { name: "Validasi" }).click()
+  // Qty selesai mulai kosong (I-01): isi semua qty diminta.
+  await page.getByRole("alertdialog").getByRole("button", { name: "Isi semua" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),
@@ -54,6 +56,8 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
   // Transfer masuk: transit → gudang tujuan.
   await page.getByRole("row").filter({ hasText: "masuk" }).getByRole("link").click()
   await page.getByRole("button", { name: "Validasi" }).click()
+  // Qty selesai mulai kosong (I-01): isi semua qty diminta.
+  await page.getByRole("alertdialog").getByRole("button", { name: "Isi semua" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),

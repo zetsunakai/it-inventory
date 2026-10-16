@@ -442,6 +442,13 @@
       "when": 1792145116556,
       "tag": "0062_receipt_line_moves",
       "breakpoints": true
+    },
+    {
+      "idx": 63,
+      "version": "7",
+      "when": 1792152021361,
+      "tag": "0063_delivery_reservation",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,8 @@
 import type { ProductTracking } from "./inventory"
 
-// Rincian lot/nomor seri penerimaan (backlog RU-03), dipakai editor di detail penerimaan dan layar
-// scan. Qty dalam satuan stok. Lot kosong = nomor otomatis saat validasi (produk ber-nomor otomatis).
+// Rincian lot/nomor seri per baris transfer (penerimaan RU-03, pengiriman I-01), dipakai editor di
+// detail dan layar scan. Qty dalam satuan stok. Penerimaan: lot kosong = nomor otomatis saat
+// validasi. Pengiriman: hanya lot yang ada stoknya di lokasi asal, maksimal sebanyak stok itu.
 
 export type LotRow = { lot: string; qty: string }
 
@@ -15,11 +16,16 @@ export function lotRowsTotal(rows: LotRow[]) {
 }
 
 // Satu scan kode lot/nomor seri: nomor seri baru jadi satu rincian ber-qty 1, lot yang sudah ada
-// bertambah 1. Scan yang membuat qty melebihi qty diminta ditolak.
+// bertambah 1. Scan yang membuat qty melebihi qty diminta, atau melebihi stok lot (barang keluar,
+// `available` diisi), ditolak.
 export function addLotScan(
   rows: LotRow[],
   code: string,
-  { tracking, requested }: { tracking: ProductTracking; requested: number },
+  {
+    tracking,
+    requested,
+    available,
+  }: { tracking: ProductTracking; requested: number; available?: Record<string, number> },
 ): ScanResult {
   const lot = code.trim()
   if (!lot) return { ok: false, message: "Kode kosong." }
@@ -30,6 +36,13 @@ export function addLotScan(
     return { ok: false, message: "Qty sudah sama dengan qty diminta." }
   }
   const index = rows.findIndex((row) => row.lot.trim() === lot)
+  if (available) {
+    const stock = available[lot] ?? 0
+    if (stock <= 0) return { ok: false, message: `${lot} tidak ada stoknya di lokasi asal.` }
+    if ((index >= 0 ? parseQty(rows[index].qty) : 0) + 1 > stock) {
+      return { ok: false, message: `Stok ${lot} di lokasi asal hanya ${stock}.` }
+    }
+  }
   if (tracking === "serial") {
     if (index >= 0) return { ok: false, message: `Nomor seri ${lot} sudah dipindai.` }
     return {
@@ -49,7 +62,7 @@ export function addLotScan(
   }
 }
 
-// Data yang dikirim ke saveReceiptLots: baris kosong (tanpa lot dan qty) diabaikan.
+// Data yang dikirim ke saveLineLots: baris kosong (tanpa lot dan qty) diabaikan.
 export function lotRowsPayload(rows: LotRow[]) {
   return rows
     .filter((row) => row.lot.trim() || row.qty.trim())

@@ -4,30 +4,31 @@ import { CircleAlert, CircleCheck, Minus, Plus, ScanLine } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useEffect, useRef, useState, useTransition } from "react"
 
-import { saveReceiptLots } from "@/app/(app)/inventory/actions"
+import { saveLineLots } from "@/app/(app)/inventory/actions"
 import { FormErrors } from "@/components/form-errors"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { formatDecimal } from "@/lib/decimal"
-import { addLotScan, type LotRow, lotRowsPayload, lotRowsTotal } from "@/lib/receipt-lots"
+import { addLotScan, type LotRow, lotRowsPayload, lotRowsTotal } from "@/lib/line-lots"
 import { cn } from "@/lib/utils"
 
-import type { ReceiptLotLine } from "./receipt-lot-editor"
+import type { LotLine } from "./line-lot-editor"
 
 type Feedback = { ok: boolean; message: string }
 
-// Layar scan penerimaan untuk tablet/HP (backlog RU-03, skill UI "Layar tablet/HP"): satu input scan
-// yang selalu fokus. Kode produk memilih baris; kode lain dicatat sebagai lot/nomor seri baris itu.
-// Produk tanpa pelacakan: setiap scan kode produknya menambah qty 1.
-export function ReceiptScanner({
+// Layar scan penerimaan dan pengiriman untuk tablet/HP (backlog RU-03, I-01, skill UI "Layar
+// tablet/HP"): satu input scan yang selalu fokus. Kode produk memilih baris; kode lain dicatat sebagai
+// lot/nomor seri baris itu. Produk tanpa pelacakan: setiap scan kode produknya menambah qty 1.
+// Pengiriman: lot dan qty dibatasi stok tersedia di lokasi asal.
+export function LineScanner({
   transferId,
   detailHref,
   lines,
 }: {
   transferId: string
   detailHref: string
-  lines: ReceiptLotLine[]
+  lines: LotLine[]
 }) {
   const router = useRouter()
   const [rows, setRows] = useState<Record<string, LotRow[]>>(() =>
@@ -57,6 +58,13 @@ export function ReceiptScanner({
         setFeedback({ ok: false, message: `${product.sku}: qty sudah sama dengan qty diminta.` })
         return
       }
+      if (product.direction === "out" && total > Number(product.stock?.available ?? 0)) {
+        setFeedback({
+          ok: false,
+          message: `${product.sku}: stok di lokasi asal hanya ${formatDecimal(product.stock?.available ?? "0")}.`,
+        })
+        return
+      }
       setRows({ ...rows, [product.id]: [{ lot: "", qty: String(total) }] })
       setFeedback({ ok: true, message: `${product.sku}: ${total}.` })
       return
@@ -74,19 +82,36 @@ export function ReceiptScanner({
     if (!active || active.tracking === "none") {
       setFeedback({
         ok: false,
-        message: `Kode ${value} bukan produk penerimaan ini. Pindai kode produk dulu.`,
+        message: `Kode ${value} bukan produk ${
+          lines[0]?.direction === "out" ? "pengiriman" : "penerimaan"
+        } ini. Pindai kode produk dulu.`,
       })
       return
     }
     const result = addLotScan(rows[active.id] ?? [], value, {
       tracking: active.tracking,
       requested: Number(active.requested),
+      available:
+        active.direction === "out"
+          ? Object.fromEntries(
+              (active.stock?.lots ?? []).map((lot) => [lot.name, Number(lot.available)]),
+            )
+          : undefined,
     })
     if (result.ok) setRows({ ...rows, [active.id]: result.rows })
     setFeedback({ ok: result.ok, message: result.message })
   }
 
   function changeQty(lineId: string, index: number, delta: number) {
+    const line = lines.find((item) => item.id === lineId)
+    const row = rows[lineId]?.[index]
+    if (line?.direction === "out" && row && delta > 0) {
+      const stock = Number(line.stock?.lots.find((lot) => lot.name === row.lot)?.available ?? 0)
+      if (Number(row.qty) + delta > stock) {
+        setFeedback({ ok: false, message: `Stok ${row.lot} di lokasi asal hanya ${stock}.` })
+        return
+      }
+    }
     setRows((current) => ({
       ...current,
       [lineId]: (current[lineId] ?? [])
@@ -100,7 +125,7 @@ export function ReceiptScanner({
 
   function save() {
     startTransition(async () => {
-      const result = await saveReceiptLots({
+      const result = await saveLineLots({
         id: transferId,
         lines: Object.fromEntries(
           lines.map((line) => [line.id, lotRowsPayload(rows[line.id] ?? [])]),

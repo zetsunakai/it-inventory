@@ -186,6 +186,10 @@ export type TransferLine = {
   // Lot pergerakan pertama, untuk form Draft (satu pergerakan per baris).
   lotId: string | null
   lotName: string | null
+  // Transfer yang mengambil stok gudang dan belum Selesai (I-01): stok tersedia di lokasi asal dan
+  // sub-lokasinya untuk baris ini (termasuk yang sudah dipesan baris ini), satuan stok, dan per lot
+  // urut FIFO tanggal masuk. Lot pertama = saran lot.
+  stock: { available: string; lots: { name: string; available: string }[] } | null
 }
 
 const stockUom = aliasedTable(uoms, "stock_uom")
@@ -260,6 +264,26 @@ export async function getTransfer(userId: string, id: string) {
     .leftJoin(lots, eq(lots.id, stockMoves.lotId))
     .where(eq(stockMoves.transferId, id))
     .orderBy(asc(stockMoves.createdAt), asc(lots.name))
+  // Stok tersedia per produk/lot di lokasi asal dan sub-lokasinya (I-01).
+  const sourceOpen =
+    header.sourceWarehouseId &&
+    header.transfer.status !== "done" &&
+    header.transfer.status !== "cancelled"
+  const stockRows = sourceOpen
+    ? (
+        await db.execute<{ product_id: string; lot_name: string | null; available: string }>(sql`
+          select b.product_id, l.name as lot_name, sum(b.qty - b.reserved_qty)::text as available
+          from stock_balances b
+          left join lots l on l.id = b.lot_id
+          where b.location_id in (select location_subtree(${header.transfer.sourceLocationId}))
+            and b.location_id <> ${header.transfer.destinationLocationId}
+            and b.product_id in (select product_id from transfer_lines where transfer_id = ${id})
+            and b.qty - b.reserved_qty > 0
+          group by b.product_id, l.name, l.created_at
+          order by min(b.in_date) nulls last, l.created_at, l.name`)
+      ).rows
+    : []
+
   const lines: TransferLine[] = lineRows.map((line) => {
     const moves = moveRows
       .filter((move) => move.lineId === line.id)
@@ -271,11 +295,35 @@ export async function getTransfer(userId: string, id: string) {
         inputUomId,
         reservedQty,
       }))
+    // Pesanan baris ini sendiri dihitung tersedia untuknya.
+    const ownReserved = new Map<string, number>()
+    for (const move of moves) {
+      const key = move.lotName ?? ""
+      ownReserved.set(key, (ownReserved.get(key) ?? 0) + Number(move.reservedQty))
+    }
+    const lotStock = new Map<string, number>()
+    for (const row of stockRows) {
+      if (row.product_id !== line.productId) continue
+      const key = row.lot_name ?? ""
+      lotStock.set(key, (lotStock.get(key) ?? 0) + Number(row.available))
+    }
+    for (const [key, qty] of ownReserved) {
+      if (qty > 0) lotStock.set(key, (lotStock.get(key) ?? 0) + qty)
+    }
+    const stock = sourceOpen
+      ? {
+          available: [...lotStock.values()].reduce((sum, qty) => sum + qty, 0).toFixed(4),
+          lots: [...lotStock.entries()]
+            .filter(([name]) => name)
+            .map(([name, qty]) => ({ name, available: qty.toFixed(4) })),
+        }
+      : null
     return {
       ...line,
       moves,
       lotId: moves[0]?.lotId ?? null,
       lotName: moves[0]?.lotName ?? null,
+      stock,
     }
   })
 

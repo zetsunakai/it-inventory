@@ -23,33 +23,14 @@ const BASE_COLUMNS: DataTableColumn<TransferLine>[] = [
     className: "w-full whitespace-normal",
     cell: (line) => (
       <span className="flex flex-col">
-        <span className="font-mono text-foreground">{line.sku}</span>
+        <span className="font-mono whitespace-nowrap text-foreground">{line.sku}</span>
         <span className="text-muted-foreground">{line.productName}</span>
       </span>
     ),
   },
   {
     header: "Lot/seri",
-    cell: (line) => {
-      const lots = line.moves.filter((move) => move.lotName)
-      return lots.length ? (
-        <span className="flex flex-col">
-          {lots.map((move) => (
-            <span key={move.id} className="whitespace-nowrap">
-              <span className="font-mono">{move.lotName}</span>
-              {lots.length > 1 && (
-                <span className="text-muted-foreground tabular-nums">
-                  {" "}
-                  · {formatDecimal(move.qty)} {line.stockUomCode}
-                </span>
-              )}
-            </span>
-          ))}
-        </span>
-      ) : (
-        "—"
-      )
-    },
+    cell: (line) => <LotList line={line} />,
   },
   {
     header: "Qty diminta",
@@ -57,6 +38,49 @@ const BASE_COLUMNS: DataTableColumn<TransferLine>[] = [
     cell: (line) => `${formatDecimal(line.inputQty)} ${line.inputUomCode}`,
   },
 ]
+
+function LotList({ line }: { line: TransferLine }) {
+  const lots = line.moves.filter((move) => move.lotName)
+  return lots.length ? (
+    <span className="flex flex-col">
+      {lots.map((move) => (
+        <span key={move.id} className="whitespace-nowrap">
+          <span className="font-mono">{move.lotName}</span>
+          {lots.length > 1 && (
+            <span className="text-muted-foreground tabular-nums">
+              {" "}
+              · {formatDecimal(move.qty)} {line.stockUomCode}
+            </span>
+          )}
+        </span>
+      ))}
+    </span>
+  ) : (
+    "—"
+  )
+}
+
+// Tombol rincian lot di sel Lot/seri (RU-03, I-01), supaya tidak jadi kolom tambahan yang terdorong
+// keluar layar.
+function withLotEditor(
+  columns: DataTableColumn<TransferLine>[],
+  lotEditor?: (line: TransferLine) => ReactNode,
+) {
+  if (!lotEditor) return columns
+  return columns.map((column) =>
+    column.header === "Lot/seri"
+      ? {
+          ...column,
+          cell: (line: TransferLine) => (
+            <span className="flex flex-col items-start gap-1.5">
+              <LotList line={line} />
+              {lotEditor(line)}
+            </span>
+          ),
+        }
+      : column,
+  )
+}
 
 // Qty dipesan hanya berarti untuk transfer yang sudah dikonfirmasi dan belum Selesai; qty selesai
 // hanya ada setelah Selesai. Kolom yang tidak berlaku tidak ditampilkan (tabel tetap muat di HP).
@@ -88,18 +112,40 @@ function lineColumns(
   lotEditor?: (line: TransferLine) => ReactNode,
 ) {
   if (status === "done") return [...BASE_COLUMNS, DONE_COLUMN]
-  const confirmed = status === "waiting" || status === "partially_available" || status === "ready"
-  // Hanya transfer yang mengambil stok gudang yang memesan stok (R-07).
-  if (confirmed && sourceWarehouseId) return [...BASE_COLUMNS, RESERVED_COLUMN]
-  // Penerimaan Siap: rincian lot dan qty diterima per baris (RU-03).
-  if (lotEditor) {
-    return [
-      ...BASE_COLUMNS,
-      RECEIVED_COLUMN,
-      { header: "Rincian", align: "right", cell: lotEditor },
-    ] satisfies DataTableColumn<TransferLine>[]
+  const base = withLotEditor(BASE_COLUMNS, lotEditor)
+  // Transfer yang mengambil stok gudang: stok tersedia per baris sebelum Validasi (I-01), lalu qty
+  // yang dipesan setelah dikonfirmasi (R-07).
+  if (sourceWarehouseId && status !== "cancelled") {
+    const confirmed = status === "waiting" || status === "partially_available" || status === "ready"
+    return [...base, AVAILABLE_COLUMN, ...(confirmed ? [RESERVED_COLUMN] : [])]
   }
+  // Penerimaan Siap: rincian lot dan qty diterima per baris (RU-03).
+  if (lotEditor) return [...base, RECEIVED_COLUMN]
   return BASE_COLUMNS
+}
+
+// Stok tersedia di lokasi asal dan sub-lokasinya untuk baris ini (I-01). Kurang dari qty diminta
+// ditandai; produk berpelacakan yang belum dipesan menampilkan saran lot (masuk paling awal).
+const AVAILABLE_COLUMN: DataTableColumn<TransferLine> = {
+  header: "Tersedia",
+  align: "right",
+  cell: (line) => {
+    if (!line.stock) return "—"
+    const short = Number(line.stock.available) < Number(line.qty)
+    const reserved = line.moves.some((move) => Number(move.reservedQty) > 0)
+    const suggestion = line.tracking !== "none" && !reserved ? line.stock.lots[0]?.name : undefined
+    return (
+      <span className={short ? "font-medium text-warning" : undefined}>
+        {formatDecimal(line.stock.available)} {line.stockUomCode}
+        {short && <span className="block text-caption">kurang dari diminta</span>}
+        {suggestion && (
+          <span className="block text-caption text-muted-foreground">
+            saran lot <span className="font-mono">{suggestion}</span>
+          </span>
+        )}
+      </span>
+    )
+  },
 }
 
 const RECEIVED_COLUMN: DataTableColumn<TransferLine> = {

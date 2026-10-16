@@ -88,17 +88,24 @@ export function TransferActions({
   const [cancelOpen, setCancelOpen] = useState(false)
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
   const [effectiveDate, setEffectiveDate] = useState(today)
-  // Hanya qty yang diubah user; baris lain memakai qty rencana terbaru dari server.
+  // Qty selesai dicatat user, mulai kosong (I-01, seperti hmx). Bila belum ada yang dicatat sama
+  // sekali, Validasi meminta konfirmasi untuk memproses semua qty diminta ("Immediate Transfer").
+  // Bila ada yang dicatat, baris yang kosong berarti 0.
   const [edited, setEdited] = useState<Record<string, string>>({})
+  const [confirmAll, setConfirmAll] = useState(false)
   const editable = lines.filter((line) => !line.detailed)
+  const recorded =
+    lines.some((line) => line.detailed) || editable.some((line) => edited[line.id]?.trim())
   const quantities = Object.fromEntries(
-    editable.map((line) => [line.id, edited[line.id] ?? toDecimalInput(line.inputQty)]),
+    editable.map((line) => [line.id, edited[line.id]?.trim() || "0"]),
   )
-  const partial = lines.some((line) =>
-    line.detailed
-      ? Number(line.detailed.qty) < Number(line.detailed.requested)
-      : Number(quantities[line.id].replace(",", ".")) !== Number(line.inputQty),
-  )
+  const partial =
+    recorded &&
+    lines.some((line) =>
+      line.detailed
+        ? Number(line.detailed.qty) < Number(line.detailed.requested)
+        : Number(quantities[line.id].replace(",", ".")) !== Number(line.inputQty),
+    )
   // Sisa qty: transfer lanjutan atau dibuang (R-08). Backdate wajib dikonfirmasi.
   const [createBackorder, setCreateBackorder] = useState(true)
   const [backdateConfirmed, setBackdateConfirmed] = useState(false)
@@ -157,7 +164,13 @@ export function TransferActions({
         )}
         {actions.has("validate") && (
           <>
-            <AlertDialog open={validateOpen} onOpenChange={setValidateOpen}>
+            <AlertDialog
+              open={validateOpen}
+              onOpenChange={(next) => {
+                setValidateOpen(next)
+                setConfirmAll(false)
+              }}
+            >
               {needsApproval && !canApprove ? (
                 <p className="self-center text-sm text-muted-foreground">
                   Menunggu persetujuan Manajer.
@@ -179,7 +192,26 @@ export function TransferActions({
                 </AlertDialogHeader>
                 {lines.length > 0 && (
                   <fieldset className="space-y-2">
-                    <legend className="text-sm font-medium">Qty yang benar-benar selesai</legend>
+                    <legend className="flex w-full items-center justify-between text-sm font-medium">
+                      Qty yang benar-benar selesai
+                      {editable.length > 0 && (
+                        <Button
+                          type="button"
+                          variant="link"
+                          className="h-auto p-0"
+                          onClick={() => {
+                            setEdited(
+                              Object.fromEntries(
+                                editable.map((line) => [line.id, toDecimalInput(line.inputQty)]),
+                              ),
+                            )
+                            setConfirmAll(false)
+                          }}
+                        >
+                          Isi semua
+                        </Button>
+                      )}
+                    </legend>
                     {lines.map((line) => (
                       <div key={line.id} className="flex items-center gap-2">
                         <Label
@@ -205,13 +237,15 @@ export function TransferActions({
                             <Input
                               id={`done-${line.id}`}
                               inputMode="decimal"
-                              value={quantities[line.id]}
-                              onChange={(event) =>
+                              value={edited[line.id] ?? ""}
+                              placeholder="0"
+                              onChange={(event) => {
                                 setEdited((current) => ({
                                   ...current,
                                   [line.id]: event.target.value,
                                 }))
-                              }
+                                setConfirmAll(false)
+                              }}
                               className="w-28 text-right tabular-nums pointer-coarse:h-11"
                             />
                             <span className="w-12 text-sm text-muted-foreground">
@@ -277,11 +311,20 @@ export function TransferActions({
                     )}
                   </div>
                 )}
+                {confirmAll && (
+                  <p role="alert" className="rounded-lg bg-warning-soft px-3 py-2.5 text-sm">
+                    Belum ada qty selesai yang dicatat. Proses semua qty diminta?
+                  </p>
+                )}
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={pending}>Batal</AlertDialogCancel>
                   <Button
                     disabled={pending || (backdated && !backdateConfirmed)}
-                    onClick={() =>
+                    onClick={() => {
+                      if (lines.length > 0 && !recorded && !confirmAll) {
+                        setConfirmAll(true)
+                        return
+                      }
                       run(
                         () =>
                           needsApproval
@@ -297,9 +340,9 @@ export function TransferActions({
                               }),
                         () => setValidateOpen(false),
                       )
-                    }
+                    }}
                   >
-                    {pending ? "Memproses…" : verb}
+                    {pending ? "Memproses…" : confirmAll ? "Proses semua" : verb}
                   </Button>
                 </AlertDialogFooter>
               </AlertDialogContent>

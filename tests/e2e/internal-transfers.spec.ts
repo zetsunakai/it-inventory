@@ -27,6 +27,8 @@ test("pindah lokasi memindah saldo di dalam gudang tanpa konfirmasi terpisah", a
 
   await expect(page.getByRole("button", { name: "Konfirmasi" })).toHaveCount(0)
   await page.getByRole("button", { name: "Validasi" }).click()
+  // Qty selesai mulai kosong (I-01): isi semua qty diminta.
+  await page.getByRole("alertdialog").getByRole("button", { name: "Isi semua" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),

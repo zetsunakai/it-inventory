@@ -442,11 +442,12 @@ export const approveTransfer = defineAction({
   },
 })
 
-// Rincian lot/nomor seri penerimaan (RU-03), dari layar detail atau layar scan: per baris, daftar
-// lot dan qty dalam satuan stok. Lot kosong = nomor otomatis saat validasi. Semua baris disimpan
-// dalam satu transaksi; kesalahannya dari set_receipt_line_moves().
+// Rincian lot/nomor seri per baris (penerimaan RU-03, pengiriman I-01), dari layar detail atau layar
+// scan: per baris, daftar lot dan qty dalam satuan stok. Penerimaan: lot kosong = nomor otomatis
+// saat validasi. Pengiriman: setiap rincian langsung dipesan dari stok lot itu. Semua baris disimpan
+// dalam satu transaksi; kesalahannya dari set_receipt_line_moves() / set_delivery_line_moves().
 const receiptLotsInput = z.record(
-  z.uuid("Baris penerimaan tidak valid."),
+  z.uuid("Baris transfer tidak valid."),
   z.array(
     z.object({
       lot: z.string().max(50, "Nomor lot maksimal 50 karakter.").nullable(),
@@ -458,28 +459,37 @@ const receiptLotsInput = z.record(
   ),
 )
 
-export const saveReceiptLots = defineAction({
-  name: "saveReceiptLots",
+const LINE_MOVES_FUNCTION: Partial<Record<TransferType, string>> = {
+  receipt: "set_receipt_line_moves",
+  delivery: "set_delivery_line_moves",
+}
+
+export const saveLineLots = defineAction({
+  name: "saveLineLots",
   permission: "inventory:write",
   schema: idInput.extend({ lines: receiptLotsInput }),
   successMessage: "Rincian lot disimpan.",
   handler: async ({ input, tx }) => {
+    const [saved] = await tx
+      .select({ type: transfers.type })
+      .from(transfers)
+      .where(eq(transfers.id, input.id))
+    const fn = saved && LINE_MOVES_FUNCTION[saved.type]
+    if (!fn) throw new AppError("Rincian lot hanya untuk penerimaan dan pengiriman.")
     const owned = await tx
       .select({ id: transferLines.id })
       .from(transferLines)
       .where(eq(transferLines.transferId, input.id))
     const ownedIds = new Set(owned.map((line) => line.id))
     if (Object.keys(input.lines).some((lineId) => !ownedIds.has(lineId))) {
-      throw new AppError("Baris penerimaan tidak ditemukan. Muat ulang halaman.")
+      throw new AppError("Baris transfer tidak ditemukan. Muat ulang halaman.")
     }
     const errors: string[] = []
     for (const [lineId, moves] of Object.entries(input.lines)) {
       // Savepoint per baris supaya kesalahan semua baris terkumpul sebelum transaksi dibatalkan.
       try {
         await tx.transaction((savepoint) =>
-          savepoint.execute(
-            sql`select set_receipt_line_moves(${lineId}, ${JSON.stringify(moves)}::jsonb)`,
-          ),
+          savepoint.execute(sql`select ${sql.raw(fn)}(${lineId}, ${JSON.stringify(moves)}::jsonb)`),
         )
       } catch (error) {
         const messages = mapDatabaseError(error)

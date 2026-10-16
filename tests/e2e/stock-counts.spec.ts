@@ -34,6 +34,8 @@ test("selisih opname yang disetujui tercatat sebagai penyesuaian; gudang beku se
   await page.goto(`/inventory/penerimaan/${pendingReceipt}`)
   await page.getByRole("button", { name: "Konfirmasi" }).click()
   await page.getByRole("button", { name: "Validasi" }).click()
+  // Qty selesai mulai kosong (I-01): isi semua qty diminta.
+  await page.getByRole("alertdialog").getByRole("button", { name: "Isi semua" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Validasi" }).click()
   await expect(page.getByRole("alert").filter({ hasText: "sedang dibekukan" })).toContainText(
     `Gudang ${fixture.warehouse.code} sedang dibekukan untuk stock opname OPN/`,

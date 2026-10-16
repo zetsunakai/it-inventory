@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { addLotScan, lotRowsPayload, lotRowsTotal } from "./receipt-lots"
+import { addLotScan, lotRowsPayload, lotRowsTotal } from "./line-lots"
 
 describe("addLotScan", () => {
   it("lot yang dipindai ulang bertambah 1", () => {
@@ -26,6 +26,22 @@ describe("addLotScan", () => {
   it("scan yang melebihi qty diminta ditolak", () => {
     const rows = [{ lot: "LOT-A", qty: "2" }]
     expect(addLotScan(rows, "LOT-B", { tracking: "lot", requested: 2 }).ok).toBe(false)
+  })
+})
+
+describe("addLotScan untuk barang keluar", () => {
+  it("hanya lot yang ada stoknya, maksimal sebanyak stok", () => {
+    const options = { tracking: "lot" as const, requested: 10, available: { "LOT-A": 1 } }
+    expect(addLotScan([], "LOT-X", options)).toEqual({
+      ok: false,
+      message: "LOT-X tidak ada stoknya di lokasi asal.",
+    })
+    const first = addLotScan([], "LOT-A", options)
+    expect(first.ok).toBe(true)
+    expect(addLotScan(first.ok ? first.rows : [], "LOT-A", options)).toEqual({
+      ok: false,
+      message: "Stok LOT-A di lokasi asal hanya 1.",
+    })
   })
 })
 

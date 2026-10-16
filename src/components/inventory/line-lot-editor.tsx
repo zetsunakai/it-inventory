@@ -3,7 +3,7 @@
 import { Plus, Trash2 } from "lucide-react"
 import { useRef, useState, useTransition } from "react"
 
-import { saveReceiptLots } from "@/app/(app)/inventory/actions"
+import { saveLineLots } from "@/app/(app)/inventory/actions"
 import { FormErrors } from "@/components/form-errors"
 import { usePageMessage } from "@/components/layout/page-message"
 import { Button } from "@/components/ui/button"
@@ -19,10 +19,12 @@ import {
 } from "@/components/ui/sheet"
 import { formatDecimal } from "@/lib/decimal"
 import type { ProductTracking } from "@/lib/inventory"
-import { type LotRow, lotRowsPayload, lotRowsTotal } from "@/lib/receipt-lots"
+import { type LotRow, lotRowsPayload, lotRowsTotal } from "@/lib/line-lots"
 
-export type ReceiptLotLine = {
+export type LotLine = {
   id: string
+  // Penerimaan (masuk) atau pengiriman (keluar).
+  direction: "in" | "out"
   sku: string
   productName: string
   tracking: ProductTracking
@@ -31,17 +33,14 @@ export type ReceiptLotLine = {
   requested: string
   uomCode: string
   rows: LotRow[]
+  // Barang keluar: stok tersedia di lokasi asal (satuan stok), total dan per lot urut FIFO.
+  stock?: { available: string; lots: { name: string; available: string }[] }
 }
 
-// Rincian lot/nomor seri satu baris penerimaan lewat keyboard (backlog RU-03): Enter di qty
-// menambah baris baru dan memindahkan fokus ke kolom lotnya. Qty selesai = jumlah rincian.
-export function ReceiptLotEditor({
-  transferId,
-  line,
-}: {
-  transferId: string
-  line: ReceiptLotLine
-}) {
+// Rincian lot/nomor seri satu baris transfer lewat keyboard (penerimaan RU-03, pengiriman I-01):
+// Enter di qty menambah baris baru dan memindahkan fokus ke kolom lotnya. Qty selesai = jumlah
+// rincian. Pengiriman: kolom lot menyarankan lot yang ada stoknya, terlama dulu.
+export function LineLotEditor({ transferId, line }: { transferId: string; line: LotLine }) {
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState<LotRow[]>(line.rows)
   const [errors, setErrors] = useState<string[]>([])
@@ -53,6 +52,9 @@ export function ReceiptLotEditor({
   const lotLabel = serial ? "Nomor seri" : "Lot"
   const total = lotRowsTotal(rows)
   const requested = Number(line.requested)
+  const outbound = line.direction === "out"
+  const lotStock = new Map(line.stock?.lots.map((lot) => [lot.name, lot.available]))
+  const listId = `lots-${line.id}`
 
   function update(index: number, patch: Partial<LotRow>) {
     setRows((current) => current.map((row, i) => (i === index ? { ...row, ...patch } : row)))
@@ -66,7 +68,7 @@ export function ReceiptLotEditor({
 
   function save() {
     startTransition(async () => {
-      const result = await saveReceiptLots({
+      const result = await saveLineLots({
         id: transferId,
         lines: { [line.id]: lotRowsPayload(rows) },
       })
@@ -101,7 +103,13 @@ export function ReceiptLotEditor({
           </SheetTitle>
           <SheetDescription>
             Diminta {formatDecimal(line.requested)} {line.uomCode}.
-            {tracked && line.lotAuto && ` ${lotLabel} kosong diberi nomor otomatis saat validasi.`}
+            {outbound &&
+              line.stock &&
+              ` Tersedia di lokasi asal ${formatDecimal(line.stock.available)} ${line.uomCode}.`}
+            {!outbound &&
+              tracked &&
+              line.lotAuto &&
+              ` ${lotLabel} kosong diberi nomor otomatis saat validasi.`}
           </SheetDescription>
         </SheetHeader>
         <form
@@ -133,7 +141,9 @@ export function ReceiptLotEditor({
                     }}
                     aria-label={`${lotLabel} baris ${index + 1}`}
                     value={row.lot}
-                    placeholder={line.lotAuto ? "Otomatis" : undefined}
+                    list={outbound ? listId : undefined}
+                    autoComplete="off"
+                    placeholder={!outbound && line.lotAuto ? "Otomatis" : undefined}
                     onChange={(event) => update(index, { lot: event.target.value })}
                     className="font-mono pointer-coarse:h-11"
                   />
@@ -168,6 +178,29 @@ export function ReceiptLotEditor({
               </div>
             ))}
           </div>
+          {outbound && tracked && (
+            <datalist id={listId}>
+              {line.stock?.lots.map((lot) => (
+                <option key={lot.name} value={lot.name}>
+                  {`tersedia ${formatDecimal(lot.available)} ${line.uomCode}`}
+                </option>
+              ))}
+            </datalist>
+          )}
+          {outbound && tracked && rows.some((row) => row.lot.trim()) && (
+            <ul className="text-caption text-muted-foreground tabular-nums">
+              {rows
+                .filter((row) => row.lot.trim())
+                .map((row, index) => (
+                  <li key={`${row.lot}-${index}`}>
+                    <span className="font-mono">{row.lot}</span>:{" "}
+                    {lotStock.has(row.lot.trim())
+                      ? `tersedia ${formatDecimal(lotStock.get(row.lot.trim())!)} ${line.uomCode}`
+                      : "tidak ada stoknya di lokasi asal"}
+                  </li>
+                ))}
+            </ul>
+          )}
           {tracked && (
             <Button type="button" variant="outline" className="self-start" onClick={addRow}>
               <Plus />
@@ -181,8 +214,8 @@ export function ReceiptLotEditor({
                 : "text-sm tabular-nums"
             }
           >
-            Diterima {formatDecimal(String(total))} dari {formatDecimal(line.requested)}{" "}
-            {line.uomCode}
+            {outbound ? "Dikirim" : "Diterima"} {formatDecimal(String(total))} dari{" "}
+            {formatDecimal(line.requested)} {line.uomCode}
             {total < requested && total > 0 && (
               <span className="text-muted-foreground">
                 {" "}
