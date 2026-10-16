@@ -435,6 +435,13 @@
       "when": 1792080463520,
       "tag": "0061_partners_revision",
       "breakpoints": true
+    },
+    {
+      "idx": 62,
+      "version": "7",
+      "when": 1792145116556,
+      "tag": "0062_receipt_line_moves",
+      "breakpoints": true
     }
   ]
 }

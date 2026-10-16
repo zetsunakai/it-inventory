@@ -55,8 +55,8 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 | Logo                         | `public/brand/logo.png` di header sidebar (ganti file untuk ganti logo); `public/brand` dikecualikan dari proxy login                                                                                                                                                                                                 | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)               |
 
 Masih tersisa untuk putaran berikutnya: halaman login masih kartu generik; tabel di HP belum
-menyembunyikan kolom sekunder; belum ada pemilih tema gelap (token gelap sudah ada); layar
-tablet untuk penerimaan/opname dibuat bersama M2.
+menyembunyikan kolom sekunder; belum ada pemilih tema gelap (token gelap sudah ada); layar scan
+tablet baru ada untuk penerimaan (RU-03), pengiriman dan opname menyusul (RU-04, RU-10).
 
 ## Arah visual
 
@@ -126,6 +126,10 @@ tablet untuk penerimaan/opname dibuat bersama M2.
 
 - Satu tugas per layar, tombol utama di bawah dan mudah dijangkau, input scan langsung fokus dan
   kembali fokus setelah setiap scan, umpan balik jelas (berhasil, salah barang, qty lebih).
+- Contoh acuan: `ReceiptScanner` (`/inventory/penerimaan/[id]/scan`): kode produk memilih baris,
+  kode lain dicatat sebagai lot/nomor seri baris aktif (`addLotScan` di `src/lib/receipt-lots.ts`),
+  pesan di `role="status"`, Simpan/Buang menempel di bawah layar HP. Rincian yang sama bisa diisi
+  lewat keyboard di detail (`ReceiptLotEditor`, panel samping; Enter di qty menambah baris).
 
 ## Batasan teknis repo
 

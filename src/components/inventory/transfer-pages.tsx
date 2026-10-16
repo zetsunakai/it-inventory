@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react"
+import { Plus, ScanLine } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
@@ -10,6 +10,7 @@ import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
+import { toDecimalInput } from "@/lib/decimal"
 import { formatDate, formatNumber } from "@/lib/format"
 import {
   MOVEMENT_CODE_LABELS,
@@ -34,6 +35,7 @@ import {
   listInternalLocations,
   listTransfers,
   listUomChoices,
+  type TransferLine,
   type TransferRow,
   transferNeighbors,
 } from "@/server/queries/transfers"
@@ -43,6 +45,7 @@ import { DocumentLayout } from "@/components/document/document-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 
 import { CreateReturnButton } from "./create-return-button"
+import { ReceiptLotEditor, type ReceiptLotLine } from "./receipt-lot-editor"
 import { TransferActions } from "./transfer-actions"
 import { TransferForm } from "./transfer-form"
 import { TransferStatusBadge } from "./transfer-status"
@@ -304,6 +307,8 @@ async function TransferDetail({
   const fromRequest = Boolean(transfer.interwarehouseId) || transfer.type === "return"
   const editable = canWrite && transfer.status === "draft" && !fromRequest
   const instant = Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"
+  // Penerimaan Siap: barang diterima per lot/nomor seri (RU-03), lewat detail atau layar scan.
+  const receiving = canWrite && transfer.type === "receipt" && transfer.status === "ready"
   const [locations, uoms] = editable
     ? await Promise.all([listInternalLocations(user.id), listUomChoices()])
     : [[], []]
@@ -378,8 +383,25 @@ async function TransferDetail({
                 productName: line.productName,
                 inputQty: line.inputQty,
                 uomCode: line.inputUomCode,
+                detailed:
+                  transfer.type === "receipt" && hasLotDetail(line)
+                    ? {
+                        qty: line.moves.reduce((sum, move) => sum + Number(move.qty), 0).toFixed(4),
+                        requested: line.qty,
+                        uomCode: line.stockUomCode,
+                      }
+                    : undefined,
               }))}
             />
+            {receiving && (
+              <Link
+                href={`${kind.path}/${transfer.id}/scan`}
+                className={buttonVariants({ variant: "outline", className: "pointer-coarse:h-11" })}
+              >
+                <ScanLine />
+                Scan
+              </Link>
+            )}
             {canReturn && <CreateReturnButton originId={transfer.id} />}
           </>
         )
@@ -438,7 +460,15 @@ async function TransferDetail({
           }}
         />
       ) : (
-        <TransferView kind={kind} transfer={transfer} />
+        <TransferView
+          kind={kind}
+          transfer={transfer}
+          lotEditor={
+            receiving
+              ? (line) => <ReceiptLotEditor transferId={transfer.id} line={receiptLotLine(line)} />
+              : undefined
+          }
+        />
       )}
     </DocumentLayout>
   )
@@ -488,4 +518,29 @@ function TransferStatusSteps({
       currentLabel={TRANSFER_STATUS_LABELS[status]}
     />
   )
+}
+
+// Baris yang pergerakannya bukan lagi satu pergerakan sebesar qty diminta: sudah diberi rincian lot
+// (RU-03), jadi qty selesainya jumlah rincian itu.
+export function hasLotDetail(line: TransferLine) {
+  const [move, ...rest] = line.moves
+  return !move || rest.length > 0 || move.inputUomId !== line.inputUomId || move.qty !== line.qty
+}
+
+// Rincian awal editor: pergerakan yang sudah ada. Satu pergerakan bawaan tanpa lot untuk produk
+// berpelacakan belum berarti apa-apa, jadi editornya mulai kosong.
+export function receiptLotLine(line: TransferLine): ReceiptLotLine {
+  const blank = !hasLotDetail(line) && !line.moves[0]?.lotName && line.tracking !== "none"
+  return {
+    id: line.id,
+    sku: line.sku,
+    productName: line.productName,
+    tracking: line.tracking,
+    lotAuto: line.lotAuto,
+    requested: line.qty,
+    uomCode: line.stockUomCode,
+    rows: blank
+      ? []
+      : line.moves.map((move) => ({ lot: move.lotName ?? "", qty: toDecimalInput(move.qty) })),
+  }
 }

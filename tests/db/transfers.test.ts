@@ -303,12 +303,14 @@ describe("simpan penerimaan", () => {
 })
 
 describe("alur status", () => {
-  test("produk wajib lot tidak bisa dikonfirmasi tanpa nomor lot", async () => {
+  // Lot penerimaan dicatat saat barang diterima (RU-03): Konfirmasi boleh, Validasi tetap ditolak.
+  test("penerimaan produk wajib lot bisa dikonfirmasi, tapi tidak divalidasi tanpa nomor lot", async () => {
     loginAs("admin")
     const id = await savedId(
       await receipt([{ productId: ids.lotProduct, inputQty: "1", uomId: ids.pcs }]),
     )
-    expect(await confirmTransfer({ id })).toEqual({
+    expect(await confirmTransfer({ id })).toMatchObject({ ok: true })
+    expect(await validateTransfer({ id })).toEqual({
       ok: false,
       errors: ["Produk ZTLOT wajib diisi nomor lot."],
     })

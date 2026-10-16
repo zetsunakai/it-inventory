@@ -117,7 +117,7 @@ function formValues(formData: FormData) {
 // RAISE EXCEPTION. Satu alasan per baris pesan, supaya bisa ditampilkan sekaligus.
 type PostgresError = { code?: string; message?: string }
 
-function mapDatabaseError(error: unknown): string[] | null {
+export function mapDatabaseError(error: unknown): string[] | null {
   const cause = error instanceof DrizzleQueryError ? error.cause : error
   if (!cause || typeof cause !== "object" || !("code" in cause)) return null
   const pgError = cause as PostgresError

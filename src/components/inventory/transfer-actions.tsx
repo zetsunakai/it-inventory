@@ -62,8 +62,16 @@ export function TransferActions({
   canBackdate: boolean
   // Halaman jenis transfer ini, untuk tautan ke transfer lanjutan (backorder).
   path: string
-  // Baris barang untuk qty selesai saat validasi. Kosong = selalu penuh.
-  lines: { id: string; sku: string; productName: string; inputQty: string; uomCode: string }[]
+  // Baris barang untuk qty selesai saat validasi. Kosong = selalu penuh. Baris yang sudah punya
+  // rincian lot (RU-03) memakai jumlah rinciannya; qty-nya tidak diisi di dialog.
+  lines: {
+    id: string
+    sku: string
+    productName: string
+    inputQty: string
+    uomCode: string
+    detailed?: { qty: string; requested: string; uomCode: string }
+  }[]
   // Scrap/penyesuaian: Validasi diganti "Setujui dan validasi" khusus Manajer.
   needsApproval?: boolean
   canApprove?: boolean
@@ -82,11 +90,14 @@ export function TransferActions({
   const [effectiveDate, setEffectiveDate] = useState(today)
   // Hanya qty yang diubah user; baris lain memakai qty rencana terbaru dari server.
   const [edited, setEdited] = useState<Record<string, string>>({})
+  const editable = lines.filter((line) => !line.detailed)
   const quantities = Object.fromEntries(
-    lines.map((line) => [line.id, edited[line.id] ?? toDecimalInput(line.inputQty)]),
+    editable.map((line) => [line.id, edited[line.id] ?? toDecimalInput(line.inputQty)]),
   )
-  const partial = lines.some(
-    (line) => Number(quantities[line.id].replace(",", ".")) !== Number(line.inputQty),
+  const partial = lines.some((line) =>
+    line.detailed
+      ? Number(line.detailed.qty) < Number(line.detailed.requested)
+      : Number(quantities[line.id].replace(",", ".")) !== Number(line.inputQty),
   )
   // Sisa qty: transfer lanjutan atau dibuang (R-08). Backdate wajib dikonfirmasi.
   const [createBackorder, setCreateBackorder] = useState(true)
@@ -182,19 +193,32 @@ export function TransferActions({
                             Diminta {formatDecimal(line.inputQty)} {line.uomCode}
                           </span>
                         </Label>
-                        <Input
-                          id={`done-${line.id}`}
-                          inputMode="decimal"
-                          value={quantities[line.id]}
-                          onChange={(event) =>
-                            setEdited((current) => ({
-                              ...current,
-                              [line.id]: event.target.value,
-                            }))
-                          }
-                          className="w-28 text-right tabular-nums pointer-coarse:h-11"
-                        />
-                        <span className="w-12 text-sm text-muted-foreground">{line.uomCode}</span>
+                        {line.detailed ? (
+                          <span id={`done-${line.id}`} className="text-right text-sm tabular-nums">
+                            {formatDecimal(line.detailed.qty)} {line.detailed.uomCode}
+                            <span className="block text-caption text-muted-foreground">
+                              dari rincian lot
+                            </span>
+                          </span>
+                        ) : (
+                          <>
+                            <Input
+                              id={`done-${line.id}`}
+                              inputMode="decimal"
+                              value={quantities[line.id]}
+                              onChange={(event) =>
+                                setEdited((current) => ({
+                                  ...current,
+                                  [line.id]: event.target.value,
+                                }))
+                              }
+                              className="w-28 text-right tabular-nums pointer-coarse:h-11"
+                            />
+                            <span className="w-12 text-sm text-muted-foreground">
+                              {line.uomCode}
+                            </span>
+                          </>
+                        )}
                       </div>
                     ))}
                     {partial && (
@@ -268,7 +292,7 @@ export function TransferActions({
                             : validateTransfer({
                                 id,
                                 effectiveDate: canBackdate ? effectiveDate : undefined,
-                                quantities: partial ? quantities : undefined,
+                                quantities: partial && editable.length ? quantities : undefined,
                                 createBackorder,
                               }),
                         () => setValidateOpen(false),

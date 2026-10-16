@@ -83,16 +83,58 @@ const DONE_COLUMN: DataTableColumn<TransferLine> = {
     line.doneQty === null ? "—" : `${formatDecimal(line.doneQty)} ${line.stockUomCode}`,
 }
 
-function lineColumns({ status, sourceWarehouseId }: TransferDetail) {
+function lineColumns(
+  { status, sourceWarehouseId }: TransferDetail,
+  lotEditor?: (line: TransferLine) => ReactNode,
+) {
   if (status === "done") return [...BASE_COLUMNS, DONE_COLUMN]
   const confirmed = status === "waiting" || status === "partially_available" || status === "ready"
   // Hanya transfer yang mengambil stok gudang yang memesan stok (R-07).
   if (confirmed && sourceWarehouseId) return [...BASE_COLUMNS, RESERVED_COLUMN]
+  // Penerimaan Siap: rincian lot dan qty diterima per baris (RU-03).
+  if (lotEditor) {
+    return [
+      ...BASE_COLUMNS,
+      RECEIVED_COLUMN,
+      { header: "Rincian", align: "right", cell: lotEditor },
+    ] satisfies DataTableColumn<TransferLine>[]
+  }
   return BASE_COLUMNS
 }
 
+const RECEIVED_COLUMN: DataTableColumn<TransferLine> = {
+  header: "Qty diterima",
+  align: "right",
+  cell: (line) => {
+    // Pergerakan bawaan tanpa lot untuk produk berpelacakan = rincian belum diisi.
+    const [first] = line.moves
+    if (
+      line.tracking !== "none" &&
+      line.moves.length === 1 &&
+      !first.lotName &&
+      first.qty === line.qty
+    )
+      return "—"
+    const received = line.moves.reduce((sum, move) => sum + Number(move.qty), 0)
+    return (
+      <span className={received < Number(line.qty) ? "font-medium text-warning" : undefined}>
+        {formatDecimal(received.toFixed(4))} {line.stockUomCode}
+      </span>
+    )
+  },
+}
+
 // Tampilan baca transfer (Siap, Selesai, Batal, atau peran tanpa izin ubah).
-export function TransferView({ kind, transfer }: { kind: TransferKind; transfer: TransferDetail }) {
+export function TransferView({
+  kind,
+  transfer,
+  lotEditor,
+}: {
+  kind: TransferKind
+  transfer: TransferDetail
+  // Tombol rincian lot per baris (penerimaan Siap, RU-03).
+  lotEditor?: (line: TransferLine) => ReactNode
+}) {
   const rows: [string, ReactNode][] = [
     ...(kind.partnerLabel
       ? [[kind.partnerLabel, transfer.partner?.name ?? "—"] as [string, ReactNode]]
@@ -213,7 +255,7 @@ export function TransferView({ kind, transfer }: { kind: TransferKind; transfer:
         </TabsList>
         <TabsContent value="barang">
           <DataTable
-            columns={lineColumns(transfer)}
+            columns={lineColumns(transfer, lotEditor)}
             rows={transfer.lines}
             rowKey={(line) => line.id}
           />

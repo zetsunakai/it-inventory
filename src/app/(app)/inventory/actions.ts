@@ -6,7 +6,12 @@ import { z } from "zod"
 import { optionalText } from "@/lib/form-fields"
 import { MANUAL_USAGE_TYPES, TRANSFER_TYPES, type TransferType } from "@/lib/inventory"
 import { transferLinesField, type TransferLineInput } from "@/lib/transfer"
-import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
+import {
+  AppError,
+  defineAction,
+  defineFormAction,
+  mapDatabaseError,
+} from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { locations, lots, stockMoves, transferLines, transfers } from "@/server/db/schema"
 
@@ -434,5 +439,54 @@ export const approveTransfer = defineAction({
     await tx.execute(
       sql`select validate_transfer(${input.id}, ${effectiveTimestamp(input.effectiveDate)}::timestamptz)`,
     )
+  },
+})
+
+// Rincian lot/nomor seri penerimaan (RU-03), dari layar detail atau layar scan: per baris, daftar
+// lot dan qty dalam satuan stok. Lot kosong = nomor otomatis saat validasi. Semua baris disimpan
+// dalam satu transaksi; kesalahannya dari set_receipt_line_moves().
+const receiptLotsInput = z.record(
+  z.uuid("Baris penerimaan tidak valid."),
+  z.array(
+    z.object({
+      lot: z.string().max(50, "Nomor lot maksimal 50 karakter.").nullable(),
+      qty: z
+        .string()
+        .transform((value) => value.trim().replace(",", "."))
+        .refine((value) => /^\d+(\.\d{1,4})?$/.test(value), "Qty harus angka, maksimal 4 desimal."),
+    }),
+  ),
+)
+
+export const saveReceiptLots = defineAction({
+  name: "saveReceiptLots",
+  permission: "inventory:write",
+  schema: idInput.extend({ lines: receiptLotsInput }),
+  successMessage: "Rincian lot disimpan.",
+  handler: async ({ input, tx }) => {
+    const owned = await tx
+      .select({ id: transferLines.id })
+      .from(transferLines)
+      .where(eq(transferLines.transferId, input.id))
+    const ownedIds = new Set(owned.map((line) => line.id))
+    if (Object.keys(input.lines).some((lineId) => !ownedIds.has(lineId))) {
+      throw new AppError("Baris penerimaan tidak ditemukan. Muat ulang halaman.")
+    }
+    const errors: string[] = []
+    for (const [lineId, moves] of Object.entries(input.lines)) {
+      // Savepoint per baris supaya kesalahan semua baris terkumpul sebelum transaksi dibatalkan.
+      try {
+        await tx.transaction((savepoint) =>
+          savepoint.execute(
+            sql`select set_receipt_line_moves(${lineId}, ${JSON.stringify(moves)}::jsonb)`,
+          ),
+        )
+      } catch (error) {
+        const messages = mapDatabaseError(error)
+        if (!messages) throw error
+        errors.push(...messages)
+      }
+    }
+    if (errors.length) throw new AppError(errors)
   },
 })

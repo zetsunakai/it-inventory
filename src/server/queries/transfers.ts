@@ -157,6 +157,8 @@ export type TransferMove = {
   lotName: string | null
   // Satuan stok.
   qty: string
+  // Satuan yang diisi user; rincian lot penerimaan (RU-03) selalu dalam satuan stok.
+  inputUomId: string
   // Qty yang dipesan dari saldo lokasi asal (R-07), satuan stok.
   reservedQty: string
 }
@@ -251,6 +253,7 @@ export async function getTransfer(userId: string, id: string) {
       lotId: stockMoves.lotId,
       lotName: lots.name,
       qty: stockMoves.qty,
+      inputUomId: stockMoves.inputUomId,
       reservedQty: stockMoves.reservedQty,
     })
     .from(stockMoves)
@@ -260,11 +263,12 @@ export async function getTransfer(userId: string, id: string) {
   const lines: TransferLine[] = lineRows.map((line) => {
     const moves = moveRows
       .filter((move) => move.lineId === line.id)
-      .map(({ id: moveId, lotId, lotName, qty, reservedQty }) => ({
+      .map(({ id: moveId, lotId, lotName, qty, inputUomId, reservedQty }) => ({
         id: moveId,
         lotId,
         lotName,
         qty,
+        inputUomId,
         reservedQty,
       }))
     return {
