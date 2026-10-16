@@ -7,7 +7,7 @@ description: Panduan revisi master produk, kategori, satuan (UoM), lot/serial, d
 
 Keputusan user (14/10/2026): master produk dan alur inventory diambil dari hmx-002. Skill ini untuk
 produk, kategori, satuan, dan lot/serial (M1-04, M1-05). Alur transfer/stok ada di skill
-`inventory-alur-hmx`, sedangkan data kepabeanan produk (HS, satuan CEISA, siap BC) tetap mengikuti PRD dan
+`inventory-alur-hmx`, sedangkan data kepabeanan produk (HS, siap BC) tetap mengikuti PRD dan
 skill `it-inventory-domain`.
 
 ## File rujukan
@@ -76,7 +76,7 @@ discontinue belum diputuskan.
 | Nomor lot/serial otomatis, kedaluwarsa       | Lot diketik manual, tanpa kedaluwarsa                              | Opsional. Kedaluwarsa berguna untuk FEFO bila reservasi dibuat.                                                                                                                                                      |
 | `barcode`, `multi_barcode`                   | Scan memakai SKU                                                   | Opsional: barcode terpisah dari SKU bila label vendor berbeda.                                                                                                                                                       |
 | `brand_id` (master merek)                    | `brand`, `model`, `size` berupa teks                               | Teks cukup; data BC hanya butuh uraian.                                                                                                                                                                              |
-| `weight`, `volume`, dimensi                  | `net_weight` (kg per satuan stok)                                  | Pertahankan (dibutuhkan netto BC). Dimensi tidak diambil.                                                                                                                                                            |
+| `weight`, `volume`, dimensi                  | Dihapus (RM-01)                                                    | Tidak diambil; berat netto diisi per baris dokumen BC.                                                                                                                                                               |
 | Varian + atribut                             | Tidak ada; satu produk = satu SKU                                  | **Tidak diambil.** Setiap SKU adalah satu produk; dokumen BC dan HS per barang, bukan per template.                                                                                                                  |
 | Arsip + `archived_by`, auto archive stok nol | `active` + `deleteUnlessUsed` (M1-08)                              | Pertahankan aturan arsip/hapus. Tambah `archived_at`/oleh bila diperlukan audit. Arsip otomatis tidak diambil.                                                                                                       |
 | `is_discontinued`                            | Tidak ada                                                          | Opsional: blok penerimaan baru, pengiriman tetap boleh.                                                                                                                                                              |
@@ -107,6 +107,6 @@ discontinue belum diputuskan.
 ## Keputusan user (14/10/2026)
 
 - Kategori produk bertingkat dengan SKU otomatis, pelacakan per nomor seri, dan satuan khusus
-  produk: **masuk lingkup** (Backlog R-01, R-02, R-03, RU-13, RU-14, RU-15).
+  produk: **masuk lingkup** (Backlog R-01, R-02, R-03, I-07).
 - Barcode terpisah dari SKU, kedaluwarsa lot, dan discontinue: belum diputuskan, jadi jangan dikerjakan
   dulu.

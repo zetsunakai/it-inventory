@@ -41,8 +41,8 @@ kolom kartu stok dan laporan mutasi, jadi simpan di setiap baris pergerakan.
 | -------- | -------------------------- | ------------------------------------------------------------------ | -------------------------------------- |
 | in       | `gr`                       | Penerimaan barang                                                  | `receipt`                              |
 | out      | `gi`                       | Pengiriman barang                                                  | `delivery`                             |
-| out      | `gr_rtn`                   | Retur ke vendor                                                    | `return` dari `receipt`                |
-| in       | `gi_rtn`                   | Retur dari customer                                                | `return` dari `delivery`               |
+| out      | `gi_rtn`                   | Retur ke vendor (juga pengganti ke customer)                       | `return` dari `receipt` (I-02)         |
+| in       | `gr_rtn`                   | Retur dari customer (juga pengganti dari vendor)                   | `return` dari `delivery` (I-02)        |
 | out / in | `itw_out` / `itw_in`       | Transfer antar gudang keluar/masuk                                 | `internal` beda gudang (satu transfer) |
 | in       | `itw_rtn`                  | Sisa transit yang dikembalikan ke gudang asal                      | tidak ada                              |
 | internal | `ilt` (`ilt_out`/`ilt_in`) | Pindah lokasi di dalam satu gudang                                 | `internal` gudang sama                 |
@@ -60,7 +60,7 @@ hmx: `draft` → (Confirm) → `confirmed` (menunggu stok) / `partially_availabl
 mengembalikan ke Draft. `waiting_approval`/`rejected` bila alur persetujuan aktif.
 
 - Confirm (`_validate_confirm`): wajib ada baris dan tanggal rencana, lokasi asal ≠ tujuan.
-  Masuk (`gr`, `gi_rtn`) langsung `ready`; keluar butuh Check Availability.
+  Masuk (`gr`, `gr_rtn`) langsung `ready`; keluar butuh Check Availability.
 - Check Availability (`action_assign`): reservasi stok per baris dari saldo lokasi asal (FIFO/FEFO
   per lokasi); status dihitung dari baris. Unreserve (`do_unreserve`) melepasnya.
 - Validate (`button_validate`): urutannya pemeriksaan (`_sanity_check_validate`) → cek tanggal
@@ -157,8 +157,8 @@ Repo ini (R-13): `draft` → `counting` (Berjalan, gudang dibekukan) → `counte
 
 ### Kartu stok
 
-Masuk: `gr`, `adj_in`, `gi_rtn`, `itw_in`, `itw_rtn`. Keluar: `gi`, `pu`, `adj_out`,
-`gr_rtn`, `itw_out`. ILT (di dalam gudang) tidak mengubah saldo gudang. Repo ini (R-14): kartu stok
+Masuk: `gr`, `adj_in`, `gr_rtn`, `itw_in`, `itw_rtn`. Keluar: `gi`, `pu`, `adj_out`,
+`gi_rtn`, `itw_out`. ILT (di dalam gudang) tidak mengubah saldo gudang. Repo ini (R-14): kartu stok
 per gudang memakai `movementLabel()` dan `MOVEMENT_CODE_DIRECTIONS`; tampilan stok menampilkan
 dipesan/tersedia; penelusuran lot di `/inventory/lot`.
 
@@ -191,7 +191,7 @@ hmx menaruh aturan di kode Python (ORM). Repo ini menaruhnya di database, dan it
 ## Cara mengerjakan revisi
 
 1. Ubah PRD bagian 6 (dan 5.1 bila master data berubah) dulu, catat keputusan di PRD 15.4, lalu
-   buat tiket revisi di tab Backlog (mis. `R2-01…`) dengan estimasi. Jangan mulai tanpa tiket.
+   buat tiket revisi di tab Backlog (mis. `I-09…`) dengan estimasi. Jangan mulai tanpa tiket.
 2. Satu tiket = satu perubahan alur utuh: migrasi baru (jangan mengubah migrasi lama yang sudah
    jalan), migrasi data untuk transfer lama (status `ready` lama → `ready` baru; kode pergerakan
    diisi dari `type` + arah gudang), fungsi DB, aksi server, UI, tes DB dan e2e, README.
@@ -222,10 +222,31 @@ lama M2 terbukti termigrasi tanpa selisih saldo (`npm run db:check` setelah migr
 ## Keputusan user (14/10/2026)
 
 - Revisi dikerjakan **sebelum M3**. Tiketnya ada di tab Backlog bagian R (alur, R-01–R-15) dan RU
-  (tampilan per menu, RU-01–RU-19). Jangan mulai sebelum user minta.
+  (tampilan per menu, RU-01–RU-03; sisanya digabung ke bagian I). Jangan mulai sebelum user minta.
 - Reservasi stok saat Cek stok: **ya** (lot terlama dulu).
 - Opname: **gudang dibekukan** selama opname berjalan.
 - Transfer antar gudang: **lewat lokasi transit (virtual)**.
 - Produk: kategori bertingkat dengan SKU otomatis, pelacakan per nomor seri, dan satuan khusus
   produk: **ya** (lihat skill `produk-hmx`). Kedaluwarsa lot, barcode terpisah, dan discontinue
   belum diputuskan, jadi jangan dikerjakan dulu.
+
+## Keputusan user (16/10/2026)
+
+- Aplikasi nanti dipisah jadi tiga app: **base**, **inventory**, dan **IT Inventory**. Inventory
+  dikerjakan dulu; M3 menyusul.
+- Inventory hanya berisi fitur yang dibutuhkan IT Inventory. Patokannya `DOCUMENT_SOURCE_MAP` di
+  `core_it_inventory/models/inventory_transfer.py` (dokumen BC hanya ditautkan ke `gr`, `gi`,
+  `itw_in`/`itw_out` berstatus Siap atau Selesai) ditambah yang dibutuhkan laporan mutasi: retur,
+  pemakaian/scrap, penyesuaian, opname, kartu stok.
+- **Purchase order, sales order, dan akuntansi (termasuk valuasi stok) tidak masuk inventory.**
+  Referensi PO/SO cukup teks. Juga tidak diambil: pick/pack, paket, batch picking, POD,
+  konsinyasi, cost center, batas qty terima/kirim, antrean validasi background.
+- Kode retur di repo ini terbalik dibanding hmx (`return_request.py`: vendor → `gi_rtn`, customer →
+  `gr_rtn`, pengganti juga `*_rtn`). Tabel di atas sudah memakai kode hmx; perbaikan data dan kode
+  ada di tiket I-02. Sampai I-02 selesai, database masih memakai pemetaan lama.
+- Sisa pekerjaan inventory ada di tab Backlog bagian **I** (I-01–I-08, satu tiket per area yang
+  menggabungkan alur dan tampilan; menggantikan R2 dan RU-04–RU-19): pengiriman dengan reservasi
+  dari sub-lokasi (FIFO tanggal masuk) dan qty selesai dicatat user, retur, pemakaian/penyesuaian
+  dengan penolakan beralasan, opname per produk dengan impor/ekspor, pindah lokasi dan antar
+  gudang, stok/periode dengan aturan tanggal, master data, lintas menu. Mesin persetujuan yang bisa
+  diatur seperti hmx belum diputuskan; sementara tetap persetujuan Manajer.

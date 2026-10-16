@@ -56,7 +56,7 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 
 Masih tersisa untuk putaran berikutnya: halaman login masih kartu generik; tabel di HP belum
 menyembunyikan kolom sekunder; belum ada pemilih tema gelap (token gelap sudah ada); layar scan
-tablet baru ada untuk penerimaan (RU-03), pengiriman dan opname menyusul (RU-04, RU-10).
+tablet baru ada untuk penerimaan (RU-03), pengiriman dan opname menyusul (I-01, I-04).
 
 ## Arah visual
 
@@ -84,6 +84,84 @@ tablet baru ada untuk penerimaan (RU-03), pengiriman dan opname menyusul (RU-04,
   (target sentuh ≥ 44px). Jangan menyamakan keduanya.
 - **Ruang kosong punya tujuan**: kelompokkan yang berhubungan, pisahkan yang tidak; jangan
   membungkus semuanya dalam kartu berbingkai.
+
+## Padanan hmx webx
+
+Diambil dari skill hmx untuk agen (`~/hmx/hmx-002/hmx/module/basic/ai_coworker/skills/`:
+`hmx-development-webx`, `hmx-development-widget-catalog`, `hmx-development-pattern-discovery`)
+dan `~/hmx/FUNDAMENTAL_REPO_GUIDE.md` §3.1 (keputusan user 16/10/2026). Mekanisme webx (Vue 3 file,
+bundle `__hmx__.py`, `VueComponent.push`, `useFetch`, view XML, ikon SVG hmx) **tidak** dipakai di
+repo ini; yang diambil adalah cara kerja dan perilaku tampilannya.
+
+### Cari contoh baku dulu
+
+Sebelum membuat layar atau pola baru, cari dua hal dan sebutkan di rencana:
+
+1. Layar hmx yang setara: view XML modulnya (mis. `core_inventory/views/*.xml`) dan widget yang
+   dipakai field-nya, lalu file Vue/CSS webx-nya bila perilakunya perlu dilihat.
+2. Halaman repo ini yang sudah memakai pola itu (mis. detail transfer untuk dokumen bertahapan,
+   master produk untuk data master). Baca alurnya utuh (halaman, komponen, aksi server, query),
+   bukan satu file.
+
+Bila ada beberapa pola di repo, ikuti yang paling baru (lihat `git log` file-nya) dan tercatat di
+skill ini. Bila belum ada padanannya, tulis polanya di skill ini setelah dibuat.
+
+### Urutan mengubah tampilan
+
+Mengikuti urutan webx (XML → widget modul → client action → extension → core), pakai jalan
+paling ringan yang cukup:
+
+1. Atur di halaman: kolom, urutan field, `span`, prop komponen bersama yang sudah ada.
+2. Tambah prop atau varian pada komponen bersama (`DataTable`, `DocumentLayout`, `FormSection`, …)
+   bila kebutuhannya berlaku di lebih dari satu halaman.
+3. Buat komponen bersama baru di `src/components/<area>/` bila polanya belum ada.
+4. Ubah komponen dasar `src/components/ui/` atau token `globals.css` hanya bila perubahannya memang
+   untuk semua halaman; sebutkan halaman yang terdampak dan cek screenshot-nya.
+
+Melompati langkah harus bisa dijelaskan alasannya. Jangan menyalin komponen ke halaman lalu
+mengubahnya di sana.
+
+### Widget hmx → komponen repo ini
+
+| Widget/pola hmx                                                     | Pakai di repo ini                                                                              |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| `statusbar` (header form)                                           | `StatusSteps` di `DocumentLayout status` (kartu "Langkah n dari m")                            |
+| `badge` (status di list)                                            | `StatusBadge` / `TransferStatusBadge` dengan tone semantik                                     |
+| `many2one`, `hx-searchable-dropdown`                                | `SearchSelect`; kode resmi `[kode] nama` → `RefCodeSelect`; kategori → `ProductCategorySelect` |
+| `one2many` / `relational_v2` (tabel baris)                          | `DataTable` di tab `Barang` dokumen; form Draft: baris di `TransferForm`                       |
+| `o2m-quick-view-drawer`, `modal-form-drawer`                        | `Sheet` sisi kanan, mis. `ReceiptLotEditor` (rincian satu baris)                               |
+| `many2many_tags`, `many2many_chips`                                 | Belum ada; daftar teks dipisah koma atau baris, chip hanya bila bisa dihapus                   |
+| `boolean` / `boolean_toggle`                                        | `CheckboxField`                                                                                |
+| `selection_radio`, `radio_card_selection`                           | radio biasa ber-label (contoh: pilihan sisa qty di dialog Validasi)                            |
+| `float`, `monetary`                                                 | input `inputMode="decimal"` + `formatDecimal`/`parseDecimalInput` (`src/lib/decimal.ts`)       |
+| `date`, `datetime`                                                  | `Input type="date"` + `formatDate`/`formatDateTime` (`src/lib/format.ts`, WIB)                 |
+| field readonly                                                      | `StaticField` (mode baca `RecordModes`), bukan input disabled                                  |
+| `form-sheet-notebook`                                               | `Tabs` (`form-notebook`)                                                                       |
+| `form-groups`, `form-side-by-side-group`                            | `FormSection` + `span`, `FormColumns`/`FormColumn`                                             |
+| `form-sheet-chatter`, `form-sheet-log-activity`, `approval_history` | `ActivityLog` di `DocumentLayout activity` (dari audit log)                                    |
+| `form-sheet-action-buttons`, `hx-smart-dropdown-button`             | `DocumentLayout actions` / `PageHeader actions`; menu ⋯ di `ListToolbar`                       |
+| `form-sheet-smart-buttons` (jumlah dokumen terkait)                 | Belum ada; tautan dokumen terkait di `InfoGrid` (mis. Retur, Lanjutan dari)                    |
+| `barcode_scanner`                                                   | Layar scan: pola `ReceiptScanner` (input selalu fokus, `role="status"`)                        |
+| `list-view-optional-column`                                         | `DataTable` kolom `optional: "show" \| "hide"` (RU-22)                                         |
+| `list-view-group*`                                                  | `DataTable group` + Kelompokkan di `ListSearchBar`                                             |
+| search view (filter, group by, favorit)                             | `ListSearchBar` (chip filter, disimpan di URL)                                                 |
+| `form-breadcrumb`                                                   | `AppBreadcrumb` lewat `PageHeader`/`DocumentLayout crumbs`                                     |
+| `quick` view (pratinjau record)                                     | Belum ada; buka halaman detail lewat `rowHref`                                                 |
+| `handle` (urut baris), `remaining_days`, `percentage_pie`           | Belum dipakai; buat komponen bersama bila dibutuhkan                                           |
+
+Saat menerjemahkan layar hmx, cari widget field-nya di view XML lalu pakai padanan di atas. Bila
+widget hmx-nya tidak ada di tabel, cek katalog lengkap di `hmx-development-widget-catalog` dan
+tambahkan barisnya di sini setelah padanannya dibuat.
+
+### Tabel lebar
+
+Di hmx, header tabel menempel saat di-scroll dan kolom penting menempel di kiri (`relational-table-v2.css`:
+`.is-sticky`, `.pinned-divider`); kolom tambahan ditandai opsional. Di repo ini:
+
+- Kolom pengenal (nomor/SKU + nama) paling kiri; kolom tambahan diberi `optional`.
+- Header dan kolom pengenal yang menempel **belum ada** di `DataTable`. Bila tabel perlu di-scroll
+  ke samping (terutama di HP 390px), tambahkan sebagai opsi `DataTable` (langkah 2 di atas), bukan
+  CSS per halaman. Tombol aksi baris jangan sampai hanya terlihat setelah scroll ke samping.
 
 ## Aturan per pola
 
