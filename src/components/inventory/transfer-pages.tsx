@@ -27,7 +27,7 @@ import {
   type RawSearchParams,
 } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
-import { transferHref, type TransferKind } from "@/lib/transfer"
+import { transferHref, type TransferKind, transferSteps } from "@/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
 import {
   getTransfer,
@@ -303,6 +303,7 @@ async function TransferDetail({
   // lewat form. Transfer pengganti retur (penerimaan/pengiriman) tetap bisa diubah, mis. mengisi lot.
   const fromRequest = Boolean(transfer.interwarehouseId) || transfer.type === "return"
   const editable = canWrite && transfer.status === "draft" && !fromRequest
+  const instant = Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"
   const [locations, uoms] = editable
     ? await Promise.all([listInternalLocations(user.id), listUomChoices()])
     : [[], []]
@@ -324,6 +325,7 @@ async function TransferDetail({
         <TransferStatusSteps
           status={transfer.status}
           reservable={Boolean(transfer.sourceWarehouseId)}
+          instant={instant}
         />
       }
       activity={<ActivityLog entries={activity} noun={kind.noun} />}
@@ -368,10 +370,12 @@ async function TransferDetail({
               needsApproval={Boolean(kind.needsApproval)}
               canApprove={hasPermission(user.roles, "inventory:approve")}
               reservable={Boolean(transfer.sourceWarehouseId)}
-              instant={Boolean(kind.sameWarehouse) && transfer.movementCode === "ilt"}
+              instant={instant}
+              fromRequest={fromRequest}
               lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
                 id: line.id,
                 sku: line.sku,
+                productName: line.productName,
                 inputQty: line.inputQty,
                 uomCode: line.inputUomCode,
               }))}
@@ -461,23 +465,21 @@ const TRANSFER_ACTIVITY_LABELS = {
   },
 }
 
-// Langkah status transfer (RU-23): transfer yang mengambil stok gudang melewati Menunggu stok.
+// Langkah status transfer (RU-23, RU-02): transfer yang mengambil stok gudang melewati Menunggu
+// stok; pindah lokasi langsung dari Draft ke Selesai.
 function TransferStatusSteps({
   status,
   reservable,
+  instant,
 }: {
   status: TransferStatus
   reservable: boolean
+  instant: boolean
 }) {
   if (status === "cancelled") {
     return <StatusSteps steps={[]} outside={{ label: "Batal", tone: "neutral" }} />
   }
-  const steps = [
-    { code: "draft", label: "Draft" },
-    ...(reservable ? [{ code: "waiting", label: "Menunggu stok" }] : []),
-    { code: "ready", label: "Siap" },
-    { code: "done", label: "Selesai" },
-  ]
+  const steps = transferSteps({ reservable, instant })
   const current = status === "partially_available" ? "waiting" : status
   return (
     <StatusSteps

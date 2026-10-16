@@ -14,8 +14,9 @@ import {
 import type { TransferKind } from "@/lib/transfer"
 import type { TransferDetail, TransferLine } from "@/server/queries/transfers"
 
-// Baris permintaan (R-05): qty diminta, qty selesai (setelah validasi), dan lot/nomor seri
-// pergerakannya. Nomor seri bisa banyak per baris, jadi ditampilkan satu per baris.
+// Baris permintaan (R-05, RU-02): qty diminta, dipesan, selesai, dan lot/nomor seri pergerakannya.
+// Satu baris bisa punya beberapa lot/nomor seri: masing-masing satu baris, dengan qty-nya bila
+// lebih dari satu.
 const BASE_COLUMNS: DataTableColumn<TransferLine>[] = [
   {
     header: "Produk",
@@ -30,11 +31,19 @@ const BASE_COLUMNS: DataTableColumn<TransferLine>[] = [
   {
     header: "Lot/seri",
     cell: (line) => {
-      const names = line.moves.flatMap((move) => (move.lotName ? [move.lotName] : []))
-      return names.length ? (
-        <span className="flex flex-col font-mono">
-          {names.map((name) => (
-            <span key={name}>{name}</span>
+      const lots = line.moves.filter((move) => move.lotName)
+      return lots.length ? (
+        <span className="flex flex-col">
+          {lots.map((move) => (
+            <span key={move.id} className="whitespace-nowrap">
+              <span className="font-mono">{move.lotName}</span>
+              {lots.length > 1 && (
+                <span className="text-muted-foreground tabular-nums">
+                  {" "}
+                  · {formatDecimal(move.qty)} {line.stockUomCode}
+                </span>
+              )}
+            </span>
           ))}
         </span>
       ) : (
@@ -56,7 +65,14 @@ const RESERVED_COLUMN: DataTableColumn<TransferLine> = {
   align: "right",
   cell: (line) => {
     const reserved = line.moves.reduce((sum, move) => sum + Number(move.reservedQty), 0)
-    return reserved ? `${formatDecimal(String(reserved))} ${line.stockUomCode}` : "—"
+    // Baris yang stoknya belum terpesan penuh ditandai supaya terlihat sebelum Validasi.
+    const short = reserved < Number(line.qty)
+    return (
+      <span className={short ? "font-medium text-warning" : undefined}>
+        {reserved ? `${formatDecimal(String(reserved))} ${line.stockUomCode}` : "—"}
+        {short && <span className="block text-caption">belum tersedia penuh</span>}
+      </span>
+    )
   },
 }
 

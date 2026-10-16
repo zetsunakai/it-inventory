@@ -27,10 +27,11 @@ import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { toDecimalInput } from "@/lib/decimal"
+import { formatDecimal, toDecimalInput } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
 import type { ActionResult } from "@/lib/action-result"
 import type { TransferStatus } from "@/lib/inventory"
+import { transferActions } from "@/lib/transfer"
 
 // Aksi transfer sesuai statusnya (PRD bagian 6.3, backlog R-06): Draft → Konfirmasi → Menunggu /
 // Sebagian tersedia / Siap → Validasi, Cek stok, Kembali ke Draft, atau Batal.
@@ -49,6 +50,7 @@ export function TransferActions({
   canApprove = false,
   reservable = false,
   instant = false,
+  fromRequest = false,
 }: {
   id: string
   number: string
@@ -61,7 +63,7 @@ export function TransferActions({
   // Halaman jenis transfer ini, untuk tautan ke transfer lanjutan (backorder).
   path: string
   // Baris barang untuk qty selesai saat validasi. Kosong = selalu penuh.
-  lines: { id: string; sku: string; inputQty: string; uomCode: string }[]
+  lines: { id: string; sku: string; productName: string; inputQty: string; uomCode: string }[]
   // Scrap/penyesuaian: Validasi diganti "Setujui dan validasi" khusus Manajer.
   needsApproval?: boolean
   canApprove?: boolean
@@ -69,6 +71,8 @@ export function TransferActions({
   reservable?: boolean
   // Pindah lokasi (R-09): Validasi langsung dari Draft, tanpa Konfirmasi terpisah.
   instant?: boolean
+  // Transfer milik permintaan antar gudang atau retur (R-10, R-11).
+  fromRequest?: boolean
 }) {
   const { show } = usePageMessage()
   const [pending, startTransition] = useTransition()
@@ -113,18 +117,15 @@ export function TransferActions({
     })
   }
 
-  // Transfer Selesai/Batal tidak punya aksi lagi; pesan hasil aksi terakhir tetap di slot pesan.
-  const open = status !== "done" && status !== "cancelled"
-  const confirmed = open && status !== "draft"
-  // Validasi bila stok sudah (sebagian) tersedia; qty yang belum tersedia diisi lebih kecil.
-  const validatable =
-    status === "ready" || status === "partially_available" || (instant && status === "draft")
-  if (!open) return null
+  // Hanya aksi yang berlaku di status ini yang tampil (RU-02). Transfer Selesai/Batal tidak punya
+  // aksi lagi; pesan hasil aksi terakhir tetap di slot pesan.
+  const actions = new Set(transferActions({ status, reservable, instant, fromRequest }))
+  if (!actions.size) return null
 
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {status === "draft" && !instant && (
+        {actions.has("confirm") && (
           <Button
             disabled={pending}
             onClick={() => run(() => confirmTransfer({ id }))}
@@ -133,7 +134,7 @@ export function TransferActions({
             Konfirmasi
           </Button>
         )}
-        {(status === "waiting" || status === "partially_available") && (
+        {actions.has("check") && (
           <Button
             variant={status === "waiting" ? "default" : "outline"}
             disabled={pending}
@@ -143,7 +144,7 @@ export function TransferActions({
             Cek stok
           </Button>
         )}
-        {validatable && (
+        {actions.has("validate") && (
           <>
             <AlertDialog open={validateOpen} onOpenChange={setValidateOpen}>
               {needsApproval && !canApprove ? (
@@ -172,9 +173,14 @@ export function TransferActions({
                       <div key={line.id} className="flex items-center gap-2">
                         <Label
                           htmlFor={`done-${line.id}`}
-                          className="min-w-0 flex-1 truncate font-mono font-normal"
+                          className="flex min-w-0 flex-1 flex-col items-start gap-0 font-normal"
                         >
-                          {line.sku}
+                          <span className="w-full truncate">
+                            <span className="font-mono">{line.sku}</span> {line.productName}
+                          </span>
+                          <span className="text-caption text-muted-foreground tabular-nums">
+                            Diminta {formatDecimal(line.inputQty)} {line.uomCode}
+                          </span>
                         </Label>
                         <Input
                           id={`done-${line.id}`}
@@ -276,7 +282,7 @@ export function TransferActions({
             </AlertDialog>
           </>
         )}
-        {reservable && validatable && (
+        {actions.has("release") && (
           <Button
             variant="outline"
             disabled={pending}
@@ -286,7 +292,7 @@ export function TransferActions({
             Lepas reservasi
           </Button>
         )}
-        {confirmed && (
+        {actions.has("reopen") && (
           <Button
             variant="outline"
             disabled={pending}

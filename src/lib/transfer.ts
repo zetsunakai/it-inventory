@@ -176,3 +176,54 @@ export function transferHref(type: TransferType, id: string) {
   const kind = (TRANSFER_KINDS as Partial<Record<TransferType, TransferKind>>)[type]
   return `${kind?.path ?? "/inventory/transfer"}/${id}`
 }
+
+// Aksi transfer yang berlaku per status (PRD bagian 6.3, backlog R-06–R-09, RU-02). Aksi yang
+// tidak berlaku tidak ditampilkan; database tetap menolaknya bila dipanggil langsung.
+export type TransferAction = "confirm" | "check" | "validate" | "release" | "reopen" | "cancel"
+
+export function transferActions({
+  status,
+  reservable,
+  instant = false,
+  fromRequest = false,
+}: {
+  status: TransferStatus
+  // Transfer yang mengambil stok gudang memesan stok (R-07).
+  reservable: boolean
+  // Pindah lokasi (R-09): divalidasi langsung dari Draft.
+  instant?: boolean
+  // Transfer milik permintaan antar gudang atau retur: Draft-nya tidak bisa diubah lewat form,
+  // jadi Kembali ke Draft tidak berguna.
+  fromRequest?: boolean
+}): TransferAction[] {
+  const reopen: TransferAction[] = fromRequest ? [] : ["reopen"]
+  switch (status) {
+    case "draft":
+      return [instant ? "validate" : "confirm", "cancel"]
+    case "waiting":
+      return ["check", ...reopen, "cancel"]
+    case "partially_available":
+      return ["validate", "check", ...(reservable ? ["release" as const] : []), ...reopen, "cancel"]
+    case "ready":
+      return ["validate", ...(reservable ? ["release" as const] : []), ...reopen, "cancel"]
+    default:
+      return []
+  }
+}
+
+// Langkah status untuk kartu "Langkah n dari m" (RU-23): hanya transfer yang mengambil stok gudang
+// dan dikonfirmasi terpisah yang melewati Menunggu stok.
+export function transferSteps({
+  reservable,
+  instant = false,
+}: {
+  reservable: boolean
+  instant?: boolean
+}) {
+  return [
+    { code: "draft", label: "Draft" },
+    ...(reservable && !instant ? [{ code: "waiting", label: "Menunggu stok" }] : []),
+    ...(instant ? [] : [{ code: "ready", label: "Siap" }]),
+    { code: "done", label: "Selesai" },
+  ]
+}
