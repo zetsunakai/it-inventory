@@ -276,3 +276,17 @@ export const reviseCustomsDocument = defineAction({
     await tx.execute(sql`select revise_customs_document(${input.id}, ${input.reason})`)
   },
 })
+
+// Duplikat (M3-13): Draft baru dengan nomor aju baru; file lampiran tidak ikut.
+export const duplicateCustomsDocument = defineAction({
+  name: "duplicateCustomsDocument",
+  permission: "bc:write",
+  schema: idInput,
+  successMessage: "Dokumen diduplikat sebagai Draft baru. Unggah ulang file lampirannya.",
+  handler: async ({ input, tx }) => {
+    const result = await tx.execute<{ id: string }>(
+      sql`select duplicate_customs_document(${input.id}) as id`,
+    )
+    return { id: result.rows[0].id }
+  },
+})

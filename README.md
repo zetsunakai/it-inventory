@@ -458,6 +458,16 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   membandingkan snapshot dengan versi berikutnya); versi lama dibuka di
   `/dokumen-bc/<jenis>/<id>/versi/<n>` (hanya baca). Angka di snapshot dibaca sebagai number
   JavaScript, jadi tampilannya tepat sampai 15 digit.
+- Daftar per jenis (M3-13): cari nomor aju, nomor daftar, atau nama partner; filter status, tanggal
+  aju (bulan ini, bulan lalu, 3 bulan terakhir, tahun ini; WIB), dan kantor pabean (pilihannya
+  dari kantor yang dipakai dokumen jenis itu). Menu ⋯ di detail: Unduh PDF, Unduh Excel, Duplikat.
+- Duplikat: `duplicate_customs_document()` membuat Draft baru (nomor aju baru) dengan salinan
+  header, entitas, barang beserta pungutan, kemasan, peti kemas, pengangkutan, dan baris lampiran
+  tanpa file; status dihitung ulang (aturan invoice memeriksa baris lampiran, bukan filenya).
+- Export draft untuk input manual ke CEISA: `/api/customs-documents/<id>/export?format=pdf|xlsx`
+  (izin `bc:read`), dibangun `customsExportSections()` di
+  `src/modules/it-inventory/server/customs-export.ts`: Excel satu sheet per bagian (`exceljs`),
+  PDF A4 (`pdf-lib`, font standar Latin-1; karakter lain diganti "?").
 - Tes yang perlu menghapus dokumen non-Draft memakai `purgeCustomsDocuments()` atau
   `forceCustomsStatus()` (`tests/db/customs-fixtures.ts`).
 - Tautan ke inventory sudah disiapkan untuk gerbang dokumen (M4): `transfers.customs_document_id`

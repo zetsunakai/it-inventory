@@ -1,8 +1,8 @@
 import { z } from "zod"
 
 import type { FieldSpan } from "@/components/form-field"
-import { parseDecimalInput } from "@/lib/decimal"
-import type { RefCodeType } from "@/lib/ref-codes"
+import { formatDecimal, parseDecimalInput } from "@/lib/decimal"
+import { formatRefCode, type RefCodeType } from "@/lib/ref-codes"
 
 import type { CustomsDocCode } from "./customs"
 
@@ -618,4 +618,29 @@ export function customsDraftChanges(
     if (!same(before[key], after[key])) changes.push(label)
   }
   return changes
+}
+
+// Nilai isian untuk dibaca (tampilan baca, export PDF/Excel): kode referensi sebagai [kode] nama,
+// angka format Indonesia, tanggal DD/MM/YYYY.
+export function formatCustomsValue(
+  field: CustomsFieldKind,
+  value: string | undefined,
+  refLabels: Record<string, string>,
+) {
+  if (!value) return "—"
+  switch (field.kind) {
+    case "ref": {
+      const name = refLabels[`${field.refType}|${value}`]
+      return name ? formatRefCode({ code: value, name }) : value
+    }
+    case "option":
+      return `[${value}] ${customsOptionLabel(field.list, value)}`
+    case "money":
+    case "qty":
+      return formatDecimal(value.replace(",", "."))
+    case "date":
+      return value.split("-").reverse().join("/")
+    default:
+      return value
+  }
 }

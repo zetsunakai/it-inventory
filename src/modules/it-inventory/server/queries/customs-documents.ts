@@ -6,7 +6,11 @@ import { toDecimalInput } from "@/lib/decimal"
 import type { ListParams } from "@/lib/list-params"
 import type { RefCodeType } from "@/lib/ref-codes"
 import { partnerAsCustomsParty } from "@/modules/inventory/lib/partner"
-import type { CustomsDocCode, CustomsDocumentStatus } from "@/modules/it-inventory/lib/customs"
+import type {
+  CustomsDocCode,
+  CustomsDocumentStatus,
+  CustomsPeriod,
+} from "@/modules/it-inventory/lib/customs"
 import {
   CUSTOMS_HEADER_COLUMNS,
   CUSTOMS_LINE_COLUMNS,
@@ -342,6 +346,23 @@ export type CustomsDocumentRow = {
   lineCount: number
 }
 
+const TODAY = sql`(now() at time zone 'Asia/Jakarta')::date`
+
+// Kantor pabean yang dipakai dokumen satu jenis, untuk pilihan filter daftar.
+export async function customsOfficeOptions(docCode: CustomsDocCode) {
+  const rows = await db.execute<{ code: string; name: string | null }>(sql`
+    select distinct d.customs_office_code as code, r.name
+    from customs_documents d
+    left join ref_codes r on r.type = 'customs_office' and r.code = d.customs_office_code
+      and r.parent_code is null
+    where d.doc_code = ${docCode} and d.customs_office_code is not null
+    order by 1`)
+  return rows.rows.map((row) => ({
+    value: row.code,
+    label: row.name ? `[${row.code}] ${row.name}` : row.code,
+  }))
+}
+
 // Entitas lawan transaksi yang ditampilkan di daftar: semua kecuali pengusaha TPB (3), pemilik (7),
 // dan eksportir (2), yang selalu perusahaan sendiri.
 const COUNTERPARTY = sql`(
@@ -349,15 +370,33 @@ const COUNTERPARTY = sql`(
   where p.document_id = d.id and p.entity_type_code not in ('2', '3', '7')
   order by p.entity_type_code limit 1)`
 
+// Rentang tanggal aju per pilihan periode, dalam tanggal WIB.
+const PERIOD_RANGES: Record<CustomsPeriod, SQL> = {
+  "bulan-ini": sql`date_trunc('month', ${TODAY}) and ${TODAY}`,
+  "bulan-lalu": sql`date_trunc('month', ${TODAY}) - interval '1 month'
+    and date_trunc('month', ${TODAY}) - interval '1 day'`,
+  "3-bulan": sql`${TODAY} - interval '3 months' and ${TODAY}`,
+  "tahun-ini": sql`date_trunc('year', ${TODAY}) and ${TODAY}`,
+}
+
 export async function listCustomsDocuments({
   docCode,
   status,
+  officeCode,
+  period,
   search,
   pageSize,
   offset,
-}: ListParams & { docCode: CustomsDocCode; status?: CustomsDocumentStatus }) {
+}: ListParams & {
+  docCode: CustomsDocCode
+  status?: CustomsDocumentStatus
+  officeCode?: string
+  period?: CustomsPeriod
+}) {
   const conditions: SQL[] = [sql`d.doc_code = ${docCode}`]
   if (status) conditions.push(sql`d.status = ${status}`)
+  if (officeCode) conditions.push(sql`d.customs_office_code = ${officeCode}`)
+  if (period) conditions.push(sql`d.aju_date between ${PERIOD_RANGES[period]}`)
   if (search) {
     const pattern = containsPattern(search)
     conditions.push(

@@ -2,10 +2,9 @@ import { DataTable, type DataTableColumn } from "@/components/data-table/data-ta
 import { InfoGrid } from "@/components/layout/info-grid"
 import { Section } from "@/components/layout/section"
 import { formatDecimal } from "@/lib/decimal"
-import { formatRefCode } from "@/lib/ref-codes"
 import {
   CUSTOMS_STATEMENT_FIELDS,
-  customsOptionLabel,
+  formatCustomsValue,
   type CustomsAttachmentDraft,
   type CustomsDocumentDraft,
   type CustomsField,
@@ -26,24 +25,8 @@ export function CustomsDocumentView({
   draft: CustomsDocumentDraft
   refLabels: RefLabels
 }) {
-  const show = (field: CustomsField, value: string | undefined) => {
-    if (!value) return "—"
-    switch (field.kind) {
-      case "ref": {
-        const name = refLabels[`${field.refType}|${value}`]
-        return name ? formatRefCode({ code: value, name }) : value
-      }
-      case "option":
-        return `[${value}] ${customsOptionLabel(field.list, value)}`
-      case "money":
-      case "qty":
-        return formatDecimal(value.replace(",", "."))
-      case "date":
-        return value.split("-").reverse().join("/")
-      default:
-        return value
-    }
-  }
+  const show = (field: CustomsField, value: string | undefined) =>
+    formatCustomsValue(field, value, refLabels)
   const headerValue = (field: CustomsField) =>
     field.detail ? draft.details[field.key] : (draft.header as Record<string, string>)[field.key]
   const grid = (fields: CustomsField[]) =>

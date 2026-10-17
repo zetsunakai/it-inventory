@@ -1,5 +1,7 @@
 "use client"
 
+import { Copy, Ellipsis, FileSpreadsheet, FileText } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { useId, useState, useTransition, type ReactNode } from "react"
 
 import { usePageMessage } from "@/components/layout/page-message"
@@ -15,12 +17,19 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { ActionResult } from "@/lib/action-result"
 import {
   cancelCustomsDocument,
+  duplicateCustomsDocument,
   registerCustomsDocument,
   rejectCustomsDocument,
   resetCustomsDocumentToDraft,
@@ -36,17 +45,21 @@ const EMPTY_RESPONSE: Response = { responseCode: "", responseNumber: "", respons
 // dialog tetap terbuka bila gagal supaya isian tidak hilang.
 export function CustomsDocumentActions({
   id,
+  path,
   ajuNumber,
   status,
   canWrite,
   canCancel,
 }: {
   id: string
+  // Path menu jenis dokumen, mis. /dokumen-bc/bc23.
+  path: string
   ajuNumber: string
   status: CustomsDocumentStatus
   canWrite: boolean
   canCancel: boolean
 }) {
+  const router = useRouter()
   const { show } = usePageMessage()
   const [pending, startTransition] = useTransition()
   const [open, setOpen] = useState<string | null>(null)
@@ -169,7 +182,8 @@ export function CustomsDocumentActions({
       ),
     )
   }
-  if (!actions.length) return null
+  const exportHref = (format: "pdf" | "xlsx") =>
+    `/api/customs-documents/${id}/export?format=${format}`
   return (
     <div className="flex flex-wrap gap-2">
       {actions.map((action, index) => (
@@ -177,6 +191,41 @@ export function CustomsDocumentActions({
           {action}
         </span>
       ))}
+      {/* Aksi sekunder: unduh draft untuk input manual ke CEISA, duplikat (M3-13). */}
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" size="icon" aria-label="Aksi lain" disabled={pending} />
+          }
+        >
+          <Ellipsis />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-56">
+          <DropdownMenuItem render={<a href={exportHref("pdf")} />} className="h-9">
+            <FileText aria-hidden />
+            Unduh PDF
+          </DropdownMenuItem>
+          <DropdownMenuItem render={<a href={exportHref("xlsx")} />} className="h-9">
+            <FileSpreadsheet aria-hidden />
+            Unduh Excel
+          </DropdownMenuItem>
+          {canWrite && (
+            <DropdownMenuItem
+              className="h-9"
+              onClick={() =>
+                startTransition(async () => {
+                  const result = await duplicateCustomsDocument({ id })
+                  show(result)
+                  if (result.ok) router.push(`${path}/${result.data.id}`)
+                })
+              }
+            >
+              <Copy aria-hidden />
+              Duplikat
+            </DropdownMenuItem>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

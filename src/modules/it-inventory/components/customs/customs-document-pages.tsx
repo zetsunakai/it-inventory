@@ -25,10 +25,13 @@ import {
   CUSTOMS_DOCUMENT_STATUS_LABELS,
   CUSTOMS_DOCUMENT_STATUS_TONES,
   CUSTOMS_DOCUMENT_STATUSES,
+  CUSTOMS_PERIOD_LABELS,
+  CUSTOMS_PERIODS,
   type CustomsDocumentStatus,
 } from "@/modules/it-inventory/lib/customs"
 import type { CustomsFormSpec } from "@/modules/it-inventory/lib/customs-form"
 import {
+  customsOfficeOptions,
   getCustomsDocument,
   getCustomsRevision,
   listCustomsDocuments,
@@ -114,7 +117,20 @@ async function CustomsTable({
   const raw = await searchParams
   const params = parseListParams(raw)
   const status = pickFilter(raw, "status", CUSTOMS_DOCUMENT_STATUSES)
-  const { rows, total } = await listCustomsDocuments({ ...params, docCode: spec.code, status })
+  const period = pickFilter(raw, "periode", CUSTOMS_PERIODS)
+  const offices = await customsOfficeOptions(spec.code)
+  const officeCode = pickFilter(
+    raw,
+    "kantor",
+    offices.map((office) => office.value),
+  )
+  const { rows, total } = await listCustomsDocuments({
+    ...params,
+    docCode: spec.code,
+    status,
+    officeCode,
+    period,
+  })
   const createLabel = `Buat ${spec.title}`
 
   return (
@@ -148,6 +164,17 @@ async function CustomsTable({
                 label: CUSTOMS_DOCUMENT_STATUS_LABELS[value],
               })),
             },
+            {
+              name: "periode",
+              label: "Tanggal aju",
+              options: CUSTOMS_PERIODS.map((value) => ({
+                value,
+                label: CUSTOMS_PERIOD_LABELS[value],
+              })),
+            },
+            ...(offices.length > 1
+              ? [{ name: "kantor", label: "Kantor pabean", options: offices }]
+              : []),
           ]}
         />
       </ListToolbar>
@@ -244,6 +271,7 @@ async function CustomsDetail({
       actions={
         <CustomsDocumentActions
           id={doc.id}
+          path={spec.path}
           ajuNumber={doc.ajuNumber}
           status={doc.status}
           canWrite={canWrite}

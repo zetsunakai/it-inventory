@@ -70,3 +70,14 @@ export const CUSTOMS_DOCUMENT_STATUS_TONES: Record<
   rejected: "danger",
   cancelled: "neutral",
 }
+
+// Filter tanggal aju di daftar dokumen (M3-13), dihitung dalam WIB oleh database.
+export const CUSTOMS_PERIODS = ["bulan-ini", "bulan-lalu", "3-bulan", "tahun-ini"] as const
+export type CustomsPeriod = (typeof CUSTOMS_PERIODS)[number]
+
+export const CUSTOMS_PERIOD_LABELS: Record<CustomsPeriod, string> = {
+  "bulan-ini": "Bulan ini",
+  "bulan-lalu": "Bulan lalu",
+  "3-bulan": "3 bulan terakhir",
+  "tahun-ini": "Tahun ini",
+}
