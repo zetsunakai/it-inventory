@@ -140,6 +140,44 @@ export const BC23: CustomsFormSpec = {
   taxes: ["BM", "PPN", "PPH"],
 }
 
+const DELIVERY_PRICE: CustomsField = {
+  key: "deliveryPrice",
+  label: "Harga penyerahan",
+  kind: "money",
+  span: 6,
+}
+
+// Uang muka, diskon, DPP, dan nilai jasa: dokumen dengan harga penyerahan (TLDDP).
+const DOMESTIC_VALUES: CustomsField[] = [
+  { key: "downPayment", label: "Uang muka", kind: "money", detail: true, span: 6 },
+  { key: "discountValue", label: "Diskon", kind: "money", detail: true, span: 6 },
+]
+
+// BC 4.0: pemasukan barang dari tempat lain dalam daerah pabean (document_40 hmx).
+export const BC40: CustomsFormSpec = {
+  code: "40",
+  title: "BC 4.0",
+  description: "Pemasukan barang dari pemasok dalam negeri (TLDDP) ke kawasan berikat.",
+  path: "/dokumen-bc/bc40",
+  header: [TPB_TYPE],
+  parties: [ENTREPRENEUR, OWNER, { code: "9", label: "Pengirim", source: "partner" }],
+  transport: { fields: [] },
+  containers: true,
+  transaction: [
+    DELIVERY_PRICE,
+    { key: "serviceValue", label: "Nilai jasa", kind: "money", detail: true, span: 6 },
+    ...DOMESTIC_VALUES,
+    { key: "volume", label: "Volume (m3)", kind: "qty", detail: true, span: 6 },
+    ...WEIGHTS,
+  ],
+  line: [
+    ...CUSTOMS_LINE_BASE_FIELDS,
+    { key: "deliveryPrice", label: "Harga penyerahan", kind: "money", span: 6 },
+  ],
+  taxes: ["PPN"],
+}
+
 export const CUSTOMS_SPECS: Partial<Record<CustomsDocCode, CustomsFormSpec>> = {
   "23": BC23,
+  "40": BC40,
 }
