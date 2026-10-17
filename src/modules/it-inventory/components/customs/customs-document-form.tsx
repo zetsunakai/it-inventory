@@ -104,7 +104,7 @@ export function CustomsDocumentForm({
       value: "header",
       label: "Header",
       content: (
-        <FormSection title="Header">
+        <FormSection title="Kantor pabean">
           <CustomsFormField
             field={{
               key: "customsOfficeCode",
@@ -131,7 +131,7 @@ export function CustomsDocumentForm({
       value: "entitas",
       label: "Entitas",
       content: (
-        <div className="divide-y">
+        <div className="flex flex-col gap-10">
           {spec.parties.map((role) => (
             <PartyEditor
               key={role.code}
@@ -186,7 +186,7 @@ export function CustomsDocumentForm({
       value: "pengangkut",
       label: "Pengangkut",
       content: (
-        <div className="divide-y">
+        <div className="flex flex-col gap-10">
           <RowsEditor
             title="Sarana angkut"
             noun="sarana angkut"
@@ -230,7 +230,7 @@ export function CustomsDocumentForm({
       value: "kemasan",
       label: spec.containers ? "Kemasan dan peti kemas" : "Kemasan",
       content: (
-        <div className="divide-y">
+        <div className="flex flex-col gap-10">
           <RowsEditor
             title="Kemasan"
             noun="kemasan"
@@ -327,13 +327,17 @@ export function CustomsDocumentForm({
     {
       value: "transaksi",
       label: "Transaksi",
-      content: <FormSection title="Transaksi">{headerFields(spec.transaction)}</FormSection>,
+      content: (
+        <FormSection title="Nilai transaksi dan berat">
+          {headerFields(spec.transaction)}
+        </FormSection>
+      ),
     },
     {
       value: "pernyataan",
       label: "Pernyataan",
       content: (
-        <FormSection title="Pernyataan">
+        <FormSection title="Penandatangan">
           {headerFields(CUSTOMS_STATEMENT_FIELDS)}
           <CustomsFormField
             field={{ key: "notes", label: "Catatan", kind: "text", long: true, span: 12 }}
@@ -365,7 +369,7 @@ export function CustomsDocumentForm({
       <input type="hidden" name="document" value={JSON.stringify(draft)} />
 
       <Tabs defaultValue="header">
-        <TabsList className="flex-wrap">
+        <TabsList>
           {tabs.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}>
               {tab.label}
@@ -475,14 +479,15 @@ function PartyEditor({
           />
         </FormField>
       )}
-      {field("name", { label: "Nama", kind: "text", span: 6 })}
+      {field("name", { label: "Nama", kind: "text", span: 12 })}
       {field("identityTypeCode", {
         label: "Jenis identitas",
         kind: "option",
         list: "identityType",
-        span: 3,
+        span: 4,
       })}
-      {field("identityNumber", { label: "Nomor identitas", kind: "text", mono: true, span: 3 })}
+      {/* NITKU 22 digit perlu lebar. */}
+      {field("identityNumber", { label: "Nomor identitas", kind: "text", mono: true, span: 8 })}
       {field("address", { label: "Alamat", kind: "text", long: true, span: role.country ? 8 : 12 })}
       {role.country &&
         field("countryCode", { label: "Negara", kind: "ref", refType: "country", span: 4 })}
@@ -612,7 +617,7 @@ function LinesEditor({
   return (
     <FormSection
       title="Barang"
-      description="Hanya produk yang sudah punya kode HS. Jumlah dalam satuan stok dipakai untuk mencocokkan dengan transfer."
+      description="Hanya produk yang sudah punya kode HS. Qty satuan stok dicocokkan dengan transfer."
       actions={
         <Button
           type="button"
@@ -706,7 +711,7 @@ function TaxesEditor({
     )
   }
   return (
-    <div className="divide-y">
+    <div className="flex flex-col gap-10">
       {lines.map((line, index) => (
         <RowsEditor
           key={index}

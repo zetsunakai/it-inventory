@@ -73,7 +73,7 @@ test("menu Auditor: bisa melihat modul baca, tanpa Administrasi dan Tutup period
 
   const links = await menuLinks(page)
   expect(links).toEqual(
-    expect.arrayContaining(["Beranda", "Stok", "Dokumen BC", "Laporan IT Inventory", "Produk"]),
+    expect.arrayContaining(["Beranda", "Stok", "BC 2.3", "Laporan IT Inventory", "Produk"]),
   )
   expect(links).not.toContain("Pengguna")
   expect(links).not.toContain("Pengaturan")
@@ -82,14 +82,14 @@ test("menu Auditor: bisa melihat modul baca, tanpa Administrasi dan Tutup period
   expect(await moduleOptions(page)).toEqual(["Inventory", "IT Inventory"])
 })
 
-test("menu Admin gudang: tanpa Dokumen BC; membuka URL-nya langsung ditolak", async ({ page }) => {
+test("menu Admin gudang: tanpa dokumen BC; membuka URL-nya langsung ditolak", async ({ page }) => {
   await loginAs(page, ACCOUNTS.gudang)
 
   const links = await menuLinks(page)
   expect(links).toContain("Penerimaan")
-  expect(links).not.toContain("Dokumen BC")
+  expect(links).not.toContain("BC 2.3")
 
-  await page.goto("/dokumen-bc")
+  await page.goto("/dokumen-bc/bc23")
   await expect(page.getByRole("heading", { name: "Akses ditolak" })).toBeVisible()
 })
 
@@ -99,16 +99,16 @@ test("klik menu membuka modul dan menandai menu yang aktif", async ({ page }) =>
   // Modul yang masih berupa placeholder, di modul IT Inventory; grupnya dibuka dulu.
   await switchModule(page, "IT Inventory")
   await expandMenus(page)
-  await sidebar(page).getByRole("link", { name: "Dokumen BC" }).click()
+  await sidebar(page).getByRole("link", { name: "Laporan IT Inventory" }).click()
 
-  await expect(page).toHaveURL(/\/dokumen-bc$/)
-  await expect(page.getByRole("heading", { name: "Dokumen BC", level: 1 })).toBeVisible()
-  await expect(page.getByText("Dijadwalkan di M3.")).toBeVisible()
-  await expect(sidebar(page).getByRole("link", { name: "Dokumen BC" })).toHaveAttribute(
+  await expect(page).toHaveURL(/\/laporan$/)
+  await expect(page.getByRole("heading", { name: "Laporan IT Inventory", level: 1 })).toBeVisible()
+  await expect(page.getByText("Dijadwalkan di M5.")).toBeVisible()
+  await expect(sidebar(page).getByRole("link", { name: "Laporan IT Inventory" })).toHaveAttribute(
     "title",
-    "Belum tersedia, dijadwalkan di M3",
+    "Belum tersedia, dijadwalkan di M5",
   )
-  await expect(sidebar(page).getByRole("link", { name: "Dokumen BC" })).toHaveAttribute(
+  await expect(sidebar(page).getByRole("link", { name: "Laporan IT Inventory" })).toHaveAttribute(
     "aria-current",
     "page",
   )

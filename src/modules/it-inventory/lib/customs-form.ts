@@ -194,15 +194,15 @@ export const CUSTOMS_STATEMENT_FIELDS: CustomsField[] = [
 ]
 
 export const CUSTOMS_LINE_BASE_FIELDS: CustomsField[] = [
-  { key: "hsCode", label: "Kode HS", kind: "ref", refType: "hs_code", span: 4 },
-  { key: "description", label: "Uraian barang", kind: "text", span: 8 },
+  { key: "hsCode", label: "Kode HS", kind: "ref", refType: "hs_code", span: 6 },
+  { key: "description", label: "Uraian barang", kind: "text", span: 6 },
   { key: "brand", label: "Merek", kind: "text", span: 4 },
   { key: "itemType", label: "Tipe", kind: "text", span: 4 },
   { key: "itemSize", label: "Ukuran", kind: "text", span: 4 },
-  { key: "qty", label: "Jumlah satuan", kind: "qty", span: 3 },
+  { key: "qty", label: "Jumlah", kind: "qty", span: 3 },
   { key: "ceisaUnitCode", label: "Satuan CEISA", kind: "ref", refType: "ceisa_unit", span: 3 },
-  { key: "stockQty", label: "Jumlah dalam satuan stok", kind: "qty", span: 3 },
-  { key: "netWeight", label: "Berat bersih (kg)", kind: "qty", span: 3 },
+  { key: "stockQty", label: "Qty satuan stok", kind: "qty", span: 3 },
+  { key: "netWeight", label: "Berat (kg)", kind: "qty", span: 3 },
   { key: "packageQty", label: "Jumlah kemasan", kind: "qty", span: 3 },
   { key: "packageTypeCode", label: "Jenis kemasan", kind: "ref", refType: "package_type", span: 3 },
 ]
@@ -368,9 +368,9 @@ function lineKinds(seq: number): Record<CustomsLineColumn, z.ZodType<string | nu
     itemType: text(label("Tipe"), 100),
     itemSize: text(label("Ukuran"), 100),
     specification: text(label("Spesifikasi"), 1000),
-    qty: amount(label("Jumlah satuan"), 4),
+    qty: amount(label("Jumlah"), 4),
     ceisaUnitCode: code,
-    stockQty: amount(label("Jumlah dalam satuan stok"), 4),
+    stockQty: amount(label("Qty satuan stok"), 4),
     packageQty: amount(label("Jumlah kemasan"), 4),
     packageTypeCode: code,
     netWeight: amount(label("Berat bersih"), 4),

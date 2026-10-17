@@ -498,6 +498,13 @@
       "when": 1792248586150,
       "tag": "0070_doc_validation_rules_seed",
       "breakpoints": true
+    },
+    {
+      "idx": 71,
+      "version": "7",
+      "when": 1792249735283,
+      "tag": "0071_customs_rule_labels",
+      "breakpoints": true
     }
   ]
 }

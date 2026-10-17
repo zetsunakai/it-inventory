@@ -206,7 +206,7 @@ describe("saveCustomsDocument", () => {
       expect.arrayContaining([
         "NDPBM harus angka, maksimal 4 desimal.",
         "Tanggal pernyataan tidak valid.",
-        "Barang seri 1: Jumlah satuan harus angka, maksimal 4 desimal.",
+        "Barang seri 1: Jumlah harus angka, maksimal 4 desimal.",
         "Nomor peti kemas tidak boleh sama.",
       ]),
     )

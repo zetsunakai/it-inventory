@@ -86,12 +86,8 @@ export const NAVIGATION: NavGroup[] = [
     module: "it-inventory",
     icon: Landmark,
     items: [
-      {
-        title: "Dokumen BC",
-        href: "/dokumen-bc",
-        permission: "bc:read",
-        plannedIn: "M3",
-      },
+      // Satu menu per jenis dokumen BC, seperti hmx (keputusan 17/10/2026).
+      { title: "BC 2.3", href: "/dokumen-bc/bc23", permission: "bc:read" },
       {
         title: "Referensi kepabeanan",
         href: "/master/referensi",
