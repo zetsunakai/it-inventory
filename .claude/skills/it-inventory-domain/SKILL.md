@@ -40,7 +40,12 @@ PRD bagian 15.4.
 
 1. **Satu set tabel dokumen generik** (`customs_documents`, `customs_document_lines`, …) dibedakan
    `doc_code`. Field khusus jenis di kolom jsonb. Bukan satu tabel per jenis seperti kedua sistem
-   lama: menambah BC 2.7 atau 3.3 cukup menambah aturan validasi.
+   lama: menambah BC 2.7 atau 3.3 tidak butuh tabel baru. **Tampilan terpisah per jenis**
+   (keputusan user 17/10/2026, PRD 15.4): setiap jenis punya menu, daftar, dan form sendiri seperti
+   hmx (`views/document_XX_views.xml`), dirakit dari komponen form bersama (tab Header, Entitas,
+   Dokumen, Pengangkut, Kemasan dan Peti Kemas, Transaksi, Barang, Pungutan, Pernyataan; backlog
+   M3-04). Field tiap form mengikuti `models/document_XX.py` hmx; jangan membuat satu form generik
+   yang menyembunyikan field per jenis.
 2. **Alur status lengkap** (PRD 7.3): Draft → Siap ajukan → Diajukan → Terdaftar / Ditolak, Batal
    (Manajer). Penguncian setelah Diajukan/Terdaftar dipaksakan trigger database, seperti pola kunci
    hmx-002 tapi di DB, bukan di kode aplikasi.
