@@ -6,7 +6,8 @@ import type * as React from "react"
 import { cn } from "@/lib/utils"
 
 // Tab dokumen (notebook hmx, RU-23): kartu dengan tab 48px dan garis bawah biru pada tab aktif;
-// ukurannya di .form-notebook (globals.css, UF-04).
+// ukurannya di .form-notebook (globals.css, UF-04). Tanpa scroll: tab yang tidak muat turun ke
+// baris berikutnya.
 function Tabs({ className, ...props }: TabsPrimitive.Root.Props) {
   return (
     <TabsPrimitive.Root data-slot="tabs" className={cn("form-notebook", className)} {...props} />
@@ -17,7 +18,7 @@ function TabsList({ className, ...props }: TabsPrimitive.List.Props) {
   return (
     <TabsPrimitive.List
       data-slot="tabs-list"
-      className={cn("relative flex min-h-12 overflow-x-auto border-b px-2", className)}
+      className={cn("relative flex min-h-12 flex-wrap border-b px-2", className)}
       {...props}
     />
   )
