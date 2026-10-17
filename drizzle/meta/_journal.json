@@ -470,6 +470,20 @@
       "when": 1792247902375,
       "tag": "0066_customs_documents_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 67,
+      "version": "7",
+      "when": 1792248379252,
+      "tag": "0067_customs_aju_number",
+      "breakpoints": true
+    },
+    {
+      "idx": 68,
+      "version": "7",
+      "when": 1792248384887,
+      "tag": "0068_customs_aju_number_rules",
+      "breakpoints": true
     }
   ]
 }

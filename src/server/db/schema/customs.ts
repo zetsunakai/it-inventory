@@ -58,8 +58,14 @@ export const customsDocuments = pgTable(
     docCode: customsDocCode().notNull(),
     status: customsDocumentStatus().notNull().default("draft"),
     version: integer().notNull().default(1),
-    ajuNumber: text(),
-    ajuDate: date({ mode: "string" }),
+    // Diisi trigger saat insert lewat next_aju_number() (M3-02); default null hanya supaya insert
+    // tidak wajib mengisinya.
+    ajuNumber: text()
+      .notNull()
+      .default(sql`null`),
+    ajuDate: date({ mode: "string" })
+      .notNull()
+      .default(sql`null`),
     // Kode ref_codes jenis customs_office: kantor pabean tempat dokumen diajukan.
     customsOfficeCode: text(),
     registrationNumber: text(),

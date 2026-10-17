@@ -396,6 +396,11 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   seterusnya).
 - `doc_code` sama dengan kodeDokumen CEISA (`23`, `40`, `25`, `30`, `41`); label, arah, dan status
   ada di `src/modules/it-inventory/lib/customs.ts`. Arah di database: `customs_doc_direction()`.
+- Nomor aju (M3-02) dibuat trigger saat dokumen dibuat lewat `next_aju_number(doc_code, kantor,
+tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar/angka) + kode
+  dokumen 3 digit + kode kantor 6 digit (kantor pabean dokumen, atau kantor pengawas di profil
+  perusahaan) + tanggal WIB + nomor urut 6 digit per jenis (`next_number('aju:<kode>', '')`). Nomor
+  dan tanggal aju tidak bisa diubah, termasuk saat revisi; nilai yang dikirim aplikasi diabaikan.
 - Dokumen baru selalu Draft, pembuatnya diisi dari `app.user_id`, dan jenisnya tidak bisa diubah.
   Status Terdaftar wajib punya nomor dan tanggal daftar.
 - Baris barang hanya untuk produk aktif yang siap dokumen BC (punya kode HS). Kategori IT Inventory

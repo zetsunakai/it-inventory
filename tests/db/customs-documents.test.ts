@@ -1,9 +1,10 @@
-import { and, eq, sql } from "drizzle-orm"
-import { afterAll, describe, expect, test } from "vitest"
+import { and, eq, inArray, sql } from "drizzle-orm"
+import { afterAll, beforeAll, describe, expect, test } from "vitest"
 
 import { db } from "@/server/db"
 import {
   auditLogs,
+  company,
   customsAttachments,
   customsContainers,
   customsDocumentLines,
@@ -15,6 +16,7 @@ import {
   locations,
   partners,
   products,
+  systemSettings,
   transfers,
   uomCategories,
   uoms,
@@ -24,15 +26,42 @@ import {
 import { inRollback, pgErrorInSavepoint, setAuditUser } from "./helpers"
 
 // Skema dokumen BC (backlog M3-01, PRD bagian 7 dan 13): satu set tabel untuk semua jenis
-// dokumen, dibedakan doc_code. Semua data uji dibuat di transaksi yang di-rollback.
+// dokumen, dibedakan doc_code. Nomor aju (M3-02, PRD 7.4). Data uji dibuat di transaksi yang
+// di-rollback, kecuali profil perusahaan dan dokumen dari tes penomoran bersamaan.
 
 type Tx = Parameters<Parameters<typeof inRollback>[1]>[0]
 
 const ACTOR = "7a2d3c4b-5e6f-4a1b-9c8d-0e1f2a3b4c5d"
 
+// Kantor pengawas di profil perusahaan menjadi kode kantor nomor aju bila dokumen belum memilih.
+const OFFICE = "050500"
+const committedDocuments: string[] = []
+
+beforeAll(async () => {
+  await db.insert(company).values({
+    name: "PT Uji Berikat",
+    address: "Jl. Industri No. 1, Bekasi",
+    npwp: "0012345678901000",
+    nitku: "0012345678901000000000",
+    nib: "1234567890123",
+    facilityType: "kawasan_berikat",
+    permitNumber: "KEP-1/2024",
+    permitDate: "2024-03-15",
+    supervisingOfficeCode: OFFICE,
+  })
+})
+
 afterAll(async () => {
+  if (committedDocuments.length) {
+    await db.delete(customsDocuments).where(inArray(customsDocuments.id, committedDocuments))
+  }
+  await db.delete(company)
   await db.$client.end()
 })
+
+function todayWib() {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).replaceAll("-", "")
+}
 
 async function fixtures(tx: Tx) {
   const [category] = await tx
@@ -180,14 +209,8 @@ describe("customs_documents", () => {
     })
   })
 
-  test("constraint header: nomor aju unik, Terdaftar wajib nomor daftar, details berupa objek", async () => {
+  test("constraint header: Terdaftar wajib nomor daftar, Batal wajib tanggal, details berupa objek", async () => {
     await inRollback(db, async (tx) => {
-      const aju = "00000102300020261017000001"
-      await draft(tx, { ajuNumber: aju })
-      expect(await pgErrorInSavepoint(tx, (sp) => draft(sp, { ajuNumber: aju }))).toContain(
-        "customs_documents_aju_number_unique",
-      )
-
       const doc = await draft(tx)
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
@@ -231,6 +254,73 @@ describe("customs_documents", () => {
         ),
       ).toContain("customs_document_parties_role_unique")
     })
+  })
+})
+
+describe("next_aju_number", () => {
+  test("format 26 karakter: kode perusahaan, kode dokumen, kantor, tanggal WIB, nomor urut per jenis", async () => {
+    await inRollback(db, async (tx) => {
+      const first = await draft(tx)
+      const second = await draft(tx)
+      const other = await draft(tx, { docCode: "40", customsOfficeCode: "040300" })
+
+      const prefix = `000023${OFFICE}${todayWib()}`
+      expect(first.ajuNumber).toHaveLength(26)
+      expect(first.ajuNumber.startsWith(prefix)).toBe(true)
+      expect(Number(second.ajuNumber.slice(-6))).toBe(Number(first.ajuNumber.slice(-6)) + 1)
+      expect(other.ajuNumber.slice(0, 20)).toBe(`000040040300${todayWib()}`)
+      expect(first.ajuDate.replaceAll("-", "")).toBe(todayWib())
+    })
+  })
+
+  test("nomor aju yang dikirim aplikasi diabaikan dan tidak bisa diubah", async () => {
+    await inRollback(db, async (tx) => {
+      const doc = await draft(tx, { ajuNumber: "X".repeat(26) })
+      expect(doc.ajuNumber.startsWith("000023")).toBe(true)
+      expect(
+        await pgErrorInSavepoint(tx, (sp) =>
+          sp
+            .update(customsDocuments)
+            .set({ ajuNumber: "00002305050020260101000001" })
+            .where(eq(customsDocuments.id, doc.id)),
+        ),
+      ).toBe("Nomor dan tanggal aju tidak bisa diubah.")
+      // Perubahan lain (mis. naik versi saat revisi) tidak menyentuh nomor aju.
+      const [revised] = await tx
+        .update(customsDocuments)
+        .set({ version: 2 })
+        .where(eq(customsDocuments.id, doc.id))
+        .returning()
+      expect(revised.ajuNumber).toBe(doc.ajuNumber)
+    })
+  })
+
+  test("kode perusahaan dan kantor harus sesuai format", async () => {
+    await inRollback(db, async (tx) => {
+      expect(await pgErrorInSavepoint(tx, (sp) => draft(sp, { customsOfficeCode: "ABC" }))).toBe(
+        "Kode kantor pabean ABC harus 6 digit untuk nomor aju.",
+      )
+      await tx
+        .update(systemSettings)
+        .set({ value: "ab" })
+        .where(eq(systemSettings.key, "customs.aju_company_code"))
+      expect(await pgErrorInSavepoint(tx, (sp) => draft(sp))).toContain(
+        "Kode perusahaan untuk nomor aju harus 3 huruf besar atau angka",
+      )
+    })
+  })
+
+  test("10 dokumen dibuat bersamaan mendapat nomor aju unik", async () => {
+    const rows = await Promise.all(
+      Array.from({ length: 10 }, () =>
+        db
+          .insert(customsDocuments)
+          .values({ docCode: "25" })
+          .returning({ id: customsDocuments.id, ajuNumber: customsDocuments.ajuNumber }),
+      ),
+    )
+    committedDocuments.push(...rows.map(([row]) => row.id))
+    expect(new Set(rows.map(([row]) => row.ajuNumber)).size).toBe(10)
   })
 })
 
