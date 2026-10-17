@@ -177,7 +177,66 @@ export const BC40: CustomsFormSpec = {
   taxes: ["PPN"],
 }
 
+const DELIVERY_REASON: CustomsField = {
+  key: "deliveryReasonCode",
+  label: "Tujuan pengeluaran",
+  kind: "option",
+  list: "deliveryReason",
+  detail: true,
+  span: 6,
+}
+
+const RECIPIENT: CustomsPartySpec = { code: "8", label: "Penerima", source: "partner" }
+
+const DPP: CustomsField = { key: "dppValue", label: "DPP", kind: "money", detail: true, span: 6 }
+
+// BC 2.5: pengeluaran barang dari TPB ke tempat lain dalam daerah pabean (document_25 hmx).
+export const BC25: CustomsFormSpec = {
+  code: "25",
+  title: "BC 2.5",
+  description: "Pengeluaran barang dari kawasan berikat ke pembeli dalam negeri (TLDDP).",
+  path: "/dokumen-bc/bc25",
+  header: [
+    TPB_TYPE,
+    DELIVERY_REASON,
+    {
+      key: "paymentTermCode",
+      label: "Cara pembayaran",
+      kind: "option",
+      list: "paymentTerm",
+      detail: true,
+      span: 6,
+    },
+    {
+      key: "transportModeCode",
+      label: "Cara angkut",
+      kind: "ref",
+      refType: "transport_mode",
+      detail: true,
+      span: 6,
+    },
+  ],
+  parties: [ENTREPRENEUR, OWNER, RECIPIENT],
+  transport: null,
+  containers: true,
+  transaction: [
+    ...CURRENCY,
+    { key: "cifValue", label: "Nilai CIF", kind: "money", span: 6 },
+    DELIVERY_PRICE,
+    DPP,
+    ...DOMESTIC_VALUES,
+    ...WEIGHTS,
+  ],
+  line: [
+    ...CUSTOMS_LINE_BASE_FIELDS,
+    { key: "cifValue", label: "Nilai CIF", kind: "money", span: 6 },
+    { key: "deliveryPrice", label: "Harga penyerahan", kind: "money", span: 6 },
+  ],
+  taxes: ["BM", "PPN", "PPH"],
+}
+
 export const CUSTOMS_SPECS: Partial<Record<CustomsDocCode, CustomsFormSpec>> = {
   "23": BC23,
   "40": BC40,
+  "25": BC25,
 }

@@ -89,6 +89,7 @@ export const NAVIGATION: NavGroup[] = [
       // Satu menu per jenis dokumen BC, seperti hmx (keputusan 17/10/2026).
       { title: "BC 2.3", href: "/dokumen-bc/bc23", permission: "bc:read" },
       { title: "BC 4.0", href: "/dokumen-bc/bc40", permission: "bc:read" },
+      { title: "BC 2.5", href: "/dokumen-bc/bc25", permission: "bc:read" },
       {
         title: "Referensi kepabeanan",
         href: "/master/referensi",
