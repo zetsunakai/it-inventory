@@ -422,6 +422,10 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   `details`, peran entitas (dari profil perusahaan atau partner), isian barang, pungutan bawaan.
   Halaman daftar/buat/detail sama untuk semua jenis (`customs-document-pages.tsx`); halaman di
   `src/app/(app)/dokumen-bc/<jenis>/` hanya meneruskan spec-nya.
+- Spec per jenis ada di `src/modules/it-inventory/lib/customs-specs.ts` (M3-05–M3-09), menu
+  Kepabeanan › BC 2.3, BC 4.0, BC 2.5, BC 3.0, BC 4.1 (`/dokumen-bc/bc23`, dst.). Field mengikuti
+  `models/document_XX.py` hmx. `tests/db/customs-specs.test.ts` memastikan setiap field yang
+  diwajibkan `doc_validation_rules` bisa diisi di form jenisnya.
 - Seluruh isi form dikirim sebagai satu JSON (`document`) ke `saveCustomsDocument`: header
   diperbarui lalu semua bagian diganti dalam satu transaksi; hanya Draft yang bisa diubah. Draft
   boleh belum lengkap; kelengkapan diperiksa `customs_document_errors()`. Dokumen baru: entitas

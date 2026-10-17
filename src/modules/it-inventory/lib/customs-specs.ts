@@ -289,9 +289,114 @@ export const BC41: CustomsFormSpec = {
   taxes: ["PPN", "PPNBM"],
 }
 
-export const CUSTOMS_SPECS: Partial<Record<CustomsDocCode, CustomsFormSpec>> = {
+// BC 3.0: pemberitahuan ekspor barang (document_30 hmx).
+export const BC30: CustomsFormSpec = {
+  code: "30",
+  title: "BC 3.0",
+  description: "Ekspor barang dari kawasan berikat ke luar negeri (PEB).",
+  path: "/dokumen-bc/bc30",
+  header: [
+    {
+      key: "exportCategoryCode",
+      label: "Kategori ekspor",
+      kind: "option",
+      list: "exportCategory",
+      detail: true,
+      span: 6,
+    },
+    {
+      key: "paymentTermCode",
+      label: "Cara pembayaran",
+      kind: "option",
+      list: "paymentTerm",
+      detail: true,
+      span: 6,
+    },
+    {
+      key: "estimatedExportDate",
+      label: "Perkiraan tanggal ekspor",
+      kind: "date",
+      detail: true,
+      span: 6,
+    },
+  ],
+  parties: [
+    { code: "2", label: "Eksportir", source: "company" },
+    { code: "6", label: "Pembeli", source: "partner", country: true },
+    { code: "8", label: "Penerima", source: "partner", country: true },
+  ],
+  transport: {
+    fields: [
+      {
+        key: "loadingPortCode",
+        label: "Pelabuhan muat",
+        kind: "ref",
+        refType: "domestic_port",
+        detail: true,
+        span: 6,
+      },
+      {
+        key: "destinationPortCode",
+        label: "Pelabuhan tujuan",
+        kind: "ref",
+        refType: "foreign_port",
+        detail: true,
+        span: 6,
+      },
+      {
+        key: "destinationCountryCode",
+        label: "Negara tujuan",
+        kind: "ref",
+        refType: "country",
+        detail: true,
+        span: 6,
+      },
+      {
+        key: "tpsCode",
+        label: "Tempat penimbunan",
+        kind: "ref",
+        refType: "tps",
+        detail: true,
+        span: 6,
+      },
+    ],
+  },
+  containers: true,
+  transaction: [
+    ...CURRENCY,
+    {
+      key: "incotermCode",
+      label: "Incoterm",
+      kind: "ref",
+      refType: "incoterm",
+      detail: true,
+      span: 6,
+    },
+    { key: "fobValue", label: "Nilai FOB", kind: "money", span: 6 },
+    { key: "freightValue", label: "Freight", kind: "money", span: 4 },
+    {
+      key: "insuranceTypeCode",
+      label: "Jenis asuransi",
+      kind: "option",
+      list: "insuranceType",
+      detail: true,
+      span: 4,
+    },
+    { key: "insuranceValue", label: "Nilai asuransi", kind: "money", span: 4 },
+    ...WEIGHTS,
+  ],
+  line: [
+    ...CUSTOMS_LINE_BASE_FIELDS,
+    { key: "fobValue", label: "Nilai FOB", kind: "money", span: 6 },
+    { key: "originCountryCode", label: "Negara asal", kind: "ref", refType: "country", span: 6 },
+  ],
+  taxes: null,
+}
+
+export const CUSTOMS_SPECS: Record<CustomsDocCode, CustomsFormSpec> = {
   "23": BC23,
   "40": BC40,
   "25": BC25,
   "41": BC41,
+  "30": BC30,
 }
