@@ -33,6 +33,7 @@ import {
 } from "../../../modules/inventory/lib/inventory"
 
 import { timestamps } from "./_columns"
+import { customsDocumentLines, customsDocuments } from "./customs"
 import { partners } from "./partners"
 import { productCategories, products } from "./products"
 import { uoms } from "./uoms"
@@ -146,6 +147,9 @@ export const transfers = pgTable(
     returnRequestId: uuid().references((): AnyPgColumn => returnRequests.id, {
       onDelete: "restrict",
     }),
+    // Dokumen BC transfer ini (PRD 8.2): satu transfer gudang berikat tepat satu dokumen, satu
+    // dokumen boleh untuk beberapa transfer. Diperiksa gerbang dokumen saat validasi (M4).
+    customsDocumentId: uuid().references(() => customsDocuments.id, { onDelete: "restrict" }),
     doneAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
     approvedAt: timestamp({ withTimezone: true }),
@@ -164,6 +168,7 @@ export const transfers = pgTable(
     index("transfers_stock_count_idx").on(table.stockCountId),
     index("transfers_interwarehouse_idx").on(table.interwarehouseId),
     index("transfers_return_request_idx").on(table.returnRequestId),
+    index("transfers_customs_document_idx").on(table.customsDocumentId),
     index("transfers_done_at_idx").on(table.doneAt),
     check(
       "transfers_locations_differ",
@@ -263,6 +268,11 @@ export const stockMoves = pgTable(
     movementCode: movementCode(),
     // Qty (satuan stok) yang dipesan baris ini dari saldo lokasi asalnya (backlog R-07).
     reservedQty: qty().notNull().default("0"),
+    // Baris barang dokumen BC yang dipenuhi pergerakan ini (PRD 8.2), untuk mencocokkan qty per
+    // barang dan per seri (M4).
+    customsDocumentLineId: uuid().references(() => customsDocumentLines.id, {
+      onDelete: "restrict",
+    }),
     doneAt: timestamp({ withTimezone: true }),
     ...timestamps,
   },
@@ -271,6 +281,7 @@ export const stockMoves = pgTable(
     index("stock_moves_line_idx").on(table.lineId),
     index("stock_moves_product_done_at_idx").on(table.productId, table.doneAt),
     index("stock_moves_lot_idx").on(table.lotId),
+    index("stock_moves_customs_document_line_idx").on(table.customsDocumentLineId),
     index("stock_moves_source_location_idx").on(table.sourceLocationId),
     index("stock_moves_destination_location_idx").on(table.destinationLocationId),
     // Laporan mutasi per gudang dan periode (PRD bagian 9).

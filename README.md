@@ -384,6 +384,29 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   berpencarian dengan `fillInteractive()` (`tests/e2e/interactive.ts`), yang menunggu hidrasi React
   dulu; label dicari dengan `exact: true` supaya tidak cocok dengan placeholder lain.
 
+## Dokumen BC
+
+- Semua jenis dokumen (BC 2.3, 4.0, 2.5, 3.0, 4.1) disimpan di satu set tabel yang dibedakan
+  `doc_code` (backlog M3-01, `src/server/db/schema/customs.ts`): `customs_documents` (header),
+  `customs_document_parties` (entitas, satu per kode entitas CEISA), `customs_document_lines`
+  (barang), `customs_line_taxes` (pungutan per barang), `customs_attachments`, `customs_packages`,
+  `customs_containers`, dan `customs_transports`. Field yang hanya dipakai sebagian jenis
+  (pelabuhan, TPS, data BC 1.1, DPP, uang muka, dst.) ada di kolom `details` (jsonb, selalu objek),
+  jadi jenis baru tidak butuh tabel baru. Tampilannya tetap terpisah per jenis (M3-04 dan
+  seterusnya).
+- `doc_code` sama dengan kodeDokumen CEISA (`23`, `40`, `25`, `30`, `41`); label, arah, dan status
+  ada di `src/modules/it-inventory/lib/customs.ts`. Arah di database: `customs_doc_direction()`.
+- Dokumen baru selalu Draft, pembuatnya diisi dari `app.user_id`, dan jenisnya tidak bisa diubah.
+  Status Terdaftar wajib punya nomor dan tanggal daftar.
+- Baris barang hanya untuk produk aktif yang siap dokumen BC (punya kode HS). Kategori IT Inventory
+  selalu disalin dari produk; product code, kode HS, dan uraian diisi dari produk bila kosong.
+  `qty` dalam satuan CEISA, `stock_qty` dalam satuan stok produk untuk dicocokkan dengan transfer.
+- Entitas disalin dari profil perusahaan atau partner, jadi dokumen tidak ikut berubah saat master
+  berubah.
+- Tautan ke inventory sudah disiapkan untuk gerbang dokumen (M4): `transfers.customs_document_id`
+  dan `stock_moves.customs_document_line_id`. Dokumen yang sudah dipakai transfer tidak bisa
+  dihapus.
+
 ## Arsip dan hapus
 
 - Data master yang sudah dipakai tidak dihapus, tapi diarsipkan (kolom `active`, centang Aktif di
