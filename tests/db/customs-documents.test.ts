@@ -44,7 +44,10 @@ beforeAll(async () => {
 
 afterAll(async () => {
   if (committedDocuments.length) {
-    await db.delete(customsDocuments).where(inArray(customsDocuments.id, committedDocuments))
+    await db.transaction(async (tx) => {
+      await tx.execute(sql`select set_config('app.customs_status_write', 'on', true)`)
+      await tx.delete(customsDocuments).where(inArray(customsDocuments.id, committedDocuments))
+    })
   }
   await db.delete(company)
   await db.$client.end()
@@ -203,6 +206,8 @@ describe("customs_documents", () => {
   test("constraint header: Terdaftar wajib nomor daftar, Batal wajib tanggal, details berupa objek", async () => {
     await inRollback(db, async (tx) => {
       const doc = await draft(tx)
+      // Status biasanya hanya lewat fungsi alur (M3-11); di sini constraint-nya yang diuji.
+      await tx.execute(sql`select set_config('app.customs_status_write', 'on', true)`)
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
           sp

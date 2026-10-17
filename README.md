@@ -439,6 +439,19 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   `bc:read`, hanya kunci yang tercatat sebagai lampiran). File yang dilepas atau tidak jadi
   disimpan tetap ada di storage; belum ada pembersihan otomatis.
 
+- Alur status (M3-11, migrasi `customs_status_rules`): Draft ⇄ Siap ajukan otomatis setiap kali
+  disimpan (`refresh_customs_document_status()`: Siap ajukan bila `customs_document_errors()`
+  kosong) → `submit_customs_document()` (Diajukan, setelah diinput di portal CEISA) →
+  `register_customs_document(id, nomor, tanggal, respon...)` (Terdaftar; nomor dan tanggal daftar
+  wajib, tanggal tidak di masa depan atau sebelum tanggal aju) atau
+  `reject_customs_document(id, alasan, respon...)` (Ditolak) → `reset_customs_document_to_draft()`.
+  `cancel_customs_document()` hanya Manajer/Administrator (izin `bc:cancel`), sebelum Terdaftar.
+  Status hanya berubah lewat fungsi itu (penanda transaksi `app.customs_status_write`); dokumen
+  Diajukan, Terdaftar, Ditolak, dan Batal beserta semua bagiannya dikunci trigger
+  (`customs_parts_guard`) dan tidak bisa dihapus. Halaman detail menampilkan kekurangan Draft,
+  tombol alur sesuai status, dan alasan penolakan.
+- Tes yang perlu menghapus dokumen non-Draft memakai `purgeCustomsDocuments()` atau
+  `forceCustomsStatus()` (`tests/db/customs-fixtures.ts`).
 - Tautan ke inventory sudah disiapkan untuk gerbang dokumen (M4): `transfers.customs_document_id`
   dan `stock_moves.customs_document_line_id`. Dokumen yang sudah dipakai transfer tidak bisa
   dihapus.

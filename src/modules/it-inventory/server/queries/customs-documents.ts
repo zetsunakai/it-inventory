@@ -242,6 +242,17 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     responseCode: doc.responseCode,
     responseNumber: doc.responseNumber,
     responseDate: doc.responseDate,
+    rejectionReason: doc.rejectionReason,
+    submittedAt: doc.submittedAt,
+    // Kekurangan menurut aturan validasi (M3-03), untuk Draft.
+    missing:
+      doc.status === "draft"
+        ? (
+            await db.execute<{ errors: string[] }>(
+              sql`select customs_document_errors(${doc.id}) as errors`,
+            )
+          ).rows[0].errors
+        : [],
     createdAt: doc.createdAt,
     updatedAt: doc.updatedAt,
     draft,

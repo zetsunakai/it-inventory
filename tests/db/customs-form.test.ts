@@ -1,4 +1,4 @@
-import { eq, like } from "drizzle-orm"
+import { eq, like, sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
 
 import type { Role } from "@/lib/permissions"
@@ -17,13 +17,12 @@ import { db } from "@/server/db"
 import {
   company,
   customsDocumentLines,
-  customsDocuments,
   products,
   uomCategories,
   uoms,
 } from "@/server/db/schema"
 
-import { CUSTOMS_TEST_OFFICE, insertTestCompany } from "./customs-fixtures"
+import { CUSTOMS_TEST_OFFICE, insertTestCompany, purgeCustomsDocuments } from "./customs-fixtures"
 
 // Form dokumen BC bersama (backlog M3-04): simpan Draft lewat server action, entitas perusahaan
 // terisi sesuai arah dokumen, isi dokumen dibaca kembali utuh untuk form.
@@ -98,7 +97,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await db.delete(customsDocuments)
+  await purgeCustomsDocuments(db)
   await db.delete(products).where(like(products.sku, "ZBF%"))
   await db.delete(uoms).where(like(uoms.code, "ZBF%"))
   await db.delete(uomCategories).where(like(uomCategories.code, "ZBF%"))
@@ -226,12 +225,12 @@ describe("saveCustomsDocument", () => {
     loginAs(["staf_exim"])
     const created = await saveCustomsDocument(null, form("30", empty))
     if (!created.ok) throw new Error(created.errors.join("\n"))
-    await db
-      .update(customsDocuments)
-      .set({ status: "cancelled", cancelledAt: new Date() })
-      .where(eq(customsDocuments.id, created.data.id))
+    await db.execute(sql`select cancel_customs_document(${created.data.id})`)
     const blocked = await saveCustomsDocument(null, form("30", empty, created.data.id))
-    expect(blocked).toMatchObject({ ok: false, errors: ["Hanya dokumen Draft yang bisa diubah."] })
+    expect(blocked).toMatchObject({
+      ok: false,
+      errors: ["Hanya dokumen Draft atau Siap ajukan yang bisa diubah."],
+    })
     // Jenis lain dengan id yang sama tidak ditemukan.
     const wrongKind = await saveCustomsDocument(null, form("23", empty, created.data.id))
     expect(wrongKind).toMatchObject({ ok: false, errors: ["Dokumen tidak ditemukan."] })

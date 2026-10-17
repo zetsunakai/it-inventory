@@ -512,6 +512,20 @@
       "when": 1792250324781,
       "tag": "0072_customs_attachment_file_key",
       "breakpoints": true
+    },
+    {
+      "idx": 73,
+      "version": "7",
+      "when": 1792250608073,
+      "tag": "0073_customs_status_columns",
+      "breakpoints": true
+    },
+    {
+      "idx": 74,
+      "version": "7",
+      "when": 1792250608863,
+      "tag": "0074_customs_status_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -2,7 +2,7 @@
 
 import { randomUUID } from "node:crypto"
 
-import { eq, inArray } from "drizzle-orm"
+import { eq, inArray, sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { CUSTOMS_DOC_CODES } from "@/modules/it-inventory/lib/customs"
@@ -13,7 +13,7 @@ import {
   MAX_ATTACHMENT_BYTES,
   type CustomsAttachmentFile,
 } from "@/modules/it-inventory/lib/customs-form"
-import { AppError, defineFormAction } from "@/server/actions/define-action"
+import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
 import { getStorage } from "@/server/storage"
 import {
@@ -30,6 +30,10 @@ import {
 // Simpan dokumen BC Draft (backlog M3-04). Header diperbarui, lalu semua bagian (entitas, barang,
 // pungutan, lampiran, kemasan, peti kemas, pengangkutan) diganti isinya dalam satu transaksi.
 // Nomor aju, kategori barang, dan aturan lain diisi/diperiksa database.
+
+// Dokumen yang sudah diajukan dikunci database (M3-11); pesan ini untuk kasus yang dicek lebih dulu.
+const EDITABLE: string[] = ["draft", "ready"]
+const NOT_EDITABLE = "Hanya dokumen Draft atau Siap ajukan yang bisa diubah."
 
 export const saveCustomsDocument = defineFormAction({
   name: "saveCustomsDocument",
@@ -56,9 +60,7 @@ export const saveCustomsDocument = defineFormAction({
       if (!current || current.docCode !== input.docCode) {
         throw new AppError("Dokumen tidak ditemukan.")
       }
-      if (current.status !== "draft") {
-        throw new AppError("Hanya dokumen Draft yang bisa diubah.")
-      }
+      if (!EDITABLE.includes(current.status)) throw new AppError(NOT_EDITABLE)
       await tx.update(customsDocuments).set(header).where(eq(customsDocuments.id, id))
       await deleteParts(tx, id)
     } else {
@@ -114,6 +116,8 @@ export const saveCustomsDocument = defineFormAction({
     if (document.transports.length) {
       await tx.insert(customsTransports).values(numbered(document.transports))
     }
+    // Draft ⇄ Siap ajukan sesuai kelengkapan (M3-11).
+    await tx.execute(sql`select refresh_customs_document_status(${documentId})`)
     return { id: documentId }
   },
 })
@@ -155,7 +159,7 @@ export const uploadCustomsAttachment = defineFormAction({
       .from(customsDocuments)
       .where(eq(customsDocuments.id, input.documentId))
     if (!doc) throw new AppError("Dokumen tidak ditemukan.")
-    if (doc.status !== "draft") throw new AppError("Hanya dokumen Draft yang bisa diubah.")
+    if (!EDITABLE.includes(doc.status)) throw new AppError(NOT_EDITABLE)
 
     const { file } = input
     const fileKey = `${attachmentKeyPrefix(input.documentId)}${randomUUID()}${ATTACHMENT_TYPES[file.type]}`
@@ -166,5 +170,95 @@ export const uploadCustomsAttachment = defineFormAction({
       contentType: file.type,
       fileSize: file.size,
     } satisfies CustomsAttachmentFile
+  },
+})
+
+// Alur status (M3-11). Aturan dan penguncian dipaksakan fungsi database; di sini hanya meneruskan
+// input dan pesannya.
+const idInput = z.object({ id: z.uuid("Dokumen tidak valid.") })
+
+const optionalDate = z
+  .string()
+  .optional()
+  .transform((value) => value || null)
+  .refine((value) => value === null || /^\d{4}-\d{2}-\d{2}$/.test(value), "Tanggal tidak valid.")
+
+const response = {
+  responseCode: z
+    .string()
+    .trim()
+    .max(10)
+    .optional()
+    .transform((value) => value || null),
+  responseNumber: z
+    .string()
+    .trim()
+    .max(50, "Nomor respon maksimal 50 karakter.")
+    .optional()
+    .transform((value) => value || null),
+  responseDate: optionalDate,
+}
+
+export const submitCustomsDocument = defineAction({
+  name: "submitCustomsDocument",
+  permission: "bc:write",
+  schema: idInput,
+  successMessage: "Dokumen dicatat Diajukan. Catat nomor daftar setelah respon Bea Cukai keluar.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(sql`select submit_customs_document(${input.id})`)
+  },
+})
+
+export const registerCustomsDocument = defineAction({
+  name: "registerCustomsDocument",
+  permission: "bc:write",
+  schema: idInput.extend({
+    registrationNumber: z.string().trim().max(50, "Nomor daftar maksimal 50 karakter."),
+    registrationDate: optionalDate,
+    ...response,
+  }),
+  successMessage: "Dokumen dicatat Terdaftar.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(
+      sql`select register_customs_document(${input.id}, ${input.registrationNumber},
+        ${input.registrationDate}::date, ${input.responseCode}, ${input.responseNumber},
+        ${input.responseDate}::date)`,
+    )
+  },
+})
+
+export const rejectCustomsDocument = defineAction({
+  name: "rejectCustomsDocument",
+  permission: "bc:write",
+  schema: idInput.extend({
+    reason: z.string().trim().max(1000, "Alasan maksimal 1000 karakter."),
+    ...response,
+  }),
+  successMessage: "Dokumen dicatat Ditolak. Kembalikan ke Draft untuk memperbaikinya.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(
+      sql`select reject_customs_document(${input.id}, ${input.reason}, ${input.responseCode},
+        ${input.responseNumber}, ${input.responseDate}::date)`,
+    )
+  },
+})
+
+export const resetCustomsDocumentToDraft = defineAction({
+  name: "resetCustomsDocumentToDraft",
+  permission: "bc:write",
+  schema: idInput,
+  successMessage: "Dokumen kembali ke Draft.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(sql`select reset_customs_document_to_draft(${input.id})`)
+  },
+})
+
+export const cancelCustomsDocument = defineAction({
+  name: "cancelCustomsDocument",
+  permission: "bc:cancel",
+  schema: idInput,
+  successMessage: "Dokumen dibatalkan.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(sql`select cancel_customs_document(${input.id})`)
   },
 })

@@ -1,3 +1,5 @@
+import { sql } from "drizzle-orm"
+
 import type { Db } from "@/server/db/client"
 import {
   company,
@@ -133,4 +135,26 @@ export async function insertCompleteDocument(tx: Tx, docCode: CustomsDocCode, pr
     .insert(customsTransports)
     .values({ documentId: doc.id, seq: 1, transportModeCode: "1", name: "EVER GIVEN" })
   return doc
+}
+
+// Hapus semua dokumen BC uji, termasuk yang sudah Diajukan/Terdaftar (biasanya dikunci trigger).
+export async function purgeCustomsDocuments(db: Db) {
+  await db.transaction(async (tx) => {
+    await tx.execute(sql`select set_config('app.customs_status_write', 'on', true)`)
+    await tx.delete(customsDocuments)
+  })
+}
+
+// Ubah status langsung (melewati alur) untuk menyiapkan data uji.
+export async function forceCustomsStatus(
+  tx: Tx,
+  id: string,
+  values: Partial<typeof customsDocuments.$inferInsert>,
+) {
+  await tx.execute(sql`select set_config('app.customs_status_write', 'on', true)`)
+  await tx
+    .update(customsDocuments)
+    .set(values)
+    .where(sql`${customsDocuments.id} = ${id}`)
+  await tx.execute(sql`select set_config('app.customs_status_write', '', true)`)
 }

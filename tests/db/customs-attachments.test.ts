@@ -16,9 +16,9 @@ import { BC41 } from "@/modules/it-inventory/lib/customs-specs"
 import { getCustomsDocument } from "@/modules/it-inventory/server/queries/customs-documents"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
-import { company, customsDocuments } from "@/server/db/schema"
+import { company } from "@/server/db/schema"
 
-import { insertTestCompany } from "./customs-fixtures"
+import { insertTestCompany, purgeCustomsDocuments } from "./customs-fixtures"
 
 // Lampiran dokumen BC dan modul penyimpanan file (backlog M3-10), dengan storage folder lokal
 // sementara.
@@ -50,7 +50,7 @@ beforeAll(async () => {
 })
 
 afterAll(async () => {
-  await db.delete(customsDocuments)
+  await purgeCustomsDocuments(db)
   await db.delete(company)
   await rm(storageDir, { recursive: true, force: true })
   await db.$client.end()

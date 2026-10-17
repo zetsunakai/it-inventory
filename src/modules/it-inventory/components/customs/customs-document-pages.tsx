@@ -31,11 +31,13 @@ import {
   getCustomsDocument,
   listCustomsDocuments,
   newCustomsDraft,
+  type CustomsDocumentDetail,
   type CustomsDocumentRow,
 } from "@/modules/it-inventory/server/queries/customs-documents"
 import { requirePermission } from "@/server/auth/session"
 import { recordActivity } from "@/server/queries/activity"
 
+import { CustomsDocumentActions } from "./customs-document-actions"
 import { CustomsDocumentForm } from "./customs-document-form"
 import { CustomsDocumentView } from "./customs-document-view"
 
@@ -228,11 +230,21 @@ async function CustomsDetail({
   const doc = await getCustomsDocument(spec, id)
   if (!doc) notFound()
   const activity = await recordActivity("customs_documents", doc.id, CUSTOMS_ACTIVITY_LABELS)
-  const editable = hasPermission(user.roles, "bc:write") && doc.status === "draft"
+  const canWrite = hasPermission(user.roles, "bc:write")
+  const editable = canWrite && (doc.status === "draft" || doc.status === "ready")
 
   return (
     <DocumentLayout
       title={`${spec.title} ${doc.ajuNumber}`}
+      actions={
+        <CustomsDocumentActions
+          id={doc.id}
+          ajuNumber={doc.ajuNumber}
+          status={doc.status}
+          canWrite={canWrite}
+          canCancel={hasPermission(user.roles, "bc:cancel")}
+        />
+      }
       crumbs={[{ label: doc.ajuNumber }]}
       meta={
         <span>
@@ -259,18 +271,55 @@ async function CustomsDetail({
       }
       activity={<ActivityLog entries={activity} noun="dokumen" />}
     >
-      {editable ? (
-        <CustomsDocumentForm
-          spec={spec}
-          documentId={doc.id}
-          initial={doc.draft}
-          initialLabels={doc.refLabels}
-        />
-      ) : (
-        <CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />
-      )}
+      <div className="space-y-4">
+        <StatusNotice doc={doc} />
+        {editable ? (
+          <CustomsDocumentForm
+            spec={spec}
+            documentId={doc.id}
+            initial={doc.draft}
+            initialLabels={doc.refLabels}
+          />
+        ) : (
+          <CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />
+        )}
+      </div>
     </DocumentLayout>
   )
+}
+
+// Keterangan status di atas isi dokumen: kekurangan Draft, siap diajukan, alasan penolakan,
+// dan data pendaftaran.
+function StatusNotice({ doc }: { doc: CustomsDocumentDetail }) {
+  if (doc.status === "draft" && doc.missing.length) {
+    return (
+      <details className="max-w-4xl rounded-lg bg-warning-soft p-3 text-control">
+        <summary className="cursor-pointer font-medium">
+          Belum bisa diajukan: {doc.missing.length} isian belum lengkap
+        </summary>
+        <ul className="mt-2 list-disc space-y-0.5 pl-5">
+          {doc.missing.map((message) => (
+            <li key={message}>{message}</li>
+          ))}
+        </ul>
+      </details>
+    )
+  }
+  if (doc.status === "ready") {
+    return (
+      <p className="max-w-4xl rounded-lg bg-success-soft p-3 text-control">
+        Isian lengkap. Input dokumen di portal CEISA, lalu tekan Ajukan.
+      </p>
+    )
+  }
+  if (doc.status === "rejected" && doc.rejectionReason) {
+    return (
+      <p role="alert" className="max-w-4xl rounded-lg bg-destructive/10 p-3 text-control">
+        <span className="font-medium">Ditolak Bea Cukai:</span> {doc.rejectionReason}
+      </p>
+    )
+  }
+  return null
 }
 
 // Label log aktivitas (RU-23).
@@ -281,6 +330,9 @@ const CUSTOMS_ACTIVITY_LABELS = {
     registration_number: "Nomor daftar",
     registration_date: "Tanggal daftar",
     response_code: "Respon",
+    response_number: "Nomor respon",
+    response_date: "Tanggal respon",
+    rejection_reason: "Alasan penolakan",
     currency_code: "Valuta",
     ndpbm: "NDPBM",
     cif_value: "Nilai CIF",

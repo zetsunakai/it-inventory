@@ -95,6 +95,9 @@ export const customsDocuments = pgTable(
     signedDate: date({ mode: "string" }),
     details: details(),
     notes: text(),
+    // Alur status (M3-11): kapan diajukan, alasan penolakan Bea Cukai.
+    submittedAt: timestamp({ withTimezone: true }),
+    rejectionReason: text(),
     cancelledAt: timestamp({ withTimezone: true }),
     // Diisi trigger dari app.user_id, tanpa foreign key seperti transfers.
     createdBy: uuid(),
