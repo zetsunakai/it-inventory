@@ -403,6 +403,13 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   dan tanggal aju tidak bisa diubah, termasuk saat revisi; nilai yang dikirim aplikasi diabaikan.
 - Dokumen baru selalu Draft, pembuatnya diisi dari `app.user_id`, dan jenisnya tidak bisa diubah.
   Status Terdaftar wajib punya nomor dan tanggal daftar.
+- Field wajib per jenis dokumen ada di tabel `doc_validation_rules` (M3-03): `target` header
+  (kolom `customs_documents`), details (kunci jsonb, camelCase), party (kode entitas CEISA),
+  line (kolom baris, diperiksa per seri), attachment (kode jenis dokumen, mis. 380 invoice),
+  transport/package/container (minimal satu baris yang kolomnya terisi). Field tabel dicek ke
+  `information_schema` saat aturan disimpan. `customs_document_errors(dokumen)` mengembalikan semua
+  kekurangan sekaligus (kosong = lengkap). Seed awal di migrasi `doc_validation_rules_seed`; data uji
+  dokumen lengkap per jenis ada di `tests/db/customs-fixtures.ts`.
 - Baris barang hanya untuk produk aktif yang siap dokumen BC (punya kode HS). Kategori IT Inventory
   selalu disalin dari produk; product code, kode HS, dan uraian diisi dari produk bila kosong.
   `qty` dalam satuan CEISA, `stock_qty` dalam satuan stok produk untuk dicocokkan dengan transfer.

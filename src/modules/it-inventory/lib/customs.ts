@@ -43,3 +43,18 @@ export const CUSTOMS_DOCUMENT_STATUS_LABELS: Record<CustomsDocumentStatus, strin
   rejected: "Ditolak",
   cancelled: "Batal",
 }
+
+// Bagian dokumen yang diperiksa aturan validasi (doc_validation_rules, M3-03). field berisi nama
+// kolom (header, line, transport, package, container), kunci details, kode entitas CEISA (party),
+// atau kode jenis dokumen lampiran (attachment).
+export const CUSTOMS_RULE_TARGETS = [
+  "header",
+  "details",
+  "party",
+  "line",
+  "attachment",
+  "transport",
+  "package",
+  "container",
+] as const
+export type CustomsRuleTarget = (typeof CUSTOMS_RULE_TARGETS)[number]

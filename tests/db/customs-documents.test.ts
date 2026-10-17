@@ -23,6 +23,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
+import { CUSTOMS_TEST_OFFICE, insertTestCompany } from "./customs-fixtures"
 import { inRollback, pgErrorInSavepoint, setAuditUser } from "./helpers"
 
 // Skema dokumen BC (backlog M3-01, PRD bagian 7 dan 13): satu set tabel untuk semua jenis
@@ -34,21 +35,11 @@ type Tx = Parameters<Parameters<typeof inRollback>[1]>[0]
 const ACTOR = "7a2d3c4b-5e6f-4a1b-9c8d-0e1f2a3b4c5d"
 
 // Kantor pengawas di profil perusahaan menjadi kode kantor nomor aju bila dokumen belum memilih.
-const OFFICE = "050500"
+const OFFICE = CUSTOMS_TEST_OFFICE
 const committedDocuments: string[] = []
 
 beforeAll(async () => {
-  await db.insert(company).values({
-    name: "PT Uji Berikat",
-    address: "Jl. Industri No. 1, Bekasi",
-    npwp: "0012345678901000",
-    nitku: "0012345678901000000000",
-    nib: "1234567890123",
-    facilityType: "kawasan_berikat",
-    permitNumber: "KEP-1/2024",
-    permitDate: "2024-03-15",
-    supervisingOfficeCode: OFFICE,
-  })
+  await insertTestCompany(db)
 })
 
 afterAll(async () => {

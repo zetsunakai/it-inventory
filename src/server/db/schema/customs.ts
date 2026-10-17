@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   check,
   date,
   index,
@@ -18,6 +19,7 @@ import {
 import {
   CUSTOMS_DOC_CODES,
   CUSTOMS_DOCUMENT_STATUSES,
+  CUSTOMS_RULE_TARGETS,
 } from "../../../modules/it-inventory/lib/customs"
 
 import { timestamps } from "./_columns"
@@ -48,6 +50,7 @@ const seq = () => integer().notNull()
 
 export const customsDocCode = pgEnum("customs_doc_code", CUSTOMS_DOC_CODES)
 export const customsDocumentStatus = pgEnum("customs_document_status", CUSTOMS_DOCUMENT_STATUSES)
+export const customsRuleTarget = pgEnum("customs_rule_target", CUSTOMS_RULE_TARGETS)
 
 // Header dokumen. Nomor aju dibuat database saat dokumen dibuat (M3-02) dan tidak berubah
 // walaupun direvisi; version naik setiap revisi (M3-12).
@@ -351,5 +354,26 @@ export const customsTransports = pgTable(
   (table) => [
     unique("customs_transports_seq_unique").on(table.documentId, table.seq),
     check("customs_transports_seq_positive", sql`${table.seq} >= 1`),
+  ],
+)
+
+// Field wajib per jenis dokumen (PRD 7.2, backlog M3-03), disimpan sebagai data supaya jenis baru
+// cukup menambah baris. Diperiksa customs_document_errors(), yang melaporkan semua kekurangan
+// sekaligus. label dipakai di pesan, position menentukan urutannya.
+export const docValidationRules = pgTable(
+  "doc_validation_rules",
+  {
+    id: id(),
+    docCode: customsDocCode().notNull(),
+    target: customsRuleTarget().notNull(),
+    field: text().notNull(),
+    label: text().notNull(),
+    position: integer().notNull().default(0),
+    active: boolean().notNull().default(true),
+    ...timestamps,
+  },
+  (table) => [
+    unique("doc_validation_rules_field_unique").on(table.docCode, table.target, table.field),
+    check("doc_validation_rules_label_not_blank", sql`btrim(${table.label}) <> ''`),
   ],
 )
