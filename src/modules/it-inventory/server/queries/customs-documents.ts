@@ -10,6 +10,7 @@ import type { CustomsDocCode, CustomsDocumentStatus } from "@/modules/it-invento
 import {
   CUSTOMS_HEADER_COLUMNS,
   CUSTOMS_LINE_COLUMNS,
+  customsDraftChanges,
   emptyDraft,
   type CustomsDocumentDraft,
   type CustomsFormSpec,
@@ -24,6 +25,7 @@ import {
   customsContainers,
   customsDocumentLines,
   customsDocumentParties,
+  customsDocumentRevisions,
   customsDocuments,
   customsLineTaxes,
   customsPackages,
@@ -32,6 +34,7 @@ import {
   products,
   refCodes,
   uoms,
+  users,
 } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
 
@@ -159,76 +162,20 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
       .orderBy(asc(customsTransports.seq)),
   ])
 
-  const order = new Map(spec.parties.map((role, index) => [role.code, index]))
-  const draft: CustomsDocumentDraft = {
-    header: Object.fromEntries(
-      CUSTOMS_HEADER_COLUMNS.map((key) => [key, text(doc[key])]),
-    ) as CustomsDocumentDraft["header"],
-    details: stringRecord(doc.details),
-    parties: parties
-      .sort((a, b) => (order.get(a.entityTypeCode) ?? 99) - (order.get(b.entityTypeCode) ?? 99))
-      .map((party) => ({
-        entityTypeCode: party.entityTypeCode,
-        partnerId: party.partnerId,
-        name: party.name,
-        address: text(party.address),
-        countryCode: text(party.countryCode),
-        identityTypeCode: text(party.identityTypeCode),
-        identityNumber: text(party.identityNumber),
-        nib: text(party.nib),
-        permitNumber: text(party.permitNumber),
-        permitDate: text(party.permitDate),
-      })),
-    lines: lines.map(({ line, sku, productName }): CustomsLineDraft => ({
-      ...(Object.fromEntries(CUSTOMS_LINE_COLUMNS.map((key) => [key, text(line[key])])) as Record<
-        (typeof CUSTOMS_LINE_COLUMNS)[number],
-        string
-      >),
-      productId: line.productId,
-      product: { id: line.productId, sku, name: productName },
-      details: stringRecord(line.details),
-      taxes: taxes
-        .filter(({ tax }) => tax.lineId === line.id)
-        .map(({ tax }) => ({
-          levyTypeCode: tax.levyTypeCode,
-          rate: text(tax.rate),
-          facilityCode: text(tax.facilityCode),
-          facilityRate: text(tax.facilityRate),
-          amount: text(tax.amount),
-        })),
+  const draft = buildDraft(spec, {
+    document: doc,
+    parties,
+    lines: lines.map(({ line, sku, productName }) => ({
+      ...line,
+      sku,
+      productName,
+      taxes: taxes.filter(({ tax }) => tax.lineId === line.id).map(({ tax }) => tax),
     })),
-    attachments: attachments.map((row) => ({
-      documentTypeCode: row.documentTypeCode,
-      number: text(row.number),
-      date: text(row.date),
-      file:
-        row.fileKey && row.fileName
-          ? {
-              fileKey: row.fileKey,
-              fileName: row.fileName,
-              contentType: row.contentType ?? "",
-              fileSize: row.fileSize ?? 0,
-            }
-          : null,
-    })),
-    packages: packages.map((row) => ({
-      qty: text(row.qty),
-      packageTypeCode: row.packageTypeCode,
-      marks: text(row.marks),
-    })),
-    containers: containers.map((row) => ({
-      number: row.number,
-      sizeCode: text(row.sizeCode),
-      typeCode: text(row.typeCode),
-      loadTypeCode: text(row.loadTypeCode),
-    })),
-    transports: transports.map((row) => ({
-      transportModeCode: text(row.transportModeCode),
-      name: text(row.name),
-      voyageNumber: text(row.voyageNumber),
-      flagCountryCode: text(row.flagCountryCode),
-    })),
-  }
+    attachments,
+    packages,
+    containers,
+    transports,
+  })
 
   return {
     id: doc.id,
@@ -257,6 +204,79 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     updatedAt: doc.updatedAt,
     draft,
     refLabels: await refLabelsFor(spec, draft),
+  }
+}
+
+// Baris tabel dokumen (dari drizzle, atau snapshot revisi yang sudah diubah ke camelCase).
+// Nilai numeric bisa berupa string (drizzle) atau angka (jsonb snapshot).
+type Value = string | number | null | undefined
+type Row = Record<string, unknown>
+export type DocumentRows = {
+  document: Row
+  parties: Row[]
+  lines: (Row & { sku: string; productName: string; taxes: Row[] })[]
+  attachments: Row[]
+  packages: Row[]
+  containers: Row[]
+  transports: Row[]
+}
+
+// Data form dari baris tabel dokumen; dipakai untuk dokumen sekarang dan snapshot revisi (M3-12).
+export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDocumentDraft {
+  const order = new Map(spec.parties.map((role, index) => [role.code, index]))
+  const pick = <K extends string>(row: Row, keys: readonly K[]) =>
+    Object.fromEntries(keys.map((key) => [key, text(row[key] as Value)])) as Record<K, string>
+  return {
+    header: pick(rows.document, CUSTOMS_HEADER_COLUMNS),
+    details: stringRecord(rows.document.details),
+    parties: [...rows.parties]
+      .sort(
+        (a, b) =>
+          (order.get(a.entityTypeCode as string) ?? 99) -
+          (order.get(b.entityTypeCode as string) ?? 99),
+      )
+      .map((party) => ({
+        ...pick(party, [
+          "entityTypeCode",
+          "name",
+          "address",
+          "countryCode",
+          "identityTypeCode",
+          "identityNumber",
+          "nib",
+          "permitNumber",
+          "permitDate",
+        ] as const),
+        partnerId: (party.partnerId as string | null) ?? null,
+      })),
+    lines: rows.lines.map((line): CustomsLineDraft => ({
+      ...pick(line, CUSTOMS_LINE_COLUMNS),
+      productId: line.productId as string,
+      product: { id: line.productId as string, sku: line.sku, name: line.productName },
+      details: stringRecord(line.details),
+      taxes: line.taxes.map((tax) =>
+        pick(tax, ["levyTypeCode", "rate", "facilityCode", "facilityRate", "amount"] as const),
+      ),
+    })),
+    attachments: rows.attachments.map((row) => ({
+      ...pick(row, ["documentTypeCode", "number", "date"] as const),
+      file:
+        row.fileKey && row.fileName
+          ? {
+              fileKey: row.fileKey as string,
+              fileName: row.fileName as string,
+              contentType: (row.contentType as string | null) ?? "",
+              fileSize: Number(row.fileSize ?? 0),
+            }
+          : null,
+    })),
+    packages: rows.packages.map((row) => pick(row, ["qty", "packageTypeCode", "marks"] as const)),
+    containers: rows.containers.map((row) =>
+      pick(row, ["number", "sizeCode", "typeCode", "loadTypeCode"] as const),
+    ),
+    transports: rows.transports.map((row) =>
+      pick(row, ["transportModeCode", "name", "voyageNumber", "flagCountryCode"] as const),
+    ),
   }
 }
 
@@ -387,9 +407,10 @@ export async function listCustomsDocuments({
 
 // Nilai tersimpan sebagai isi field form. Angka numeric Postgres ("1000.50") ditulis seperti input
 // user ("1000,5").
-function text(value: string | null | undefined) {
-  if (!value) return ""
-  return /^\d+\.\d+$/.test(value) ? toDecimalInput(value) : value
+function text(value: Value) {
+  if (value === null || value === undefined || value === "") return ""
+  const textValue = String(value)
+  return /^\d+\.\d+$/.test(textValue) ? toDecimalInput(textValue) : textValue
 }
 
 function stringRecord(value: unknown) {
@@ -397,4 +418,96 @@ function stringRecord(value: unknown) {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, String(entry)]),
   )
+}
+
+// Snapshot revisi (jsonb, kolom snake_case) sebagai DocumentRows.
+function snapshotRows(snapshot: unknown): DocumentRows {
+  const camel = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(camel)
+    if (value && typeof value === "object") {
+      return Object.fromEntries(
+        Object.entries(value).map(([key, entry]) => [
+          key.replace(/_([a-z0-9])/g, (_, letter: string) => letter.toUpperCase()),
+          // details sudah camelCase dan isinya bukan kolom.
+          key === "details" ? entry : camel(entry),
+        ]),
+      )
+    }
+    return value
+  }
+  return camel(snapshot) as DocumentRows
+}
+
+export type CustomsRevisionEntry = {
+  version: number
+  reason: string
+  createdAt: Date
+  userName: string | null
+  // Bagian/isian yang berubah di versi berikutnya.
+  changes: string[]
+}
+
+// Riwayat revisi: siapa, kapan, alasan, dan apa yang berubah dibanding versi sesudahnya (versi
+// terakhir dibandingkan dengan dokumen sekarang).
+export async function listCustomsRevisions(
+  spec: CustomsFormSpec,
+  documentId: string,
+  current: CustomsDocumentDraft,
+): Promise<CustomsRevisionEntry[]> {
+  const rows = await db
+    .select({
+      version: customsDocumentRevisions.version,
+      reason: customsDocumentRevisions.reason,
+      createdAt: customsDocumentRevisions.createdAt,
+      snapshot: customsDocumentRevisions.snapshot,
+      userName: users.name,
+    })
+    .from(customsDocumentRevisions)
+    .leftJoin(users, eq(users.id, customsDocumentRevisions.createdBy))
+    .where(eq(customsDocumentRevisions.documentId, documentId))
+    .orderBy(asc(customsDocumentRevisions.version))
+  const drafts = rows.map((row) => buildDraft(spec, snapshotRows(row.snapshot)))
+  return rows.map((row, index) => ({
+    version: row.version,
+    reason: row.reason,
+    createdAt: row.createdAt,
+    userName: row.userName,
+    changes: customsDraftChanges(spec, drafts[index], drafts[index + 1] ?? current),
+  }))
+}
+
+// Satu versi lama (read-only) untuk ditampilkan.
+export async function getCustomsRevision(
+  spec: CustomsFormSpec,
+  documentId: string,
+  version: number,
+) {
+  const [row] = await db
+    .select({
+      snapshot: customsDocumentRevisions.snapshot,
+      reason: customsDocumentRevisions.reason,
+      createdAt: customsDocumentRevisions.createdAt,
+    })
+    .from(customsDocumentRevisions)
+    .innerJoin(customsDocuments, eq(customsDocuments.id, customsDocumentRevisions.documentId))
+    .where(
+      and(
+        eq(customsDocumentRevisions.documentId, documentId),
+        eq(customsDocumentRevisions.version, version),
+        eq(customsDocuments.docCode, spec.code),
+      ),
+    )
+  if (!row) return null
+  const rows = snapshotRows(row.snapshot)
+  const draft = buildDraft(spec, rows)
+  return {
+    version,
+    reason: row.reason,
+    createdAt: row.createdAt,
+    ajuNumber: String(rows.document.ajuNumber),
+    registrationNumber: (rows.document.registrationNumber as string | null) ?? null,
+    registrationDate: (rows.document.registrationDate as string | null) ?? null,
+    draft,
+    refLabels: await refLabelsFor(spec, draft),
+  }
 }

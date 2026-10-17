@@ -13,11 +13,12 @@ import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { Section } from "@/components/layout/section"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatDate, formatNumber } from "@/lib/format"
+import { formatDate, formatDateTime, formatNumber } from "@/lib/format"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import {
@@ -29,10 +30,13 @@ import {
 import type { CustomsFormSpec } from "@/modules/it-inventory/lib/customs-form"
 import {
   getCustomsDocument,
+  getCustomsRevision,
   listCustomsDocuments,
+  listCustomsRevisions,
   newCustomsDraft,
   type CustomsDocumentDetail,
   type CustomsDocumentRow,
+  type CustomsRevisionEntry,
 } from "@/modules/it-inventory/server/queries/customs-documents"
 import { requirePermission } from "@/server/auth/session"
 import { recordActivity } from "@/server/queries/activity"
@@ -230,6 +234,7 @@ async function CustomsDetail({
   const doc = await getCustomsDocument(spec, id)
   if (!doc) notFound()
   const activity = await recordActivity("customs_documents", doc.id, CUSTOMS_ACTIVITY_LABELS)
+  const revisions = await listCustomsRevisions(spec, doc.id, doc.draft)
   const canWrite = hasPermission(user.roles, "bc:write")
   const editable = canWrite && (doc.status === "draft" || doc.status === "ready")
 
@@ -283,6 +288,9 @@ async function CustomsDetail({
         ) : (
           <CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />
         )}
+        {revisions.length > 0 && (
+          <RevisionHistory path={`${spec.path}/${doc.id}`} revisions={revisions} />
+        )}
       </div>
     </DocumentLayout>
   )
@@ -322,6 +330,85 @@ function StatusNotice({ doc }: { doc: CustomsDocumentDetail }) {
   return null
 }
 
+// Riwayat revisi (M3-12): siapa, kapan, alasan, dan apa yang berubah di versi berikutnya.
+function RevisionHistory({ path, revisions }: { path: string; revisions: CustomsRevisionEntry[] }) {
+  return (
+    <Section title="Riwayat revisi">
+      <ol className="max-w-4xl divide-y rounded-lg border">
+        {[...revisions].reverse().map((revision) => (
+          <li key={revision.version} className="space-y-1 p-3 text-control">
+            <p>
+              <Link
+                href={`${path}/versi/${revision.version}`}
+                className="font-medium text-primary underline-offset-4 hover:underline"
+              >
+                Versi {revision.version}
+              </Link>{" "}
+              <span className="text-muted-foreground">
+                direvisi {revision.userName ?? "sistem"} · {formatDateTime(revision.createdAt)}
+              </span>
+            </p>
+            <p>Alasan: {revision.reason}</p>
+            <p className="text-caption text-muted-foreground">
+              {revision.changes.length
+                ? `Berubah di versi ${revision.version + 1}: ${revision.changes.join(", ")}`
+                : `Belum ada perubahan di versi ${revision.version + 1}.`}
+            </p>
+          </li>
+        ))}
+      </ol>
+    </Section>
+  )
+}
+
+// Versi lama dokumen (snapshot revisi), hanya baca.
+export function CustomsRevisionPage({
+  spec,
+  params,
+}: {
+  spec: CustomsFormSpec
+  params: Promise<{ id: string; version: string }>
+}) {
+  return (
+    <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
+      <RevisionDetail spec={spec} params={params} />
+    </Suspense>
+  )
+}
+
+async function RevisionDetail({
+  spec,
+  params,
+}: {
+  spec: CustomsFormSpec
+  params: Promise<{ id: string; version: string }>
+}) {
+  await requirePermission("bc:read")
+  const { id, version } = await params
+  const number = Number(version)
+  if (!z.uuid().safeParse(id).success || !Number.isInteger(number) || number < 1) notFound()
+  const revision = await getCustomsRevision(spec, id, number)
+  if (!revision) notFound()
+  return (
+    <DocumentLayout
+      title={`${spec.title} ${revision.ajuNumber} versi ${revision.version}`}
+      crumbs={[
+        { label: revision.ajuNumber, href: `${spec.path}/${id}` },
+        { label: `Versi ${revision.version}` },
+      ]}
+      meta={
+        <span>
+          Versi lama, hanya baca
+          {revision.registrationNumber && ` · Nomor daftar ${revision.registrationNumber}`} ·
+          Direvisi {formatDateTime(revision.createdAt)}: {revision.reason}
+        </span>
+      }
+    >
+      <CustomsDocumentView spec={spec} draft={revision.draft} refLabels={revision.refLabels} />
+    </DocumentLayout>
+  )
+}
+
 // Label log aktivitas (RU-23).
 const CUSTOMS_ACTIVITY_LABELS = {
   fields: {
@@ -343,6 +430,7 @@ const CUSTOMS_ACTIVITY_LABELS = {
     signer_name: "Penandatangan",
     notes: "Catatan",
     version: "Versi",
+    submitted_at: "Tanggal diajukan",
   },
   values: { status: CUSTOMS_DOCUMENT_STATUS_LABELS as Record<string, string> },
 }

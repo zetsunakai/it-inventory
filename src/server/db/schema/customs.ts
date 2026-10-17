@@ -382,3 +382,27 @@ export const docValidationRules = pgTable(
     check("doc_validation_rules_label_not_blank", sql`btrim(${table.label}) <> ''`),
   ],
 )
+
+// Revisi dokumen Terdaftar (PRD 7.5, backlog M3-12): snapshot jsonb versi lama (dokumen beserta
+// semua bagiannya, dari customs_document_snapshot()) dan alasan revisinya. Append-only; dokumen
+// lanjut ke versi berikutnya dengan nomor aju yang sama.
+export const customsDocumentRevisions = pgTable(
+  "customs_document_revisions",
+  {
+    id: id(),
+    documentId: uuid()
+      .notNull()
+      .references(() => customsDocuments.id, { onDelete: "cascade" }),
+    // Versi yang disimpan snapshot ini.
+    version: integer().notNull(),
+    snapshot: jsonb().notNull(),
+    reason: text().notNull(),
+    // Diisi fungsi dari app.user_id, tanpa foreign key seperti audit_logs.
+    createdBy: uuid(),
+    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    unique("customs_document_revisions_version_unique").on(table.documentId, table.version),
+    check("customs_document_revisions_reason_not_blank", sql`btrim(${table.reason}) <> ''`),
+  ],
+)

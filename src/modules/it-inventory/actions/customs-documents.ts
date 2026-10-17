@@ -262,3 +262,17 @@ export const cancelCustomsDocument = defineAction({
     await tx.execute(sql`select cancel_customs_document(${input.id})`)
   },
 })
+
+// Revisi dokumen Terdaftar (M3-12): versi lama disimpan, dokumen kembali ke Draft dengan nomor
+// aju yang sama.
+export const reviseCustomsDocument = defineAction({
+  name: "reviseCustomsDocument",
+  permission: "bc:write",
+  schema: idInput.extend({
+    reason: z.string().trim().max(1000, "Alasan maksimal 1000 karakter."),
+  }),
+  successMessage: "Versi baru dibuat. Koreksi dokumen, ajukan, lalu catat terdaftar lagi.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(sql`select revise_customs_document(${input.id}, ${input.reason})`)
+  },
+})

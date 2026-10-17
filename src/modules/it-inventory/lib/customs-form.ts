@@ -574,3 +574,48 @@ export const customsDocumentField = z
     }
   })
   .pipe(customsDocumentInputSchema)
+
+// Bagian dan isian yang berbeda antara dua versi dokumen (riwayat revisi, M3-12), sebagai label
+// yang dibaca user, urut sesuai form.
+export function customsDraftChanges(
+  spec: CustomsFormSpec,
+  before: CustomsDocumentDraft,
+  after: CustomsDocumentDraft,
+): string[] {
+  const changes: string[] = []
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+  const fields: CustomsField[] = [
+    { key: "customsOfficeCode", label: "Kantor pabean", kind: "ref", refType: "customs_office" },
+    ...spec.header,
+    ...(spec.transport?.fields ?? []),
+    ...spec.transaction,
+    ...CUSTOMS_STATEMENT_FIELDS,
+    { key: "notes", label: "Catatan", kind: "text" },
+  ]
+  const value = (draft: CustomsDocumentDraft, field: CustomsField) =>
+    field.detail
+      ? (draft.details[field.key] ?? "")
+      : ((draft.header as Record<string, string>)[field.key] ?? "")
+  for (const field of fields) {
+    if (value(before, field) !== value(after, field)) changes.push(field.label)
+  }
+  for (const role of spec.parties) {
+    const party = (draft: CustomsDocumentDraft) =>
+      draft.parties.find((entry) => entry.entityTypeCode === role.code) ?? null
+    if (!same(party(before), party(after))) changes.push(`Entitas ${role.label}`)
+  }
+  const lineCount = Math.max(before.lines.length, after.lines.length)
+  for (let index = 0; index < lineCount; index++) {
+    if (!same(before.lines[index], after.lines[index])) changes.push(`Barang seri ${index + 1}`)
+  }
+  const parts = [
+    ["attachments", "Lampiran"],
+    ["packages", "Kemasan"],
+    ["containers", "Peti kemas"],
+    ["transports", "Pengangkutan"],
+  ] as const
+  for (const [key, label] of parts) {
+    if (!same(before[key], after[key])) changes.push(label)
+  }
+  return changes
+}

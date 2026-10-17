@@ -450,6 +450,14 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   Diajukan, Terdaftar, Ditolak, dan Batal beserta semua bagiannya dikunci trigger
   (`customs_parts_guard`) dan tidak bisa dihapus. Halaman detail menampilkan kekurangan Draft,
   tombol alur sesuai status, dan alasan penolakan.
+- Revisi (M3-12, migrasi `customs_revision_rules`): `revise_customs_document(id, alasan)` hanya untuk
+  dokumen Terdaftar; menyimpan `customs_document_snapshot()` (dokumen + semua bagian sebagai jsonb)
+  ke `customs_document_revisions` (append-only), lalu dokumen naik `version` dan kembali ke Draft
+  dengan nomor aju yang sama untuk dikoreksi, diajukan, dan didaftarkan ulang. Riwayat di halaman
+  detail menyebut siapa, kapan, alasan, dan isian yang berubah (`customsDraftChanges()`,
+  membandingkan snapshot dengan versi berikutnya); versi lama dibuka di
+  `/dokumen-bc/<jenis>/<id>/versi/<n>` (hanya baca). Angka di snapshot dibaca sebagai number
+  JavaScript, jadi tampilannya tepat sampai 15 digit.
 - Tes yang perlu menghapus dokumen non-Draft memakai `purgeCustomsDocuments()` atau
   `forceCustomsStatus()` (`tests/db/customs-fixtures.ts`).
 - Tautan ke inventory sudah disiapkan untuk gerbang dokumen (M4): `transfers.customs_document_id`

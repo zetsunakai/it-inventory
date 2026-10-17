@@ -24,6 +24,7 @@ import {
   registerCustomsDocument,
   rejectCustomsDocument,
   resetCustomsDocumentToDraft,
+  reviseCustomsDocument,
   submitCustomsDocument,
 } from "@/modules/it-inventory/actions/customs-documents"
 import type { CustomsDocumentStatus } from "@/modules/it-inventory/lib/customs"
@@ -139,6 +140,17 @@ export function CustomsDocumentActions({
       >
         Kembali ke Draft
       </Button>,
+    )
+  }
+  if (canWrite && status === "registered") {
+    actions.push(
+      <ReviseDialog
+        key="revise"
+        open={open === "revise"}
+        onOpenChange={(next) => setOpen(next ? "revise" : null)}
+        pending={pending}
+        onConfirm={(reason) => run(() => reviseCustomsDocument({ id, reason }))}
+      />,
     )
   }
   if (canCancel && status !== "registered" && status !== "cancelled") {
@@ -316,6 +328,52 @@ function RejectDialog({
           <AlertDialogCancel disabled={pending}>Kembali</AlertDialogCancel>
           <Button disabled={pending} onClick={() => onConfirm({ reason, ...response })}>
             Catat ditolak
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  )
+}
+
+function ReviseDialog({
+  open,
+  onOpenChange,
+  pending,
+  onConfirm,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  pending: boolean
+  onConfirm: (reason: string) => void
+}) {
+  const uid = useId()
+  const [reason, setReason] = useState("")
+  return (
+    <AlertDialog open={open} onOpenChange={onOpenChange}>
+      <AlertDialogTrigger render={<Button variant="outline" disabled={pending} />}>
+        Revisi
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Buat revisi dokumen</AlertDialogTitle>
+          <AlertDialogDescription>
+            Versi sekarang disimpan apa adanya dan bisa dibuka lagi. Dokumen kembali ke Draft dengan
+            nomor aju yang sama untuk dikoreksi, lalu diajukan dan didaftarkan ulang.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <div className="space-y-1.5">
+          <Label htmlFor={`${uid}-reason`}>Alasan revisi</Label>
+          <Textarea
+            id={`${uid}-reason`}
+            rows={3}
+            value={reason}
+            onChange={(event) => setReason(event.target.value)}
+          />
+        </div>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Kembali</AlertDialogCancel>
+          <Button disabled={pending} onClick={() => onConfirm(reason)}>
+            Buat revisi
           </Button>
         </AlertDialogFooter>
       </AlertDialogContent>

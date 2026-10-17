@@ -14,13 +14,7 @@ import {
 } from "@/modules/it-inventory/server/queries/customs-documents"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
-import {
-  company,
-  customsDocumentLines,
-  products,
-  uomCategories,
-  uoms,
-} from "@/server/db/schema"
+import { company, customsDocumentLines, products, uomCategories, uoms } from "@/server/db/schema"
 
 import { CUSTOMS_TEST_OFFICE, insertTestCompany, purgeCustomsDocuments } from "./customs-fixtures"
 

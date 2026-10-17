@@ -526,6 +526,20 @@
       "when": 1792250608863,
       "tag": "0074_customs_status_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 75,
+      "version": "7",
+      "when": 1792251102286,
+      "tag": "0075_customs_document_revisions",
+      "breakpoints": true
+    },
+    {
+      "idx": 76,
+      "version": "7",
+      "when": 1792251103535,
+      "tag": "0076_customs_revision_rules",
+      "breakpoints": true
     }
   ]
 }
