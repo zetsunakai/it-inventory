@@ -27,7 +27,7 @@ export default function EditLocationPage({
   params,
 }: PageProps<"/master/gudang/[id]/lokasi/[lokasiId]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-80 w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-80 w-full" />}>
       <EditLocation params={params} />
     </Suspense>
   )

@@ -18,7 +18,7 @@ export default function NewProductPage() {
         title="Tambah produk"
         description="Product code dan satuan stok tidak bisa diubah setelah disimpan. Product code boleh dikosongkan bila kategori produknya punya prefix kode."
       />
-      <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
         <Guarded />
       </Suspense>
     </>

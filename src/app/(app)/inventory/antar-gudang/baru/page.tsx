@@ -16,7 +16,7 @@ export default function NewInterwarehousePage() {
         title="Buat transfer antar gudang"
         description="Disimpan sebagai Draft. Saat dikonfirmasi, transfer keluar dibuat dan stok gudang asal dipesan."
       />
-      <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
         <Guarded />
       </Suspense>
     </>

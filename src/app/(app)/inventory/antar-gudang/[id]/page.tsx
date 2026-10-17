@@ -100,7 +100,7 @@ export default function InterwarehouseDetailPage({
   params,
 }: PageProps<"/inventory/antar-gudang/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
       <Detail params={params} />
     </Suspense>
   )

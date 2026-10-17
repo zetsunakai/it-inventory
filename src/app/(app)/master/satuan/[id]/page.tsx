@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Ubah satuan · IT Inventory" }
 
 export default function EditUomPage({ params }: PageProps<"/master/satuan/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-72 w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-72 w-full" />}>
       <EditUom params={params} />
     </Suspense>
   )

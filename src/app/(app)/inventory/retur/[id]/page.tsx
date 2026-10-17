@@ -99,7 +99,7 @@ const LINE_COLUMNS: DataTableColumn<RequestLine>[] = [
 
 export default function ReturnRequestPage({ params }: PageProps<"/inventory/retur/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
       <Detail params={params} />
     </Suspense>
   )

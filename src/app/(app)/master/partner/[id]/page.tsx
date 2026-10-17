@@ -22,7 +22,7 @@ export const metadata: Metadata = { title: "Detail partner · IT Inventory" }
 
 export default function PartnerPage({ params }: PageProps<"/master/partner/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
       <PartnerDetail params={params} />
     </Suspense>
   )

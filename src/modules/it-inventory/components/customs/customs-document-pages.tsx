@@ -202,7 +202,7 @@ export function NewCustomsDocumentPage({ spec }: { spec: CustomsFormSpec }) {
         title={`Buat ${spec.title}`}
         description="Disimpan sebagai Draft dengan nomor aju baru. Isian boleh dilengkapi bertahap."
       />
-      <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
         <NewCustomsForm spec={spec} />
       </Suspense>
     </>
@@ -215,7 +215,7 @@ async function NewCustomsForm({ spec }: { spec: CustomsFormSpec }) {
   return (
     <div className="space-y-4">
       {!companyReady && (
-        <p role="alert" className="max-w-4xl rounded-lg bg-warning-soft p-3 text-control">
+        <p role="alert" className="rounded-lg bg-warning-soft p-3 text-control">
           Profil perusahaan belum diisi, jadi entitas perusahaan dan nomor aju belum bisa dibuat.{" "}
           <Link href="/master/perusahaan" className="font-medium underline underline-offset-4">
             Isi profil perusahaan
@@ -235,7 +235,7 @@ export function CustomsDocumentDetailPage({
   params: Promise<{ id: string }>
 }) {
   return (
-    <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
       <CustomsDetail spec={spec} params={params} />
     </Suspense>
   )
@@ -329,7 +329,7 @@ async function CustomsDetail({
 function StatusNotice({ doc }: { doc: CustomsDocumentDetail }) {
   if (doc.status === "draft" && doc.missing.length) {
     return (
-      <details className="max-w-4xl rounded-lg bg-warning-soft p-3 text-control">
+      <details className="rounded-lg bg-warning-soft p-3 text-control">
         <summary className="cursor-pointer font-medium">
           Belum bisa diajukan: {doc.missing.length} isian belum lengkap
         </summary>
@@ -343,14 +343,14 @@ function StatusNotice({ doc }: { doc: CustomsDocumentDetail }) {
   }
   if (doc.status === "ready") {
     return (
-      <p className="max-w-4xl rounded-lg bg-success-soft p-3 text-control">
+      <p className="rounded-lg bg-success-soft p-3 text-control">
         Isian lengkap. Input dokumen di portal CEISA, lalu tekan Ajukan.
       </p>
     )
   }
   if (doc.status === "rejected" && doc.rejectionReason) {
     return (
-      <p role="alert" className="max-w-4xl rounded-lg bg-destructive/10 p-3 text-control">
+      <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-control">
         <span className="font-medium">Ditolak Bea Cukai:</span> {doc.rejectionReason}
       </p>
     )
@@ -362,7 +362,7 @@ function StatusNotice({ doc }: { doc: CustomsDocumentDetail }) {
 function RevisionHistory({ path, revisions }: { path: string; revisions: CustomsRevisionEntry[] }) {
   return (
     <Section title="Riwayat revisi">
-      <ol className="max-w-4xl divide-y rounded-lg border">
+      <ol className="divide-y rounded-lg border">
         {[...revisions].reverse().map((revision) => (
           <li key={revision.version} className="space-y-1 p-3 text-control">
             <p>
@@ -398,7 +398,7 @@ export function CustomsRevisionPage({
   params: Promise<{ id: string; version: string }>
 }) {
   return (
-    <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
       <RevisionDetail spec={spec} params={params} />
     </Suspense>
   )

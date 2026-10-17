@@ -19,7 +19,7 @@ export default function ImportProductsPage() {
         title="Import produk"
         description="Product code baru ditambahkan, product code yang sudah ada diperbarui. Bila ada satu baris yang salah, tidak ada yang disimpan."
       />
-      <Suspense fallback={<Skeleton className="h-40 w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-40 w-full" />}>
         <Guarded />
       </Suspense>
       <ImportColumnGuide columns={PRODUCT_COLUMNS} />

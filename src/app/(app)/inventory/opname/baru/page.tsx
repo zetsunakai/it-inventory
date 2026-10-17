@@ -17,7 +17,7 @@ export default function NewStockCountPage() {
         title="Buat sesi opname"
         description="Disimpan sebagai Draft. Saat Manajer menekan Mulai hitung, daftar hitung diambil dari stok di lingkup ini dan gudangnya dibekukan sampai opname disetujui atau dibatalkan."
       />
-      <Suspense fallback={<Skeleton className="h-64 w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <Guarded />
       </Suspense>
     </>

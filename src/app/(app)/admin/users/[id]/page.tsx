@@ -19,7 +19,7 @@ export const metadata: Metadata = { title: "Detail pengguna · IT Inventory" }
 
 export default function UserPage({ params }: PageProps<"/admin/users/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-96 w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
       <UserDetail params={params} />
     </Suspense>
   )

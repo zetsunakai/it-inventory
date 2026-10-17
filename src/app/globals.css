@@ -196,8 +196,9 @@
  *                           kehilangan bingkainya.
  */
 @layer components {
+  /* Selebar area konten seperti .hx-form-sheet hmx (tanpa batas lebar); lebar field diatur span. */
   .form-page {
-    @apply flex w-full max-w-4xl flex-col gap-4;
+    @apply flex w-full min-w-0 flex-col gap-4;
   }
 
   /* Baris aksi di atas form/mode baca; ikut ter-scroll bersama halaman. */

@@ -19,7 +19,7 @@ export default function ImportPartnersPage() {
         title="Import partner"
         description="NPWP baru ditambahkan, NPWP yang sudah ada diperbarui (cabang dipilih lewat NITKU). Bila ada satu baris yang salah, tidak ada yang disimpan."
       />
-      <Suspense fallback={<Skeleton className="h-40 w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-40 w-full" />}>
         <Guarded />
       </Suspense>
       <ImportColumnGuide columns={PARTNER_COLUMNS} />

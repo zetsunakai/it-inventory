@@ -27,7 +27,7 @@ export const metadata: Metadata = { title: "Detail produk · IT Inventory" }
 
 export default function ProductPage({ params }: PageProps<"/master/produk/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[32rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
       <ProductDetail params={params} />
     </Suspense>
   )

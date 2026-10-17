@@ -25,7 +25,7 @@ function place(path: string, warehouse: string | null) {
 
 export default function LotPage({ params }: PageProps<"/inventory/lot/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
       <Trace params={params} />
     </Suspense>
   )

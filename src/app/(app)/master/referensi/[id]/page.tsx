@@ -20,7 +20,7 @@ export const metadata: Metadata = { title: "Ubah referensi · IT Inventory" }
 
 export default function EditRefCodePage({ params }: PageProps<"/master/referensi/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-64 w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-64 w-full" />}>
       <EditRefCode params={params} />
     </Suspense>
   )

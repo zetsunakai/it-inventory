@@ -27,7 +27,7 @@ export const metadata: Metadata = { title: "Sesi opname · IT Inventory" }
 
 export default function StockCountPage({ params }: PageProps<"/inventory/opname/[id]">) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
       <StockCountDetail params={params} />
     </Suspense>
   )

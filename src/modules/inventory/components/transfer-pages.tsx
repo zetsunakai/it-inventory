@@ -258,7 +258,7 @@ export function NewTransferPage({
   return (
     <>
       <PageHeader title={`Buat ${kind.noun}`} description={description} />
-      <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
         <NewTransferForm kind={kind} />
       </Suspense>
     </>
@@ -282,7 +282,7 @@ export function TransferDetailPage({
   params: Promise<{ id: string }>
 }) {
   return (
-    <Suspense fallback={<Skeleton className="h-[28rem] w-full max-w-4xl" />}>
+    <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
       <TransferDetail kind={kind} effect={effect} params={params} />
     </Suspense>
   )

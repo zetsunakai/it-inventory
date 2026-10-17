@@ -23,7 +23,7 @@ export default function CompanyProfilePage() {
         title="Profil perusahaan"
         description="Dipakai otomatis sebagai entitas Pengusaha/Pemilik di dokumen BC."
       />
-      <Suspense fallback={<Skeleton className="h-96 w-full max-w-4xl" />}>
+      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
         <CompanyProfile />
       </Suspense>
     </>
