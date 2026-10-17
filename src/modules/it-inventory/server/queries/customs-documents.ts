@@ -201,6 +201,15 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
       documentTypeCode: row.documentTypeCode,
       number: text(row.number),
       date: text(row.date),
+      file:
+        row.fileKey && row.fileName
+          ? {
+              fileKey: row.fileKey,
+              fileName: row.fileName,
+              contentType: row.contentType ?? "",
+              fileSize: row.fileSize ?? 0,
+            }
+          : null,
     })),
     packages: packages.map((row) => ({
       qty: text(row.qty),

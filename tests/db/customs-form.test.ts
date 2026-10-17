@@ -176,7 +176,9 @@ describe("saveCustomsDocument", () => {
     })
     expect(saved?.draft.lines[0].taxes).toHaveLength(2)
     expect(saved?.draft.containers[0].number).toBe("MSKU1234567")
-    expect(saved?.draft.attachments).toEqual([{ documentTypeCode: "380", number: "", date: "" }])
+    expect(saved?.draft.attachments).toEqual([
+      { documentTypeCode: "380", number: "", date: "", file: null },
+    ])
 
     // Ubah: bagian diganti seluruhnya, nomor aju tetap.
     const changed = { ...saved!.draft, lines: [], containers: [] }

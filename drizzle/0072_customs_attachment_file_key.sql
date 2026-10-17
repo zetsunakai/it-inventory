@@ -1,0 +1,1 @@
+CREATE INDEX "customs_attachments_file_key_idx" ON "customs_attachments" USING btree ("file_key");

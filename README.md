@@ -432,9 +432,25 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   perusahaan (pengusaha, pemilik, atau eksportir) dari profil perusahaan, kantor pabean pengawas,
   dan penandatangan = user yang login. Entitas partner disalin dari `/api/customs-parties`, produk
   dicari lewat `/api/customs-products` (hanya yang punya kode HS).
+- Lampiran (M3-10): file diunggah per baris di tab Dokumen lewat `uploadCustomsAttachment` (hanya
+  dokumen Draft yang sudah tersimpan; PDF, JPG, PNG, Excel, Word, maksimal 5 MB) ke kunci
+  `customs/<id dokumen>/<uuid>.<ext>`, lalu kunci dan nama filenya tersimpan bersama baris saat
+  Simpan (kunci milik dokumen lain ditolak). Unduh lewat `/api/customs-files?key=...` (izin
+  `bc:read`, hanya kunci yang tercatat sebagai lampiran). File yang dilepas atau tidak jadi
+  disimpan tetap ada di storage; belum ada pembersihan otomatis.
+
 - Tautan ke inventory sudah disiapkan untuk gerbang dokumen (M4): `transfers.customs_document_id`
   dan `stock_moves.customs_document_line_id`. Dokumen yang sudah dipakai transfer tidak bisa
   dihapus.
+
+## Penyimpanan file
+
+- Semua file lewat `getStorage()` (`src/server/storage`): `put`, `get`, `delete`. Driver dipilih
+  `STORAGE_DRIVER`: `local` (bawaan, folder `STORAGE_DIR`, default `.storage/`, diabaikan git) atau
+  `s3` (object storage S3-compatible, path-style, `S3_ENDPOINT`, `S3_REGION`, `S3_BUCKET`,
+  `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`). Driver S3 memakai `fetch` dengan tanda tangan SigV4
+  sendiri (tanpa SDK); tesnya memakai contoh resmi AWS.
+- Kunci file hanya huruf, angka, `-`, `_`, `.`, `/`, tanpa `..` (`assertSafeKey`).
 
 ## Arsip dan hapus
 

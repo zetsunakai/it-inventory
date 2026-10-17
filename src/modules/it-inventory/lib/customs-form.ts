@@ -239,7 +239,37 @@ export type CustomsLineDraft = Record<CustomsLineColumn, string> & {
   taxes: CustomsTaxDraft[]
 }
 
-export type CustomsAttachmentDraft = { documentTypeCode: string; number: string; date: string }
+// File lampiran (M3-10) diunggah lewat uploadCustomsAttachment, lalu kuncinya ikut disimpan.
+export type CustomsAttachmentFile = {
+  fileKey: string
+  fileName: string
+  contentType: string
+  fileSize: number
+}
+
+export type CustomsAttachmentDraft = {
+  documentTypeCode: string
+  number: string
+  date: string
+  file: CustomsAttachmentFile | null
+}
+
+// Lampiran: maksimal 5 MB (batas body server action 6 MB di next.config.ts), jenis yang umum
+// untuk dokumen pendukung.
+export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024
+export const ATTACHMENT_TYPES: Record<string, string> = {
+  "application/pdf": ".pdf",
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ".xlsx",
+  "application/vnd.ms-excel": ".xls",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ".docx",
+}
+
+// Semua file lampiran satu dokumen ada di bawah awalan ini.
+export function attachmentKeyPrefix(documentId: string) {
+  return `customs/${documentId}/`
+}
 export type CustomsPackageDraft = { qty: string; packageTypeCode: string; marks: string }
 export type CustomsContainerDraft = {
   number: string
@@ -293,7 +323,7 @@ export function emptyDraft(spec: CustomsFormSpec): CustomsDocumentDraft {
     details: {},
     parties: [],
     lines: [emptyLine(spec.taxes)],
-    attachments: [{ documentTypeCode: "380", number: "", date: "" }],
+    attachments: [{ documentTypeCode: "380", number: "", date: "", file: null }],
     packages: [],
     containers: [],
     transports: spec.transport ? [emptyTransport()] : [],
@@ -438,6 +468,14 @@ export const customsDocumentInputSchema = z
         documentTypeCode: z.string().trim().min(1, "Jenis lampiran wajib dipilih."),
         number: text("Nomor lampiran", 100),
         date: date("Tanggal lampiran"),
+        file: z
+          .object({
+            fileKey: z.string().min(1).max(300),
+            fileName: z.string().trim().min(1).max(255),
+            contentType: z.string().max(100),
+            fileSize: z.number().int().positive(),
+          })
+          .nullable(),
       }),
     ),
     packages: z.array(

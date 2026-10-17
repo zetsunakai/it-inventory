@@ -278,6 +278,8 @@ export const customsAttachments = pgTable(
   (table) => [
     unique("customs_attachments_seq_unique").on(table.documentId, table.seq),
     index("customs_attachments_type_idx").on(table.documentId, table.documentTypeCode),
+    // Unduh lampiran lewat kunci file (/api/customs-files).
+    index("customs_attachments_file_key_idx").on(table.fileKey),
     check("customs_attachments_seq_positive", sql`${table.seq} >= 1`),
     check(
       "customs_attachments_file_complete",

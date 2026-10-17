@@ -25,6 +25,8 @@
 /build
 
 # misc
+# File lampiran lokal (STORAGE_DRIVER=local)
+/.storage/
 .DS_Store
 *.pem
 

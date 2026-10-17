@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
+import { Plus } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useId, useState, type ReactNode } from "react"
 
@@ -26,7 +26,9 @@ import {
   type CustomsTaxDraft,
 } from "@/modules/it-inventory/lib/customs-form"
 
+import { AttachmentsEditor } from "./attachments-editor"
 import { CustomsFormField, type FieldChange, type RefLabels } from "./customs-field"
+import { RowCard } from "./row-card"
 
 type ProductChoice = { id: string; sku: string; name: string; hsCode: string; uomCode: string }
 type PartnerChoice = { id: string; name: string; identityNumber: string }
@@ -155,27 +157,13 @@ export function CustomsDocumentForm({
       value: "dokumen",
       label: "Dokumen",
       content: (
-        <RowsEditor
-          title="Dokumen lampiran"
-          description="Invoice wajib ada sebelum dokumen bisa diajukan."
-          noun="lampiran"
+        <AttachmentsEditor
+          documentId={documentId}
           idPrefix={fieldId("attachment")}
           rows={draft.attachments}
           onChange={(rows) => change("attachments", rows)}
-          newRow={() => ({ documentTypeCode: "", number: "", date: "" })}
           refLabels={labels}
           onLabel={rememberLabel}
-          columns={[
-            {
-              key: "documentTypeCode",
-              label: "Jenis",
-              kind: "ref",
-              refType: "document_type",
-              span: 6,
-            },
-            { key: "number", label: "Nomor", kind: "text", span: 3 },
-            { key: "date", label: "Tanggal", kind: "date", span: 3 },
-          ]}
         />
       ),
     },
@@ -564,34 +552,6 @@ function RowsEditor<T extends Record<string, string>>({
         </RowCard>
       ))}
     </FormSection>
-  )
-}
-
-function RowCard({
-  label,
-  onRemove,
-  children,
-}: {
-  label: string
-  onRemove: () => void
-  children: ReactNode
-}) {
-  return (
-    <div className="form-grid rounded-lg border p-4">
-      <div className="flex items-center justify-between gap-2">
-        <p className="text-control font-medium first-letter:uppercase">{label}</p>
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          aria-label={`Hapus ${label}`}
-          onClick={onRemove}
-        >
-          <Trash2 />
-        </Button>
-      </div>
-      {children}
-    </div>
   )
 }
 

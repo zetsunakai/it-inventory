@@ -6,6 +6,7 @@ import { formatRefCode } from "@/lib/ref-codes"
 import {
   CUSTOMS_STATEMENT_FIELDS,
   customsOptionLabel,
+  type CustomsAttachmentDraft,
   type CustomsDocumentDraft,
   type CustomsField,
   type CustomsFormSpec,
@@ -72,6 +73,37 @@ export function CustomsDocumentView({
     },
   ]
 
+  const attachmentColumns: DataTableColumn<CustomsAttachmentDraft & { seq: number }>[] = [
+    {
+      header: "Jenis",
+      className: "w-full whitespace-normal",
+      cell: (row) =>
+        show(
+          { key: "type", label: "", kind: "ref", refType: "document_type" },
+          row.documentTypeCode,
+        ),
+    },
+    { header: "Nomor", cell: (row) => row.number || "—" },
+    {
+      header: "Tanggal",
+      cell: (row) => (row.date ? row.date.split("-").reverse().join("/") : "—"),
+    },
+    {
+      header: "File",
+      cell: (row) =>
+        row.file ? (
+          <a
+            href={`/api/customs-files?key=${encodeURIComponent(row.file.fileKey)}`}
+            className="text-primary underline-offset-4 hover:underline"
+          >
+            {row.file.fileName}
+          </a>
+        ) : (
+          "—"
+        ),
+    },
+  ]
+
   return (
     <div className="space-y-8">
       <Section title="Header">
@@ -107,6 +139,14 @@ export function CustomsDocumentView({
           columns={lineColumns}
           rows={draft.lines.map((line, index) => ({ ...line, seq: index + 1 }))}
           rowKey={(line) => String(line.seq)}
+        />
+      </Section>
+      <Section title="Lampiran">
+        <DataTable
+          columns={attachmentColumns}
+          rows={draft.attachments.map((row, index) => ({ ...row, seq: index + 1 }))}
+          rowKey={(row) => String(row.seq)}
+          empty={{ title: "Belum ada lampiran." }}
         />
       </Section>
       <Section title="Pernyataan">

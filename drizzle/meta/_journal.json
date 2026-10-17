@@ -505,6 +505,13 @@
       "when": 1792249735283,
       "tag": "0071_customs_rule_labels",
       "breakpoints": true
+    },
+    {
+      "idx": 72,
+      "version": "7",
+      "when": 1792250324781,
+      "tag": "0072_customs_attachment_file_key",
+      "breakpoints": true
     }
   ]
 }

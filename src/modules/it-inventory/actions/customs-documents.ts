@@ -1,12 +1,21 @@
 "use server"
 
+import { randomUUID } from "node:crypto"
+
 import { eq, inArray } from "drizzle-orm"
 import { z } from "zod"
 
 import { CUSTOMS_DOC_CODES } from "@/modules/it-inventory/lib/customs"
-import { customsDocumentField } from "@/modules/it-inventory/lib/customs-form"
+import {
+  ATTACHMENT_TYPES,
+  attachmentKeyPrefix,
+  customsDocumentField,
+  MAX_ATTACHMENT_BYTES,
+  type CustomsAttachmentFile,
+} from "@/modules/it-inventory/lib/customs-form"
 import { AppError, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
+import { getStorage } from "@/server/storage"
 import {
   customsAttachments,
   customsContainers,
@@ -77,8 +86,22 @@ export const saveCustomsDocument = defineFormAction({
     }
     const numbered = <T>(rows: T[]) =>
       rows.map((row, index) => ({ documentId, seq: index + 1, ...row }))
+    const prefix = attachmentKeyPrefix(documentId)
+    if (document.attachments.some((row) => row.file && !row.file.fileKey.startsWith(prefix))) {
+      throw new AppError("File lampiran tidak valid. Unggah ulang filenya.")
+    }
     if (document.attachments.length) {
-      await tx.insert(customsAttachments).values(numbered(document.attachments))
+      await tx.insert(customsAttachments).values(
+        numbered(
+          document.attachments.map(({ file, ...row }) => ({
+            ...row,
+            fileKey: file?.fileKey ?? null,
+            fileName: file?.fileName ?? null,
+            contentType: file?.contentType || null,
+            fileSize: file?.fileSize ?? null,
+          })),
+        ),
+      )
     }
     if (document.packages.length) {
       await tx
@@ -108,3 +131,40 @@ async function deleteParts(tx: Transaction, id: string) {
   await tx.delete(customsContainers).where(eq(customsContainers.documentId, id))
   await tx.delete(customsTransports).where(eq(customsTransports.documentId, id))
 }
+
+// Unggah file lampiran dokumen Draft yang sudah tersimpan (M3-10). File langsung masuk storage;
+// barisnya tercatat saat dokumen disimpan. File yang tidak jadi dipakai tetap di storage.
+export const uploadCustomsAttachment = defineFormAction({
+  name: "uploadCustomsAttachment",
+  permission: "bc:write",
+  schema: z.object({
+    documentId: z.uuid("Simpan dokumen dulu sebelum mengunggah file."),
+    file: z
+      .instanceof(File, { message: "Pilih file lampiran." })
+      .refine((file) => file.size > 0, "File kosong.")
+      .refine((file) => file.size <= MAX_ATTACHMENT_BYTES, "Ukuran file maksimal 5 MB.")
+      .refine(
+        (file) => file.type in ATTACHMENT_TYPES,
+        "Jenis file harus PDF, JPG, PNG, Excel, atau Word.",
+      ),
+  }),
+  refresh: false,
+  handler: async ({ input, tx }) => {
+    const [doc] = await tx
+      .select({ status: customsDocuments.status })
+      .from(customsDocuments)
+      .where(eq(customsDocuments.id, input.documentId))
+    if (!doc) throw new AppError("Dokumen tidak ditemukan.")
+    if (doc.status !== "draft") throw new AppError("Hanya dokumen Draft yang bisa diubah.")
+
+    const { file } = input
+    const fileKey = `${attachmentKeyPrefix(input.documentId)}${randomUUID()}${ATTACHMENT_TYPES[file.type]}`
+    await getStorage().put(fileKey, new Uint8Array(await file.arrayBuffer()), file.type)
+    return {
+      fileKey,
+      fileName: file.name.slice(0, 255),
+      contentType: file.type,
+      fileSize: file.size,
+    } satisfies CustomsAttachmentFile
+  },
+})
