@@ -58,3 +58,15 @@ export const CUSTOMS_RULE_TARGETS = [
   "container",
 ] as const
 export type CustomsRuleTarget = (typeof CUSTOMS_RULE_TARGETS)[number]
+
+export const CUSTOMS_DOCUMENT_STATUS_TONES: Record<
+  CustomsDocumentStatus,
+  "neutral" | "info" | "success" | "warning" | "danger"
+> = {
+  draft: "neutral",
+  ready: "warning",
+  submitted: "info",
+  registered: "success",
+  rejected: "danger",
+  cancelled: "neutral",
+}

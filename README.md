@@ -415,6 +415,19 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   `qty` dalam satuan CEISA, `stock_qty` dalam satuan stok produk untuk dicocokkan dengan transfer.
 - Entitas disalin dari profil perusahaan atau partner, jadi dokumen tidak ikut berubah saat master
   berubah.
+- Form dokumen BC (M3-04) dirakit dari bagian bersama di
+  `src/modules/it-inventory/components/customs/`: tab Header, Entitas, Dokumen, Pengangkut,
+  Kemasan dan peti kemas, Barang, Pungutan, Transaksi, Pernyataan. Isi setiap tab diatur
+  `CustomsFormSpec` jenisnya (`src/modules/it-inventory/lib/customs-form.ts`): isian header atau
+  `details`, peran entitas (dari profil perusahaan atau partner), isian barang, pungutan bawaan.
+  Halaman daftar/buat/detail sama untuk semua jenis (`customs-document-pages.tsx`); halaman di
+  `src/app/(app)/dokumen-bc/<jenis>/` hanya meneruskan spec-nya.
+- Seluruh isi form dikirim sebagai satu JSON (`document`) ke `saveCustomsDocument`: header
+  diperbarui lalu semua bagian diganti dalam satu transaksi; hanya Draft yang bisa diubah. Draft
+  boleh belum lengkap; kelengkapan diperiksa `customs_document_errors()`. Dokumen baru: entitas
+  perusahaan (pengusaha, pemilik, atau eksportir) dari profil perusahaan, kantor pabean pengawas,
+  dan penandatangan = user yang login. Entitas partner disalin dari `/api/customs-parties`, produk
+  dicari lewat `/api/customs-products` (hanya yang punya kode HS).
 - Tautan ke inventory sudah disiapkan untuk gerbang dokumen (M4): `transfers.customs_document_id`
   dan `stock_moves.customs_document_line_id`. Dokumen yang sudah dipakai transfer tidak bisa
   dihapus.
