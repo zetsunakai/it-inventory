@@ -235,8 +235,63 @@ export const BC25: CustomsFormSpec = {
   taxes: ["BM", "PPN", "PPH"],
 }
 
+// BC 4.1: pengeluaran kembali barang asal TLDDP dari TPB (document_41 hmx).
+export const BC41: CustomsFormSpec = {
+  code: "41",
+  title: "BC 4.1",
+  description: "Pengeluaran kembali barang asal dalam negeri dari kawasan berikat.",
+  path: "/dokumen-bc/bc41",
+  header: [
+    TPB_TYPE,
+    DELIVERY_REASON,
+    {
+      key: "plbWarehouseCode",
+      label: "Kode gudang PLB",
+      kind: "text",
+      mono: true,
+      detail: true,
+      span: 6,
+    },
+  ],
+  parties: [ENTREPRENEUR, OWNER, RECIPIENT],
+  transport: { fields: [] },
+  containers: true,
+  transaction: [
+    DELIVERY_PRICE,
+    {
+      key: "acquisitionPrice",
+      label: "Harga perolehan",
+      kind: "money",
+      detail: true,
+      span: 6,
+    },
+    DPP,
+    { key: "serviceValue", label: "Nilai jasa", kind: "money", detail: true, span: 6 },
+    ...DOMESTIC_VALUES,
+    { key: "ppnRate", label: "Tarif PPN (%)", kind: "qty", detail: true, span: 3 },
+    { key: "ppnValue", label: "PPN", kind: "money", detail: true, span: 3 },
+    { key: "ppnbmRate", label: "Tarif PPnBM (%)", kind: "qty", detail: true, span: 3 },
+    { key: "ppnbmValue", label: "PPnBM", kind: "money", detail: true, span: 3 },
+    { key: "volume", label: "Volume (m3)", kind: "qty", detail: true, span: 6 },
+    ...WEIGHTS,
+  ],
+  line: [
+    ...CUSTOMS_LINE_BASE_FIELDS,
+    { key: "deliveryPrice", label: "Harga penyerahan", kind: "money", span: 6 },
+    {
+      key: "acquisitionPrice",
+      label: "Harga perolehan",
+      kind: "money",
+      detail: true,
+      span: 6,
+    },
+  ],
+  taxes: ["PPN", "PPNBM"],
+}
+
 export const CUSTOMS_SPECS: Partial<Record<CustomsDocCode, CustomsFormSpec>> = {
   "23": BC23,
   "40": BC40,
   "25": BC25,
+  "41": BC41,
 }
