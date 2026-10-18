@@ -40,7 +40,7 @@ import {
   type TransferRow,
   transferNeighbors,
 } from "@/modules/inventory/server/queries/transfers"
-import { recordActivity } from "@/server/queries/activity"
+import { recordActivity, statusDates } from "@/server/queries/activity"
 import { ActivityLog } from "@/components/document/activity-log"
 import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { DocumentLayout } from "@/components/document/document-layout"
@@ -252,7 +252,20 @@ export function NewTransferPage({
   description: string
 }) {
   return (
-    <NewRecordLayout title={`Buat ${kind.noun}`} description={description} noun={kind.noun}>
+    <NewRecordLayout
+      title={`Buat ${kind.noun}`}
+      description={description}
+      noun={kind.noun}
+      status={
+        <StatusSteps
+          steps={transferSteps({
+            reservable: kind.locationSide === "source",
+            instant: Boolean(kind.sameWarehouse),
+          })}
+          current="draft"
+        />
+      }
+    >
       <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
         <NewTransferForm kind={kind} />
       </Suspense>
@@ -320,9 +333,10 @@ async function TransferDetail({
     canWrite &&
     transfer.status === "done" &&
     (transfer.type === "receipt" || transfer.type === "delivery")
-  const [neighbors, activity] = await Promise.all([
+  const [neighbors, activity, dates] = await Promise.all([
     transferNeighbors(user.id, transfer, kind.movementCodes),
     recordActivity("transfers", transfer.id, TRANSFER_ACTIVITY_LABELS),
+    statusDates("transfers", transfer.id),
   ])
   const neighborHref = (target?: { id: string; number: string }) =>
     target && { href: transferHref(transfer.type, target.id), label: target.number }
@@ -335,6 +349,7 @@ async function TransferDetail({
           status={transfer.status}
           reservable={Boolean(transfer.sourceWarehouseId)}
           instant={instant}
+          dates={dates}
         />
       }
       activity={<ActivityLog entries={activity} noun={kind.noun} />}
@@ -516,19 +531,30 @@ function TransferStatusSteps({
   status,
   reservable,
   instant,
+  dates,
 }: {
   status: TransferStatus
   reservable: boolean
   instant: boolean
+  dates: Record<string, Date>
 }) {
-  if (status === "cancelled") {
-    return <StatusSteps steps={[]} outside={{ label: "Batal", tone: "neutral" }} />
-  }
   const steps = transferSteps({ reservable, instant })
+  // Sebagian tersedia tampil di langkah Menunggu stok.
+  const stepDates = { ...dates, waiting: dates.waiting ?? dates.partially_available }
+  if (status === "cancelled") {
+    return (
+      <StatusSteps
+        steps={steps}
+        dates={stepDates}
+        outside={{ label: "Batal", tone: "neutral", code: "cancelled" }}
+      />
+    )
+  }
   const current = status === "partially_available" ? "waiting" : status
   return (
     <StatusSteps
       steps={steps}
+      dates={stepDates}
       current={steps.some((step) => step.code === current) ? current : "ready"}
       currentLabel={TRANSFER_STATUS_LABELS[status]}
     />

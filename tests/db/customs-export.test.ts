@@ -4,6 +4,7 @@ import { NextRequest } from "next/server"
 import { PDFDocument } from "pdf-lib"
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
 
+import { GET as exportList } from "@/app/api/customs-documents/export/route"
 import { GET as exportDocument } from "@/app/api/customs-documents/[id]/export/route"
 import type { Role } from "@/lib/permissions"
 import { duplicateCustomsDocument } from "@/modules/it-inventory/actions/customs-documents"
@@ -175,5 +176,43 @@ describe("export draft", () => {
 
     const invalid = await request("docx")
     expect(invalid.status).toBe(400)
+  })
+})
+
+describe("export daftar BC", () => {
+  test("mengikuti filter kantor, mengabaikan halaman, dan membuat PDF/Excel", async () => {
+    loginAs(["auditor"])
+    const doc = await getCustomsDocument(BC23, ids.other)
+    const query = "docCode=23&kantor=040300&page=99"
+    const excel = await exportList(
+      new NextRequest(`http://localhost/api/customs-documents/export?${query}&format=xlsx`),
+    )
+    expect(excel.status).toBe(200)
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(await excel.arrayBuffer())
+    const sheet = workbook.worksheets[0]
+    expect(sheet.rowCount).toBe(2)
+    expect(sheet.getCell("A2").value).toBe(doc!.ajuNumber)
+    expect(excel.headers.get("content-disposition")).toContain("Daftar-BC23.xlsx")
+
+    const pdf = await exportList(
+      new NextRequest(`http://localhost/api/customs-documents/export?${query}&format=pdf`),
+    )
+    expect(pdf.status).toBe(200)
+    const loaded = await PDFDocument.load(await pdf.arrayBuffer())
+    expect(loaded.getTitle()).toBe("Daftar BC 2.3")
+    expect(loaded.getPageCount()).toBeGreaterThan(0)
+  })
+
+  test("memvalidasi sesi, izin, jenis dokumen, dan format", async () => {
+    const request = (query = "docCode=23&format=xlsx") =>
+      exportList(new NextRequest(`http://localhost/api/customs-documents/export?${query}`))
+    session.user = null
+    expect((await request()).status).toBe(401)
+    loginAs(["admin_gudang"])
+    expect((await request()).status).toBe(403)
+    loginAs(["auditor"])
+    expect((await request("docCode=unknown&format=xlsx")).status).toBe(400)
+    expect((await request("docCode=23&format=docx")).status).toBe(400)
   })
 })

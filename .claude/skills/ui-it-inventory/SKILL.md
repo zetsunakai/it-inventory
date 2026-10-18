@@ -44,7 +44,7 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 | Info detail dokumen/master                   | `InfoGrid` (label di atas nilai, 3 kolom; `wide` untuk catatan/alasan) lalu `Section` per bagian                                                                                                                                                                                                                                                        | `dl` dua kolom memanjang, `h2` + `space-y` buatan sendiri                        |
 | Form (UF-04)                                 | `FORM_CLASS` → `FormActions` di **atas** → `FormErrors` → `FormSection`; lebar field lewat `span` (3/4/6/8/9/12, bawaan 6) di `FormField`/`StaticField`; `FormColumns`/`FormColumn` (kiri siapa/di mana, kanan kapan/rujukan). Ukuran di `globals.css` (`.form-sheet`, `.form-grid`, `.form-field`, `.form-notebook`)                                   | `max-w-*`/`grid-cols-[…]`/`w-48` per form, tombol Simpan di bawah                |
 | Daftar ala hmx (RU-22)                       | `ListToolbar action/pager` + `ListSearchBar` (chip filter, panel Filter/Kelompokkan/Favorit) + `ListPager`; `DataTable id` + kolom `optional`, `group`                                                                                                                                                                                                  | Select filter terpisah, pagination di bawah tabel                                |
-| Dokumen ala hmx (RU-23)                      | `DocumentLayout` (judul, panah record, meta, aksi alur, kartu `StatusSteps`, panel `ActivityLog` dari audit log) + `Tabs` (Barang, Detail pergerakan, Catatan)                                                                                                                                                                                          | `PageHeader` + badge status untuk dokumen bertahapan                             |
+| Dokumen ala hmx (RU-23)                      | `DocumentLayout` (judul, panah record, meta, aksi alur, kolom kanan 320px: kartu `StatusSteps` sejajar baris tombol (status aktif saja, dropdown alur tanpa tanggal, Draft sejak create) di atas panel `ActivityLog` dari audit log) + `Tabs` (Barang, Detail pergerakan, Catatan)                                                                      | `PageHeader` + badge status untuk dokumen bertahapan                             |
 | Dokumen BC per jenis (M3)                    | `CustomsFormSpec` di `src/modules/it-inventory/lib/customs-specs.ts` + halaman `customs-document-pages.tsx`; form `CustomsDocumentForm` dengan tab hmx (Header, Entitas, Dokumen, Pengangkut, Kemasan, Barang, Pungutan, Transaksi, Pernyataan), baris berulang sebagai kartu `RowCard`; tes `customs-specs.test.ts` memastikan field wajib ada di form | Satu form generik yang menyembunyikan field per jenis, form BC disalin per jenis |
 | Bagian dari modul lain di halaman modul (M4) | Prop slot, mis. `TransferDetailPage panel={(t) => <TransferCustomsPanel transferId={t.id} />}` diisi halaman `src/app`; Beranda menggabungkan `attentionItems` dan `customsAttentionItems` di `src/app/(app)/page.tsx`                                                                                                                                  | Modul inventory mengimpor komponen/query modul IT Inventory                      |
 | Toolbar daftar                               | `ListToolbar` (cari, filter, lalu aksi Buat di kanan)                                                                                                                                                                                                                                                                                                   | Susunan flex buatan sendiri per halaman                                          |
@@ -125,31 +125,31 @@ mengubahnya di sana.
 
 ### Widget hmx → komponen repo ini
 
-| Widget/pola hmx                                                     | Pakai di repo ini                                                                              |
-| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| `statusbar` (header form)                                           | `StatusSteps` di `DocumentLayout status` (kartu "Langkah n dari m")                            |
-| `badge` (status di list)                                            | `StatusBadge` / `TransferStatusBadge` dengan tone semantik                                     |
-| `many2one`, `hx-searchable-dropdown`                                | `SearchSelect`; kode resmi `[kode] nama` → `RefCodeSelect`; kategori → `ProductCategorySelect` |
-| `one2many` / `relational_v2` (tabel baris)                          | `DataTable` di tab `Barang` dokumen; form Draft: baris di `TransferForm`                       |
-| `o2m-quick-view-drawer`, `modal-form-drawer`                        | `Sheet` sisi kanan, mis. `ReceiptLotEditor` (rincian satu baris)                               |
-| `many2many_tags`, `many2many_chips`                                 | Belum ada; daftar teks dipisah koma atau baris, chip hanya bila bisa dihapus                   |
-| `boolean` / `boolean_toggle`                                        | `CheckboxField`                                                                                |
-| `selection_radio`, `radio_card_selection`                           | radio biasa ber-label (contoh: pilihan sisa qty di dialog Validasi)                            |
-| `float`, `monetary`                                                 | input `inputMode="decimal"` + `formatDecimal`/`parseDecimalInput` (`src/lib/decimal.ts`)       |
-| `date`, `datetime`                                                  | `Input type="date"` + `formatDate`/`formatDateTime` (`src/lib/format.ts`, WIB)                 |
-| field readonly                                                      | `StaticField` (mode baca `RecordModes`), bukan input disabled                                  |
-| `form-sheet-notebook`                                               | `Tabs` (`form-notebook`)                                                                       |
-| `form-groups`, `form-side-by-side-group`                            | `FormSection` + `span`, `FormColumns`/`FormColumn`                                             |
-| `form-sheet-chatter`, `form-sheet-log-activity`, `approval_history` | `ActivityLog` di `DocumentLayout activity` (dari audit log)                                    |
-| `form-sheet-action-buttons`, `hx-smart-dropdown-button`             | `DocumentLayout actions` / `PageHeader actions`; menu ⋯ di `ListToolbar`                       |
-| `form-sheet-smart-buttons` (jumlah dokumen terkait)                 | Belum ada; tautan dokumen terkait di `InfoGrid` (mis. Retur, Lanjutan dari)                    |
-| `barcode_scanner`                                                   | Layar scan: pola `ReceiptScanner` (input selalu fokus, `role="status"`)                        |
-| `list-view-optional-column`                                         | `DataTable` kolom `optional: "show" \| "hide"` (RU-22)                                         |
-| `list-view-group*`                                                  | `DataTable group` + Kelompokkan di `ListSearchBar`                                             |
-| search view (filter, group by, favorit)                             | `ListSearchBar` (chip filter, disimpan di URL)                                                 |
-| `form-breadcrumb`                                                   | `AppBreadcrumb` lewat `PageHeader`/`DocumentLayout crumbs`                                     |
-| `quick` view (pratinjau record)                                     | Belum ada; buka halaman detail lewat `rowHref`                                                 |
-| `handle` (urut baris), `remaining_days`, `percentage_pie`           | Belum dipakai; buat komponen bersama bila dibutuhkan                                           |
+| Widget/pola hmx                                                     | Pakai di repo ini                                                                                                       |
+| ------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `statusbar` (header form)                                           | `StatusSteps` di `DocumentLayout status` (status aktif + dropdown alur tanpa tanggal, sejajar tombol di atas Aktivitas) |
+| `badge` (status di list)                                            | `StatusBadge` / `TransferStatusBadge` dengan tone semantik                                                              |
+| `many2one`, `hx-searchable-dropdown`                                | `SearchSelect`; kode resmi `[kode] nama` → `RefCodeSelect`; kategori → `ProductCategorySelect`                          |
+| `one2many` / `relational_v2` (tabel baris)                          | `DataTable` di tab `Barang` dokumen; form Draft: baris di `TransferForm`                                                |
+| `o2m-quick-view-drawer`, `modal-form-drawer`                        | `Sheet` sisi kanan, mis. `ReceiptLotEditor` (rincian satu baris)                                                        |
+| `many2many_tags`, `many2many_chips`                                 | Belum ada; daftar teks dipisah koma atau baris, chip hanya bila bisa dihapus                                            |
+| `boolean` / `boolean_toggle`                                        | `CheckboxField`                                                                                                         |
+| `selection_radio`, `radio_card_selection`                           | radio biasa ber-label (contoh: pilihan sisa qty di dialog Validasi)                                                     |
+| `float`, `monetary`                                                 | input `inputMode="decimal"` + `formatDecimal`/`parseDecimalInput` (`src/lib/decimal.ts`)                                |
+| `date`, `datetime`                                                  | `Input type="date"` + `formatDate`/`formatDateTime` (`src/lib/format.ts`, WIB)                                          |
+| field readonly                                                      | `StaticField` (mode baca `RecordModes`), bukan input disabled                                                           |
+| `form-sheet-notebook`                                               | `Tabs` (`form-notebook`)                                                                                                |
+| `form-groups`, `form-side-by-side-group`                            | `FormSection` + `span`, `FormColumns`/`FormColumn`                                                                      |
+| `form-sheet-chatter`, `form-sheet-log-activity`, `approval_history` | `ActivityLog` di `DocumentLayout activity` (dari audit log)                                                             |
+| `form-sheet-action-buttons`, `hx-smart-dropdown-button`             | `DocumentLayout actions` / `PageHeader actions`; menu ⋯ di `ListToolbar`                                                |
+| `form-sheet-smart-buttons` (jumlah dokumen terkait)                 | Belum ada; tautan dokumen terkait di `InfoGrid` (mis. Retur, Lanjutan dari)                                             |
+| `barcode_scanner`                                                   | Layar scan: pola `ReceiptScanner` (input selalu fokus, `role="status"`)                                                 |
+| `list-view-optional-column`                                         | `DataTable` kolom `optional: "show" \| "hide"` (RU-22)                                                                  |
+| `list-view-group*`                                                  | `DataTable group` + Kelompokkan di `ListSearchBar`                                                                      |
+| search view (filter, group by, favorit)                             | `ListSearchBar` (chip filter, disimpan di URL)                                                                          |
+| `form-breadcrumb`                                                   | `AppBreadcrumb` lewat `PageHeader`/`DocumentLayout crumbs`                                                              |
+| `quick` view (pratinjau record)                                     | Belum ada; buka halaman detail lewat `rowHref`                                                                          |
+| `handle` (urut baris), `remaining_days`, `percentage_pie`           | Belum dipakai; buat komponen bersama bila dibutuhkan                                                                    |
 
 Saat menerjemahkan layar hmx, cari widget field-nya di view XML lalu pakai padanan di atas. Bila
 widget hmx-nya tidak ada di tabel, cek katalog lengkap di `hmx-development-widget-catalog` dan
@@ -194,6 +194,17 @@ Di hmx, header tabel menempel saat di-scroll dan kolom penting menempel di kiri 
   bukan input disabled abu-abu.
 - Peran baca-saja (Auditor, peran tanpa `master:write`) melihat tampilan baca yang rapi, bukan
   form yang semua field-nya disabled.
+
+### Dokumen BC
+
+- Halaman create/detail/revisi tidak menampilkan H1; identitas dokumen tetap di breadcrumb.
+- Header detail tidak menampilkan tanggal. Tanggal di field dokumen dan log aktivitas tetap ada.
+- Tombol Duplikat tepat setelah Simpan untuk dokumen yang bisa diubah; tidak tampil sebelum
+  dokumen tersimpan. Tombol Batalkan dokumen dan summary kekurangan Draft tidak ditampilkan.
+- Field wajib diberi `*` dan validasi kontrol berdasarkan aturan aktif `doc_validation_rules`;
+  submit yang menemukan field kosong mengarahkan ke tab field tersebut.
+- Unduh PDF/Excel hanya di kanan judul **daftar** BC, mengikuti pola export/import inventory.
+  Isinya rekap daftar sesuai pencarian/filter aktif, mencakup seluruh halaman.
 
 ### Status dan angka
 

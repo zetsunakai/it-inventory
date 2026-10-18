@@ -60,7 +60,7 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
   await page.goto(requestUrl)
   await expect(page.getByText("Diproses", { exact: true }).first()).toBeVisible()
   await page.getByRole("row").filter({ hasText: "Pengganti" }).getByRole("link").click()
-  await expect(page.getByRole("heading", { name: /^Penerimaan PNR\// })).toBeVisible()
+  await expect(page.getByRole("heading", { name: /^Pengganti dari vendor PNR\// })).toBeVisible()
   await page.getByRole("button", { name: "Konfirmasi" }).click()
   await validate(page)
   expect(await stockAt(fixture.product.id, fixture.rack.id)).toBe(10)

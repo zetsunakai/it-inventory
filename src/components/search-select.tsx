@@ -26,6 +26,7 @@ export function SearchSelect<T>({
   id,
   placeholder = "Cari kode atau nama",
   invalid,
+  required,
 }: {
   endpoint: string
   params?: Record<string, string>
@@ -36,6 +37,7 @@ export function SearchSelect<T>({
   id?: string
   placeholder?: string
   invalid?: boolean
+  required?: boolean
 }) {
   const [items, setItems] = useState<T[]>(value ? [value] : [])
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle")
@@ -78,6 +80,7 @@ export function SearchSelect<T>({
   return (
     <Combobox<T>
       items={items}
+      required={required}
       value={value}
       onValueChange={onValueChange}
       // Penyaringan sudah dilakukan server.

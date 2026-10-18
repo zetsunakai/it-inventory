@@ -4,6 +4,9 @@ import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
 import type { Role } from "@/lib/permissions"
 import { saveCustomsDocument } from "@/modules/it-inventory/actions/customs-documents"
 import {
+  customsDocumentFields,
+  customsLineFields,
+  customsListBlock,
   emptyAttachment,
   emptyDraft,
   emptyParty,
@@ -13,8 +16,10 @@ import { BC20, BC23, BC261, BC30 } from "@/modules/it-inventory/lib/customs-spec
 import {
   getCustomsDocument,
   newCustomsDraft,
+  requiredCustomsSpec,
 } from "@/modules/it-inventory/server/queries/customs-documents"
 import type { CurrentUser } from "@/server/auth/session"
+import { statusDates } from "@/server/queries/activity"
 import { db } from "@/server/db"
 import { company, customsDocumentLines, products, uomCategories, uoms } from "@/server/db/schema"
 
@@ -207,6 +212,11 @@ describe("saveCustomsDocument", () => {
     const created = await saveCustomsDocument(null, form("30", empty))
     if (!created.ok) throw new Error(created.errors.join("\n"))
     await db.execute(sql`select cancel_customs_document(${created.data.id})`)
+    // Tanggal tiap status untuk kartu status (dari audit log).
+    expect(Object.keys(await statusDates("customs_documents", created.data.id)).sort()).toEqual([
+      "cancelled",
+      "draft",
+    ])
     const blocked = await saveCustomsDocument(null, form("30", empty, created.data.id))
     expect(blocked).toMatchObject({
       ok: false,
@@ -296,4 +306,26 @@ describe("bagian khusus form hmx", () => {
     const duplicated = await getCustomsDocument(BC261, copy.id)
     expect(duplicated?.draft.guarantees).toEqual(temporary.guarantees)
   })
+})
+
+test("field mandatory mengikuti aturan BC tanpa mengubah spec asli", async () => {
+  const spec = await requiredCustomsSpec(BC23)
+  const fields = customsDocumentFields(spec)
+  expect(
+    fields.find((field) => field.store === "header" && field.key === "grossWeight")?.required,
+  ).toBe(true)
+  expect(
+    fields.find((field) => field.store === "details" && field.key === "loadingPortCode")?.required,
+  ).toBe(true)
+  expect(
+    fields.find((field) => field.store === "party" && field.role === "5" && field.key === "name")
+      ?.required,
+  ).toBe(true)
+  expect(customsLineFields(spec).find((field) => field.key === "hsCode")?.required).toBe(true)
+  expect(
+    customsListBlock(spec, "packages")?.columns.find((field) => field.key === "packageTypeCode")
+      ?.required,
+  ).toBe(true)
+  expect(customsDocumentFields(BC23).some((field) => field.required)).toBe(false)
+  expect(fields.some((field) => !field.required)).toBe(true)
 })

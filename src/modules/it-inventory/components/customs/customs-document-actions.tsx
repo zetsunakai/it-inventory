@@ -1,6 +1,6 @@
 "use client"
 
-import { Copy, Ellipsis, FileSpreadsheet, FileText } from "lucide-react"
+import { Copy } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useId, useState, useTransition, type ReactNode } from "react"
 
@@ -17,18 +17,11 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import type { ActionResult } from "@/lib/action-result"
 import {
-  cancelCustomsDocument,
   duplicateCustomsDocument,
   registerCustomsDocument,
   rejectCustomsDocument,
@@ -49,7 +42,7 @@ export function CustomsDocumentActions({
   ajuNumber,
   status,
   canWrite,
-  canCancel,
+  includeDuplicate = true,
 }: {
   id: string
   // Path menu jenis dokumen, mis. /dokumen-bc/bc23.
@@ -57,9 +50,8 @@ export function CustomsDocumentActions({
   ajuNumber: string
   status: CustomsDocumentStatus
   canWrite: boolean
-  canCancel: boolean
+  includeDuplicate?: boolean
 }) {
-  const router = useRouter()
   const { show } = usePageMessage()
   const [pending, startTransition] = useTransition()
   const [open, setOpen] = useState<string | null>(null)
@@ -166,24 +158,6 @@ export function CustomsDocumentActions({
       />,
     )
   }
-  if (canCancel && status !== "registered" && status !== "cancelled") {
-    actions.push(
-      dialog(
-        "cancel",
-        "Batalkan dokumen",
-        "ghost",
-        `Batalkan dokumen ${ajuNumber}?`,
-        "Dokumen yang sudah Batal tidak bisa dibuka lagi. Nomor aju tidak dipakai ulang.",
-        {
-          label: "Batalkan dokumen",
-          destructive: true,
-          onConfirm: () => run(() => cancelCustomsDocument({ id })),
-        },
-      ),
-    )
-  }
-  const exportHref = (format: "pdf" | "xlsx") =>
-    `/api/customs-documents/${id}/export?format=${format}`
   return (
     <div className="flex flex-wrap gap-2">
       {actions.map((action, index) => (
@@ -191,42 +165,39 @@ export function CustomsDocumentActions({
           {action}
         </span>
       ))}
-      {/* Aksi sekunder: unduh draft untuk input manual ke CEISA, duplikat (M3-13). */}
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="outline" size="icon" aria-label="Aksi lain" disabled={pending} />
-          }
-        >
-          <Ellipsis />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuItem render={<a href={exportHref("pdf")} />} className="h-9">
-            <FileText aria-hidden />
-            Unduh PDF
-          </DropdownMenuItem>
-          <DropdownMenuItem render={<a href={exportHref("xlsx")} />} className="h-9">
-            <FileSpreadsheet aria-hidden />
-            Unduh Excel
-          </DropdownMenuItem>
-          {canWrite && (
-            <DropdownMenuItem
-              className="h-9"
-              onClick={() =>
-                startTransition(async () => {
-                  const result = await duplicateCustomsDocument({ id })
-                  show(result)
-                  if (result.ok) router.push(`${path}/${result.data.id}`)
-                })
-              }
-            >
-              <Copy aria-hidden />
-              Duplikat
-            </DropdownMenuItem>
-          )}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {canWrite && includeDuplicate && <DuplicateCustomsButton id={id} path={path} />}
     </div>
+  )
+}
+
+export function DuplicateCustomsButton({
+  id,
+  path,
+  disabled,
+}: {
+  id: string
+  path: string
+  disabled?: boolean
+}) {
+  const router = useRouter()
+  const { show } = usePageMessage()
+  const [pending, startTransition] = useTransition()
+  return (
+    <Button
+      type="button"
+      variant="outline"
+      disabled={disabled || pending}
+      onClick={() =>
+        startTransition(async () => {
+          const result = await duplicateCustomsDocument({ id })
+          show(result)
+          if (result.ok) router.push(`${path}/${result.data.id}`)
+        })
+      }
+    >
+      <Copy aria-hidden />
+      Duplikat
+    </Button>
   )
 }
 

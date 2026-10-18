@@ -1,116 +1,90 @@
-"use client"
-
 import { Check, ChevronDown, CircleX } from "lucide-react"
-import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 
 export type StatusStep = { code: string; label: string }
 
-// Kartu status dokumen ala hmx (RU-23): "Langkah n dari m" + status sekarang; Detail membuka
-// daftar langkah (selesai, sekarang, berikutnya). Status di luar urutan (mis. Batal) tampil
-// tanpa nomor langkah.
+// Status saat ini; urutan alur hanya terlihat saat dropdown dibuka.
 export function StatusSteps({
   steps,
   current,
   outside,
   currentLabel,
+  dates = {},
 }: {
   steps: StatusStep[]
-  // Kode langkah sekarang (salah satu steps), atau kosong bila outside diisi.
   current?: string
-  // Status di luar urutan, mis. { label: "Batal" }.
-  outside?: { label: string; tone: "neutral" | "danger" }
-  // Label status sekarang bila lebih rinci dari nama langkahnya (mis. Sebagian tersedia).
+  outside?: { label: string; tone: "neutral" | "danger"; code?: string }
   currentLabel?: string
+  dates?: Record<string, Date>
 }) {
-  const [open, setOpen] = useState(false)
   const index = steps.findIndex((step) => step.code === current)
-  const done = !outside && index === steps.length - 1
+  const finished = !outside && index === steps.length - 1
   const label = outside?.label ?? currentLabel ?? steps[index]?.label ?? "—"
 
   return (
-    <div className="w-full rounded-2xl border bg-card lg:w-80">
-      <button
-        type="button"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-        className="flex w-full items-center gap-3 p-3 text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
-      >
-        <span
-          className={cn(
-            "flex size-9 shrink-0 items-center justify-center rounded-full",
-            outside
-              ? outside.tone === "danger"
-                ? "bg-destructive-soft text-destructive"
-                : "bg-muted text-muted-foreground"
-              : done
-                ? "bg-success-soft text-success"
+    <section aria-label="Status" className="relative rounded-2xl border bg-card">
+      <details className="group">
+        <summary className="flex cursor-pointer list-none items-center gap-3 rounded-2xl px-4 py-3 text-control outline-none focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-details-marker]:hidden">
+          <span
+            aria-hidden
+            className={cn(
+              "flex size-6 shrink-0 items-center justify-center rounded-full",
+              outside
+                ? outside.tone === "danger"
+                  ? "bg-destructive-soft text-destructive"
+                  : "bg-muted text-muted-foreground"
                 : "bg-info-soft text-primary",
-          )}
-          aria-hidden
-        >
-          {outside ? (
-            <CircleX className="size-4" />
-          ) : done ? (
-            <Check className="size-4" />
-          ) : (
-            <span className="text-control font-semibold">{index + 1}</span>
-          )}
-        </span>
-        <span className="min-w-0 flex-1">
-          {!outside && (
-            <span className="block text-caption text-muted-foreground">
-              Langkah {index + 1} dari {steps.length}
-            </span>
-          )}
-          <span className="block truncate text-control font-semibold">{label}</span>
-        </span>
-        <span className="flex items-center gap-1 text-caption font-medium text-primary">
-          Detail
+            )}
+          >
+            {outside ? (
+              <CircleX className="size-4" />
+            ) : finished ? (
+              <Check className="size-4" />
+            ) : (
+              <span className="size-2 rounded-full bg-primary" />
+            )}
+          </span>
+          <span aria-current="step" className="min-w-0 flex-1 font-semibold">
+            {label}
+          </span>
           <ChevronDown
-            className={cn("size-4 transition-transform", open && "rotate-180")}
+            className="size-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180"
             aria-hidden
           />
-        </span>
-      </button>
-      {open && (
-        <ol className="space-y-2 border-t px-3 py-3">
+        </summary>
+        <ol className="absolute top-full right-0 z-20 mt-2 w-full min-w-56 space-y-3 rounded-2xl border bg-popover p-4 text-popover-foreground shadow-md">
           {steps.map((step, stepIndex) => {
-            const state = outside
-              ? "upcoming"
-              : stepIndex < index || done
-                ? "done"
-                : stepIndex === index
-                  ? "current"
-                  : "upcoming"
+            const active = !outside && stepIndex === index
+            const done = outside ? Boolean(dates[step.code]) : stepIndex < index || finished
             return (
-              <li key={step.code} className="flex items-center gap-2.5 text-control">
+              <li key={step.code} className="flex items-center gap-3 text-control">
                 <span
-                  className={cn(
-                    "flex size-5 shrink-0 items-center justify-center rounded-full border text-caption",
-                    state === "done" && "border-success bg-success text-white",
-                    state === "current" && "border-primary bg-primary text-primary-foreground",
-                    state === "upcoming" && "text-muted-foreground",
-                  )}
                   aria-hidden
+                  className={cn(
+                    "flex size-5 shrink-0 items-center justify-center rounded-full border",
+                    done && "border-primary bg-primary text-primary-foreground",
+                    active && !done && "border-primary text-primary",
+                    !active && !done && "border-border",
+                  )}
                 >
-                  {state === "done" ? <Check className="size-3" /> : stepIndex + 1}
+                  {done ? (
+                    <Check className="size-3" />
+                  ) : active ? (
+                    <span className="size-2 rounded-full bg-primary" />
+                  ) : null}
                 </span>
                 <span
-                  className={cn(
-                    state === "current" && "font-semibold text-primary",
-                    state === "upcoming" && "text-muted-foreground",
-                  )}
+                  className={cn(active ? "font-semibold text-primary" : "text-muted-foreground")}
                 >
-                  {step.label}
-                  {state === "current" && <span className="sr-only"> (sekarang)</span>}
+                  {active ? (currentLabel ?? step.label) : step.label}
+                  {active && <span className="sr-only"> (sekarang)</span>}
                 </span>
               </li>
             )
           })}
         </ol>
-      )}
-    </div>
+      </details>
+    </section>
   )
 }

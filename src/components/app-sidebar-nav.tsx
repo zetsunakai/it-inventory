@@ -443,7 +443,6 @@ function ModuleSwitcher({
               className="w-56"
             >
               <DropdownMenuGroup>
-                <DropdownMenuLabel className="text-caption">Pilih modul</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={value}
                   onValueChange={(next) => onChange(next as AppModule)}
@@ -451,7 +450,12 @@ function ModuleSwitcher({
                   {modules.map((module) => {
                     const ModuleIcon = MODULE_MENUS[module].icon
                     return (
-                      <DropdownMenuRadioItem key={module} value={module} className="h-10">
+                      <DropdownMenuRadioItem
+                        key={module}
+                        value={module}
+                        closeOnClick
+                        className="h-10"
+                      >
                         <ModuleIcon className="size-4 text-muted-foreground" aria-hidden />
                         {MODULE_MENUS[module].label}
                       </DropdownMenuRadioItem>

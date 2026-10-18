@@ -21,6 +21,9 @@ import {
   customsLineFields,
   emptyDraft,
   isListBlock,
+  isFieldGroup,
+  type CustomsField,
+  type CustomsBlock,
   type CustomsAttachmentDraft,
   type CustomsDocumentDraft,
   type CustomsFormSpec,
@@ -31,6 +34,7 @@ import { companyAsCustomsParty } from "@/modules/it-inventory/lib/company"
 import { db } from "@/server/db"
 import {
   company,
+  docValidationRules,
   customsAttachments,
   customsBankAccounts,
   customsContainers,
@@ -570,5 +574,49 @@ export async function getCustomsRevision(
     registrationDate: (rows.document.registrationDate as string | null) ?? null,
     draft,
     refLabels: await refLabelsFor(spec, draft),
+  }
+}
+
+// Penanda wajib mengikuti aturan kelengkapan aktif per jenis dokumen.
+export async function requiredCustomsSpec(spec: CustomsFormSpec): Promise<CustomsFormSpec> {
+  const rules = await db
+    .select()
+    .from(docValidationRules)
+    .where(and(eq(docValidationRules.docCode, spec.code), eq(docValidationRules.active, true)))
+  const field = (item: CustomsField, target?: string): CustomsField => {
+    const store = item.store ?? target
+    const required = rules.some((rule) => {
+      if (store === "party")
+        return rule.target === "party" && rule.field === item.role && item.key === "name"
+      const key = rule.field.replace(/_([a-z])/g, (_, letter: string) => letter.toUpperCase())
+      return rule.target === store && key === item.key
+    })
+    return { ...item, required: item.required || required }
+  }
+  const blocks = (items: CustomsBlock[]): CustomsBlock[] =>
+    items.map((block) => {
+      if (isListBlock(block)) {
+        const targets: Record<string, string> = {
+          packages: "package",
+          containers: "container",
+          transports: "transport",
+          owners: "party",
+        }
+        const target = targets[block.list]
+        return { ...block, columns: block.columns.map((item) => field(item, target)) }
+      }
+      return {
+        ...block,
+        fields: block.fields.map((item) =>
+          isFieldGroup(item)
+            ? { ...item, fields: item.fields.map((entry) => field(entry)) }
+            : field(item),
+        ),
+      }
+    })
+  return {
+    ...spec,
+    tabs: spec.tabs.map((tab) => ({ ...tab, blocks: blocks(tab.blocks) })),
+    line: { ...spec.line, blocks: blocks(spec.line.blocks) },
   }
 }

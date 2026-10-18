@@ -40,8 +40,9 @@ test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => 
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),
   ).toBeVisible()
-  // Kartu status langkah (RU-23); teks yang sama juga ada di panel Aktivitas.
-  await expect(page.getByRole("button", { name: /^Langkah 3 dari 3 Selesai/ })).toBeVisible()
+  // Kartu status (timeline langkah); teks yang sama juga ada di panel Aktivitas.
+  const currentStep = page.getByRole("region", { name: "Status" }).locator('[aria-current="step"]')
+  await expect(currentStep).toContainText("Selesai")
   await expect(page.getByRole("button", { name: "Batalkan penerimaan" })).toHaveCount(0)
 
   expect(await stockAt(fixture.product.id, fixture.rack.id)).toBe(12.5)

@@ -197,3 +197,21 @@ export async function tableActivity(
     ]
   })
 }
+
+// Kapan terakhir kali record mencapai setiap nilai status, dari audit log: saat dibuat (INSERT)
+// dan setiap perubahan kolom status. Dipakai kartu status dokumen (StatusSteps) untuk tanggal per
+// langkah; status yang dicapai ulang (mis. kembali ke Draft) memakai waktu terakhir.
+export async function statusDates(
+  table: string,
+  recordId: string,
+  column = "status",
+): Promise<Record<string, Date>> {
+  const result = await db.execute<{ status: string; at: string }>(sql`
+    select a.new_data ->> ${column} as status, max(a.occurred_at) as at
+    from audit_logs a
+    where a.table_name = ${table} and a.record_id = ${recordId}
+      and a.new_data ->> ${column} is not null
+      and (a.action = 'INSERT' or a.old_data ->> ${column} is distinct from a.new_data ->> ${column})
+    group by 1`)
+  return Object.fromEntries(result.rows.map((row) => [row.status, new Date(row.at)]))
+}

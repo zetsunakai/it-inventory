@@ -16,6 +16,7 @@ export function FormField({
   errors,
   hint,
   span = 6,
+  required,
   children,
 }: {
   label: string
@@ -23,12 +24,19 @@ export function FormField({
   errors?: string[]
   hint?: string
   span?: FieldSpan
+  required?: boolean
   children: ReactNode
 }) {
   return (
     <div className="form-field" data-span={span}>
       <Label htmlFor={htmlFor} className="min-h-5 text-control leading-5">
         {label}
+        {required && (
+          <span className="text-destructive" aria-hidden>
+            {" "}
+            *
+          </span>
+        )}
       </Label>
       {children}
       {hint && <p className="text-caption text-muted-foreground">{hint}</p>}

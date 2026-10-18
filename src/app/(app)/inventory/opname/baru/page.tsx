@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { StockCountForm } from "@/modules/inventory/components/stock-count-form"
+import { StatusSteps } from "@/components/document/status-steps"
 import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
@@ -16,6 +17,18 @@ export default function NewStockCountPage() {
       title="Buat sesi opname"
       description="Disimpan sebagai Draft. Saat Manajer menekan Mulai hitung, daftar hitung diambil dari stok di lingkup ini dan gudangnya dibekukan sampai opname disetujui atau dibatalkan."
       noun="sesi opname"
+      status={
+        <StatusSteps
+          steps={[
+            { code: "draft", label: "Draft" },
+            { code: "counting", label: "Berjalan" },
+            { code: "counted", label: "Selesai hitung" },
+            { code: "review", label: "Menunggu persetujuan" },
+            { code: "approved", label: "Disetujui" },
+          ]}
+          current="draft"
+        />
+      }
     >
       <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <Guarded />

@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { InterwarehouseForm } from "@/modules/inventory/components/interwarehouse-form"
+import { StatusSteps } from "@/components/document/status-steps"
 import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
@@ -15,6 +16,17 @@ export default function NewInterwarehousePage() {
       title="Buat transfer antar gudang"
       description="Disimpan sebagai Draft. Saat dikonfirmasi, transfer keluar dibuat dan stok gudang asal dipesan."
       noun="permintaan"
+      status={
+        <StatusSteps
+          steps={[
+            { code: "draft", label: "Draft" },
+            { code: "confirmed", label: "Dikonfirmasi" },
+            { code: "in_progress", label: "Di perjalanan" },
+            { code: "done", label: "Selesai" },
+          ]}
+          current="draft"
+        />
+      }
     >
       <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
         <Guarded />

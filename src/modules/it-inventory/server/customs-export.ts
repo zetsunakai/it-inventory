@@ -23,6 +23,8 @@ import {
   type CustomsListBlock,
 } from "@/modules/it-inventory/lib/customs-form"
 
+import type { CustomsDocumentRow } from "./queries/customs-documents"
+
 // Export draft dokumen BC ke PDF dan Excel (backlog M3-13, PRD 7.6) untuk membantu input manual
 // ke portal CEISA selama MVP. Isinya semua bagian dokumen, urut seperti tab form.
 
@@ -208,6 +210,63 @@ export async function customsExportExcel(spec: CustomsFormSpec, doc: ExportDocum
     })
   }
   return Buffer.from(await workbook.xlsx.writeBuffer())
+}
+
+// Rekap daftar BC menggunakan kolom dan urutan yang sama dengan list view.
+export async function customsListExport(
+  spec: CustomsFormSpec,
+  rows: CustomsDocumentRow[],
+  format: "pdf" | "xlsx",
+) {
+  const columns = [
+    "Nomor aju",
+    "Tanggal aju",
+    "Pemasok/penerima",
+    "Nomor daftar",
+    "Tanggal daftar",
+    "Barang",
+    "Status",
+  ]
+  const values = rows.map((row) => [
+    row.ajuNumber,
+    date(row.ajuDate),
+    row.counterparty ?? "—",
+    row.registrationNumber ?? "—",
+    date(row.registrationDate),
+    String(row.lineCount),
+    CUSTOMS_DOCUMENT_STATUS_LABELS[row.status],
+  ])
+  if (format === "xlsx") {
+    const workbook = new ExcelJS.Workbook()
+    workbook.creator = "IT Inventory"
+    const sheet = workbook.addWorksheet(spec.title)
+    sheet.addRow(columns).font = { bold: true }
+    values.forEach((row) => sheet.addRow(row))
+    sheet.columns.forEach((column) => {
+      column.width = 26
+    })
+    sheet.views = [{ state: "frozen", ySplit: 1 }]
+    sheet.autoFilter = {
+      from: { row: 1, column: 1 },
+      to: { row: Math.max(1, rows.length + 1), column: columns.length },
+    }
+    return Buffer.from(await workbook.xlsx.writeBuffer())
+  }
+  const pdf = await PDFDocument.create()
+  pdf.setTitle(`Daftar ${spec.title}`)
+  pdf.setCreator("IT Inventory")
+  const regular = await pdf.embedFont(StandardFonts.Helvetica)
+  const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
+  const writer = new PdfWriter(pdf, regular, bold)
+  writer.text(`Daftar ${spec.title}`, { font: bold, size: 14 })
+  writer.text(`${rows.length} dokumen`, { size: 9 })
+  if (!rows.length) writer.text("Tidak ada dokumen.")
+  for (const row of values) {
+    writer.gap(10)
+    writer.rule()
+    columns.forEach((column, index) => writer.field(column, row[index]))
+  }
+  return pdf.save()
 }
 
 // PDF A4: judul, catatan draft, lalu setiap bagian. Tabel ditulis per baris sebagai label: nilai

@@ -27,7 +27,11 @@ test("selisih opname yang disetujui tercatat sebagai penyesuaian; gudang beku se
 
   await page.getByRole("button", { name: "Mulai hitung" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Mulai hitung" }).click()
-  await expect(page.getByText(/^Penghitungan dimulai\. Gudang dibekukan/)).toBeVisible()
+  await expect(
+    page
+      .getByRole("status")
+      .filter({ hasText: /^Penghitungan dimulai\. Gudang dibekukan/, visible: true }),
+  ).toBeVisible()
   await expect(page.getByText(`Gudang ${fixture.warehouse.code} dibekukan`)).toBeVisible()
 
   // Transfer di gudang beku tidak bisa divalidasi.
@@ -66,10 +70,10 @@ test("selisih opname yang disetujui tercatat sebagai penyesuaian; gudang beku se
   )
 
   await page.getByRole("button", { name: "Ajukan persetujuan" }).click()
-  // Kartu status langkah (RU-23); teks yang sama juga ada di panel Aktivitas.
+  // Kartu status (timeline langkah); teks yang sama juga ada di panel Aktivitas.
   await expect(
-    page.getByRole("button", { name: /^Langkah \d+ dari \d+ Menunggu persetujuan/ }),
-  ).toBeVisible()
+    page.getByRole("region", { name: "Status" }).locator('[aria-current="step"]'),
+  ).toContainText("Menunggu persetujuan")
 
   await page.getByRole("button", { name: "Setujui hasil opname" }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Setujui" }).click()

@@ -1,4 +1,4 @@
-import { Plus } from "lucide-react"
+import { FileSpreadsheet, FileText, Plus } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense } from "react"
@@ -39,12 +39,13 @@ import {
   listCustomsDocuments,
   listCustomsRevisions,
   newCustomsDraft,
+  requiredCustomsSpec,
   type CustomsDocumentDetail,
   type CustomsDocumentRow,
   type CustomsRevisionEntry,
 } from "@/modules/it-inventory/server/queries/customs-documents"
 import { requirePermission } from "@/server/auth/session"
-import { recordActivity } from "@/server/queries/activity"
+import { recordActivity, statusDates } from "@/server/queries/activity"
 
 import { CustomsDocumentActions } from "./customs-document-actions"
 import { CustomsDocumentForm } from "./customs-document-form"
@@ -101,10 +102,48 @@ export function CustomsListPage({
 }) {
   return (
     <>
-      <PageHeader title={spec.title} description={spec.description} />
+      <PageHeader
+        title={spec.title}
+        description={spec.description}
+        actions={
+          <Suspense fallback={null}>
+            <CustomsListDownloads spec={spec} searchParams={searchParams} />
+          </Suspense>
+        }
+      />
       <Suspense fallback={<DataTableSkeleton />}>
         <CustomsTable spec={spec} searchParams={searchParams} />
       </Suspense>
+    </>
+  )
+}
+
+async function CustomsListDownloads({
+  spec,
+  searchParams,
+}: {
+  spec: CustomsFormSpec
+  searchParams: Promise<RawSearchParams>
+}) {
+  await requirePermission("bc:read")
+  const raw = await searchParams
+  const query = new URLSearchParams({ docCode: spec.code })
+  for (const key of ["q", "status", "periode", "kantor"]) {
+    const value = raw[key]
+    const single = Array.isArray(value) ? value[0] : value
+    if (single) query.set(key, single)
+  }
+  const href = (format: string) => `/api/customs-documents/export?${query}&format=${format}`
+  return (
+    <>
+      <a href={href("pdf")} download className={buttonVariants({ variant: "outline" })}>
+        <FileText />
+        Unduh PDF
+      </a>
+      <a href={href("xlsx")} download className={buttonVariants({ variant: "outline" })}>
+        <FileSpreadsheet />
+        Unduh Excel
+      </a>
     </>
   )
 }
@@ -201,8 +240,10 @@ export function NewCustomsDocumentPage({ spec }: { spec: CustomsFormSpec }) {
   return (
     <NewRecordLayout
       title={`Buat ${spec.title}`}
-      description="Disimpan sebagai Draft dengan nomor aju baru. Isian boleh dilengkapi bertahap."
+      hideTitle
+      description="Disimpan sebagai Draft dengan nomor aju baru."
       noun="dokumen"
+      status={<StatusSteps steps={STEPS} current="draft" />}
     >
       <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
         <NewCustomsForm spec={spec} />
@@ -213,7 +254,10 @@ export function NewCustomsDocumentPage({ spec }: { spec: CustomsFormSpec }) {
 
 async function NewCustomsForm({ spec }: { spec: CustomsFormSpec }) {
   const user = await requirePermission("bc:write")
-  const { draft, refLabels, companyReady } = await newCustomsDraft(spec, user.name)
+  const [formSpec, { draft, refLabels, companyReady }] = await Promise.all([
+    requiredCustomsSpec(spec),
+    newCustomsDraft(spec, user.name),
+  ])
   return (
     <div className="space-y-4">
       {!companyReady && (
@@ -224,7 +268,7 @@ async function NewCustomsForm({ spec }: { spec: CustomsFormSpec }) {
           </Link>
         </p>
       )}
-      <CustomsDocumentForm spec={spec} initial={draft} initialLabels={refLabels} />
+      <CustomsDocumentForm spec={formSpec} initial={draft} initialLabels={refLabels} />
     </div>
   )
 }
@@ -262,44 +306,51 @@ async function CustomsDetail({
   if (!z.uuid().safeParse(id).success) notFound()
   const doc = await getCustomsDocument(spec, id)
   if (!doc) notFound()
-  const activity = await recordActivity("customs_documents", doc.id, CUSTOMS_ACTIVITY_LABELS)
-  const revisions = await listCustomsRevisions(spec, doc.id, doc.draft)
+  const [activity, dates] = await Promise.all([
+    recordActivity("customs_documents", doc.id, CUSTOMS_ACTIVITY_LABELS),
+    statusDates("customs_documents", doc.id),
+  ])
+  const [revisions, formSpec] = await Promise.all([
+    listCustomsRevisions(spec, doc.id, doc.draft),
+    requiredCustomsSpec(spec),
+  ])
   const canWrite = hasPermission(user.roles, "bc:write")
   const editable = canWrite && (doc.status === "draft" || doc.status === "ready")
 
   return (
     <DocumentLayout
       title={`${spec.title} ${doc.ajuNumber}`}
+      hideTitle
       actions={
-        <CustomsDocumentActions
-          id={doc.id}
-          path={spec.path}
-          ajuNumber={doc.ajuNumber}
-          status={doc.status}
-          canWrite={canWrite}
-          canCancel={hasPermission(user.roles, "bc:cancel")}
-        />
+        !editable && (
+          <CustomsDocumentActions
+            id={doc.id}
+            path={spec.path}
+            ajuNumber={doc.ajuNumber}
+            status={doc.status}
+            canWrite={canWrite}
+          />
+        )
       }
       crumbs={[{ label: doc.ajuNumber }]}
       meta={
-        <span>
-          Tanggal aju {wibDate(doc.ajuDate)}
-          {doc.registrationNumber &&
-            ` · Nomor daftar ${doc.registrationNumber}${
-              doc.registrationDate ? ` (${wibDate(doc.registrationDate)})` : ""
-            }`}
-          {doc.version > 1 && ` · Versi ${doc.version}`}
-        </span>
+        [
+          doc.registrationNumber && `Nomor daftar ${doc.registrationNumber}`,
+          doc.version > 1 && `Versi ${doc.version}`,
+        ]
+          .filter(Boolean)
+          .join(" · ") || undefined
       }
       status={
         <StatusSteps
           steps={STEPS}
           current={doc.status}
+          dates={dates}
           outside={
             doc.status === "rejected"
-              ? { label: "Ditolak", tone: "danger" }
+              ? { label: "Ditolak", tone: "danger", code: "rejected" }
               : doc.status === "cancelled"
-                ? { label: "Batal", tone: "neutral" }
+                ? { label: "Batal", tone: "neutral", code: "cancelled" }
                 : undefined
           }
         />
@@ -310,10 +361,20 @@ async function CustomsDetail({
         <StatusNotice doc={doc} />
         {editable ? (
           <CustomsDocumentForm
-            spec={spec}
+            spec={formSpec}
             documentId={doc.id}
             initial={doc.draft}
             initialLabels={doc.refLabels}
+            actions={
+              <CustomsDocumentActions
+                id={doc.id}
+                path={spec.path}
+                ajuNumber={doc.ajuNumber}
+                status={doc.status}
+                canWrite={canWrite}
+                includeDuplicate={false}
+              />
+            }
           />
         ) : (
           <CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />
@@ -334,23 +395,8 @@ async function CustomsDetail({
   )
 }
 
-// Keterangan status di atas isi dokumen: kekurangan Draft, siap diajukan, alasan penolakan,
-// dan data pendaftaran.
+// Keterangan siap diajukan dan alasan penolakan di atas isi dokumen.
 function StatusNotice({ doc }: { doc: CustomsDocumentDetail }) {
-  if (doc.status === "draft" && doc.missing.length) {
-    return (
-      <details className="rounded-lg bg-warning-soft p-3 text-control">
-        <summary className="cursor-pointer font-medium">
-          Belum bisa diajukan: {doc.missing.length} isian belum lengkap
-        </summary>
-        <ul className="mt-2 list-disc space-y-0.5 pl-5">
-          {doc.missing.map((message) => (
-            <li key={message}>{message}</li>
-          ))}
-        </ul>
-      </details>
-    )
-  }
   if (doc.status === "ready") {
     return (
       <p className="rounded-lg bg-success-soft p-3 text-control">
@@ -430,6 +476,7 @@ async function RevisionDetail({
   return (
     <DocumentLayout
       title={`${spec.title} ${revision.ajuNumber} versi ${revision.version}`}
+      hideTitle
       crumbs={[
         { label: revision.ajuNumber, href: `${spec.path}/${id}` },
         { label: `Versi ${revision.version}` },
@@ -437,8 +484,8 @@ async function RevisionDetail({
       meta={
         <span>
           Versi lama, hanya baca
-          {revision.registrationNumber && ` · Nomor daftar ${revision.registrationNumber}`} ·
-          Direvisi {formatDateTime(revision.createdAt)}: {revision.reason}
+          {revision.registrationNumber && ` · Nomor daftar ${revision.registrationNumber}`} · Alasan
+          revisi: {revision.reason}
         </span>
       }
     >

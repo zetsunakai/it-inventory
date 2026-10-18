@@ -136,6 +136,9 @@ export async function receiveStock(
         destinationLocationId: fixture.rack.id,
       })
       if (validate) {
+        // Fixture inventory memakai pengecualian gerbang BC yang sama dengan server E2E.
+        // Gerbang aktif diuji terpisah di tests/db/customs-gate.test.ts.
+        await tx.execute(sql`set local app.customs_gate = 'off'`)
         await tx.execute(sql`select validate_transfer(${transfer.id}, ${at ?? null}::timestamptz)`)
       }
       return transfer.id

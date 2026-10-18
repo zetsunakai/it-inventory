@@ -94,6 +94,7 @@ export type CustomsField = CustomsFieldKind & {
   store?: CustomsFieldStore
   role?: string
   span?: FieldSpan
+  required?: boolean
 }
 
 // Beberapa isian sebaris di bawah satu label (grup side_by_side hmx, mis. Jenis Identitas).

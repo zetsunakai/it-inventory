@@ -25,7 +25,7 @@ import {
 } from "@/modules/inventory/server/queries/return-requests"
 import { listInternalLocations } from "@/modules/inventory/server/queries/transfers"
 import { InfoGrid } from "@/components/layout/info-grid"
-import { recordActivity } from "@/server/queries/activity"
+import { recordActivity, statusDates } from "@/server/queries/activity"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { StatusSteps } from "@/components/document/status-steps"
@@ -111,7 +111,10 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
   if (!z.uuid().safeParse(id).success) notFound()
   const request = await getReturnRequest(user.id, id)
   if (!request) notFound()
-  const activity = await recordActivity("return_requests", request.id, RETURN_ACTIVITY_LABELS)
+  const [activity, dates] = await Promise.all([
+    recordActivity("return_requests", request.id, RETURN_ACTIVITY_LABELS),
+    statusDates("return_requests", request.id),
+  ])
   const canWrite = hasPermission(user.roles, "inventory:write")
   const editable = canWrite && request.status === "draft"
   const locations = editable
@@ -194,7 +197,12 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
             { code: "done", label: "Selesai" },
           ]}
           current={request.status}
-          outside={request.status === "cancelled" ? { label: "Batal", tone: "neutral" } : undefined}
+          dates={dates}
+          outside={
+            request.status === "cancelled"
+              ? { label: "Batal", tone: "neutral", code: "cancelled" }
+              : undefined
+          }
         />
       }
       activity={<ActivityLog entries={activity} noun="permintaan retur" />}

@@ -2,7 +2,7 @@
 
 import { Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useId, useState, type ReactNode } from "react"
+import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection } from "@/components/form-field"
@@ -33,6 +33,7 @@ import {
   type CustomsRowDraft,
 } from "@/modules/it-inventory/lib/customs-form"
 
+import { DuplicateCustomsButton } from "./customs-document-actions"
 import { AttachmentsEditor } from "./attachments-editor"
 import {
   CustomsControl,
@@ -49,17 +50,19 @@ type OnLabel = (label?: { key: string; name: string }) => void
 
 // Form dokumen BC: tab, grup, field, dan label sama dengan form hmx jenisnya (spec dari
 // customs-layouts.generated.ts). Semua isian disimpan di satu state dan dikirim sebagai JSON;
-// Draft boleh belum lengkap (kelengkapan diperiksa aturan validasi saat menuju Siap ajukan).
+// Field wajib mengikuti aturan kelengkapan aktif per jenis dokumen.
 export function CustomsDocumentForm({
   spec,
   documentId,
   initial,
   initialLabels,
+  actions,
 }: {
   spec: CustomsFormSpec
   documentId?: string
   initial: CustomsDocumentDraft
   initialLabels: RefLabels
+  actions?: ReactNode
 }) {
   const router = useRouter()
   const uid = useId()
@@ -70,6 +73,8 @@ export function CustomsDocumentForm({
   )
   const [draft, setDraft] = useState(initial)
   const [labels, setLabels] = useState(initialLabels)
+  const [activeTab, setActiveTab] = useState(spec.tabs[0]?.key)
+  const invalidTarget = useRef<HTMLElement | null>(null)
 
   useEffect(() => {
     if (state?.ok && !documentId) router.push(`${spec.path}/${state.data.id}`)
@@ -112,6 +117,7 @@ export function CustomsDocumentForm({
                 key={itemIndex}
                 id={fieldId(`${key}-partner`)}
                 label={item.label}
+                required={item.required}
                 party={draft.parties.find((entry) => entry.entityTypeCode === role.code)}
                 onChange={(party) =>
                   setDraft((current) => ({
@@ -222,11 +228,34 @@ export function CustomsDocumentForm({
     isListBlock(block) ? listBlock(block, key) : fieldBlock(block, key)
 
   return (
-    <form action={formAction} className={FORM_CLASS}>
+    <form
+      action={formAction}
+      className={FORM_CLASS}
+      onInvalidCapture={(event) => {
+        if (invalidTarget.current === event.target) return
+        event.preventDefault()
+        if (invalidTarget.current || !(event.target instanceof HTMLElement)) return
+        const target = event.target
+        invalidTarget.current = target
+        const tab = target.closest<HTMLElement>("[data-customs-tab]")?.dataset.customsTab
+        if (tab) setActiveTab(tab)
+        requestAnimationFrame(() => {
+          target.focus()
+          if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement) {
+            target.reportValidity()
+          }
+          invalidTarget.current = null
+        })
+      }}
+    >
       <FormActions>
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
+        {documentId && (
+          <DuplicateCustomsButton id={documentId} path={spec.path} disabled={pending} />
+        )}
+        {actions}
         {state?.ok && documentId && (
           <p role="status" className="text-control text-success">
             Perubahan disimpan.
@@ -238,7 +267,7 @@ export function CustomsDocumentForm({
       <input type="hidden" name="docCode" value={spec.code} />
       <input type="hidden" name="document" value={JSON.stringify(draft)} />
 
-      <Tabs defaultValue={spec.tabs[0]?.key}>
+      <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           {spec.tabs.map((tab) => (
             <TabsTrigger key={tab.key} value={tab.key}>
@@ -248,7 +277,7 @@ export function CustomsDocumentForm({
         </TabsList>
         {spec.tabs.map((tab) => (
           // Isi tab tetap terpasang supaya pilihan yang belum disimpan tidak hilang saat pindah tab.
-          <TabsContent key={tab.key} value={tab.key} keepMounted>
+          <TabsContent key={tab.key} value={tab.key} data-customs-tab={tab.key} keepMounted>
             <div className="flex flex-col gap-10">
               {sideBySide(tab.blocks).map((group, index) =>
                 group.length > 1 ? (
@@ -317,12 +346,14 @@ function PartnerField({
   id,
   label,
   roleCode,
+  required,
   party,
   onChange,
 }: {
   id: string
   label: string
   roleCode: string
+  required?: boolean
   party: CustomsPartyDraft | undefined
   onChange: (party: CustomsPartyDraft) => void
 }) {
@@ -360,10 +391,16 @@ function PartnerField({
   }
 
   return (
-    <FormField label={label} htmlFor={id} errors={loadError ? [loadError] : undefined}>
+    <FormField
+      label={label}
+      htmlFor={id}
+      required={required}
+      errors={loadError ? [loadError] : undefined}
+    >
       <SearchSelect<PartnerChoice>
         id={id}
         endpoint="/api/partners"
+        required={required}
         value={partner}
         onValueChange={pickPartner}
         getKey={(choice) => choice.id}
@@ -408,7 +445,10 @@ function RowsTable({
         >
           <span>Seri</span>
           {columns.map((column) => (
-            <span key={column.key}>{column.label}</span>
+            <span key={column.key}>
+              {column.label}
+              {column.required && <span className="text-destructive"> *</span>}
+            </span>
           ))}
         </div>
         {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada.</p>}
@@ -602,10 +642,12 @@ function LinesEditor({
                       label={item.label}
                       htmlFor={`${prefix}-product`}
                       span={12}
+                      required
                     >
                       <SearchSelect<ProductChoice>
                         id={`${prefix}-product`}
                         endpoint="/api/customs-products"
+                        required
                         value={
                           line.product
                             ? { ...line.product, hsCode: line.hsCode, uomCode: "" }
@@ -688,6 +730,7 @@ function LinesEditor({
 // Tidak ada di form hmx: qty dalam satuan stok produk dipakai gerbang transfer (M4-02).
 const STOCK_QTY: CustomsField = {
   key: "stockQty",
+  required: true,
   label: "Jumlah dalam Satuan Stok",
   kind: "qty",
   store: "line",

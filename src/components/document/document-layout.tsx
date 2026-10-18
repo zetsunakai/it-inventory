@@ -7,19 +7,17 @@ import { PageMessageSlot } from "@/components/layout/page-message"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-import { SidePanel } from "./side-panel"
+import { DocumentAside, SidePanel } from "./side-panel"
 
 export type RecordNeighbors = {
   prev?: { href: string; label: string }
   next?: { href: string; label: string }
 }
 
-// Kerangka form/dokumen ala hmx-002 (backlog RU-23):
-//   kiri: judul + tombol record sebelumnya/berikutnya, meta, tombol aksi alur;
-//   kanan: kartu status (StatusSteps);
-//   isi dokumen (grup info, tab) dengan panel log aktivitas di samping.
+// Status berada di kanan baris aksi; aktivitas tetap di samping isi dokumen.
 export function DocumentLayout({
   title,
+  hideTitle = false,
   crumbs,
   meta,
   actions,
@@ -29,6 +27,7 @@ export function DocumentLayout({
   children,
 }: {
   title: string
+  hideTitle?: boolean
   crumbs?: Crumb[]
   meta?: ReactNode
   actions?: ReactNode
@@ -40,36 +39,58 @@ export function DocumentLayout({
   return (
     <div className="space-y-6">
       <div className="space-y-4">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
           <div className="min-w-0 space-y-3">
-            <div className="flex items-center gap-3">
-              <h1 className="min-w-0 text-2xl font-semibold tracking-tight text-balance">
-                {title}
-              </h1>
-              {neighbors && (neighbors.prev || neighbors.next) && (
-                <nav aria-label="Record lain" className="flex shrink-0 gap-1">
-                  <NeighborLink target={neighbors.prev} label="Sebelumnya">
-                    <ChevronLeft />
-                  </NeighborLink>
-                  <NeighborLink target={neighbors.next} label="Berikutnya">
-                    <ChevronRight />
-                  </NeighborLink>
-                </nav>
-              )}
-            </div>
+            {(!hideTitle || neighbors?.prev || neighbors?.next) && (
+              <div className="flex items-center gap-3">
+                {!hideTitle && (
+                  <h1 className="min-w-0 text-2xl font-semibold tracking-tight text-balance">
+                    {title}
+                  </h1>
+                )}
+                {neighbors && (neighbors.prev || neighbors.next) && (
+                  <nav aria-label="Record lain" className="flex shrink-0 gap-1">
+                    <NeighborLink target={neighbors.prev} label="Sebelumnya">
+                      <ChevronLeft />
+                    </NeighborLink>
+                    <NeighborLink target={neighbors.next} label="Berikutnya">
+                      <ChevronRight />
+                    </NeighborLink>
+                  </nav>
+                )}
+              </div>
+            )}
             {meta && <div className="text-control text-muted-foreground">{meta}</div>}
-            {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
           </div>
-          {status}
         </div>
         <PageMessageSlot />
         <PageCrumbs crumbs={crumbs ?? [{ label: title }]} />
       </div>
       <div
-        className={cn("grid items-start gap-6", activity && "xl:grid-cols-[minmax(0,1fr)_auto]")}
+        className={cn(
+          "grid items-start gap-6",
+          (status || activity) && "xl:grid-cols-[minmax(0,1fr)_auto]",
+        )}
       >
-        <div className="min-w-0 space-y-8">{children}</div>
-        {activity && <SidePanel title="Aktivitas">{activity}</SidePanel>}
+        <div className="min-w-0 space-y-4">
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+          {children}
+        </div>
+        {(status || activity) &&
+          (status ? (
+            <div className="flex min-w-0 flex-col gap-4 xl:w-80">
+              {status}
+              {activity && (
+                <SidePanel title="Aktivitas" wide>
+                  {activity}
+                </SidePanel>
+              )}
+            </div>
+          ) : (
+            <DocumentAside>
+              {activity && <SidePanel title="Aktivitas">{activity}</SidePanel>}
+            </DocumentAside>
+          ))}
       </div>
     </div>
   )

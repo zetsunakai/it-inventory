@@ -45,7 +45,9 @@ async function switchModule(page: Page, label: string) {
   await sidebar(page)
     .getByRole("button", { name: /^Ganti modul/ })
     .click()
-  await page.getByRole("menuitemradio", { name: label }).click()
+  await expect(page.getByText("Pilih modul", { exact: true })).toHaveCount(0)
+  await page.getByRole("menuitemradio", { name: label, exact: true }).click()
+  await expect(page.getByRole("menuitemradio")).toHaveCount(0)
 }
 
 // Semua menu yang boleh dilihat, dari semua modul di pemilih.

@@ -37,7 +37,7 @@ export function CustomsControl({
   refLabels,
   ariaLabel,
 }: {
-  field: CustomsFieldKind & { label: string }
+  field: CustomsFieldKind & { label: string; required?: boolean }
   id: string
   value: string
   onChange: FieldChange
@@ -52,6 +52,7 @@ export function CustomsControl({
           key={labelKey}
           id={id}
           type={field.refType}
+          required={field.required}
           defaultValue={
             value ? { code: value, name: refLabels[labelKey] ?? "", parentCode: null } : null
           }
@@ -71,7 +72,12 @@ export function CustomsControl({
         label: `[${code}] ${name}`,
       }))
       return (
-        <Select items={items} value={value || null} onValueChange={(next) => onChange(next ?? "")}>
+        <Select
+          required={field.required}
+          items={items}
+          value={value || null}
+          onValueChange={(next) => onChange(next ?? "")}
+        >
           <SelectTrigger id={id} aria-label={ariaLabel} className="w-full">
             <SelectValue placeholder="Pilih" />
           </SelectTrigger>
@@ -91,6 +97,7 @@ export function CustomsControl({
           id={id}
           type="date"
           aria-label={ariaLabel}
+          required={field.required}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -113,6 +120,7 @@ export function CustomsControl({
           id={id}
           inputMode="decimal"
           aria-label={ariaLabel}
+          required={field.required}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className="tabular-nums"
@@ -128,6 +136,7 @@ export function CustomsControl({
           id={id}
           rows={2}
           aria-label={ariaLabel}
+          required={field.required}
           value={value}
           onChange={(event) => onChange(event.target.value)}
         />
@@ -135,6 +144,7 @@ export function CustomsControl({
         <Input
           id={id}
           aria-label={ariaLabel}
+          required={field.required}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           className={cn(field.mono && "font-mono")}
@@ -158,7 +168,7 @@ export function CustomsFormField({
   refLabels: RefLabels
 }) {
   return (
-    <FormField label={field.label} htmlFor={id} span={field.span}>
+    <FormField label={field.label} htmlFor={id} span={field.span} required={field.required}>
       <CustomsControl
         field={field}
         id={id}
@@ -186,7 +196,12 @@ export function CustomsGroupField({
   refLabels: RefLabels
 }) {
   return (
-    <FormField label={group.group} htmlFor={`${id}-${group.fields[0]?.key}`} span={6}>
+    <FormField
+      label={group.group}
+      htmlFor={`${id}-${group.fields[0]?.key}`}
+      span={6}
+      required={group.fields.some((field) => field.required)}
+    >
       <div className="flex flex-col gap-2 sm:flex-row">
         {group.fields.map((field) => (
           <div key={field.key} className="min-w-0 flex-1">

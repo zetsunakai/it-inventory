@@ -18,7 +18,7 @@ import { hasPermission } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { getStockCount } from "@/modules/inventory/server/queries/stock-counts"
 import { listInternalLocations } from "@/modules/inventory/server/queries/transfers"
-import { recordActivity } from "@/server/queries/activity"
+import { recordActivity, statusDates } from "@/server/queries/activity"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { StatusSteps } from "@/components/document/status-steps"
@@ -39,7 +39,10 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
   if (!z.uuid().safeParse(id).success) notFound()
   const count = await getStockCount(user.id, id)
   if (!count) notFound()
-  const activity = await recordActivity("stock_counts", count.id, STOCK_COUNT_ACTIVITY_LABELS)
+  const [activity, dates] = await Promise.all([
+    recordActivity("stock_counts", count.id, STOCK_COUNT_ACTIVITY_LABELS),
+    statusDates("stock_counts", count.id),
+  ])
 
   const canWrite = hasPermission(user.roles, "inventory:write")
   const canCount = canWrite && count.status === "counting"
@@ -100,7 +103,12 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
             { code: "approved", label: "Disetujui" },
           ]}
           current={count.status}
-          outside={count.status === "cancelled" ? { label: "Batal", tone: "neutral" } : undefined}
+          dates={dates}
+          outside={
+            count.status === "cancelled"
+              ? { label: "Batal", tone: "neutral", code: "cancelled" }
+              : undefined
+          }
         />
       }
       activity={<ActivityLog entries={activity} noun="sesi opname" />}
