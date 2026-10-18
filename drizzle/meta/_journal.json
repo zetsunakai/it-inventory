@@ -547,6 +547,41 @@
       "when": 1792251564482,
       "tag": "0077_customs_duplicate",
       "breakpoints": true
+    },
+    {
+      "idx": 78,
+      "version": "7",
+      "when": 1792296351573,
+      "tag": "0078_customs_transfer_links",
+      "breakpoints": true
+    },
+    {
+      "idx": 79,
+      "version": "7",
+      "when": 1792296398615,
+      "tag": "0079_customs_gate",
+      "breakpoints": true
+    },
+    {
+      "idx": 80,
+      "version": "7",
+      "when": 1792296649498,
+      "tag": "0080_origin_allocations",
+      "breakpoints": true
+    },
+    {
+      "idx": 81,
+      "version": "7",
+      "when": 1792296650961,
+      "tag": "0081_origin_allocation_rules",
+      "breakpoints": true
+    },
+    {
+      "idx": 82,
+      "version": "7",
+      "when": 1792297033610,
+      "tag": "0082_customs_move_links",
+      "breakpoints": true
     }
   ]
 }

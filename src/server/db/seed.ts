@@ -9,6 +9,7 @@ import { eq, inArray } from "drizzle-orm"
 import type { Role } from "../../lib/permissions"
 import { REF_CODE_TYPES } from "../../lib/ref-codes"
 import { createDb, type Db } from "./client"
+import { seedDemoCustoms } from "./seed-demo"
 import {
   accounts,
   locations,
@@ -34,6 +35,8 @@ async function main() {
     await seedUoms(db)
     await seedAdmin(db)
     if (process.env.SEED_DEMO_USERS === "true") await seedDemoUsers(db)
+    // Alur dokumen BC (M4-07): BC 2.3 → penerimaan lewat gerbang → BC 2.5 dengan alokasi asal.
+    if (process.env.SEED_DEMO_DATA === "true") await seedDemoCustoms(db)
     console.log("Seed selesai.")
   } finally {
     await pool.end()

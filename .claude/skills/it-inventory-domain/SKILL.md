@@ -59,11 +59,18 @@ PRD bagian 15.4.
 5. **Entitas sebagai baris per peran** (`customs_document_parties`): pengusaha, pemilik,
    pemasok/penjual, pembeli/penerima, PPJK. Terisi dari profil perusahaan dan partner
    (`companyAsCustomsParty`, `partnerAsCustomsParty`); NPWP memakai NITKU.
-6. **Gerbang dokumen dipaksakan database** (PRD 8.4, M4) lewat `customs_gate_errors()` yang sudah
-   disiapkan di `validate_transfer`. Kedua sistem lama tidak punya gerbang; ini pembeda utama.
+6. **Gerbang dokumen dipaksakan database** (PRD 8.4, M4) lewat `customs_gate_errors()` di
+   `validate_transfer`. Kedua sistem lama tidak punya gerbang; ini pembeda utama. Penanda
+   `app.customs_gate = 'off'` hanya untuk koneksi tes inventory lama; jangan pernah menyetelnya di
+   kode aplikasi. Tes yang menguji gerbang membuka koneksi tanpa penanda itu (lihat README bagian
+   Gerbang dokumen BC).
 7. **Pemetaan dokumen ↔ jenis transfer** mengikuti pola `DOCUMENT_SOURCE_MAP` hmx-002, disesuaikan
-   PRD 8.3: masuk (penerimaan) → BC 2.3, 4.0; keluar (pengiriman) → BC 2.5, 3.0, 4.1. Transfer
-   internal antar gudang sendiri tidak butuh dokumen.
+   PRD 8.3: masuk (penerimaan `gr`) → BC 2.3, 4.0; keluar (pengiriman `gi`) → BC 2.5, 3.0, 4.1.
+   Hanya `gr` dan `gi` yang wajib dokumen (keputusan 18/10/2026, PRD 15.4): retur, pindah lokasi,
+   antar gudang, pemakaian & scrap, dan penyesuaian tanpa dokumen BC. Satu dokumen boleh untuk
+   beberapa transfer parsial, selama total transfer Selesai per produk tidak melebihi qty dokumen.
+   Arah kode retur: `gr_rtn` pemasukan, `gi_rtn` pengeluaran (return_request hmx); jangan ikuti
+   arah terbalik di `stock_card_service.py`/`mutation_report.py` hmx.
 8. **Dokumen asal** (PRD 8.5) per baris dokumen keluar ke saldo asal baris dokumen masuk
    (`origin_allocations`): BC 2.5 dan 3.0 dari BC 2.3 atau 4.0; BC 4.1 hanya dari BC 4.0. Saran
    FIFO. Lebih ketat dari `source_sequence` hmx-002 (yang hanya mencatat seri asal).

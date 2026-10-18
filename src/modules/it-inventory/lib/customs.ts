@@ -81,3 +81,19 @@ export const CUSTOMS_PERIOD_LABELS: Record<CustomsPeriod, string> = {
   "3-bulan": "3 bulan terakhir",
   "tahun-ini": "Tahun ini",
 }
+
+// Jenis dokumen BC yang boleh ditautkan per kode pergerakan transfer (M4-01, keputusan 18/10/2026):
+// hanya penerimaan dan pengiriman. Sama dengan customs_movement_doc_codes() di database.
+export const CUSTOMS_MOVEMENT_DOC_CODES: Partial<Record<string, readonly CustomsDocCode[]>> = {
+  gr: ["23", "40"],
+  gi: ["25", "30", "41"],
+}
+
+// Jenis dokumen asal yang boleh per jenis dokumen keluar (PRD 8.5, M4-03). Sama dengan
+// customs_origin_doc_codes() di database.
+export const CUSTOMS_ORIGIN_DOC_CODES: Partial<Record<CustomsDocCode, readonly CustomsDocCode[]>> =
+  {
+    "25": ["23", "40"],
+    "30": ["23", "40"],
+    "41": ["40"],
+  }

@@ -26,6 +26,7 @@ import {
   CUSTOMS_DOCUMENT_STATUS_LABELS,
   CUSTOMS_DOCUMENT_STATUS_TONES,
   CUSTOMS_DOCUMENT_STATUSES,
+  CUSTOMS_ORIGIN_DOC_CODES,
   CUSTOMS_PERIOD_LABELS,
   CUSTOMS_PERIODS,
   type CustomsDocumentStatus,
@@ -48,6 +49,8 @@ import { recordActivity } from "@/server/queries/activity"
 import { CustomsDocumentActions } from "./customs-document-actions"
 import { CustomsDocumentForm } from "./customs-document-form"
 import { CustomsDocumentView } from "./customs-document-view"
+import { DocumentTransfersSection } from "./document-transfers-section"
+import { OriginAllocationsSection } from "./origin-allocations-section"
 
 // Halaman daftar, buat, dan detail dokumen BC, sama untuk semua jenis (M3-04). Halaman di
 // src/app/(app)/dokumen-bc/<jenis>/ hanya meneruskan spec jenisnya (M3-05–M3-09).
@@ -317,6 +320,14 @@ async function CustomsDetail({
         ) : (
           <CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />
         )}
+        {CUSTOMS_ORIGIN_DOC_CODES[spec.code] && (
+          <OriginAllocationsSection
+            documentId={doc.id}
+            origins={CUSTOMS_ORIGIN_DOC_CODES[spec.code] ?? []}
+            editable={editable}
+          />
+        )}
+        <DocumentTransfersSection documentId={doc.id} />
         {revisions.length > 0 && (
           <RevisionHistory path={`${spec.path}/${doc.id}`} revisions={revisions} />
         )}

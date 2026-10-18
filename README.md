@@ -474,6 +474,46 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   dan `stock_moves.customs_document_line_id`. Dokumen yang sudah dipakai transfer tidak bisa
   dihapus.
 
+## Gerbang dokumen BC dan ketertelusuran (M4)
+
+- Hanya penerimaan (`gr`) dan pengiriman (`gi`) yang memakai dokumen BC (keputusan 18/10/2026,
+  PRD 15.4): `gr` → BC 2.3 atau 4.0, `gi` → BC 2.5, 3.0, atau 4.1 (`customs_movement_doc_codes()`,
+  `CUSTOMS_MOVEMENT_DOC_CODES`). Retur, pindah lokasi, antar gudang, pemakaian & scrap, dan
+  penyesuaian tidak bisa ditautkan.
+- Tautan (M4-01, migrasi `customs_transfer_links`, `customs_move_links`):
+  `transfers.customs_document_id` (jenis cocok, dokumen tidak Batal, tidak bisa diganti setelah
+  Selesai; transfer lanjutan mewarisi dokumen transfer asal) dan `stock_moves.customs_document_line_id`
+  yang diisi database per produk (saat transfer ditautkan, move dibuat, atau baris dokumen
+  ditambah). Baris dokumen yang dipakai move Selesai tidak bisa diganti produknya atau dihapus.
+  Form dokumen menyimpan barang per seri (`saveLines`) supaya id baris tetap.
+- Gerbang (M4-02, `customs_gate_errors()` di `transfer_validation_errors()`): penerimaan/pengiriman
+  hanya bisa Selesai bila dokumennya Terdaftar dan qty per produk (satuan stok) tidak melebihi sisa
+  dokumen (qty dokumen − transfer lain Selesai dengan dokumen sama). Parsial boleh, kelebihan
+  toleransi 0, tanpa override. Dokumen yang direvisi kembali Draft sehingga menahan transfer.
+  Penanda `app.customs_gate = 'off'` hanya untuk koneksi tes inventory lama (Vitest lewat
+  `tests/db/setup-env.ts`, server e2e lewat `playwright.config.ts`); aplikasi tidak pernah
+  menyetelnya. Tes gerbang (`tests/db/customs-gate.test.ts`) memakai koneksi dengan gerbang aktif.
+- Alokasi dokumen asal (M4-03, migrasi `origin_allocation_rules`): `origin_allocations` dari baris
+  dokumen keluar ke baris dokumen masuk Terdaftar (BC 2.5 dan 3.0 dari BC 2.3/4.0, BC 4.1 hanya dari
+  BC 4.0; produk sama; tidak melebihi sisa di view `customs_origin_balances`, baris asal dikunci).
+  `allocate_origin(baris, [{origin_line_id, qty}])` mengganti alokasi satu baris;
+  `suggest_origin_allocations(baris)` memberi saran FIFO. Alokasi lengkap jadi syarat Siap ajukan:
+  `customs_document_errors()` = `customs_rule_errors()` (aturan M3-03) + `customs_origin_errors()`.
+  Alokasi ikut terkunci bersama dokumen keluarnya; dokumen keluar Batal mengembalikan saldo asal.
+- Layar (M4-04, M4-05): panel Dokumen BC di detail penerimaan/pengiriman (dokumen tertaut, qty per
+  produk, alasan gerbang, tombol Buat BC …, tautkan dokumen yang ada lewat
+  `/api/customs-documents/linkable`, lepas tautan). Panel disisipkan halaman `src/app` lewat prop
+  `panel` `TransferDetailPage`, jadi modul inventory tidak mengimpor modul IT Inventory. Detail
+  dokumen punya bagian Transfer (qty dokumen vs Selesai vs berjalan) dan, untuk dokumen keluar,
+  Alokasi dokumen asal (pilih saldo lewat `/api/customs-origins`, Saran FIFO, Simpan alokasi).
+- Pengecualian (M4-06, `/dokumen-bc/pengecualian`, izin `bc:read`): penerimaan/pengiriman Selesai
+  tanpa dokumen (transfer lama sebelum gerbang aktif; tidak diubah), dokumen Terdaftar lebih dari 7
+  hari tanpa transfer Selesai, selisih qty dokumen vs transfer Selesai, saldo asal sisa ≤ 10%.
+  Ringkasannya masuk Beranda bagian Perlu perhatian (`customsAttentionItems`).
+- Data demo (M4-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat produk
+  `DEMO-KAIN`, BC 2.3 Terdaftar, penerimaan yang ditautkan dan divalidasi lewat gerbang, dan BC 2.5
+  Siap ajukan dengan alokasi asal ke BC 2.3.
+
 ## Penyimpanan file
 
 - Semua file lewat `getStorage()` (`src/server/storage`): `put`, `get`, `delete`. Driver dipilih

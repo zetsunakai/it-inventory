@@ -6,6 +6,7 @@ import { StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requireUser } from "@/server/auth/session"
 import { attentionItems } from "@/modules/inventory/server/queries/home"
+import { customsAttentionItems } from "@/modules/it-inventory/server/queries/customs-exceptions"
 
 // Beranda berisi pekerjaan, bukan sapaan (skill ui-it-inventory): hal yang perlu
 // ditindaklanjuti. Navigasi modul cukup di sidebar.
@@ -22,7 +23,13 @@ export default function HomePage() {
 
 async function Home() {
   const user = await requireUser()
-  const items = await attentionItems(user)
+  // Pengecualian dokumen BC (M4-06) dari modul IT Inventory, digabung di halaman ini supaya modul
+  // inventory tidak bergantung padanya.
+  const [inventory, customs] = await Promise.all([
+    attentionItems(user),
+    customsAttentionItems(user),
+  ])
+  const items = [...customs, ...inventory]
 
   return (
     <div className="max-w-4xl">
@@ -63,9 +70,6 @@ async function Home() {
             ))}
           </ul>
         )}
-        <p className="text-caption text-muted-foreground">
-          Pengecualian transaksi (dokumen BC belum terdaftar, selisih qty) tampil di sini mulai M4.
-        </p>
       </section>
     </div>
   )

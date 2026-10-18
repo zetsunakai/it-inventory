@@ -1,7 +1,7 @@
 import { Plus, ScanLine } from "lucide-react"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { Suspense } from "react"
+import { Suspense, type ReactNode } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
@@ -271,19 +271,25 @@ async function NewTransferForm({ kind }: { kind: TransferKind }) {
   return <TransferForm kind={kind} locations={locations} uoms={uoms} />
 }
 
+// Bagian tambahan dari modul lain di detail transfer, mis. panel dokumen BC (M4-04). Dirakit halaman
+// di src/app supaya modul inventory tidak bergantung pada modul IT Inventory.
+export type TransferPanel = (transfer: { id: string }) => ReactNode
+
 export function TransferDetailPage({
   kind,
   effect,
   params,
+  panel,
 }: {
   kind: TransferKind
   // Akibat validasi untuk konfirmasi, mis. "Stok di lokasi tujuan bertambah".
   effect: string
   params: Promise<{ id: string }>
+  panel?: TransferPanel
 }) {
   return (
     <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
-      <TransferDetail kind={kind} effect={effect} params={params} />
+      <TransferDetail kind={kind} effect={effect} params={params} panel={panel} />
     </Suspense>
   )
 }
@@ -292,10 +298,12 @@ async function TransferDetail({
   kind,
   effect,
   params,
+  panel,
 }: {
   kind: TransferKind
   effect: string
   params: Promise<{ id: string }>
+  panel?: TransferPanel
 }) {
   const user = await requirePermission("inventory:read")
   const { id } = await params
@@ -426,6 +434,7 @@ async function TransferDetail({
         )
       }
     >
+      {panel?.({ id: transfer.id })}
       {editable ? (
         <TransferForm
           kind={kind}

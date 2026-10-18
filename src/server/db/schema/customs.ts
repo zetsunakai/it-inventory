@@ -406,3 +406,27 @@ export const customsDocumentRevisions = pgTable(
     check("customs_document_revisions_reason_not_blank", sql`btrim(${table.reason}) <> ''`),
   ],
 )
+
+// Alokasi dokumen asal (PRD 8.5, backlog M4-03): qty (satuan stok) baris barang dokumen keluar yang
+// diambil dari baris barang dokumen masuk (saldo asal). Pasangan jenis, produk, dan sisa saldo
+// asal diperiksa trigger origin_allocations_before_write; dikunci bersama dokumen keluarnya.
+export const originAllocations = pgTable(
+  "origin_allocations",
+  {
+    id: id(),
+    outLineId: uuid()
+      .notNull()
+      .references(() => customsDocumentLines.id, { onDelete: "cascade" }),
+    originLineId: uuid()
+      .notNull()
+      .references(() => customsDocumentLines.id, { onDelete: "restrict" }),
+    qty: qty().notNull(),
+    createdBy: uuid(),
+    ...timestamps,
+  },
+  (table) => [
+    unique("origin_allocations_pair_unique").on(table.outLineId, table.originLineId),
+    index("origin_allocations_origin_idx").on(table.originLineId),
+    check("origin_allocations_qty_positive", sql`${table.qty} > 0`),
+  ],
+)

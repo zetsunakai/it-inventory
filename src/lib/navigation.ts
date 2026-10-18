@@ -92,6 +92,7 @@ export const NAVIGATION: NavGroup[] = [
       { title: "BC 2.5", href: "/dokumen-bc/bc25", permission: "bc:read" },
       { title: "BC 3.0", href: "/dokumen-bc/bc30", permission: "bc:read" },
       { title: "BC 4.1", href: "/dokumen-bc/bc41", permission: "bc:read" },
+      { title: "Pengecualian", href: "/dokumen-bc/pengecualian", permission: "bc:read" },
       {
         title: "Referensi kepabeanan",
         href: "/master/referensi",
