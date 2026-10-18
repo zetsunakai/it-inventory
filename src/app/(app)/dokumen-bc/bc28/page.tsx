@@ -1,7 +1,10 @@
-import { ModulePlaceholder, moduleMetadata } from "@/components/module-placeholder"
+import type { Metadata } from "next"
 
-export const metadata = moduleMetadata("/dokumen-bc/bc28")
+import { CustomsListPage } from "@/modules/it-inventory/components/customs/customs-document-pages"
+import { BC28 } from "@/modules/it-inventory/lib/customs-specs"
 
-export default function Page() {
-  return <ModulePlaceholder href="/dokumen-bc/bc28" />
+export const metadata: Metadata = { title: "BC 2.8 · IT Inventory" }
+
+export default function Bc28Page({ searchParams }: PageProps<"/dokumen-bc/bc28">) {
+  return <CustomsListPage spec={BC28} searchParams={searchParams} />
 }

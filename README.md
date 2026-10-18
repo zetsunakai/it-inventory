@@ -386,7 +386,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 
 ## Dokumen BC
 
-- Semua jenis dokumen (BC 2.3, 4.0, 2.5, 3.0, 4.1) disimpan di satu set tabel yang dibedakan
+- Semua jenis dokumen (MVP: BC 2.3, 4.0, 2.5, 3.0, 4.1; lalu BC 2.0, 2.6.1, 2.6.2, 2.7, 1.6, 2.8,
+  3.3, dan P3BET, backlog D-01–D-08) disimpan di satu set tabel yang dibedakan
   `doc_code` (backlog M3-01, `src/server/db/schema/customs.ts`): `customs_documents` (header),
   `customs_document_parties` (entitas, satu per kode entitas CEISA), `customs_document_lines`
   (barang), `customs_line_taxes` (pungutan per barang), `customs_attachments`, `customs_packages`,
@@ -394,8 +395,14 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   (pelabuhan, TPS, data BC 1.1, DPP, uang muka, dst.) ada di kolom `details` (jsonb, selalu objek),
   jadi jenis baru tidak butuh tabel baru. Tampilannya tetap terpisah per jenis (M3-04 dan
   seterusnya).
-- `doc_code` sama dengan kodeDokumen CEISA (`23`, `40`, `25`, `30`, `41`); label, arah, dan status
-  ada di `src/modules/it-inventory/lib/customs.ts`. Arah di database: `customs_doc_direction()`.
+- `doc_code` sama dengan kodeDokumen CEISA (`23`, `40`, `25`, `30`, `41`, `20`, `261`, `262`,
+  `27`, `16`, `28`, `33`, dan `331` untuk P3BET); label, arah, dan status ada di
+  `src/modules/it-inventory/lib/customs.ts`. Arah di database: `customs_doc_direction()`; nama
+  jenis untuk pesan: `customs_doc_title()`. Jenis di luar MVP baru punya form dan aturan validasi;
+  gerbang transfer dan alokasi asal tetap hanya untuk jenis MVP.
+- Menambah nilai `customs_doc_code`: drizzle menjalankan semua migrasi dalam satu transaksi, dan
+  nilai dari `ALTER TYPE ... ADD VALUE` tidak bisa dipakai di transaksi itu. Bila aturan validasi
+  jenis baru ikut di-seed, buat ulang tipenya seperti migrasi `customs_doc_codes_all`.
 - Nomor aju (M3-02) dibuat trigger saat dokumen dibuat lewat `next_aju_number(doc_code, kantor,
 tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar/angka) + kode
   dokumen 3 digit + kode kantor 6 digit (kantor pabean dokumen, atau kantor pengawas di profil
@@ -408,7 +415,8 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   line (kolom baris, diperiksa per seri), attachment (kode jenis dokumen, mis. 380 invoice),
   transport/package/container (minimal satu baris yang kolomnya terisi). Field tabel dicek ke
   `information_schema` saat aturan disimpan. `customs_document_errors(dokumen)` mengembalikan semua
-  kekurangan sekaligus (kosong = lengkap). Seed awal di migrasi `doc_validation_rules_seed`; data uji
+  kekurangan sekaligus (kosong = lengkap). Seed awal di migrasi `doc_validation_rules_seed` (jenis
+  di luar MVP: `customs_doc_codes_all`); data uji
   dokumen lengkap per jenis ada di `tests/db/customs-fixtures.ts`.
 - Baris barang hanya untuk produk aktif yang siap dokumen BC (punya kode HS). Kategori IT Inventory
   selalu disalin dari produk; product code, kode HS, dan uraian diisi dari produk bila kosong.

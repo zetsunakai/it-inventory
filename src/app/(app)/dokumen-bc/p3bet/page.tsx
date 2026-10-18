@@ -1,7 +1,10 @@
-import { ModulePlaceholder, moduleMetadata } from "@/components/module-placeholder"
+import type { Metadata } from "next"
 
-export const metadata = moduleMetadata("/dokumen-bc/p3bet")
+import { CustomsListPage } from "@/modules/it-inventory/components/customs/customs-document-pages"
+import { P3BET } from "@/modules/it-inventory/lib/customs-specs"
 
-export default function Page() {
-  return <ModulePlaceholder href="/dokumen-bc/p3bet" />
+export const metadata: Metadata = { title: "P3BET · IT Inventory" }
+
+export default function P3betPage({ searchParams }: PageProps<"/dokumen-bc/p3bet">) {
+  return <CustomsListPage spec={P3BET} searchParams={searchParams} />
 }

@@ -13,7 +13,7 @@ import {
   uomCategories,
   uoms,
 } from "@/server/db/schema"
-import { CUSTOMS_DOC_DIRECTIONS, type CustomsDocCode } from "@/modules/it-inventory/lib/customs"
+import { CUSTOMS_ORIGIN_DOC_CODES, type CustomsDocCode } from "@/modules/it-inventory/lib/customs"
 
 // Data uji dokumen BC (M3): profil perusahaan (dibutuhkan nomor aju), produk siap BC, dan dokumen
 // yang lolos semua aturan validasi seed. Kode data uji berawalan ZB.
@@ -70,6 +70,14 @@ const PARTIES: Record<CustomsDocCode, string[]> = {
   "25": ["3", "7", "8"],
   "30": ["2", "6"],
   "41": ["3", "7", "8"],
+  "20": ["1", "7", "9"],
+  "261": ["3", "8", "7"],
+  "262": ["3", "9", "7"],
+  "27": ["3", "7", "8"],
+  "16": ["3", "7", "9"],
+  "28": ["3", "1", "7"],
+  "33": ["2", "3", "6"],
+  "331": ["3", "8"],
 }
 
 // Dokumen Draft yang lolos semua aturan validasi seed untuk jenisnya.
@@ -102,6 +110,11 @@ export async function insertCompleteDocument(tx: Tx, docCode: CustomsDocCode, pr
         incotermCode: "FOB",
         destinationPortCode: "SGSIN",
         destinationCountryCode: "SG",
+        importTypeCode: "1",
+        temporaryReasonCode: "1",
+        destinationOfficeCode: "050500",
+        plbWarehouseCode: "PLB01",
+        exportTypeCode: "1",
       },
     })
     .returning()
@@ -137,9 +150,9 @@ export async function insertCompleteDocument(tx: Tx, docCode: CustomsDocCode, pr
   await tx
     .insert(customsTransports)
     .values({ documentId: doc.id, seq: 1, transportModeCode: "1", name: "EVER GIVEN" })
-  // Dokumen keluar butuh alokasi dokumen asal (M4-03): BC 4.0 Terdaftar boleh untuk BC 2.5, 3.0,
-  // dan 4.1.
-  if (customsDocDirection(docCode) === "out") {
+  // Dokumen keluar MVP butuh alokasi dokumen asal (M4-03): BC 4.0 Terdaftar boleh untuk BC 2.5,
+  // 3.0, dan 4.1.
+  if (CUSTOMS_ORIGIN_DOC_CODES[docCode]) {
     const origin = await insertCompleteDocument(tx, "40", productId)
     await registerDocument(tx, origin.id, origin.ajuDate)
     const [originLine] = await tx
@@ -152,8 +165,6 @@ export async function insertCompleteDocument(tx: Tx, docCode: CustomsDocCode, pr
   }
   return doc
 }
-
-const customsDocDirection = (code: CustomsDocCode) => CUSTOMS_DOC_DIRECTIONS[code]
 
 // Draft lengkap → Siap ajukan → Diajukan → Terdaftar.
 export async function registerDocument(tx: Tx, id: string, ajuDate: string) {

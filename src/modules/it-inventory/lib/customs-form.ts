@@ -70,6 +70,102 @@ export const CUSTOMS_OPTION_LISTS = {
     ["LN", "Luar negeri"],
     ["DN", "Dalam negeri"],
   ],
+  // Tujuan pengeluaran sementara BC 2.6.1 dan pemasukan kembali BC 2.6.2.
+  temporaryReason: [
+    ["1", "Diperbaiki"],
+    ["2", "Disubkontrakkan"],
+    ["3", "Dipinjamkan"],
+    ["4", "Barang return"],
+    ["5", "Lainnya"],
+  ],
+  // Jenis impor BC 2.0 dan 2.8.
+  importType: [
+    ["1", "Untuk dipakai"],
+    ["2", "Sementara"],
+    ["5", "Pelayanan segera"],
+    ["9", "Dipakai sementara"],
+  ],
+  // Jenis prosedur (Jenis PIB, Jenis BC 3.3).
+  procedureType: [
+    ["1", "Biasa"],
+    ["2", "Berkala"],
+    ["3", "Untuk dipakai"],
+    ["4", "Sementara"],
+    ["5", "Re-impor"],
+    ["6", "TPB"],
+    ["7", "Pelayanan segera"],
+    ["8", "Vooruitslag"],
+    ["9", "Gabungan"],
+  ],
+  tradeTransactionType: [
+    ["IMB", "Imbal dagang"],
+    ["IOA", "Interoffice account"],
+    ["KMD", "Pembayaran kemudian"],
+    ["KON", "Konsinyasi"],
+    ["LAI", "Lainnya"],
+    ["PMK", "Pembayaran di muka"],
+    ["RLC", "Red clause L/C"],
+    ["SLC", "Sight L/C"],
+    ["ULC", "Usance L/C"],
+    ["WSI", "Wesel inkaso"],
+  ],
+  // Jenis nilai transaksi (BC 2.8).
+  valuationType: [
+    ["NTR", "Transaksi jual beli"],
+    ["BTR", "Bukan transaksi jual beli lainnya"],
+    ["CAM", "Transaksi gabungan"],
+    ["CMA", "Hadiah/promosi/contoh"],
+    ["FTR", "Harga futures"],
+    ["HBH", "Bantuan/hibah"],
+    ["ITM", "Intermediary yang tidak membeli"],
+    ["KON", "Konsinyasi"],
+    ["LES", "Sewa (leasing)"],
+    ["PRO", "Mengandung proceeds"],
+    ["ROY", "Mengandung royalti"],
+    ["TIP", "Titipan"],
+  ],
+  // Jenis ekspor BC 3.3.
+  exportType: [
+    ["1", "Biasa"],
+    ["2", "Berkala"],
+    ["3", "Fasilitas"],
+    ["4", "Re-impor"],
+    ["5", "Re-ekspor"],
+    ["6", "Ex impor sementara"],
+  ],
+  // Cara dagang BC 3.3.
+  tradeMethod: [
+    ["1", "Biasa"],
+    ["2", "Imbal dagang"],
+    ["3", "Pembayaran di muka"],
+    ["4", "Pembayaran kemudian bertahap"],
+    ["5", "Pembayaran kemudian tunai"],
+    ["6", "Sight L/C"],
+    ["7", "Usance L/C"],
+    ["8", "Red clause L/C"],
+    ["9", "Wesel inkaso"],
+    ["10", "Konsinyasi"],
+    ["11", "Inter-company account"],
+    ["12", "Pembayaran dalam negeri tunai"],
+    ["13", "Telegraphic transfer dalam negeri"],
+    ["14", "Tanpa pembayaran"],
+    ["15", "Lainnya"],
+  ],
+  bulkType: [
+    ["1", "Curah"],
+    ["2", "Non curah"],
+  ],
+  yesNo: [
+    ["Y", "Ya"],
+    ["T", "Tidak"],
+  ],
+  // Jenis tanda pengaman P3BET.
+  sealType: [
+    ["1", "Kabel"],
+    ["2", "Kunci logam"],
+    ["3", "Kunci plastik"],
+    ["4", "Lainnya"],
+  ],
   // Jenis muatan peti kemas (kodeJenisKontainer).
   containerLoad: [
     ["8", "FCL"],

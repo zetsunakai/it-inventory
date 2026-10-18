@@ -2,8 +2,24 @@
 // customs_* yang dibedakan doc_code; tampilan tetap terpisah per jenis (keputusan 17/10/2026).
 // Dipakai bersama oleh schema, server, dan UI.
 
-// Kode dokumen sama dengan kodeDokumen CEISA, supaya payload tidak perlu dipetakan lagi.
-export const CUSTOMS_DOC_CODES = ["23", "40", "25", "30", "41"] as const
+// Kode dokumen sama dengan kodeDokumen CEISA, supaya payload tidak perlu dipetakan lagi. Lima
+// jenis pertama MVP; sisanya (jadwal PRD fase 2 dan 3) sudah punya form tapi belum masuk gerbang
+// transfer dan alokasi asal. P3BET memakai kode CEISA 331.
+export const CUSTOMS_DOC_CODES = [
+  "23",
+  "40",
+  "25",
+  "30",
+  "41",
+  "20",
+  "261",
+  "262",
+  "27",
+  "16",
+  "28",
+  "33",
+  "331",
+] as const
 export type CustomsDocCode = (typeof CUSTOMS_DOC_CODES)[number]
 
 export const CUSTOMS_DOC_CODE_LABELS: Record<CustomsDocCode, string> = {
@@ -12,16 +28,33 @@ export const CUSTOMS_DOC_CODE_LABELS: Record<CustomsDocCode, string> = {
   "25": "BC 2.5",
   "30": "BC 3.0",
   "41": "BC 4.1",
+  "20": "BC 2.0",
+  "261": "BC 2.6.1",
+  "262": "BC 2.6.2",
+  "27": "BC 2.7",
+  "16": "BC 1.6",
+  "28": "BC 2.8",
+  "33": "BC 3.3",
+  "331": "P3BET",
 }
 
 // Arah dokumen (PRD 7.1): masuk ke atau keluar dari kawasan berikat. Sama dengan
-// customs_doc_direction() di database.
+// customs_doc_direction() di database. BC 2.7 dan 3.3 dipakai dua arah di hmx; di sini dicatat
+// sebagai keluar (dokumen dibuat pihak pengirim) sampai aturan gerbangnya diputuskan.
 export const CUSTOMS_DOC_DIRECTIONS: Record<CustomsDocCode, "in" | "out"> = {
   "23": "in",
   "40": "in",
   "25": "out",
   "30": "out",
   "41": "out",
+  "20": "in",
+  "261": "out",
+  "262": "in",
+  "27": "out",
+  "16": "in",
+  "28": "out",
+  "33": "out",
+  "331": "out",
 }
 
 // Status dokumen (PRD 7.3). "Gagal kirim" baru ada di fase 2 (CEISA).

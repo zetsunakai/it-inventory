@@ -364,11 +364,12 @@ export async function customsOfficeOptions(docCode: CustomsDocCode) {
 }
 
 // Entitas lawan transaksi yang ditampilkan di daftar: semua kecuali pengusaha TPB (3), pemilik (7),
-// dan eksportir (2), yang selalu perusahaan sendiri.
+// dan eksportir (2), yang selalu perusahaan sendiri. Entitas dari master partner didahulukan, jadi
+// importir dan pemusatan BC 2.0 (perusahaan sendiri) tidak tampil sebagai lawan transaksi.
 const COUNTERPARTY = sql`(
   select p.name from customs_document_parties p
   where p.document_id = d.id and p.entity_type_code not in ('2', '3', '7')
-  order by p.entity_type_code limit 1)`
+  order by p.partner_id is null, p.entity_type_code limit 1)`
 
 // Rentang tanggal aju per pilihan periode, dalam tanggal WIB.
 const PERIOD_RANGES: Record<CustomsPeriod, SQL> = {

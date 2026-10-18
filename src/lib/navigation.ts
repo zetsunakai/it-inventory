@@ -89,14 +89,12 @@ export const NAVIGATION: NavGroup[] = [
     ],
   },
   // Dokumen BC dikelompokkan seperti menu hmx (Dokumen Impor, Ekspor, TPB), satu menu per jenis
-  // (keputusan 17/10/2026). Jenis di luar MVP tampil redup sesuai jadwal PRD.
+  // (keputusan 17/10/2026). Semua jenis sudah punya form (backlog D-01–D-08).
   {
     label: "Dokumen impor",
     module: "it-inventory",
     icon: ArrowDownToLine,
-    items: [
-      { title: "BC 2.0", href: "/dokumen-bc/bc20", permission: "bc:read", plannedIn: "Fase 2" },
-    ],
+    items: [{ title: "BC 2.0", href: "/dokumen-bc/bc20", permission: "bc:read" }],
   },
   {
     label: "Dokumen ekspor",
@@ -104,8 +102,8 @@ export const NAVIGATION: NavGroup[] = [
     icon: ArrowUpFromLine,
     items: [
       { title: "BC 3.0", href: "/dokumen-bc/bc30", permission: "bc:read" },
-      { title: "BC 3.3", href: "/dokumen-bc/bc33", permission: "bc:read", plannedIn: "Fase 3" },
-      { title: "P3BET", href: "/dokumen-bc/p3bet", permission: "bc:read", plannedIn: "Fase 3" },
+      { title: "BC 3.3", href: "/dokumen-bc/bc33", permission: "bc:read" },
+      { title: "P3BET", href: "/dokumen-bc/p3bet", permission: "bc:read" },
     ],
   },
   {
@@ -113,13 +111,13 @@ export const NAVIGATION: NavGroup[] = [
     module: "it-inventory",
     icon: Landmark,
     items: [
-      { title: "BC 1.6", href: "/dokumen-bc/bc16", permission: "bc:read", plannedIn: "Fase 3" },
+      { title: "BC 1.6", href: "/dokumen-bc/bc16", permission: "bc:read" },
       { title: "BC 2.3", href: "/dokumen-bc/bc23", permission: "bc:read" },
       { title: "BC 2.5", href: "/dokumen-bc/bc25", permission: "bc:read" },
-      { title: "BC 2.6.1", href: "/dokumen-bc/bc261", permission: "bc:read", plannedIn: "Fase 2" },
-      { title: "BC 2.6.2", href: "/dokumen-bc/bc262", permission: "bc:read", plannedIn: "Fase 2" },
-      { title: "BC 2.7", href: "/dokumen-bc/bc27", permission: "bc:read", plannedIn: "Fase 2" },
-      { title: "BC 2.8", href: "/dokumen-bc/bc28", permission: "bc:read", plannedIn: "Fase 3" },
+      { title: "BC 2.6.1", href: "/dokumen-bc/bc261", permission: "bc:read" },
+      { title: "BC 2.6.2", href: "/dokumen-bc/bc262", permission: "bc:read" },
+      { title: "BC 2.7", href: "/dokumen-bc/bc27", permission: "bc:read" },
+      { title: "BC 2.8", href: "/dokumen-bc/bc28", permission: "bc:read" },
       { title: "BC 4.0", href: "/dokumen-bc/bc40", permission: "bc:read" },
       { title: "BC 4.1", href: "/dokumen-bc/bc41", permission: "bc:read" },
     ],
