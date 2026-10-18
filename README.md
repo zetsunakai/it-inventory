@@ -506,10 +506,6 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   `panel` `TransferDetailPage`, jadi modul inventory tidak mengimpor modul IT Inventory. Detail
   dokumen punya bagian Transfer (qty dokumen vs Selesai vs berjalan) dan, untuk dokumen keluar,
   Alokasi dokumen asal (pilih saldo lewat `/api/customs-origins`, Saran FIFO, Simpan alokasi).
-- Pengecualian (M4-06, `/dokumen-bc/pengecualian`, izin `bc:read`): penerimaan/pengiriman Selesai
-  tanpa dokumen (transfer lama sebelum gerbang aktif; tidak diubah), dokumen Terdaftar lebih dari 7
-  hari tanpa transfer Selesai, selisih qty dokumen vs transfer Selesai, saldo asal sisa ≤ 10%.
-  Ringkasannya masuk Beranda bagian Perlu perhatian (`customsAttentionItems`).
 - Data demo (M4-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat produk
   `DEMO-KAIN`, BC 2.3 Terdaftar, penerimaan yang ditautkan dan divalidasi lewat gerbang, dan BC 2.5
   Siap ajukan dengan alokasi asal ke BC 2.3.

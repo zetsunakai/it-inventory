@@ -16,12 +16,13 @@ test.describe("Auditor", () => {
   test("melihat data seed dan mencari lewat kode atau nama, tanpa tombol ubah", async ({
     page,
   }) => {
-    await page.goto("/master/referensi")
+    await page.goto("/master/referensi/pelabuhan-dalam-negeri")
     await expect(page.getByRole("link", { name: "Tambah referensi" })).toHaveCount(0)
 
     await page.getByRole("searchbox", { name: "Cari kode atau nama" }).fill("IDJKT")
     await expect(page.getByRole("cell", { name: "Jakarta - Java" })).toBeVisible()
 
+    await page.goto("/master/referensi/kantor-pabean")
     await page.getByRole("searchbox", { name: "Cari kode atau nama" }).fill("tanjung priok")
     await expect(page.getByRole("cell", { name: "KPU Tanjung Priok" })).toBeVisible()
     await expect(
@@ -30,7 +31,7 @@ test.describe("Auditor", () => {
   })
 
   test("tidak bisa membuka halaman tambah referensi", async ({ page }) => {
-    await page.goto("/master/referensi/baru")
+    await page.goto("/master/referensi/tps/baru")
     await expect(page.getByRole("heading", { name: "Akses ditolak" })).toBeVisible()
   })
 })
@@ -39,24 +40,22 @@ test.describe("Administrator", () => {
   test.use({ storageState: ADMIN_STATE_FILE })
 
   test("form tambah menampilkan semua kesalahan sekaligus", async ({ page }) => {
-    await page.goto("/master/referensi/baru")
+    await page.goto("/master/referensi/tps/baru")
     await page.getByRole("button", { name: "Simpan" }).click()
 
     const errors = page.getByRole("alert").filter({ hasText: "wajib" })
-    await expect(errors).toContainText("Jenis referensi wajib dipilih.")
+    await expect(errors).toContainText("Kantor pabean wajib dipilih untuk TPS.")
     await expect(errors).toContainText("Kode wajib diisi.")
     await expect(errors).toContainText("Nama wajib diisi.")
   })
 
-  test("menambah TPS dengan kantor pabean dari pilihan [kode] nama, lalu mengarsipkannya", async ({
+  test("menambah TPS dengan kantor pabean dari pilihan [kode] nama, lalu ditolak bila kodenya kembar", async ({
     page,
   }) => {
     // Kode unik per run, karena di CI tes bisa diulang tanpa reset database.
     const code = `E2E${Date.now().toString(36).slice(-5).toUpperCase()}`
 
-    await page.goto("/master/referensi/baru")
-    await page.getByLabel("Jenis").click()
-    await page.getByRole("option", { name: "TPS" }).click()
+    await page.goto("/master/referensi/tps/baru")
 
     const office = page.getByLabel("Kantor pabean")
     await office.fill("priok")
@@ -68,7 +67,7 @@ test.describe("Administrator", () => {
     await page.getByRole("button", { name: "Simpan" }).click()
 
     // Kembali ke daftar, tersaring ke referensi yang baru dibuat.
-    await expect(page).toHaveURL(new RegExp(`/master/referensi\\?jenis=tps&q=${code}$`))
+    await expect(page).toHaveURL(new RegExp(`/master/referensi/tps\\?q=${code}$`))
     const row = page.getByRole("row").filter({ hasText: code })
     await expect(row).toContainText("TPS Uji E2E")
     await expect(row).toContainText("Kantor pabean 040300")
@@ -84,9 +83,7 @@ test.describe("Administrator", () => {
     ])
 
     // Kode yang sama di kantor yang sama ditolak.
-    await page.goto("/master/referensi/baru")
-    await page.getByLabel("Jenis").click()
-    await page.getByRole("option", { name: "TPS" }).click()
+    await page.goto("/master/referensi/tps/baru")
     await page.getByLabel("Kantor pabean").fill("040300")
     await page.getByRole("option", { name: "[040300] KPU Tanjung Priok" }).click()
     await page.getByLabel("Kode").fill(code)
@@ -96,17 +93,10 @@ test.describe("Administrator", () => {
       page.getByRole("alert").filter({ hasText: `Kode ${code} sudah ada di TPS` }),
     ).toBeVisible()
 
-    // Arsipkan: tetap ada di daftar, tapi tidak bisa dipilih untuk data baru.
-    await page.goto(`/master/referensi?jenis=tps&q=${code}`)
-    await page.getByRole("row").filter({ hasText: code }).getByRole("link").first().click()
-    await page.getByRole("button", { name: "Edit" }).click()
-    await page.getByRole("checkbox", { name: "Aktif" }).uncheck()
-    await page.getByRole("button", { name: "Simpan" }).click()
-    await expect(page.getByRole("status")).toHaveText("Perubahan disimpan.")
-
-    await page.goto(`/master/referensi?jenis=tps&q=${code}`)
-    await expect(page.getByRole("row").filter({ hasText: code })).toContainText("Arsip")
-    expect((await search(code)).items).toEqual([])
+    // Daftar hanya baca, juga untuk Administrator: tanpa tombol tambah dan baris tanpa tautan.
+    await page.goto(`/master/referensi/tps?q=${code}`)
+    await expect(page.getByRole("link", { name: "Tambah referensi" })).toHaveCount(0)
+    await expect(page.getByRole("row").filter({ hasText: code }).getByRole("link")).toHaveCount(0)
   })
 })
 

@@ -62,3 +62,41 @@ export type RefCodeOption = {
 export function formatRefCode(item: { code: string; name: string }) {
   return `[${item.code}] ${item.name}`
 }
+
+// Segmen URL per jenis: setiap jenis punya menu dan daftar sendiri di Master data IT Inventory,
+// seperti menu Master Data hmx (/master/referensi/kode-hs, …).
+export const REF_CODE_TYPE_SLUGS: Record<RefCodeType, string> = {
+  document_type: "jenis-dokumen",
+  customs_office: "kantor-pabean",
+  domestic_port: "pelabuhan-dalam-negeri",
+  foreign_port: "pelabuhan-luar-negeri",
+  tps: "tps",
+  country: "negara",
+  currency: "valuta",
+  package_type: "jenis-kemasan",
+  container_size: "ukuran-kontainer",
+  container_type: "tipe-kontainer",
+  facility: "fasilitas",
+  levy_type: "jenis-pungutan",
+  incoterm: "incoterm",
+  transport_mode: "cara-angkut",
+  entity_type: "jenis-entitas",
+  response: "respon",
+  hs_code: "kode-hs",
+  ceisa_unit: "satuan-ceisa",
+}
+
+export function refCodeTypeFromSlug(slug: string): RefCodeType | undefined {
+  return REF_CODE_TYPES.find((type) => REF_CODE_TYPE_SLUGS[type] === slug)
+}
+
+// Nama menu dan judul daftar, berawalan Referensi dan berhuruf kapital tiap kata seperti hmx:
+// "Referensi Jenis Kemasan", "Referensi Kode HS".
+export function refCodeMenuTitle(type: RefCodeType) {
+  const label = REF_CODE_TYPE_LABELS[type].replace(/(^|\s)\p{Ll}/gu, (char) => char.toUpperCase())
+  return `Referensi ${label}`
+}
+
+export function refCodeListHref(type: RefCodeType) {
+  return `/master/referensi/${REF_CODE_TYPE_SLUGS[type]}`
+}

@@ -18,7 +18,7 @@ export type AttentionItem = {
 }
 
 // Hal yang perlu ditindaklanjuti, dari data nyata (skill ui-it-inventory: beranda berisi
-// pekerjaan). Pengecualian transaksi (PRD 8.6) menyusul di M4.
+// pekerjaan).
 export async function attentionItems(user: { id: string; roles: Role[] }) {
   const [master, inventory] = await Promise.all([masterItems(user), inventoryItems(user)])
   return [...master, ...inventory]

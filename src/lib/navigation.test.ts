@@ -7,9 +7,11 @@ import {
   modulesFor,
   NAVIGATION,
   navigationFor,
+  navEntries,
   navigationTrail,
 } from "./navigation"
 import { APP_MODULES, PERMISSION_MODULES, PERMISSIONS } from "./permissions"
+import { REF_CODE_TYPES } from "./ref-codes"
 
 function hrefs(groups: ReturnType<typeof navigationFor>) {
   return groups.flatMap((group) => group.items.map((item) => item.href))
@@ -20,9 +22,10 @@ describe("navigationFor", () => {
     expect(hrefs(navigationFor(["administrator"]))).toEqual(hrefs(NAVIGATION))
   })
 
-  test("Auditor tidak melihat menu Administrasi maupun Tutup periode", () => {
+  test("Auditor tidak melihat menu Pengguna, Pengaturan, maupun Tutup periode", () => {
     const groups = navigationFor(["auditor"])
-    expect(groups.map((group) => group.label)).not.toContain("Administrasi")
+    expect(hrefs(groups)).not.toContain("/admin/users")
+    expect(hrefs(groups)).not.toContain("/admin/pengaturan")
     expect(hrefs(groups)).not.toContain("/inventory/periode")
     expect(hrefs(groups)).toContain("/laporan")
   })
@@ -87,9 +90,17 @@ describe("modul (S-01)", () => {
     }
   })
 
-  test("referensi kepabeanan dan profil perusahaan ada di area Kepabeanan", () => {
-    expect(navigationTrail("/master/referensi")?.group.label).toBe("Kepabeanan")
-    expect(navigationTrail("/master/perusahaan")?.group.module).toBe("it-inventory")
+  test("referensi kepabeanan satu menu per jenis di Master data IT Inventory", () => {
+    const trail = navigationTrail("/master/referensi/kode-hs/abc")
+    expect(trail?.group).toMatchObject({ label: "Master data", module: "it-inventory" })
+    expect(trail?.item.title).toBe("Referensi Kode HS")
+    expect(navigationTrail("/master/referensi/tps")?.item.title).toBe("Referensi TPS")
+    expect(navigationTrail("/master/referensi/jenis-kemasan")?.item.title).toBe(
+      "Referensi Jenis Kemasan",
+    )
+    expect(trail?.group.items).toHaveLength(REF_CODE_TYPES.length)
+    expect(trail?.item.submenu).toBe("Produk")
+    expect(navigationTrail("/master/perusahaan")?.group.module).toBe("base")
   })
 })
 
@@ -100,16 +111,42 @@ describe("menu per modul (S-02)", () => {
       "it-inventory",
       "base",
     ])
-    expect(modulesFor(navigationFor(["auditor"]))).toEqual(["inventory", "it-inventory"])
-    // Admin gudang tetap melihat Laporan (report:read) di IT Inventory, tanpa Pengaturan.
-    expect(modulesFor(navigationFor(["admin_gudang"]))).not.toContain("base")
+    // Peran lain melihat Pengaturan hanya untuk Profil perusahaan (master:read).
+    expect(modulesFor(navigationFor(["auditor"]))).toEqual(["inventory", "it-inventory", "base"])
+    expect(
+      hrefs(navigationFor(["admin_gudang"])).filter((href) => href.startsWith("/admin")),
+    ).toEqual([])
   })
 
   test("modul aktif mengikuti halaman yang dibuka", () => {
     expect(moduleForPath("/")).toBe("inventory")
     expect(moduleForPath("/inventory/pengiriman/123")).toBe("inventory")
-    expect(moduleForPath("/master/referensi/abc")).toBe("it-inventory")
+    expect(moduleForPath("/master/referensi/tps/abc")).toBe("it-inventory")
     expect(moduleForPath("/admin/users")).toBe("base")
     expect(moduleForPath("/tidak-ada")).toBeNull()
+  })
+})
+
+describe("navEntries (sub menu seperti hmx)", () => {
+  test("item berurutan dengan submenu sama jadi satu entry, item tanpa submenu tetap sendiri", () => {
+    const entries = navEntries([
+      { title: "A", href: "/a" },
+      { title: "B", href: "/b", submenu: "X" },
+      { title: "C", href: "/c", submenu: "X" },
+      { title: "D", href: "/d", submenu: "Y" },
+    ])
+    expect(
+      entries.map((entry) => (entry.kind === "item" ? entry.item.title : entry.title)),
+    ).toEqual(["A", "X", "Y"])
+    expect(entries[1]).toMatchObject({ kind: "submenu", items: [{ title: "B" }, { title: "C" }] })
+  })
+
+  test("Master data IT Inventory punya lima sub menu", () => {
+    const group = NAVIGATION.find(
+      (entry) => entry.module === "it-inventory" && entry.label === "Master data",
+    )!
+    expect(navEntries(group.items).map((entry) => entry.kind === "submenu" && entry.title)).toEqual(
+      ["Produk", "Logistik & Lokasi", "Perdagangan", "Kepabeanan (CEISA)", "Entitas & Fasilitas"],
+    )
   })
 })

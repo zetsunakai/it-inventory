@@ -14,6 +14,9 @@ import {
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
@@ -29,6 +32,7 @@ import {
   MODULE_MENUS,
   moduleForPath,
   modulesFor,
+  navEntries,
   navigationFor,
   type NavGroup,
   type NavItem,
@@ -71,14 +75,14 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
   const activeGroup = groups.find((group) =>
     group.items.some((item) => item.href !== "/" && isActivePath(pathname, item.href)),
   )?.label
-  const [open, setOpen] = useState<Record<string, boolean>>(() =>
-    activeGroup ? { [activeGroup]: true } : {},
-  )
-  // Pindah ke halaman di bagian lain: bagian itu ikut terbuka, yang dibuka user tetap terbuka.
+  // Semua bagian terbuka secara bawaan seperti hmx (expandTopSections di sidebar.js); yang dicatat
+  // hanya bagian yang ditutup user.
+  const [closed, setClosed] = useState<Record<string, boolean>>({})
+  // Pindah ke halaman di bagian yang sedang ditutup: bagian itu dibuka lagi.
   const [shownActive, setShownActive] = useState(activeGroup)
   if (activeGroup !== shownActive) {
     setShownActive(activeGroup)
-    if (activeGroup && !open[activeGroup]) setOpen({ ...open, [activeGroup]: true })
+    if (activeGroup && closed[activeGroup]) setClosed({ ...closed, [activeGroup]: false })
   }
   const baseId = useId()
   const close = () => isMobile && setOpenMobile(false)
@@ -148,7 +152,9 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
       group.items
         .filter(
           (item) =>
-            item.title.toLowerCase().includes(term) || group.label.toLowerCase().includes(term),
+            item.title.toLowerCase().includes(term) ||
+            group.label.toLowerCase().includes(term) ||
+            Boolean(item.submenu?.toLowerCase().includes(term)),
         )
         .map((item) => ({ group, item })),
     )
@@ -170,6 +176,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
                       <span className="truncate">{item.title}</span>
                       <span className="truncate text-caption opacity-75">
                         {MODULE_MENUS[group.module].label} · {group.label}
+                        {item.submenu && <> · {item.submenu}</>}
                       </span>
                     </span>
                   </SidebarMenuButton>
@@ -207,7 +214,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
         if (collapsed) {
           return <CollapsedGroup key={group.label} group={group} pathname={pathname} />
         }
-        const expanded = Boolean(open[group.label])
+        const expanded = !closed[group.label]
         const hasActive = group.label === activeGroup
         const contentId = `${baseId}-group-${index}`
         return (
@@ -216,7 +223,8 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
               type="button"
               aria-expanded={expanded}
               aria-controls={contentId}
-              onClick={() => setOpen({ ...open, [group.label]: !expanded })}
+              data-nav-group
+              onClick={() => setClosed({ ...closed, [group.label]: expanded })}
               className="flex h-10 w-full items-center gap-3 rounded-md px-3 text-left text-control font-medium text-sidebar-foreground ring-sidebar-ring outline-hidden hover:bg-sidebar-accent focus-visible:ring-2"
             >
               <Icon
@@ -238,13 +246,95 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
             <SidebarGroupContent id={contentId} hidden={!expanded} className="pt-0.5">
               {/* Menu anak sejajar teks menu induknya (ikon 18px + jarak 12px). */}
               <SidebarMenu className="gap-0.5">
-                {group.items.map((item) => link(item, "pl-[42px]"))}
+                {navEntries(group.items).map((entry) =>
+                  entry.kind === "item" ? (
+                    link(entry.item, "pl-[42px]")
+                  ) : (
+                    <SubmenuEntry
+                      key={entry.title}
+                      title={entry.title}
+                      items={entry.items}
+                      pathname={pathname}
+                      onNavigate={close}
+                    />
+                  ),
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         )
       })}
     </>
+  )
+}
+
+function CollapsedLink({ item, pathname }: { item: NavItem; pathname: string }) {
+  const active = isActivePath(pathname, item.href)
+  return (
+    <DropdownMenuItem
+      render={<Link href={item.href} aria-current={active ? "page" : undefined} />}
+      className={cn("h-9", active && "font-medium text-primary")}
+    >
+      {item.title}
+    </DropdownMenuItem>
+  )
+}
+
+// Sub menu entry seperti hmx (menu-entry.vue): klik entry membuka daftar menunya di panel yang
+// melayang di samping sidebar; klik di luar atau memilih menu menutupnya. Entry ikut menyala bila
+// salah satu menunya sedang dibuka.
+function SubmenuEntry({
+  title,
+  items,
+  pathname,
+  onNavigate,
+}: {
+  title: string
+  items: NavItem[]
+  pathname: string
+  onNavigate: () => void
+}) {
+  const active = items.some((item) => isActivePath(pathname, item.href))
+  return (
+    <SidebarMenuItem>
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={<SidebarMenuButton isActive={active} className={cn(ITEM, "pl-[42px]")} />}
+        >
+          <span className="flex-1 truncate">{title}</span>
+          <ChevronRight className="size-4 shrink-0 opacity-70" aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          side="right"
+          align="start"
+          sideOffset={16}
+          className="max-h-[calc(100vh-100px)] w-72 p-1.5"
+        >
+          {items.map((item) => {
+            const current = isActivePath(pathname, item.href)
+            return (
+              <DropdownMenuItem
+                key={item.href}
+                render={
+                  <Link
+                    href={item.href}
+                    aria-current={current ? "page" : undefined}
+                    onClick={onNavigate}
+                  />
+                }
+                className={cn(
+                  "h-10 px-2 font-medium",
+                  current &&
+                    "bg-primary text-primary-foreground focus:bg-primary focus:text-primary-foreground",
+                )}
+              >
+                {item.title}
+              </DropdownMenuItem>
+            )
+          })}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </SidebarMenuItem>
   )
 }
 
@@ -273,18 +363,29 @@ function CollapsedGroup({ group, pathname }: { group: NavGroup; pathname: string
             <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-56">
               <DropdownMenuGroup>
                 <DropdownMenuLabel className="text-caption">{group.label}</DropdownMenuLabel>
-                {group.items.map((item) => {
-                  const active = isActivePath(pathname, item.href)
-                  return (
-                    <DropdownMenuItem
-                      key={item.href}
-                      render={<Link href={item.href} aria-current={active ? "page" : undefined} />}
-                      className={cn("h-9", active && "font-medium text-primary")}
-                    >
-                      {item.title}
-                    </DropdownMenuItem>
-                  )
-                })}
+                {navEntries(group.items).map((entry) =>
+                  entry.kind === "item" ? (
+                    <CollapsedLink key={entry.item.href} item={entry.item} pathname={pathname} />
+                  ) : (
+                    // Sub menu di panel melayang: daftar menunya membuka satu tingkat lagi ke samping.
+                    <DropdownMenuSub key={entry.title}>
+                      <DropdownMenuSubTrigger
+                        className={cn(
+                          "h-9",
+                          entry.items.some((item) => isActivePath(pathname, item.href)) &&
+                            "font-medium text-primary",
+                        )}
+                      >
+                        {entry.title}
+                      </DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent className="w-72">
+                        {entry.items.map((item) => (
+                          <CollapsedLink key={item.href} item={item} pathname={pathname} />
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  ),
+                )}
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>

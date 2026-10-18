@@ -1,5 +1,7 @@
 import {
+  ArrowDownToLine,
   ArrowLeftRight,
+  ArrowUpFromLine,
   Boxes,
   ClipboardList,
   FileCheck2,
@@ -7,6 +9,7 @@ import {
   Database,
   House,
   Landmark,
+  Library,
   Settings,
   SlidersHorizontal,
   type LucideIcon,
@@ -19,6 +22,7 @@ import {
   type Permission,
   type Role,
 } from "./permissions"
+import { refCodeListHref, refCodeMenuTitle, type RefCodeType } from "./ref-codes"
 
 // Satu sumber untuk menu sidebar dan halaman modul. Menu hanya menyembunyikan
 // yang tidak boleh dibuka; pengecekan izin yang menentukan tetap di setiap halaman.
@@ -30,6 +34,9 @@ export type NavItem = {
   permission?: Permission
   // Tiket backlog yang mengisi modul ini, ditampilkan selama modul masih kosong.
   plannedIn?: string
+  // Sub menu entry di dalam grup, seperti hmx: grup › sub menu › daftar menu yang terbuka melayang
+  // di samping sidebar. Item berurutan dengan submenu yang sama menjadi satu entry.
+  submenu?: string
 }
 
 export type NavGroup = {
@@ -81,29 +88,67 @@ export const NAVIGATION: NavGroup[] = [
       { title: "Tutup periode", href: "/inventory/periode", permission: "inventory:approve" },
     ],
   },
+  // Dokumen BC dikelompokkan seperti menu hmx (Dokumen Impor, Ekspor, TPB), satu menu per jenis
+  // (keputusan 17/10/2026). Jenis di luar MVP tampil redup sesuai jadwal PRD.
   {
-    label: "Kepabeanan",
+    label: "Dokumen impor",
+    module: "it-inventory",
+    icon: ArrowDownToLine,
+    items: [
+      { title: "BC 2.0", href: "/dokumen-bc/bc20", permission: "bc:read", plannedIn: "Fase 2" },
+    ],
+  },
+  {
+    label: "Dokumen ekspor",
+    module: "it-inventory",
+    icon: ArrowUpFromLine,
+    items: [
+      { title: "BC 3.0", href: "/dokumen-bc/bc30", permission: "bc:read" },
+      { title: "BC 3.3", href: "/dokumen-bc/bc33", permission: "bc:read", plannedIn: "Fase 3" },
+      { title: "P3BET", href: "/dokumen-bc/p3bet", permission: "bc:read", plannedIn: "Fase 3" },
+    ],
+  },
+  {
+    label: "Dokumen TPB",
     module: "it-inventory",
     icon: Landmark,
     items: [
-      // Satu menu per jenis dokumen BC, seperti hmx (keputusan 17/10/2026).
+      { title: "BC 1.6", href: "/dokumen-bc/bc16", permission: "bc:read", plannedIn: "Fase 3" },
       { title: "BC 2.3", href: "/dokumen-bc/bc23", permission: "bc:read" },
-      { title: "BC 4.0", href: "/dokumen-bc/bc40", permission: "bc:read" },
       { title: "BC 2.5", href: "/dokumen-bc/bc25", permission: "bc:read" },
-      { title: "BC 3.0", href: "/dokumen-bc/bc30", permission: "bc:read" },
+      { title: "BC 2.6.1", href: "/dokumen-bc/bc261", permission: "bc:read", plannedIn: "Fase 2" },
+      { title: "BC 2.6.2", href: "/dokumen-bc/bc262", permission: "bc:read", plannedIn: "Fase 2" },
+      { title: "BC 2.7", href: "/dokumen-bc/bc27", permission: "bc:read", plannedIn: "Fase 2" },
+      { title: "BC 2.8", href: "/dokumen-bc/bc28", permission: "bc:read", plannedIn: "Fase 3" },
+      { title: "BC 4.0", href: "/dokumen-bc/bc40", permission: "bc:read" },
       { title: "BC 4.1", href: "/dokumen-bc/bc41", permission: "bc:read" },
-      { title: "Pengecualian", href: "/dokumen-bc/pengecualian", permission: "bc:read" },
-      {
-        title: "Referensi kepabeanan",
-        href: "/master/referensi",
-        permission: "master:read",
-      },
-      {
-        title: "Profil perusahaan",
-        href: "/master/perusahaan",
-        permission: "master:read",
-      },
     ],
+  },
+  {
+    // Referensi kepabeanan satu menu per jenis, dikelompokkan dalam sub menu seperti Master Data
+    // hmx (core_it_inventory/views/menu_views.xml).
+    label: "Master data",
+    module: "it-inventory",
+    icon: Library,
+    items: refCodeMenu([
+      ["Produk", ["ceisa_unit", "package_type", "hs_code"]],
+      [
+        "Logistik & Lokasi",
+        [
+          "domestic_port",
+          "foreign_port",
+          "tps",
+          "customs_office",
+          "country",
+          "container_size",
+          "container_type",
+          "transport_mode",
+        ],
+      ],
+      ["Perdagangan", ["incoterm", "currency"]],
+      ["Kepabeanan (CEISA)", ["document_type", "levy_type", "response"]],
+      ["Entitas & Fasilitas", ["entity_type", "facility"]],
+    ]),
   },
   {
     label: "Laporan",
@@ -156,6 +201,9 @@ export const NAVIGATION: NavGroup[] = [
     icon: Settings,
     items: [
       { title: "Pengguna", href: "/admin/users", permission: "user:manage" },
+      // Profil perusahaan (pengusaha TPB di dokumen BC) di modul Pengaturan, bisa dibaca semua peran
+      // yang punya master:read.
+      { title: "Profil perusahaan", href: "/master/perusahaan", permission: "master:read" },
       {
         title: "Pengaturan",
         href: "/admin/pengaturan",
@@ -164,6 +212,32 @@ export const NAVIGATION: NavGroup[] = [
     ],
   },
 ]
+
+function refCodeMenu(submenus: [string, RefCodeType[]][]): NavItem[] {
+  return submenus.flatMap(([submenu, types]) =>
+    types.map((type) => ({
+      title: refCodeMenuTitle(type),
+      href: refCodeListHref(type),
+      permission: "master:read" as const,
+      submenu,
+    })),
+  )
+}
+
+export type NavEntry =
+  { kind: "item"; item: NavItem } | { kind: "submenu"; title: string; items: NavItem[] }
+
+// Item grup untuk sidebar: item berurutan dengan submenu yang sama digabung jadi satu entry.
+export function navEntries(items: NavItem[]): NavEntry[] {
+  const entries: NavEntry[] = []
+  for (const item of items) {
+    const last = entries.at(-1)
+    if (!item.submenu) entries.push({ kind: "item", item })
+    else if (last?.kind === "submenu" && last.title === item.submenu) last.items.push(item)
+    else entries.push({ kind: "submenu", title: item.submenu, items: [item] })
+  }
+  return entries
+}
 
 // Menu yang boleh dilihat oleh kumpulan peran ini. Grup yang kosong dibuang.
 export function navigationFor(roles: readonly Role[]): NavGroup[] {

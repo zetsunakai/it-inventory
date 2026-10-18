@@ -2,6 +2,7 @@ import "server-only"
 
 import { sql } from "drizzle-orm"
 
+import { refCodeListHref, type RefCodeType } from "@/lib/ref-codes"
 import { db } from "@/server/db"
 
 // Record sebelum/sesudah untuk tombol di header dokumen master (RU-23), urut kode seperti
@@ -58,7 +59,7 @@ export async function productCategoryNeighbors(path: string) {
   return { prev: link(prev.rows[0]), next: link(next.rows[0]) }
 }
 
-export async function refCodeNeighbors(type: string, code: string, parentCode: string | null) {
+export async function refCodeNeighbors(type: RefCodeType, code: string, parentCode: string | null) {
   const [prev, next] = await Promise.all([
     db.execute<{ id: string; code: string }>(sql`
       select id, code from ref_codes
@@ -70,7 +71,7 @@ export async function refCodeNeighbors(type: string, code: string, parentCode: s
       order by code asc limit 1`),
   ])
   const link = (row?: { id: string; code: string }) =>
-    row && { href: `/master/referensi/${row.id}`, label: row.code }
+    row && { href: `${refCodeListHref(type)}/${row.id}`, label: row.code }
   return { prev: link(prev.rows[0]), next: link(next.rows[0]) }
 }
 

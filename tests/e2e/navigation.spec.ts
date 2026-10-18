@@ -21,7 +21,7 @@ async function loginAs(page: Page, account: { email: string; password: string })
 // Klik bisa jatuh sebelum halaman selesai hydrate, jadi tiap grup diulang sampai benar-benar terbuka.
 async function expandMenus(page: Page) {
   // Menu per peran ikut di-stream; tunggu grupnya ada sebelum dihitung.
-  const groups = sidebar(page).locator("button[aria-expanded]")
+  const groups = sidebar(page).locator("button[data-nav-group]")
   await expect(groups.first()).toBeVisible()
   for (const group of await groups.all()) {
     await expect(async () => {
@@ -66,20 +66,27 @@ async function menuLinks(page: Page) {
   return all
 }
 
-test("menu Auditor: bisa melihat modul baca, tanpa Administrasi dan Tutup periode", async ({
+test("menu Auditor: bisa melihat modul baca, tanpa Pengguna, Pengaturan, dan Tutup periode", async ({
   page,
 }) => {
   await loginAs(page, ACCOUNTS.auditor)
 
   const links = await menuLinks(page)
   expect(links).toEqual(
-    expect.arrayContaining(["Beranda", "Stok", "BC 2.3", "Laporan IT Inventory", "Produk"]),
+    expect.arrayContaining([
+      "Beranda",
+      "Stok",
+      "BC 2.3",
+      "Laporan IT Inventory",
+      "Produk",
+      "Profil perusahaan",
+    ]),
   )
   expect(links).not.toContain("Pengguna")
   expect(links).not.toContain("Pengaturan")
   expect(links).not.toContain("Tutup periode")
-  await expect(sidebar(page).getByText("Administrasi", { exact: true })).toHaveCount(0)
-  expect(await moduleOptions(page)).toEqual(["Inventory", "IT Inventory"])
+  // Pengaturan tampil hanya untuk Profil perusahaan (hanya baca).
+  expect(await moduleOptions(page)).toEqual(["Inventory", "IT Inventory", "Pengaturan"])
 })
 
 test("menu Admin gudang: tanpa dokumen BC; membuka URL-nya langsung ditolak", async ({ page }) => {
@@ -121,13 +128,13 @@ test("tautan langsung ke halaman modul lain memindahkan menu ke modul itu", asyn
   await expect(
     sidebar(page).getByRole("button", { name: /^Ganti modul, sekarang Inventory/ }),
   ).toBeVisible()
-  await page.goto("/master/referensi")
+  await page.goto("/master/referensi/kode-hs")
   await expect(
     sidebar(page).getByRole("button", { name: /^Ganti modul, sekarang IT Inventory/ }),
   ).toBeVisible()
 })
 
-test("menu anak tersembunyi sampai menu induknya diklik; grup halaman aktif terbuka", async ({
+test("semua bagian menu terbuka secara bawaan seperti hmx; bisa ditutup dan dibuka lagi", async ({
   page,
 }) => {
   await loginAs(page, ACCOUNTS.auditor)
@@ -136,11 +143,11 @@ test("menu anak tersembunyi sampai menu induknya diklik; grup halaman aktif terb
   const inventory = sidebar(page).getByRole("button", { name: "Stok & kontrol" })
   const master = sidebar(page).getByRole("button", { name: "Master data" })
   await expect(inventory).toHaveAttribute("aria-expanded", "true")
-  await expect(master).toHaveAttribute("aria-expanded", "false")
-  await expect(sidebar(page).getByRole("link", { name: "Produk", exact: true })).toHaveCount(0)
+  await expect(master).toHaveAttribute("aria-expanded", "true")
+  await expect(sidebar(page).getByRole("link", { name: "Produk", exact: true })).toBeVisible()
 
   await master.click()
+  await expect(sidebar(page).getByRole("link", { name: "Produk", exact: true })).toHaveCount(0)
+  await master.click()
   await expect(sidebar(page).getByRole("link", { name: "Produk", exact: true })).toBeVisible()
-  await inventory.click()
-  await expect(sidebar(page).getByRole("link", { name: "Stok", exact: true })).toHaveCount(0)
 })

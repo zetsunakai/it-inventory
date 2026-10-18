@@ -6,11 +6,17 @@ import { z } from "zod"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatRefCode, REF_CODE_PARENT_TYPES, REF_CODE_TYPE_LABELS } from "@/lib/ref-codes"
+import {
+  formatRefCode,
+  REF_CODE_PARENT_TYPES,
+  REF_CODE_TYPE_LABELS,
+  refCodeListHref,
+  refCodeTypeFromSlug,
+} from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
 import { findRefCode, getRefCode } from "@/server/queries/ref-codes"
 
-import { RefCodeEditForm } from "../ref-code-forms"
+import { RefCodeEditForm } from "../../ref-code-forms"
 import { StaticField, ViewSection } from "@/components/form-field"
 import { RecordModes } from "@/components/layout/record-modes"
 import { recordActivity } from "@/server/queries/activity"
@@ -18,7 +24,7 @@ import { refCodeNeighbors } from "@/server/queries/neighbors"
 
 export const metadata: Metadata = { title: "Ubah referensi · IT Inventory" }
 
-export default function EditRefCodePage({ params }: PageProps<"/master/referensi/[id]">) {
+export default function EditRefCodePage({ params }: PageProps<"/master/referensi/[jenis]/[id]">) {
   return (
     <Suspense fallback={<Skeleton className="h-64 w-full" />}>
       <EditRefCode params={params} />
@@ -26,13 +32,14 @@ export default function EditRefCodePage({ params }: PageProps<"/master/referensi
   )
 }
 
-async function EditRefCode({ params }: { params: Promise<{ id: string }> }) {
+async function EditRefCode({ params }: { params: Promise<{ jenis: string; id: string }> }) {
   await requirePermission("ref:write")
-  const { id } = await params
+  const { jenis, id } = await params
   // Id bukan UUID = pasti tidak ada; jangan sampai jadi error query di Postgres.
   if (!z.uuid().safeParse(id).success) notFound()
   const row = await getRefCode(id)
-  if (!row) notFound()
+  // Referensi hanya terbuka di bawah menu jenisnya sendiri.
+  if (!row || row.type !== refCodeTypeFromSlug(jenis)) notFound()
 
   const parentType = REF_CODE_PARENT_TYPES[row.type]
   const parent = parentType && row.parentCode ? await findRefCode(parentType, row.parentCode) : null
@@ -44,7 +51,7 @@ async function EditRefCode({ params }: { params: Promise<{ id: string }> }) {
   return (
     <DocumentLayout
       title={row.name}
-      meta="Jenis dan kode tidak bisa diubah."
+      meta="Kode tidak bisa diubah."
       crumbs={[{ label: formatRefCode(row) }]}
       neighbors={neighbors}
       activity={<ActivityLog entries={activity} noun="referensi kepabeanan" />}
@@ -52,10 +59,9 @@ async function EditRefCode({ params }: { params: Promise<{ id: string }> }) {
       <RecordModes
         key={row.id}
         canEdit
-        createHref="/master/referensi/baru"
+        createHref={`${refCodeListHref(row.type)}/baru`}
         view={
           <ViewSection title="Data referensi">
-            <StaticField label="Jenis" value={REF_CODE_TYPE_LABELS[row.type]} />
             {parentType && (
               <StaticField
                 label={REF_CODE_TYPE_LABELS[parentType]}
