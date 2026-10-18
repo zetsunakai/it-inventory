@@ -124,7 +124,7 @@ async function ReturnRequestTable({ searchParams }: { searchParams: Promise<RawS
         rowKey={(row) => row.id}
         rowHref={(row) => `${PATH}/${row.id}`}
         rowMuted={(row) => row.status === "cancelled"}
-        empty={listEmptyState({ searchParams: raw, basePath: PATH, noun: "retur" })}
+        empty={listEmptyState({ searchParams: raw, noun: "retur" })}
       />
     </div>
   )

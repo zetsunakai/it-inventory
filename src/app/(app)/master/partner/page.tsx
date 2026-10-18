@@ -117,9 +117,7 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
         rowMuted={(row) => !row.active}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: "/master/partner",
           noun: "partner",
-          create: canEdit ? { href: "/master/partner/baru", label: "Tambah partner" } : undefined,
         })}
       />
     </div>

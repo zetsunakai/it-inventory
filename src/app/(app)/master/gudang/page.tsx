@@ -143,11 +143,7 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
           hasActiveFilters(raw) || hasAllWarehouseAccess(user.roles)
             ? listEmptyState({
                 searchParams: raw,
-                basePath: "/master/gudang",
                 noun: "gudang",
-                create: canEdit
-                  ? { href: "/master/gudang/baru", label: "Tambah gudang" }
-                  : undefined,
               })
             : {
                 title: "Anda belum diberi akses ke gudang mana pun.",

@@ -86,14 +86,7 @@ async function LotTable({ searchParams }: { searchParams: Promise<RawSearchParam
         rows={rows}
         rowKey={(row) => row.id}
         rowHref={(row) => `${PATH}/${row.id}`}
-        empty={
-          raw.q
-            ? listEmptyState({ searchParams: raw, basePath: PATH, noun: "lot" })
-            : {
-                title: "Belum ada lot atau nomor seri yang bergerak.",
-                description: "Lot muncul di sini setelah transfer berlot divalidasi.",
-              }
-        }
+        empty={listEmptyState({ searchParams: raw, noun: "lot atau nomor seri" })}
       />
     </div>
   )

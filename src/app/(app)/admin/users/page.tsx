@@ -87,7 +87,7 @@ async function UserTable({ searchParams }: { searchParams: Promise<RawSearchPara
         rows={rows}
         rowKey={(user) => user.id}
         rowHref={(user) => `/admin/users/${user.id}`}
-        empty={listEmptyState({ searchParams: raw, basePath: "/admin/users", noun: "user" })}
+        empty={listEmptyState({ searchParams: raw, noun: "user" })}
       />
     </div>
   )

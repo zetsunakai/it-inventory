@@ -121,11 +121,7 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
         rowMuted={(row) => !row.active}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: "/master/kategori-produk",
           noun: "kategori produk",
-          create: canEdit
-            ? { href: "/master/kategori-produk/baru", label: "Tambah kategori" }
-            : undefined,
         })}
       />
     </div>

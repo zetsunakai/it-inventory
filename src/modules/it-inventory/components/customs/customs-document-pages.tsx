@@ -190,9 +190,7 @@ async function CustomsTable({
         rowMuted={(row) => row.status === "cancelled"}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: spec.path,
           noun: `dokumen ${spec.title}`,
-          create: canWrite ? { href: `${spec.path}/baru`, label: createLabel } : undefined,
         })}
       />
     </div>

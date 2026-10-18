@@ -146,9 +146,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
         rowMuted={(row) => !row.active}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: "/master/produk",
           noun: "produk",
-          create: canEdit ? { href: "/master/produk/baru", label: "Tambah produk" } : undefined,
         })}
       />
     </div>

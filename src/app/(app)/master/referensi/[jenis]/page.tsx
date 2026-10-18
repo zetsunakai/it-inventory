@@ -17,7 +17,6 @@ import {
 import {
   REF_CODE_PARENT_TYPES,
   REF_CODE_TYPE_LABELS,
-  refCodeListHref,
   refCodeMenuTitle,
   refCodeTypeFromSlug,
   type RefCodeType,
@@ -95,7 +94,6 @@ async function RefCodeTable({
   const raw = await searchParams
   const params = parseListParams(raw)
   const list = await listRefCodes({ active: pickActive(raw), ...params, type })
-  const basePath = refCodeListHref(type)
 
   return (
     <div className="space-y-4">
@@ -126,7 +124,6 @@ async function RefCodeTable({
         rowMuted={(row) => !row.active}
         empty={listEmptyState({
           searchParams: raw,
-          basePath,
           noun: "referensi",
         })}
       />

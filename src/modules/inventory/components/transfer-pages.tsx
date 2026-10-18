@@ -237,12 +237,7 @@ async function TransferTable({
         rowMuted={(row) => row.status === "cancelled"}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: kind.path,
           noun: kind.noun,
-          create:
-            canWrite && kind.creatable !== false
-              ? { href: createHref, label: createLabel }
-              : undefined,
         })}
       />
     </div>

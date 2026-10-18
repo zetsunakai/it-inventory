@@ -148,9 +148,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
         rowMuted={(row) => !row.active}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: "/master/satuan",
           noun: "satuan",
-          create: canEdit ? { href: "/master/satuan/baru", label: "Tambah satuan" } : undefined,
         })}
       />
     </div>

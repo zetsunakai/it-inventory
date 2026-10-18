@@ -125,9 +125,7 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
         rowMuted={(row) => row.status === "cancelled"}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: PATH,
           noun: "transfer antar gudang",
-          create: canWrite ? { href: `${PATH}/baru`, label: "Buat permintaan" } : undefined,
         })}
       />
     </div>

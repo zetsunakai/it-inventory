@@ -121,11 +121,7 @@ async function StockCountTable({ searchParams }: { searchParams: Promise<RawSear
         rowMuted={(row) => row.status === "cancelled"}
         empty={listEmptyState({
           searchParams: raw,
-          basePath: "/inventory/opname",
           noun: "sesi opname",
-          create: canCreate
-            ? { href: "/inventory/opname/baru", label: "Buat sesi opname" }
-            : undefined,
         })}
       />
     </div>

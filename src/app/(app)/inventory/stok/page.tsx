@@ -151,14 +151,7 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
         rows={rows}
         rowKey={(row) => `${row.productId}|${row.locationPath}|${row.lotName ?? ""}`}
         rowHref={(row) => `/inventory/stok/${row.productId}?gudang=${row.warehouseId}`}
-        empty={
-          raw.q || warehouseId || date
-            ? listEmptyState({ searchParams: raw, basePath: "/inventory/stok", noun: "stok" })
-            : {
-                title: "Belum ada stok.",
-                description: "Stok bertambah setelah penerimaan divalidasi.",
-              }
-        }
+        empty={listEmptyState({ searchParams: raw, noun: "stok" })}
       />
     </div>
   )
