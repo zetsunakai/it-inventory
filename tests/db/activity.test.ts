@@ -1,9 +1,14 @@
-import { eq, sql } from "drizzle-orm"
+import { and, eq, sql } from "drizzle-orm"
 import { afterAll, expect, test } from "vitest"
 
 import { db } from "@/server/db"
-import { partners } from "@/server/db/schema"
-import { recordActivity } from "@/server/queries/activity"
+import { partners, systemSettings, userRoles, users } from "@/server/db/schema"
+import {
+  childActivity,
+  mergeActivity,
+  recordActivity,
+  tableActivity,
+} from "@/server/queries/activity"
 
 // Log aktivitas dokumen dari audit_logs (backlog RU-23). Data uji berawalan ZAC.
 
@@ -13,8 +18,12 @@ const LABELS = {
 
 let id = ""
 
+let userId = ""
+
 afterAll(async () => {
   if (id) await db.delete(partners).where(eq(partners.id, id))
+  if (userId) await db.delete(users).where(eq(users.id, userId))
+  await db.delete(systemSettings).where(eq(systemSettings.key, "zac.uji"))
   await db.$client.end()
 })
 
@@ -40,5 +49,39 @@ test("dibuat lalu diubah: perubahan per field dengan label, perubahan kolom tekn
   expect(entries[0].changes).toEqual([
     { field: "Nama", from: "Mitra lama", to: "Mitra baru" },
     { field: "Aktif", from: "Ya", to: "Tidak" },
+  ])
+})
+
+test("baris anak (peran) tampil sebagai perubahan record induk, digabung terbaru dulu", async () => {
+  const [user] = await db
+    .insert(users)
+    .values({ name: "ZAC User", email: "zac@activity.test", emailVerified: true })
+    .returning({ id: users.id })
+  userId = user.id
+  await db.insert(userRoles).values({ userId, role: "staf_exim" })
+  await db.insert(userRoles).values({ userId, role: "auditor" })
+  await db
+    .delete(userRoles)
+    .where(and(eq(userRoles.userId, userId), eq(userRoles.role, "staf_exim")))
+
+  const roles = await childActivity("user_roles", userId, "Peran", (data) => String(data.role))
+  expect(roles.map((entry) => entry.changes[0])).toEqual([
+    { field: "Peran", from: "staf_exim", to: "dihapus" },
+    { field: "Peran", from: null, to: "+ auditor" },
+    { field: "Peran", from: null, to: "+ staf_exim" },
+  ])
+  const merged = mergeActivity(await recordActivity("users", userId, { fields: {} }), roles)
+  expect(merged.map((entry) => entry.action)).toEqual(["UPDATE", "UPDATE", "UPDATE", "INSERT"])
+})
+
+test("riwayat tabel kecil: perubahan nilai per record dengan label record", async () => {
+  await db.insert(systemSettings).values({ key: "zac.uji", value: "satu", description: "Uji" })
+  await db.update(systemSettings).set({ value: "dua" }).where(eq(systemSettings.key, "zac.uji"))
+  const entries = (await tableActivity("system_settings", "value", (key) => `Label ${key}`)).filter(
+    (entry) => entry.changes[0].field === "Label zac.uji",
+  )
+  expect(entries.map((entry) => entry.changes[0])).toEqual([
+    { field: "Label zac.uji", from: "satu", to: "dua" },
+    { field: "Label zac.uji", from: null, to: "satu" },
   ])
 })

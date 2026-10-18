@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { PageHeader } from "@/components/page-header"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 
@@ -11,15 +11,15 @@ export const metadata: Metadata = { title: "Tambah gudang · IT Inventory" }
 
 export default function NewWarehousePage() {
   return (
-    <>
-      <PageHeader
-        title="Tambah gudang"
-        description="Kode gudang tidak bisa diubah setelah disimpan. Lokasi ditambahkan setelahnya."
-      />
+    <NewRecordLayout
+      title="Tambah gudang"
+      description="Kode gudang tidak bisa diubah setelah disimpan. Lokasi ditambahkan setelahnya."
+      noun="gudang"
+    >
       <Suspense fallback={<Skeleton className="h-80 w-full" />}>
         <Guarded />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 

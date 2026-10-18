@@ -107,3 +107,93 @@ export async function recordActivity(
     ]
   })
 }
+
+// Baris anak satu record (mis. peran pengguna, akses gudang) yang ditambah atau dihapus, ditampilkan
+// sebagai perubahan record induknya. describe mengubah isi baris menjadi teks, mis. nama peran.
+export async function childActivity(
+  table: string,
+  parentId: string,
+  field: string,
+  describe: (data: Record<string, unknown>) => string,
+  limit = 50,
+): Promise<ActivityEntry[]> {
+  const result = await db.execute<{
+    id: number
+    occurred_at: string
+    user_name: string | null
+    action: "INSERT" | "UPDATE" | "DELETE"
+    old_data: Record<string, unknown> | null
+    new_data: Record<string, unknown> | null
+  }>(sql`
+    select a.id, a.occurred_at, u.name as user_name, a.action, a.old_data, a.new_data
+    from audit_logs a left join users u on u.id = a.user_id
+    where a.table_name = ${table} and a.record_id = ${parentId} and a.action <> 'UPDATE'
+    order by a.id desc
+    limit ${limit}`)
+  return result.rows.map((row) => {
+    const added = row.action === "INSERT"
+    const text = describe((added ? row.new_data : row.old_data) ?? {})
+    return {
+      id: row.id,
+      at: new Date(row.occurred_at),
+      userName: row.user_name,
+      action: "UPDATE" as const,
+      changes: [{ field, from: added ? null : text, to: added ? `+ ${text}` : "dihapus" }],
+    }
+  })
+}
+
+// Gabungan beberapa sumber riwayat, terbaru dulu.
+export function mergeActivity(...lists: ActivityEntry[][]) {
+  return lists.flat().sort((a, b) => b.id - a.id)
+}
+
+// Riwayat semua record satu tabel kecil (mis. pengaturan): setiap perubahan kolom `column` tampil
+// sebagai "<label record>: lama → baru".
+export async function tableActivity(
+  table: string,
+  column: string,
+  recordLabel: (recordId: string) => string,
+  limit = 50,
+): Promise<ActivityEntry[]> {
+  const result = await db.execute<{
+    id: number
+    occurred_at: string
+    user_name: string | null
+    record_id: string
+    action: "INSERT" | "UPDATE" | "DELETE"
+    old_data: Record<string, unknown> | null
+    new_data: Record<string, unknown> | null
+  }>(sql`
+    select a.id, a.occurred_at, u.name as user_name, a.record_id, a.action, a.old_data, a.new_data
+    from audit_logs a left join users u on u.id = a.user_id
+    where a.table_name = ${table}
+    order by a.id desc
+    limit ${limit}`)
+  const text = (value: unknown) =>
+    value === null || value === undefined
+      ? null
+      : typeof value === "string"
+        ? value
+        : JSON.stringify(value)
+  return result.rows.flatMap((row) => {
+    const before = text(row.old_data?.[column])
+    const after = text(row.new_data?.[column])
+    if (row.action === "UPDATE" && before === after) return []
+    return [
+      {
+        id: row.id,
+        at: new Date(row.occurred_at),
+        userName: row.user_name,
+        action: "UPDATE" as const,
+        changes: [
+          {
+            field: recordLabel(row.record_id),
+            from: before,
+            to: row.action === "DELETE" ? "dihapus" : after,
+          },
+        ],
+      },
+    ]
+  })
+}

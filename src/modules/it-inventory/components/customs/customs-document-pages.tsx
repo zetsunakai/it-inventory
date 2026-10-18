@@ -11,6 +11,7 @@ import { ListPager } from "@/components/data-table/list-pager"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { Section } from "@/components/layout/section"
@@ -197,15 +198,15 @@ async function CustomsTable({
 
 export function NewCustomsDocumentPage({ spec }: { spec: CustomsFormSpec }) {
   return (
-    <>
-      <PageHeader
-        title={`Buat ${spec.title}`}
-        description="Disimpan sebagai Draft dengan nomor aju baru. Isian boleh dilengkapi bertahap."
-      />
+    <NewRecordLayout
+      title={`Buat ${spec.title}`}
+      description="Disimpan sebagai Draft dengan nomor aju baru. Isian boleh dilengkapi bertahap."
+      noun="dokumen"
+    >
       <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
         <NewCustomsForm spec={spec} />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 

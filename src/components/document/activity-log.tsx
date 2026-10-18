@@ -3,10 +3,25 @@ import { ArrowRight, CirclePlus, PencilLine, Trash2 } from "lucide-react"
 import { formatDateTime } from "@/lib/format"
 import type { ActivityEntry } from "@/server/queries/activity"
 
-// Log aktivitas di panel samping dokumen (RU-23): siapa, kapan, dan apa yang berubah.
-export function ActivityLog({ entries, noun }: { entries: ActivityEntry[]; noun: string }) {
+// Log aktivitas di panel samping dokumen (RU-23): siapa, kapan, dan apa yang berubah. unsaved =
+// halaman Buat, record-nya belum ada.
+export function ActivityLog({
+  entries,
+  noun,
+  unsaved,
+}: {
+  entries: ActivityEntry[]
+  noun: string
+  unsaved?: boolean
+}) {
   if (entries.length === 0) {
-    return <p className="text-control text-muted-foreground">Belum ada aktivitas tercatat.</p>
+    return (
+      <p className="text-control text-muted-foreground">
+        {unsaved
+          ? `Riwayat perubahan muncul di sini setelah ${noun} disimpan.`
+          : "Belum ada aktivitas tercatat."}
+      </p>
+    )
   }
   return (
     <ol className="space-y-4">

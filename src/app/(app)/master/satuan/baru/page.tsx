@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { PageHeader } from "@/components/page-header"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { listUomCategories } from "@/modules/inventory/server/queries/uoms"
@@ -12,15 +12,15 @@ export const metadata: Metadata = { title: "Tambah satuan · IT Inventory" }
 
 export default function NewUomPage() {
   return (
-    <>
-      <PageHeader
-        title="Tambah satuan"
-        description="Kode dan kategori tidak bisa diubah setelah disimpan."
-      />
+    <NewRecordLayout
+      title="Tambah satuan"
+      description="Kode dan kategori tidak bisa diubah setelah disimpan."
+      noun="satuan"
+    >
       <Suspense fallback={<Skeleton className="h-72 w-full" />}>
         <Guarded />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 

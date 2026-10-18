@@ -1,13 +1,15 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { PageHeader } from "@/components/page-header"
+import { ActivityLog } from "@/components/document/activity-log"
+import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { FACILITY_TYPE_LABELS } from "@/modules/it-inventory/lib/company"
 import { formatDate } from "@/lib/format"
 import { hasPermission } from "@/lib/permissions"
 import { formatRefCode } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
+import { recordActivity } from "@/server/queries/activity"
 import { getCompanyProfile } from "@/modules/it-inventory/server/queries/company"
 
 import { CompanyProfileForm } from "./company-profile-form"
@@ -18,22 +20,30 @@ export const metadata: Metadata = { title: "Profil perusahaan · IT Inventory" }
 
 export default function CompanyProfilePage() {
   return (
-    <>
-      <PageHeader
-        title="Profil perusahaan"
-        description="Dipakai otomatis sebagai entitas Pengusaha/Pemilik di dokumen BC."
-      />
-      <Suspense fallback={<Skeleton className="h-96 w-full" />}>
-        <CompanyProfile />
-      </Suspense>
-    </>
+    <Suspense fallback={<Skeleton className="h-96 w-full" />}>
+      <CompanyProfilePanel />
+    </Suspense>
   )
 }
 
-async function CompanyProfile() {
+// Satu template dengan halaman detail lain: isi profil dan panel Aktivitas dari audit log
+// (profil satu baris, record_id-nya "true").
+async function CompanyProfilePanel() {
   const user = await requirePermission("master:read")
+  const activity = await recordActivity("company", "true", COMPANY_ACTIVITY_LABELS)
+  return (
+    <DocumentLayout
+      title="Profil perusahaan"
+      meta="Dipakai otomatis sebagai entitas Pengusaha/Pemilik di dokumen BC."
+      activity={<ActivityLog entries={activity} noun="profil perusahaan" />}
+    >
+      <CompanyProfile canEdit={hasPermission(user.roles, "master:write")} />
+    </DocumentLayout>
+  )
+}
+
+async function CompanyProfile({ canEdit }: { canEdit: boolean }) {
   const profile = await getCompanyProfile()
-  const canEdit = hasPermission(user.roles, "master:write")
 
   // Belum diisi: langsung form bagi yang berhak mengubah.
   if (!profile) {
@@ -86,4 +96,19 @@ async function CompanyProfile() {
       form={canEdit && <CompanyProfileForm profile={profile} office={profile.office ?? null} />}
     />
   )
+}
+
+const COMPANY_ACTIVITY_LABELS = {
+  fields: {
+    name: "Nama perusahaan",
+    address: "Alamat",
+    npwp: "NPWP",
+    nitku: "NITKU",
+    nib: "NIB",
+    facility_type: "Jenis fasilitas",
+    permit_number: "Nomor izin fasilitas",
+    permit_date: "Tanggal izin fasilitas",
+    supervising_office_code: "Kantor pabean pengawas",
+  },
+  values: { facility_type: FACILITY_TYPE_LABELS as Record<string, string> },
 }

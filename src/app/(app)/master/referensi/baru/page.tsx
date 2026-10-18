@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { PageHeader } from "@/components/page-header"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 
@@ -11,15 +11,15 @@ export const metadata: Metadata = { title: "Tambah referensi · IT Inventory" }
 
 export default function NewRefCodePage() {
   return (
-    <>
-      <PageHeader
-        title="Tambah referensi"
-        description="Jenis dan kode tidak bisa diubah setelah disimpan."
-      />
+    <NewRecordLayout
+      title="Tambah referensi"
+      description="Jenis dan kode tidak bisa diubah setelah disimpan."
+      noun="referensi"
+    >
       <Suspense fallback={<Skeleton className="h-64 w-full" />}>
         <Guarded />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 

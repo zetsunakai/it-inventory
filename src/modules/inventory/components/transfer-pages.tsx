@@ -42,6 +42,7 @@ import {
 } from "@/modules/inventory/server/queries/transfers"
 import { recordActivity } from "@/server/queries/activity"
 import { ActivityLog } from "@/components/document/activity-log"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 
@@ -256,12 +257,11 @@ export function NewTransferPage({
   description: string
 }) {
   return (
-    <>
-      <PageHeader title={`Buat ${kind.noun}`} description={description} />
+    <NewRecordLayout title={`Buat ${kind.noun}`} description={description} noun={kind.noun}>
       <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
         <NewTransferForm kind={kind} />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 

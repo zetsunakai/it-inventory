@@ -3,14 +3,18 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
+import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { InfoGrid } from "@/components/layout/info-grid"
 import { Section } from "@/components/layout/section"
 import { StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from "@/lib/format"
-import { hasAllWarehouseAccess, requiresMfa, ROLE_LABELS } from "@/lib/permissions"
+import { hasAllWarehouseAccess, requiresMfa, ROLE_LABELS, type Role } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
+import { db } from "@/server/db"
+import { warehouses } from "@/server/db/schema"
+import { childActivity, mergeActivity, recordActivity } from "@/server/queries/activity"
 import { getUser, listGrantableWarehouses, listUserWarehouses } from "@/server/queries/users"
 
 import { WarehouseAccess } from "../warehouse-access"
@@ -37,9 +41,15 @@ async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
   const [granted, candidates] = allWarehouses
     ? [[], []]
     : await Promise.all([listUserWarehouses(user.id), listGrantableWarehouses(user.id)])
+  const activity = await userActivity(user.id)
 
   return (
-    <DocumentLayout title={user.name} crumbs={[{ label: user.name }]} meta={user.email}>
+    <DocumentLayout
+      title={user.name}
+      crumbs={[{ label: user.name }]}
+      meta={user.email}
+      activity={<ActivityLog entries={activity} noun="pengguna" />}
+    >
       <InfoGrid
         items={[
           {
@@ -74,5 +84,28 @@ async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
         )}
       </Section>
     </DocumentLayout>
+  )
+}
+
+// Riwayat pengguna: data akun, peran, dan akses gudang (tabel peran dan akses gudang tercatat per
+// pengguna di audit log).
+async function userActivity(userId: string) {
+  const names = new Map(
+    (
+      await db
+        .select({ id: warehouses.id, code: warehouses.code, name: warehouses.name })
+        .from(warehouses)
+    ).map((row) => [row.id, `${row.code} · ${row.name}`]),
+  )
+  return mergeActivity(
+    await recordActivity("users", userId, {
+      fields: { name: "Nama", email: "Email", two_factor_enabled: "MFA" },
+    }),
+    await childActivity("user_roles", userId, "Peran", (data) =>
+      String(ROLE_LABELS[data.role as Role] ?? data.role),
+    ),
+    await childActivity("user_warehouses", userId, "Akses gudang", (data) =>
+      String(names.get(String(data.warehouse_id)) ?? "gudang"),
+    ),
   )
 }

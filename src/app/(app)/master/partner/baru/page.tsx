@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { PageHeader } from "@/components/page-header"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 
@@ -11,15 +11,15 @@ export const metadata: Metadata = { title: "Tambah partner · IT Inventory" }
 
 export default function NewPartnerPage() {
   return (
-    <>
-      <PageHeader
-        title="Tambah partner"
-        description="Kode partner tidak bisa diubah setelah disimpan."
-      />
+    <NewRecordLayout
+      title="Tambah partner"
+      description="Kode partner tidak bisa diubah setelah disimpan."
+      noun="partner"
+    >
       <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
         <Guarded />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 

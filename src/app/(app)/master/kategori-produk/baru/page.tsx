@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import { Suspense } from "react"
 
-import { PageHeader } from "@/components/page-header"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { listProductCategoryOptions } from "@/modules/inventory/server/queries/product-categories"
@@ -12,12 +12,11 @@ export const metadata: Metadata = { title: "Tambah kategori produk · IT Invento
 
 export default function NewProductCategoryPage() {
   return (
-    <>
-      <PageHeader title="Tambah kategori produk" />
+    <NewRecordLayout title="Tambah kategori produk" noun="kategori produk">
       <Suspense fallback={<Skeleton className="h-72 w-full" />}>
         <Guarded />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 

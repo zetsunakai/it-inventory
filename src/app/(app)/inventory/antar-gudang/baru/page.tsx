@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { InterwarehouseForm } from "@/modules/inventory/components/interwarehouse-form"
-import { PageHeader } from "@/components/page-header"
+import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { listInternalLocations, listUomChoices } from "@/modules/inventory/server/queries/transfers"
@@ -11,15 +11,15 @@ export const metadata: Metadata = { title: "Buat transfer antar gudang · IT Inv
 
 export default function NewInterwarehousePage() {
   return (
-    <>
-      <PageHeader
-        title="Buat transfer antar gudang"
-        description="Disimpan sebagai Draft. Saat dikonfirmasi, transfer keluar dibuat dan stok gudang asal dipesan."
-      />
+    <NewRecordLayout
+      title="Buat transfer antar gudang"
+      description="Disimpan sebagai Draft. Saat dikonfirmasi, transfer keluar dibuat dan stok gudang asal dipesan."
+      noun="permintaan"
+    >
       <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
         <Guarded />
       </Suspense>
-    </>
+    </NewRecordLayout>
   )
 }
 
