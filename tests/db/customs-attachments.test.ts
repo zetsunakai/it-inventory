@@ -11,7 +11,11 @@ import {
   saveCustomsDocument,
   uploadCustomsAttachment,
 } from "@/modules/it-inventory/actions/customs-documents"
-import { emptyDraft, MAX_ATTACHMENT_BYTES } from "@/modules/it-inventory/lib/customs-form"
+import {
+  emptyAttachment,
+  emptyDraft,
+  MAX_ATTACHMENT_BYTES,
+} from "@/modules/it-inventory/lib/customs-form"
 import { BC41 } from "@/modules/it-inventory/lib/customs-specs"
 import { getCustomsDocument } from "@/modules/it-inventory/server/queries/customs-documents"
 import type { CurrentUser } from "@/server/auth/session"
@@ -56,7 +60,7 @@ afterAll(async () => {
   await db.$client.end()
 })
 
-const empty = () => ({ ...emptyDraft(BC41), lines: [] })
+const empty = () => ({ ...emptyDraft(), lines: [] })
 
 async function createDocument() {
   const data = new FormData()
@@ -100,7 +104,12 @@ describe("lampiran dokumen BC", () => {
 
     const draft = empty()
     draft.attachments = [
-      { documentTypeCode: "380", number: "INV-001", date: "2026-10-17", file: uploaded.data },
+      {
+        ...emptyAttachment("380"),
+        number: "INV-001",
+        date: "2026-10-17",
+        file: uploaded.data,
+      },
     ]
     expect(await save(id, draft)).toMatchObject({ ok: true })
     const saved = await getCustomsDocument(BC41, id)
@@ -159,7 +168,7 @@ describe("lampiran dokumen BC", () => {
     )
     if (!uploaded.ok) throw new Error(uploaded.errors.join("\n"))
     const draft = empty()
-    draft.attachments = [{ documentTypeCode: "217", number: "", date: "", file: uploaded.data }]
+    draft.attachments = [{ ...emptyAttachment("217"), file: uploaded.data }]
     expect(await save(second, draft)).toMatchObject({
       ok: false,
       errors: ["File lampiran tidak valid. Unggah ulang filenya."],

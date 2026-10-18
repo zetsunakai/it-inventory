@@ -74,21 +74,24 @@ export function FormSection({
   actions,
   children,
 }: {
-  title: string
+  // Tanpa judul (grup tanpa nama di form dokumen BC hmx) bagian kepala tidak tampil.
+  title?: string
   description?: string
   actions?: ReactNode
   children: ReactNode
 }) {
   return (
     <fieldset className="form-sheet">
-      <legend className="sr-only">{title}</legend>
-      <div className="form-sheet-header">
-        <div aria-hidden className="min-w-0">
-          <p className="form-sheet-title">{title}</p>
-          {description && <p className="form-sheet-description">{description}</p>}
+      {title && <legend className="sr-only">{title}</legend>}
+      {(title || actions) && (
+        <div className="form-sheet-header">
+          <div aria-hidden className="min-w-0">
+            {title && <p className="form-sheet-title">{title}</p>}
+            {description && <p className="form-sheet-description">{description}</p>}
+          </div>
+          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
         </div>
-        {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-      </div>
+      )}
       <div className="form-grid">{children}</div>
     </fieldset>
   )

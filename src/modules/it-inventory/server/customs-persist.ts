@@ -11,11 +11,13 @@ import { AppError } from "@/server/actions/app-error"
 import type { Transaction } from "@/server/db/audit"
 import {
   customsAttachments,
+  customsBankAccounts,
   customsContainers,
   customsDocumentLines,
   customsDocumentParties,
+  customsDocumentTaxes,
   customsDocuments,
-  customsLineTaxes,
+  customsGuarantees,
   customsPackages,
   customsTransports,
 } from "@/server/db/schema"
@@ -66,23 +68,7 @@ export async function persistCustomsDocument(
   await saveLines(tx, documentId, document.lines)
   const numbered = <T>(rows: T[]) =>
     rows.map((row, index) => ({ documentId, seq: index + 1, ...row }))
-  const prefix = attachmentKeyPrefix(documentId)
-  if (document.attachments.some((row) => row.file && !row.file.fileKey.startsWith(prefix))) {
-    throw new AppError("File lampiran tidak valid. Unggah ulang filenya.")
-  }
-  if (document.attachments.length) {
-    await tx.insert(customsAttachments).values(
-      numbered(
-        document.attachments.map(({ file, ...row }) => ({
-          ...row,
-          fileKey: file?.fileKey ?? null,
-          fileName: file?.fileName ?? null,
-          contentType: file?.contentType || null,
-          fileSize: file?.fileSize ?? null,
-        })),
-      ),
-    )
-  }
+  await saveAttachments(tx, documentId, null, document.attachments)
   if (document.packages.length) {
     await tx
       .insert(customsPackages)
@@ -94,9 +80,46 @@ export async function persistCustomsDocument(
   if (document.transports.length) {
     await tx.insert(customsTransports).values(numbered(document.transports))
   }
+  if (document.taxes.length) {
+    await tx.insert(customsDocumentTaxes).values(numbered(document.taxes))
+  }
+  if (document.guarantees.length) {
+    await tx.insert(customsGuarantees).values(numbered(document.guarantees))
+  }
+  if (document.bankAccounts.length) {
+    await tx.insert(customsBankAccounts).values(numbered(document.bankAccounts))
+  }
   // Draft ⇄ Siap ajukan sesuai kelengkapan (M3-11).
   await tx.execute(sql`select refresh_customs_document_status(${documentId})`)
   return documentId
+}
+
+type AttachmentInput = CustomsDocumentInput["attachments"][number]
+
+// Lampiran dokumen (lineId null) atau Dokumen Lartas satu barang. File harus milik dokumen ini.
+async function saveAttachments(
+  tx: Transaction,
+  documentId: string,
+  lineId: string | null,
+  rows: AttachmentInput[],
+) {
+  const prefix = attachmentKeyPrefix(documentId)
+  if (rows.some((row) => row.file && !row.file.fileKey.startsWith(prefix))) {
+    throw new AppError("File lampiran tidak valid. Unggah ulang filenya.")
+  }
+  if (!rows.length) return
+  await tx.insert(customsAttachments).values(
+    rows.map(({ file, ...row }, index) => ({
+      documentId,
+      lineId,
+      seq: index + 1,
+      ...row,
+      fileKey: file?.fileKey ?? null,
+      fileName: file?.fileName ?? null,
+      contentType: file?.contentType || null,
+      fileSize: file?.fileSize ?? null,
+    })),
+  )
 }
 
 // Bagian dokumen selain barang diganti seluruhnya setiap simpan. Barang disimpan per seri
@@ -108,12 +131,15 @@ async function deleteParts(tx: Transaction, id: string) {
   await tx.delete(customsPackages).where(eq(customsPackages.documentId, id))
   await tx.delete(customsContainers).where(eq(customsContainers.documentId, id))
   await tx.delete(customsTransports).where(eq(customsTransports.documentId, id))
+  await tx.delete(customsDocumentTaxes).where(eq(customsDocumentTaxes.documentId, id))
+  await tx.delete(customsGuarantees).where(eq(customsGuarantees.documentId, id))
+  await tx.delete(customsBankAccounts).where(eq(customsBankAccounts.documentId, id))
 }
 
 type LineInput = CustomsDocumentInput["lines"][number]
 
 // Barang per seri: seri yang sudah ada diperbarui di tempat, seri baru ditambah, seri yang tidak
-// ada lagi dihapus. Pungutan per barang diganti.
+// ada lagi dihapus. Dokumen Lartas per barang diganti (lampiran dokumen sudah dihapus deleteParts).
 async function saveLines(tx: Transaction, documentId: string, lines: LineInput[]) {
   const existing = await tx
     .select({ id: customsDocumentLines.id, seq: customsDocumentLines.seq })
@@ -124,12 +150,11 @@ async function saveLines(tx: Transaction, documentId: string, lines: LineInput[]
   if (removed.length) {
     await tx.delete(customsDocumentLines).where(inArray(customsDocumentLines.id, removed))
   }
-  for (const [index, { taxes, ...line }] of lines.entries()) {
+  for (const [index, { attachments, ...line }] of lines.entries()) {
     const seq = index + 1
     let lineId = idBySeq.get(seq)
     if (lineId) {
       await tx.update(customsDocumentLines).set(line).where(eq(customsDocumentLines.id, lineId))
-      await tx.delete(customsLineTaxes).where(eq(customsLineTaxes.lineId, lineId))
     } else {
       const [row] = await tx
         .insert(customsDocumentLines)
@@ -137,8 +162,6 @@ async function saveLines(tx: Transaction, documentId: string, lines: LineInput[]
         .returning({ id: customsDocumentLines.id })
       lineId = row.id
     }
-    if (taxes.length) {
-      await tx.insert(customsLineTaxes).values(taxes.map((tax) => ({ lineId, ...tax })))
-    }
+    await saveAttachments(tx, documentId, lineId, attachments)
   }
 }

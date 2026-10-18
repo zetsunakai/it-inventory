@@ -14,8 +14,14 @@ import type {
 import {
   CUSTOMS_HEADER_COLUMNS,
   CUSTOMS_LINE_COLUMNS,
+  CUSTOMS_ROW_KEYS,
+  customsDocumentFields,
   customsDraftChanges,
+  customsFieldValue,
+  customsLineFields,
   emptyDraft,
+  isListBlock,
+  type CustomsAttachmentDraft,
   type CustomsDocumentDraft,
   type CustomsFormSpec,
   type CustomsLineDraft,
@@ -26,12 +32,14 @@ import { db } from "@/server/db"
 import {
   company,
   customsAttachments,
+  customsBankAccounts,
   customsContainers,
   customsDocumentLines,
   customsDocumentParties,
   customsDocumentRevisions,
+  customsDocumentTaxes,
   customsDocuments,
-  customsLineTaxes,
+  customsGuarantees,
   customsPackages,
   customsTransports,
   partners,
@@ -79,7 +87,8 @@ export async function searchCustomsProducts(search: string): Promise<CustomsProd
   return rows.map((row) => ({ ...row, hsCode: row.hsCode ?? "" }))
 }
 
-// Data partner sebagai entitas dokumen (disalin ke dokumen, bisa diubah di form).
+// Data partner sebagai entitas dokumen (disalin ke dokumen, bisa diubah di form). Nomor identitas
+// dan NITKU diisi terpisah seperti form entitas hmx.
 export async function customsPartyFromPartner(partnerId: string) {
   const [partner] = await db.select().from(partners).where(eq(partners.id, partnerId))
   if (!partner) return null
@@ -90,14 +99,15 @@ export async function customsPartyFromPartner(partnerId: string) {
     address: party.address,
     countryCode: party.countryCode,
     identityTypeCode: party.identityType,
-    identityNumber: party.identityNumber,
+    identityNumber: partner.identityNumber,
+    details: (partner.nitku ? { nitku: partner.nitku } : {}) as Record<string, string>,
   }
 }
 
-// Dokumen baru: entitas perusahaan sesuai jenis (pengusaha, pemilik, eksportir) dari profil
-// perusahaan, kantor pabean pengawas, dan penandatangan = user yang login (PRD 8.3).
+// Dokumen baru: entitas perusahaan sesuai jenis (pengusaha, pemilik, eksportir, importir) dari
+// profil perusahaan, kantor pabean pengawas, dan penandatangan = user yang login (PRD 8.3).
 export async function newCustomsDraft(spec: CustomsFormSpec, signerName: string) {
-  const draft = emptyDraft(spec)
+  const draft = emptyDraft()
   const [profile] = await db.select().from(company)
   if (profile) {
     const party = companyAsCustomsParty(profile)
@@ -111,10 +121,11 @@ export async function newCustomsDraft(spec: CustomsFormSpec, signerName: string)
         address: party.address,
         countryCode: "ID",
         identityTypeCode: party.identityType,
-        identityNumber: party.identityNumber,
+        identityNumber: party.npwp,
         nib: party.nib,
         permitNumber: party.permitNumber,
         permitDate: party.permitDate,
+        details: { nitku: party.nitku },
       }))
   }
   draft.header.signerName = signerName
@@ -130,7 +141,18 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     .where(and(eq(customsDocuments.id, id), eq(customsDocuments.docCode, spec.code)))
   if (!doc) return null
 
-  const [parties, lines, taxes, attachments, packages, containers, transports] = await Promise.all([
+  const bySeq = <T extends { seq: number }>(rows: T[]) => rows.sort((a, b) => a.seq - b.seq)
+  const [
+    parties,
+    lines,
+    attachments,
+    packages,
+    containers,
+    transports,
+    taxes,
+    guarantees,
+    bankAccounts,
+  ] = await Promise.all([
     db.select().from(customsDocumentParties).where(eq(customsDocumentParties.documentId, id)),
     db
       .select({ line: customsDocumentLines, sku: products.sku, productName: products.name })
@@ -138,47 +160,26 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
       .innerJoin(products, eq(products.id, customsDocumentLines.productId))
       .where(eq(customsDocumentLines.documentId, id))
       .orderBy(asc(customsDocumentLines.seq)),
-    db
-      .select({ tax: customsLineTaxes })
-      .from(customsLineTaxes)
-      .innerJoin(customsDocumentLines, eq(customsDocumentLines.id, customsLineTaxes.lineId))
-      .where(eq(customsDocumentLines.documentId, id))
-      .orderBy(asc(customsLineTaxes.levyTypeCode)),
-    db
-      .select()
-      .from(customsAttachments)
-      .where(eq(customsAttachments.documentId, id))
-      .orderBy(asc(customsAttachments.seq)),
-    db
-      .select()
-      .from(customsPackages)
-      .where(eq(customsPackages.documentId, id))
-      .orderBy(asc(customsPackages.seq)),
-    db
-      .select()
-      .from(customsContainers)
-      .where(eq(customsContainers.documentId, id))
-      .orderBy(asc(customsContainers.seq)),
-    db
-      .select()
-      .from(customsTransports)
-      .where(eq(customsTransports.documentId, id))
-      .orderBy(asc(customsTransports.seq)),
+    db.select().from(customsAttachments).where(eq(customsAttachments.documentId, id)),
+    db.select().from(customsPackages).where(eq(customsPackages.documentId, id)),
+    db.select().from(customsContainers).where(eq(customsContainers.documentId, id)),
+    db.select().from(customsTransports).where(eq(customsTransports.documentId, id)),
+    db.select().from(customsDocumentTaxes).where(eq(customsDocumentTaxes.documentId, id)),
+    db.select().from(customsGuarantees).where(eq(customsGuarantees.documentId, id)),
+    db.select().from(customsBankAccounts).where(eq(customsBankAccounts.documentId, id)),
   ])
 
   const draft = buildDraft(spec, {
     document: doc,
-    parties,
-    lines: lines.map(({ line, sku, productName }) => ({
-      ...line,
-      sku,
-      productName,
-      taxes: taxes.filter(({ tax }) => tax.lineId === line.id).map(({ tax }) => tax),
-    })),
-    attachments,
-    packages,
-    containers,
-    transports,
+    parties: bySeq(parties),
+    lines: lines.map(({ line, sku, productName }) => ({ ...line, sku, productName })),
+    attachments: bySeq(attachments),
+    packages: bySeq(packages),
+    containers: bySeq(containers),
+    transports: bySeq(transports),
+    taxes: bySeq(taxes),
+    guarantees: bySeq(guarantees),
+    bankAccounts: bySeq(bankAccounts),
   })
 
   return {
@@ -218,18 +219,39 @@ type Row = Record<string, unknown>
 export type DocumentRows = {
   document: Row
   parties: Row[]
-  lines: (Row & { sku: string; productName: string; taxes: Row[] })[]
+  lines: (Row & { sku: string; productName: string })[]
   attachments: Row[]
   packages: Row[]
   containers: Row[]
   transports: Row[]
+  taxes: Row[]
+  guarantees: Row[]
+  bankAccounts: Row[]
+}
+
+const pick = <K extends string>(row: Row, keys: readonly K[]) =>
+  Object.fromEntries(keys.map((key) => [key, text(row[key] as Value)])) as Record<K, string>
+
+function attachmentDraft(row: Row): CustomsAttachmentDraft {
+  return {
+    ...pick(row, ["documentTypeCode", "number", "date", "facilityCode", "permit", "officeCode"]),
+    file:
+      row.fileKey && row.fileName
+        ? {
+            fileKey: row.fileKey as string,
+            fileName: row.fileName as string,
+            contentType: (row.contentType as string | null) ?? "",
+            fileSize: Number(row.fileSize ?? 0),
+          }
+        : null,
+  }
 }
 
 // Data form dari baris tabel dokumen; dipakai untuk dokumen sekarang dan snapshot revisi (M3-12).
 export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDocumentDraft {
   const order = new Map(spec.parties.map((role, index) => [role.code, index]))
-  const pick = <K extends string>(row: Row, keys: readonly K[]) =>
-    Object.fromEntries(keys.map((key) => [key, text(row[key] as Value)])) as Record<K, string>
+  const lineAttachments = (lineId: unknown) =>
+    rows.attachments.filter((row) => row.lineId === lineId).map(attachmentDraft)
   return {
     header: pick(rows.document, CUSTOMS_HEADER_COLUMNS),
     details: stringRecord(rows.document.details),
@@ -252,35 +274,25 @@ export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDo
           "permitDate",
         ] as const),
         partnerId: (party.partnerId as string | null) ?? null,
+        details: stringRecord(party.details),
       })),
     lines: rows.lines.map((line): CustomsLineDraft => ({
       ...pick(line, CUSTOMS_LINE_COLUMNS),
       productId: line.productId as string,
       product: { id: line.productId as string, sku: line.sku, name: line.productName },
       details: stringRecord(line.details),
-      taxes: line.taxes.map((tax) =>
-        pick(tax, ["levyTypeCode", "rate", "facilityCode", "facilityRate", "amount"] as const),
-      ),
+      attachments: lineAttachments(line.id),
+      vdEntries: Array.isArray(line.vdEntries)
+        ? (line.vdEntries as Row[]).map((row) => pick(row, CUSTOMS_ROW_KEYS.vdEntries))
+        : [],
     })),
-    attachments: rows.attachments.map((row) => ({
-      ...pick(row, ["documentTypeCode", "number", "date"] as const),
-      file:
-        row.fileKey && row.fileName
-          ? {
-              fileKey: row.fileKey as string,
-              fileName: row.fileName as string,
-              contentType: (row.contentType as string | null) ?? "",
-              fileSize: Number(row.fileSize ?? 0),
-            }
-          : null,
-    })),
-    packages: rows.packages.map((row) => pick(row, ["qty", "packageTypeCode", "marks"] as const)),
-    containers: rows.containers.map((row) =>
-      pick(row, ["number", "sizeCode", "typeCode", "loadTypeCode"] as const),
-    ),
-    transports: rows.transports.map((row) =>
-      pick(row, ["transportModeCode", "name", "voyageNumber", "flagCountryCode"] as const),
-    ),
+    attachments: lineAttachments(null),
+    packages: rows.packages.map((row) => pick(row, CUSTOMS_ROW_KEYS.packages)),
+    containers: rows.containers.map((row) => pick(row, CUSTOMS_ROW_KEYS.containers)),
+    transports: rows.transports.map((row) => pick(row, CUSTOMS_ROW_KEYS.transports)),
+    taxes: rows.taxes.map((row) => pick(row, CUSTOMS_ROW_KEYS.taxes)),
+    guarantees: rows.guarantees.map((row) => pick(row, CUSTOMS_ROW_KEYS.guarantees)),
+    bankAccounts: rows.bankAccounts.map((row) => pick(row, CUSTOMS_ROW_KEYS.bankAccounts)),
   }
 }
 
@@ -293,36 +305,38 @@ async function refLabelsFor(spec: CustomsFormSpec, draft: CustomsDocumentDraft) 
   const add = (type: RefCodeType, code: string | undefined) => {
     if (code) pairs.push([type, code])
   }
-  add("customs_office", draft.header.customsOfficeCode)
-  add("currency", draft.header.currencyCode)
-  for (const field of [...spec.header, ...spec.transaction, ...(spec.transport?.fields ?? [])]) {
-    if (field.kind !== "ref") continue
-    add(
-      field.refType,
-      field.detail ? draft.details[field.key] : (draft.header as Record<string, string>)[field.key],
-    )
+  for (const field of customsDocumentFields(spec)) {
+    if (field.kind === "ref") add(field.refType, customsFieldValue(draft, field))
   }
-  for (const party of draft.parties) add("country", party.countryCode)
-  for (const line of draft.lines) {
-    for (const field of spec.line) {
-      if (field.kind === "ref") {
-        add(
-          field.refType,
-          field.detail ? line.details[field.key] : (line as Record<string, string>)[field.key],
-        )
+  // Kolom daftar: nilai dibaca dari baris daftar (pemilik barang dari entitas berseri).
+  for (const tab of spec.tabs) {
+    for (const block of tab.blocks) {
+      if (!isListBlock(block) || block.list === "lines") continue
+      const rows: Record<string, unknown>[] =
+        block.list === "owners"
+          ? draft.parties
+          : block.list === "attachments"
+            ? draft.attachments
+            : block.list === "vdEntries"
+              ? []
+              : draft[block.list]
+      for (const column of block.columns) {
+        if (column.kind !== "ref") continue
+        for (const row of rows) add(column.refType, row[column.key] as string | undefined)
       }
     }
-    for (const tax of line.taxes) add("levy_type", tax.levyTypeCode)
   }
-  for (const row of draft.attachments) add("document_type", row.documentTypeCode)
-  for (const row of draft.packages) add("package_type", row.packageTypeCode)
-  for (const row of draft.containers) {
-    add("container_size", row.sizeCode)
-    add("container_type", row.typeCode)
-  }
-  for (const row of draft.transports) {
-    add("transport_mode", row.transportModeCode)
-    add("country", row.flagCountryCode)
+  const lartas = spec.line.lartas?.columns ?? []
+  for (const line of draft.lines) {
+    for (const field of customsLineFields(spec)) {
+      if (field.kind === "ref") add(field.refType, customsFieldValue(draft, field, line))
+    }
+    for (const column of lartas) {
+      if (column.kind !== "ref") continue
+      for (const row of line.attachments) {
+        add(column.refType, (row as unknown as Record<string, string>)[column.key])
+      }
+    }
   }
   if (!pairs.length) return {}
   const conditions = pairs.map(
@@ -475,7 +489,14 @@ function snapshotRows(snapshot: unknown): DocumentRows {
     }
     return value
   }
-  return camel(snapshot) as DocumentRows
+  // Snapshot sebelum migrasi customs_forms_hmx belum punya pungutan dokumen, jaminan, dan bank
+  // devisa.
+  return {
+    taxes: [],
+    guarantees: [],
+    bankAccounts: [],
+    ...(camel(snapshot) as Partial<DocumentRows>),
+  } as DocumentRows
 }
 
 export type CustomsRevisionEntry = {

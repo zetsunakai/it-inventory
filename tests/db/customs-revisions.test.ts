@@ -158,7 +158,7 @@ describe("riwayat revisi", () => {
         version: 1,
         reason: "Kurs salah",
         userName: "Exim Revisi",
-        changes: ["NDPBM (kurs)", "Barang seri 1"],
+        changes: ["NDPBM", "Barang seri 1"],
       }),
     ])
 

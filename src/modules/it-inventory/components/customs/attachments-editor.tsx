@@ -9,15 +9,21 @@ import { formatNumber } from "@/lib/format"
 import { uploadCustomsAttachment } from "@/modules/it-inventory/actions/customs-documents"
 import {
   ATTACHMENT_TYPES,
+  emptyAttachment,
   type CustomsAttachmentDraft,
+  type CustomsField,
 } from "@/modules/it-inventory/lib/customs-form"
 
 import { CustomsFormField, type RefLabels } from "./customs-field"
 import { RowCard } from "./row-card"
 
-// Lampiran dokumen BC (backlog M3-10): jenis, nomor, tanggal, dan file. File diunggah langsung ke
-// storage saat dipilih; barisnya tersimpan bersama dokumen saat Simpan.
+// Lampiran dokumen BC (backlog M3-10) dan Dokumen Lartas per barang: kolom mengikuti daftar hmx
+// (Jenis, Nomor, Tanggal, Facility, Izin, Kantor, File). File diunggah langsung ke storage saat
+// dipilih; barisnya tersimpan bersama dokumen saat Simpan.
 export function AttachmentsEditor({
+  title,
+  description,
+  columns,
   documentId,
   idPrefix,
   rows,
@@ -25,6 +31,9 @@ export function AttachmentsEditor({
   refLabels,
   onLabel,
 }: {
+  title: string
+  description?: string
+  columns: CustomsField[]
   documentId?: string
   idPrefix: string
   rows: CustomsAttachmentDraft[]
@@ -37,66 +46,50 @@ export function AttachmentsEditor({
 
   return (
     <FormSection
-      title="Dokumen lampiran"
-      description="Invoice wajib ada sebelum dokumen bisa diajukan. File PDF, gambar, Excel, atau Word, maksimal 5 MB."
+      title={title}
+      description={description}
       actions={
         <Button
           type="button"
           variant="outline"
-          onClick={() =>
-            onChange([...rows, { documentTypeCode: "", number: "", date: "", file: null }])
-          }
+          onClick={() => onChange([...rows, emptyAttachment()])}
         >
           <Plus />
-          Tambah lampiran
+          Tambah
         </Button>
       }
     >
-      {rows.length === 0 && (
-        <p className="text-control text-muted-foreground">Belum ada lampiran.</p>
-      )}
+      {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada.</p>}
       {rows.map((row, index) => (
         <RowCard
           key={index}
-          label={`lampiran ${index + 1}`}
+          label={`${title} ${index + 1}`}
           onRemove={() => onChange(rows.filter((_, position) => position !== index))}
         >
-          <CustomsFormField
-            field={{
-              key: "documentTypeCode",
-              label: "Jenis",
-              kind: "ref",
-              refType: "document_type",
-              span: 6,
-            }}
-            id={`${idPrefix}-${index}-type`}
-            value={row.documentTypeCode}
-            onChange={(value, label) => {
-              onLabel(label)
-              update(index, { documentTypeCode: value })
-            }}
-            refLabels={refLabels}
-          />
-          <CustomsFormField
-            field={{ key: "number", label: "Nomor", kind: "text", span: 3 }}
-            id={`${idPrefix}-${index}-number`}
-            value={row.number}
-            onChange={(value) => update(index, { number: value })}
-            refLabels={refLabels}
-          />
-          <CustomsFormField
-            field={{ key: "date", label: "Tanggal", kind: "date", span: 3 }}
-            id={`${idPrefix}-${index}-date`}
-            value={row.date}
-            onChange={(value) => update(index, { date: value })}
-            refLabels={refLabels}
-          />
-          <AttachmentFile
-            documentId={documentId}
-            id={`${idPrefix}-${index}-file`}
-            row={row}
-            onChange={(file) => update(index, { file })}
-          />
+          {columns.map((column) =>
+            column.kind === "file" ? (
+              <AttachmentFile
+                key={column.key}
+                label={column.label}
+                documentId={documentId}
+                id={`${idPrefix}-${index}-file`}
+                row={row}
+                onChange={(file) => update(index, { file })}
+              />
+            ) : (
+              <CustomsFormField
+                key={column.key}
+                field={{ ...column, span: column.kind === "ref" ? 6 : 3 }}
+                id={`${idPrefix}-${index}-${column.key}`}
+                value={(row as unknown as Record<string, string>)[column.key] ?? ""}
+                onChange={(value, label) => {
+                  onLabel(label)
+                  update(index, { [column.key]: value })
+                }}
+                refLabels={refLabels}
+              />
+            ),
+          )}
         </RowCard>
       ))}
     </FormSection>
@@ -104,11 +97,13 @@ export function AttachmentsEditor({
 }
 
 function AttachmentFile({
+  label,
   documentId,
   id,
   row,
   onChange,
 }: {
+  label: string
   documentId?: string
   id: string
   row: CustomsAttachmentDraft
@@ -132,7 +127,7 @@ function AttachmentFile({
 
   return (
     <div className="form-field" data-span={12}>
-      <p className="form-field-label">File</p>
+      <p className="form-field-label">{label}</p>
       {row.file ? (
         <div className="flex min-h-10 flex-wrap items-center gap-x-3 gap-y-1">
           <a

@@ -3,19 +3,24 @@ import "server-only"
 import ExcelJS from "exceljs"
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib"
 
-import { formatDecimal } from "@/lib/decimal"
 import {
   CUSTOMS_DOCUMENT_STATUS_LABELS,
   type CustomsDocumentStatus,
 } from "@/modules/it-inventory/lib/customs"
 import {
-  CUSTOMS_STATEMENT_FIELDS,
-  customsOptionLabel,
+  OWNER_CODE,
+  customsFieldValue,
+  customsLineFields,
   formatCustomsValue,
+  isFieldGroup,
+  isListBlock,
+  type CustomsAttachmentDraft,
   type CustomsDocumentDraft,
   type CustomsField,
+  type CustomsFieldItem,
   type CustomsFieldKind,
   type CustomsFormSpec,
+  type CustomsListBlock,
 } from "@/modules/it-inventory/lib/customs-form"
 
 // Export draft dokumen BC ke PDF dan Excel (backlog M3-13, PRD 7.6) untuk membantu input manual
@@ -41,16 +46,29 @@ export function customsExportSections(spec: CustomsFormSpec, doc: ExportDocument
   const { draft, refLabels } = doc
   const show = (field: CustomsFieldKind, value: string | undefined) =>
     formatCustomsValue(field, value, refLabels)
-  const headerValue = (field: CustomsField) =>
-    field.detail ? draft.details[field.key] : (draft.header as Record<string, string>)[field.key]
-  const fields = (list: CustomsField[]): [string, string][] =>
-    list.map((field) => [field.label, show(field, headerValue(field))])
-  const ref = (refType: Extract<CustomsFieldKind, { kind: "ref" }>["refType"], value: string) =>
-    show({ kind: "ref", refType }, value)
+  const fieldPairs = (items: CustomsFieldItem[]): [string, string][] =>
+    items.map((item) =>
+      isFieldGroup(item)
+        ? [
+            item.group,
+            item.fields.map((field) => show(field, customsFieldValue(draft, field))).join(" "),
+          ]
+        : [item.label, show(item, customsFieldValue(draft, item))],
+    )
+  const cell = (column: CustomsField, row: Record<string, unknown>) => {
+    if (column.kind === "file") {
+      return (row as unknown as CustomsAttachmentDraft).file?.fileName ?? "—"
+    }
+    return show(column, row[column.key] as string | undefined)
+  }
+  const table = (columns: CustomsField[], rows: Record<string, unknown>[]): Table => ({
+    columns: ["Seri", ...columns.map((column) => column.label)],
+    rows: rows.map((row, index) => [String(index + 1), ...columns.map((c) => cell(c, row))]),
+  })
 
   const sections: ExportSection[] = [
     {
-      title: "Header",
+      title: "Dokumen",
       fields: [
         ["Jenis dokumen", `${spec.title} (${spec.code})`],
         ["Nomor aju", doc.ajuNumber],
@@ -59,130 +77,104 @@ export function customsExportSections(spec: CustomsFormSpec, doc: ExportDocument
         ["Versi", String(doc.version)],
         ["Nomor daftar", doc.registrationNumber ?? "—"],
         ["Tanggal daftar", date(doc.registrationDate)],
-        ["Kantor pabean", ref("customs_office", draft.header.customsOfficeCode)],
-        ...fields(spec.header),
       ],
     },
+  ]
+  for (const tab of spec.tabs) {
+    const fields = tab.blocks.flatMap((block) =>
+      isListBlock(block)
+        ? []
+        : fieldPairs(block.fields).map(([label, value]): [string, string] => [
+            block.title && block.title !== tab.label ? `${block.title} · ${label}` : label,
+            value,
+          ]),
+    )
+    if (fields.length) sections.push({ title: tab.label, fields })
+    for (const block of tab.blocks) {
+      if (!isListBlock(block)) continue
+      if (block.list === "lines") {
+        sections.push(...lineSections(spec, draft, show))
+        continue
+      }
+      const rows: Record<string, unknown>[] =
+        block.list === "owners"
+          ? draft.parties
+              .filter((party) => party.entityTypeCode === OWNER_CODE)
+              .map((party) => ({ ...party, ...party.details }))
+          : block.list === "attachments"
+            ? draft.attachments
+            : block.list === "vdEntries"
+              ? []
+              : draft[block.list]
+      sections.push({ title: block.title, table: table(block.columns, rows) })
+    }
+  }
+  return sections
+}
+
+// Barang (kolom form Barang hmx dan jumlah dalam satuan stok), lalu Dokumen Lartas dan Voluntary
+// Declaration per barang bila ada.
+function lineSections(
+  spec: CustomsFormSpec,
+  draft: CustomsDocumentDraft,
+  show: (field: CustomsFieldKind, value: string | undefined) => string,
+): ExportSection[] {
+  const fields = customsLineFields(spec)
+  const sections: ExportSection[] = [
     {
-      title: "Entitas",
+      title: "Barang",
       table: {
-        columns: ["Peran", "Nama", "Jenis identitas", "Nomor identitas", "Alamat", "Negara"],
-        rows: spec.parties.map((role) => {
-          const party = draft.parties.find((entry) => entry.entityTypeCode === role.code)
-          return [
-            `${role.label} (${role.code})`,
-            party?.name || "—",
-            party?.identityTypeCode
-              ? `[${party.identityTypeCode}] ${customsOptionLabel("identityType", party.identityTypeCode)}`
-              : "—",
-            party?.identityNumber || "—",
-            party?.address || "—",
-            party?.countryCode ? ref("country", party.countryCode) : "—",
-          ]
-        }),
-      },
-    },
-    {
-      title: "Dokumen lampiran",
-      table: {
-        columns: ["Seri", "Jenis", "Nomor", "Tanggal", "File"],
-        rows: draft.attachments.map((row, index) => [
+        columns: [
+          "Seri",
+          "Product code",
+          ...fields.map((f) => f.label),
+          "Jumlah dalam Satuan Stok",
+        ],
+        rows: draft.lines.map((line, index) => [
           String(index + 1),
-          ref("document_type", row.documentTypeCode),
-          row.number || "—",
-          date(row.date || null),
-          row.file?.fileName ?? "—",
+          line.product?.sku ?? "—",
+          ...fields.map((field) => show(field, customsFieldValue(draft, field, line))),
+          show({ kind: "qty" }, line.stockQty),
         ]),
       },
     },
   ]
-  if (spec.transport) {
+  const lartas = spec.line.lartas
+  if (lartas) {
     sections.push({
-      title: "Pengangkutan",
-      fields: fields(spec.transport.fields),
+      title: lartas.title,
       table: {
-        columns: ["Seri", "Cara angkut", "Nama sarana angkut", "Voyage/flight", "Bendera"],
-        rows: draft.transports.map((row, index) => [
-          String(index + 1),
-          ref("transport_mode", row.transportModeCode),
-          row.name || "—",
-          row.voyageNumber || "—",
-          ref("country", row.flagCountryCode),
-        ]),
-      },
-    })
-  }
-  sections.push({
-    title: "Kemasan",
-    table: {
-      columns: ["Seri", "Jumlah", "Jenis kemasan", "Merek"],
-      rows: draft.packages.map((row, index) => [
-        String(index + 1),
-        show({ kind: "qty" }, row.qty),
-        ref("package_type", row.packageTypeCode),
-        row.marks || "—",
-      ]),
-    },
-  })
-  if (spec.containers) {
-    sections.push({
-      title: "Peti kemas",
-      table: {
-        columns: ["Seri", "Nomor", "Ukuran", "Tipe", "Jenis muatan"],
-        rows: draft.containers.map((row, index) => [
-          String(index + 1),
-          row.number,
-          ref("container_size", row.sizeCode),
-          ref("container_type", row.typeCode),
-          show({ kind: "option", list: "containerLoad" }, row.loadTypeCode),
-        ]),
-      },
-    })
-  }
-  const lineFields = spec.line
-  sections.push({
-    title: "Barang",
-    table: {
-      columns: ["Seri", "Product code", ...lineFields.map((field) => field.label)],
-      rows: draft.lines.map((line, index) => [
-        String(index + 1),
-        line.product?.sku ?? "—",
-        ...lineFields.map((field) =>
-          show(
-            field,
-            field.detail
-              ? line.details[field.key]
-              : (line as unknown as Record<string, string>)[field.key],
-          ),
-        ),
-      ]),
-    },
-  })
-  if (spec.taxes) {
-    sections.push({
-      title: "Pungutan",
-      table: {
-        columns: ["Seri barang", "Jenis", "Tarif (%)", "Fasilitas", "Tarif fasilitas (%)", "Nilai"],
+        columns: ["Seri barang", ...lartas.columns.map((column) => column.label)],
         rows: draft.lines.flatMap((line, index) =>
-          line.taxes.map((tax) => [
+          line.attachments.map((row) => [
             String(index + 1),
-            ref("levy_type", tax.levyTypeCode),
-            tax.rate ? formatDecimal(tax.rate.replace(",", ".")) : "—",
-            show({ kind: "option", list: "taxFacility" }, tax.facilityCode),
-            tax.facilityRate ? formatDecimal(tax.facilityRate.replace(",", ".")) : "—",
-            show({ kind: "money" }, tax.amount),
+            ...lartas.columns.map((column) =>
+              column.kind === "file"
+                ? (row.file?.fileName ?? "—")
+                : show(column, (row as unknown as Record<string, string>)[column.key]),
+            ),
           ]),
         ),
       },
     })
   }
-  sections.push(
-    { title: "Transaksi", fields: fields(spec.transaction) },
-    {
-      title: "Pernyataan",
-      fields: [...fields(CUSTOMS_STATEMENT_FIELDS), ["Catatan", draft.header.notes || "—"]],
-    },
+  const vd = spec.line.blocks.find(
+    (block): block is CustomsListBlock => isListBlock(block) && block.list === "vdEntries",
   )
+  if (vd) {
+    sections.push({
+      title: "Voluntary Declaration",
+      table: {
+        columns: ["Seri barang", ...vd.columns.map((column) => column.label)],
+        rows: draft.lines.flatMap((line, index) =>
+          line.vdEntries.map((row) => [
+            String(index + 1),
+            ...vd.columns.map((column) => show(column, row[column.key])),
+          ]),
+        ),
+      },
+    })
+  }
   return sections
 }
 
@@ -192,8 +184,13 @@ const DRAFT_NOTE = "Draft untuk input manual ke portal CEISA, bukan dokumen resm
 export async function customsExportExcel(spec: CustomsFormSpec, doc: ExportDocument) {
   const workbook = new ExcelJS.Workbook()
   workbook.creator = "IT Inventory"
+  const names = new Set<string>()
   for (const section of customsExportSections(spec, doc)) {
-    const sheet = workbook.addWorksheet(section.title.slice(0, 31))
+    // Nama sheet maksimal 31 karakter dan harus unik.
+    let name = section.title.slice(0, 31)
+    for (let index = 2; names.has(name); index++) name = `${section.title.slice(0, 27)} (${index})`
+    names.add(name)
+    const sheet = workbook.addWorksheet(name)
     sheet.addRow([`${spec.title} ${doc.ajuNumber} · ${section.title}`]).font = { bold: true }
     sheet.addRow([DRAFT_NOTE]).font = { italic: true }
     sheet.addRow([])

@@ -5,186 +5,21 @@ import { formatDecimal, parseDecimalInput } from "@/lib/decimal"
 import { formatRefCode, type RefCodeType } from "@/lib/ref-codes"
 
 import type { CustomsDocCode } from "./customs"
+import { HMX_OPTION_LISTS } from "./customs-layouts.generated"
 
-// Form dokumen BC (backlog M3-04, keputusan user 17/10/2026): setiap jenis dokumen punya menu dan
-// form sendiri seperti hmx, dirakit dari bagian yang sama (tab Header, Entitas, Dokumen,
-// Pengangkut, Kemasan dan Peti Kemas, Barang, Pungutan, Transaksi, Pernyataan). Isi setiap bagian
-// diatur CustomsFormSpec jenisnya; data tetap satu set tabel customs_* per doc_code.
+// Form dokumen BC: setiap jenis punya menu dan form sendiri seperti hmx (keputusan user
+// 17/10/2026), dengan tab, grup, field, dan label sama persis dengan form hmx (keputusan user
+// 18/10/2026). Susunannya (CustomsLayout) dibangkitkan dari hmx oleh
+// scripts/import-customs-forms-from-hmx.py; data tetap satu set tabel customs_* per doc_code.
 
-// Daftar kode CEISA yang pendek dan tetap (dari data hmx core_it_inventory), tampil sebagai
-// pilihan biasa. Kode yang panjang (kantor, pelabuhan, HS, dst.) ada di referensi kepabeanan.
-export const CUSTOMS_OPTION_LISTS = {
-  // Fasilitas tarif pungutan (kodeFasilitasTarif).
-  taxFacility: [
-    ["1", "Dibayar"],
-    ["2", "Ditanggung pemerintah"],
-    ["3", "Ditangguhkan"],
-    ["4", "Berkala"],
-    ["5", "Dibebaskan"],
-    ["6", "Tidak dipungut"],
-    ["7", "Sudah dilunasi"],
-    ["8", "Dijaminkan"],
-    ["9", "Ditunda"],
-  ],
-  tpbType: [
-    ["1", "Kawasan Berikat"],
-    ["2", "Gudang Berikat"],
-    ["3", "TPPB"],
-    ["4", "TBB"],
-    ["5", "TLB"],
-    ["6", "KDUB"],
-    ["7", "Lainnya"],
-  ],
-  // Tujuan pengeluaran BC 2.5 dan 4.1.
-  deliveryReason: [
-    ["1", "Penyerahan BKP"],
-    ["2", "Penyerahan JKP"],
-    ["3", "Retur"],
-    ["4", "Non penyerahan"],
-    ["5", "Lainnya"],
-  ],
-  paymentTerm: [
-    ["1", "Biasa/tunai"],
-    ["2", "Berkala"],
-    ["3", "Dengan jaminan"],
-    ["4", "Perhitungan kemudian"],
-    ["5", "Konsinyasi"],
-    ["6", "Usance L/C"],
-    ["7", "Red clause L/C"],
-    ["8", "Inter-company account"],
-    ["9", "Gabungan/lainnya"],
-    ["15", "Pembayaran di muka"],
-    ["16", "Sight L/C"],
-    ["17", "Inkaso"],
-  ],
-  exportCategory: [
-    ["10", "Umum"],
-    ["21", "NIPER dengan pembebasan"],
-    ["22", "NIPER dengan pengembalian"],
-    ["23", "KITE dengan pembebasan dan pengembalian"],
-    ["41", "TPB dari kawasan berikat"],
-    ["42", "TPB dari gudang berikat"],
-    ["51", "PLB"],
-  ],
-  insuranceType: [
-    ["LN", "Luar negeri"],
-    ["DN", "Dalam negeri"],
-  ],
-  // Tujuan pengeluaran sementara BC 2.6.1 dan pemasukan kembali BC 2.6.2.
-  temporaryReason: [
-    ["1", "Diperbaiki"],
-    ["2", "Disubkontrakkan"],
-    ["3", "Dipinjamkan"],
-    ["4", "Barang return"],
-    ["5", "Lainnya"],
-  ],
-  // Jenis impor BC 2.0 dan 2.8.
-  importType: [
-    ["1", "Untuk dipakai"],
-    ["2", "Sementara"],
-    ["5", "Pelayanan segera"],
-    ["9", "Dipakai sementara"],
-  ],
-  // Jenis prosedur (Jenis PIB, Jenis BC 3.3).
-  procedureType: [
-    ["1", "Biasa"],
-    ["2", "Berkala"],
-    ["3", "Untuk dipakai"],
-    ["4", "Sementara"],
-    ["5", "Re-impor"],
-    ["6", "TPB"],
-    ["7", "Pelayanan segera"],
-    ["8", "Vooruitslag"],
-    ["9", "Gabungan"],
-  ],
-  tradeTransactionType: [
-    ["IMB", "Imbal dagang"],
-    ["IOA", "Interoffice account"],
-    ["KMD", "Pembayaran kemudian"],
-    ["KON", "Konsinyasi"],
-    ["LAI", "Lainnya"],
-    ["PMK", "Pembayaran di muka"],
-    ["RLC", "Red clause L/C"],
-    ["SLC", "Sight L/C"],
-    ["ULC", "Usance L/C"],
-    ["WSI", "Wesel inkaso"],
-  ],
-  // Jenis nilai transaksi (BC 2.8).
-  valuationType: [
-    ["NTR", "Transaksi jual beli"],
-    ["BTR", "Bukan transaksi jual beli lainnya"],
-    ["CAM", "Transaksi gabungan"],
-    ["CMA", "Hadiah/promosi/contoh"],
-    ["FTR", "Harga futures"],
-    ["HBH", "Bantuan/hibah"],
-    ["ITM", "Intermediary yang tidak membeli"],
-    ["KON", "Konsinyasi"],
-    ["LES", "Sewa (leasing)"],
-    ["PRO", "Mengandung proceeds"],
-    ["ROY", "Mengandung royalti"],
-    ["TIP", "Titipan"],
-  ],
-  // Jenis ekspor BC 3.3.
-  exportType: [
-    ["1", "Biasa"],
-    ["2", "Berkala"],
-    ["3", "Fasilitas"],
-    ["4", "Re-impor"],
-    ["5", "Re-ekspor"],
-    ["6", "Ex impor sementara"],
-  ],
-  // Cara dagang BC 3.3.
-  tradeMethod: [
-    ["1", "Biasa"],
-    ["2", "Imbal dagang"],
-    ["3", "Pembayaran di muka"],
-    ["4", "Pembayaran kemudian bertahap"],
-    ["5", "Pembayaran kemudian tunai"],
-    ["6", "Sight L/C"],
-    ["7", "Usance L/C"],
-    ["8", "Red clause L/C"],
-    ["9", "Wesel inkaso"],
-    ["10", "Konsinyasi"],
-    ["11", "Inter-company account"],
-    ["12", "Pembayaran dalam negeri tunai"],
-    ["13", "Telegraphic transfer dalam negeri"],
-    ["14", "Tanpa pembayaran"],
-    ["15", "Lainnya"],
-  ],
-  bulkType: [
-    ["1", "Curah"],
-    ["2", "Non curah"],
-  ],
-  yesNo: [
-    ["Y", "Ya"],
-    ["T", "Tidak"],
-  ],
-  // Jenis tanda pengaman P3BET.
-  sealType: [
-    ["1", "Kabel"],
-    ["2", "Kunci logam"],
-    ["3", "Kunci plastik"],
-    ["4", "Lainnya"],
-  ],
-  // Jenis muatan peti kemas (kodeJenisKontainer).
-  containerLoad: [
-    ["8", "FCL"],
-    ["7", "LCL"],
-    ["4", "Kosong"],
-  ],
-  // Jenis identitas entitas (kodeJenisIdentitas).
-  identityType: [
-    ["6", "NPWP 16 digit"],
-    ["5", "NPWP 15 digit"],
-    ["2", "Paspor"],
-    ["3", "KTP"],
-    ["4", "Lainnya"],
-  ],
-} as const satisfies Record<string, readonly (readonly [string, string])[]>
+// Daftar pilihan kode CEISA yang pendek (dari CHOICES model dan data hmx). Kode yang panjang
+// (kantor, pelabuhan, HS, dst.) ada di referensi kepabeanan.
+export const CUSTOMS_OPTION_LISTS = HMX_OPTION_LISTS
 export type CustomsOptionList = keyof typeof CUSTOMS_OPTION_LISTS
 
 export function customsOptionLabel(list: CustomsOptionList, code: string) {
-  return CUSTOMS_OPTION_LISTS[list].find(([value]) => value === code)?.[1] ?? code
+  const items: readonly (readonly [string, string])[] = CUSTOMS_OPTION_LISTS[list]
+  return items.find(([value]) => value === code)?.[1] ?? code
 }
 
 // Kolom header yang diisi di form (status, nomor daftar, dan respon diubah lewat alur status).
@@ -208,6 +43,7 @@ export const CUSTOMS_HEADER_COLUMNS = [
 export type CustomsHeaderColumn = (typeof CUSTOMS_HEADER_COLUMNS)[number]
 
 export const CUSTOMS_LINE_COLUMNS = [
+  "itemCode",
   "hsCode",
   "description",
   "brand",
@@ -232,37 +68,76 @@ export const CUSTOMS_LINE_COLUMNS = [
 ] as const
 export type CustomsLineColumn = (typeof CUSTOMS_LINE_COLUMNS)[number]
 
-// Jenis isian: teks, tanggal, uang (2 desimal), qty/berat/kurs (4 desimal), kode referensi
-// kepabeanan, atau pilihan dari CUSTOMS_OPTION_LISTS.
+// Jenis isian: teks, tanggal, uang (2 desimal), qty/berat/kurs (4 desimal),
+// centang, kode referensi kepabeanan, pilihan dari CUSTOMS_OPTION_LISTS, pilihan produk (baris
+// barang), atau file (lampiran).
 export type CustomsFieldKind =
   | { kind: "text"; long?: boolean; mono?: boolean }
   | { kind: "date" }
   | { kind: "money" }
   | { kind: "qty" }
+  | { kind: "boolean" }
   | { kind: "ref"; refType: RefCodeType }
   | { kind: "option"; list: CustomsOptionList }
+  | { kind: "product" }
+  | { kind: "file" }
 
-// Satu isian header atau baris. key = kolom tabel (CUSTOMS_HEADER_COLUMNS/CUSTOMS_LINE_COLUMNS)
-// atau, dengan detail: true, kunci di kolom details (camelCase, sama dengan doc_validation_rules).
+// Tempat nilai isian disimpan: kolom customs_documents (header) atau details-nya, kolom entitas
+// peran role atau details-nya, sarana angkut pertama (transport), kolom baris barang (line) atau
+// details-nya. Kolom sub-tabel (list) tidak memakai store.
+export type CustomsFieldStore =
+  "header" | "details" | "party" | "partyDetails" | "transport" | "line" | "lineDetails"
+
 export type CustomsField = CustomsFieldKind & {
   key: string
   label: string
-  detail?: boolean
+  store?: CustomsFieldStore
+  role?: string
   span?: FieldSpan
 }
 
+// Beberapa isian sebaris di bawah satu label (grup side_by_side hmx, mis. Jenis Identitas).
+export type CustomsFieldGroup = { group: string; fields: CustomsField[] }
+export type CustomsFieldItem = CustomsField | CustomsFieldGroup
+
+export type CustomsListKind =
+  | "attachments"
+  | "packages"
+  | "containers"
+  | "transports"
+  | "taxes"
+  | "guarantees"
+  | "bankAccounts"
+  | "owners"
+  | "lines"
+  | "vdEntries"
+
+// Blok isian (grup berjudul hmx; role = blok entitas peran itu) atau daftar baris (sub-tabel).
+export type CustomsFieldBlock = { title: string | null; role?: string; fields: CustomsFieldItem[] }
+export type CustomsListBlock = { title: string; list: CustomsListKind; columns: CustomsField[] }
+export type CustomsBlock = CustomsFieldBlock | CustomsListBlock
+export type CustomsTab = { key: string; label: string; blocks: CustomsBlock[] }
+
 export type CustomsPartySpec = {
-  // Kode entitas CEISA (ref_codes entity_type).
+  // Kode entitas CEISA (ref_codes entity_type; 23 = konsolidator).
   code: string
+  // Judul grup entitas di form hmx, juga dipakai pesan validasi.
   label: string
   // company = diisi dari profil perusahaan; partner = dipilih dari master partner.
   source: "company" | "partner"
-  // Alamat negara dan izin TPB ditampilkan bila dipakai jenis ini.
-  country?: boolean
-  permit?: boolean
 }
 
-export type CustomsFormSpec = {
+export type CustomsLayout = {
+  tabs: CustomsTab[]
+  parties: CustomsPartySpec[]
+  // Form Barang per jenis (document_product_views hmx) dan daftar Dokumen Lartas per barang.
+  line: {
+    blocks: CustomsBlock[]
+    lartas: { title: string; columns: CustomsField[] } | null
+  }
+}
+
+export type CustomsFormSpec = CustomsLayout & {
   code: CustomsDocCode
   // Mis. "BC 2.3"; judul menu dan halaman.
   title: string
@@ -270,38 +145,42 @@ export type CustomsFormSpec = {
   description: string
   // Path menu, mis. /dokumen-bc/bc23.
   path: string
-  header: CustomsField[]
-  parties: CustomsPartySpec[]
-  // null = tab Pengangkut tidak tampil.
-  transport: { fields: CustomsField[] } | null
-  containers: boolean
-  transaction: CustomsField[]
-  line: CustomsField[]
-  // Jenis pungutan yang disiapkan untuk barang baru; null = tab Pungutan tidak tampil.
-  taxes: string[] | null
 }
 
-// Isian yang sama di semua jenis.
-export const CUSTOMS_STATEMENT_FIELDS: CustomsField[] = [
-  { key: "signerCity", label: "Kota pernyataan", kind: "text", span: 6 },
-  { key: "signedDate", label: "Tanggal pernyataan", kind: "date", span: 6 },
-  { key: "signerName", label: "Nama penandatangan", kind: "text", span: 6 },
-  { key: "signerPosition", label: "Jabatan penandatangan", kind: "text", span: 6 },
-]
+// Daftar Pemilik Barang (BC 3.0, 3.3, P3BET) disimpan sebagai entitas pemilik (kode 7) berseri.
+export const OWNER_CODE = "7"
 
-export const CUSTOMS_LINE_BASE_FIELDS: CustomsField[] = [
-  { key: "hsCode", label: "Kode HS", kind: "ref", refType: "hs_code", span: 6 },
-  { key: "description", label: "Uraian barang", kind: "text", span: 6 },
-  { key: "brand", label: "Merek", kind: "text", span: 4 },
-  { key: "itemType", label: "Tipe", kind: "text", span: 4 },
-  { key: "itemSize", label: "Ukuran", kind: "text", span: 4 },
-  { key: "qty", label: "Jumlah", kind: "qty", span: 3 },
-  { key: "ceisaUnitCode", label: "Satuan CEISA", kind: "ref", refType: "ceisa_unit", span: 3 },
-  { key: "stockQty", label: "Qty satuan stok", kind: "qty", span: 3 },
-  { key: "netWeight", label: "Berat (kg)", kind: "qty", span: 3 },
-  { key: "packageQty", label: "Jumlah kemasan", kind: "qty", span: 3 },
-  { key: "packageTypeCode", label: "Jenis kemasan", kind: "ref", refType: "package_type", span: 3 },
-]
+export const isFieldGroup = (item: CustomsFieldItem): item is CustomsFieldGroup => "group" in item
+export const isListBlock = (block: CustomsBlock): block is CustomsListBlock => "list" in block
+
+export function flatFields(items: CustomsFieldItem[]): CustomsField[] {
+  return items.flatMap((item) => (isFieldGroup(item) ? item.fields : [item]))
+}
+
+// Semua isian dokumen (bukan baris barang dan bukan kolom sub-tabel), urut sesuai form.
+export function customsDocumentFields(spec: CustomsLayout): CustomsField[] {
+  return spec.tabs.flatMap((tab) =>
+    tab.blocks.flatMap((block) => (isListBlock(block) ? [] : flatFields(block.fields))),
+  )
+}
+
+// Isian form Barang (tanpa pilihan produk), urut sesuai form.
+export function customsLineFields(spec: CustomsLayout): CustomsField[] {
+  return spec.line.blocks.flatMap((block) =>
+    isListBlock(block) ? [] : flatFields(block.fields).filter((field) => field.kind !== "product"),
+  )
+}
+
+export function customsListBlock(spec: CustomsLayout, list: CustomsListKind) {
+  for (const tab of spec.tabs) {
+    for (const block of tab.blocks) {
+      if (isListBlock(block) && block.list === list) return block
+    }
+  }
+  return spec.line.blocks.find(
+    (block): block is CustomsListBlock => isListBlock(block) && block.list === list,
+  )
+}
 
 // ---------------------------------------------------------------------------------------------
 // Data form: semua nilai berupa teks ("" = kosong), dikirim sebagai satu JSON (field "document").
@@ -317,23 +196,12 @@ export type CustomsPartyDraft = {
   nib: string
   permitNumber: string
   permitDate: string
-}
-
-export type CustomsTaxDraft = {
-  levyTypeCode: string
-  rate: string
-  facilityCode: string
-  facilityRate: string
-  amount: string
-}
-
-export type CustomsLineDraft = Record<CustomsLineColumn, string> & {
-  productId: string
-  // Hanya untuk tampilan pilihan produk.
-  product: { id: string; sku: string; name: string } | null
+  // NITKU, status, jenis API, dst. (isian entitas hmx yang tidak punya kolom sendiri).
   details: Record<string, string>
-  taxes: CustomsTaxDraft[]
 }
+
+// Daftar baris sederhana: nilai per kunci kolom.
+export type CustomsRowDraft = Record<string, string>
 
 // File lampiran (M3-10) diunggah lewat uploadCustomsAttachment, lalu kuncinya ikut disimpan.
 export type CustomsAttachmentFile = {
@@ -347,7 +215,178 @@ export type CustomsAttachmentDraft = {
   documentTypeCode: string
   number: string
   date: string
+  facilityCode: string
+  permit: string
+  officeCode: string
   file: CustomsAttachmentFile | null
+}
+
+export type CustomsLineDraft = Record<CustomsLineColumn, string> & {
+  productId: string
+  // Hanya untuk tampilan pilihan produk.
+  product: { id: string; sku: string; name: string } | null
+  details: Record<string, string>
+  // Dokumen Lartas barang ini dan Voluntary Declaration (BC 2.0).
+  attachments: CustomsAttachmentDraft[]
+  vdEntries: CustomsRowDraft[]
+}
+
+export type CustomsTaxDraft = { levyTypeCode: string; rate: string; amount: string; status: string }
+
+export type CustomsDocumentDraft = {
+  header: Record<CustomsHeaderColumn, string>
+  details: Record<string, string>
+  parties: CustomsPartyDraft[]
+  lines: CustomsLineDraft[]
+  attachments: CustomsAttachmentDraft[]
+  packages: CustomsRowDraft[]
+  containers: CustomsRowDraft[]
+  transports: CustomsRowDraft[]
+  taxes: CustomsTaxDraft[]
+  guarantees: CustomsRowDraft[]
+  bankAccounts: CustomsRowDraft[]
+}
+
+// Kunci baris per daftar, supaya baris baru dan data dari database punya bentuk yang sama.
+export const CUSTOMS_ROW_KEYS = {
+  packages: ["qty", "packageTypeCode", "marks"],
+  containers: ["number", "sizeCode", "typeCode", "loadTypeCode"],
+  transports: ["transportModeCode", "name", "voyageNumber", "flagCountryCode"],
+  taxes: ["levyTypeCode", "rate", "amount", "status"],
+  guarantees: [
+    "typeCode",
+    "number",
+    "date",
+    "value",
+    "dueDate",
+    "guarantor",
+    "bpjNumber",
+    "bpjDate",
+  ],
+  bankAccounts: ["code", "bankCode"],
+  vdEntries: ["valuationTypeCode", "dueDate", "amount"],
+} as const
+
+export const emptyRow = (keys: readonly string[]): CustomsRowDraft =>
+  Object.fromEntries(keys.map((key) => [key, ""]))
+
+export function emptyParty(entityTypeCode: string): CustomsPartyDraft {
+  return {
+    entityTypeCode,
+    partnerId: null,
+    name: "",
+    address: "",
+    countryCode: "",
+    identityTypeCode: "",
+    identityNumber: "",
+    nib: "",
+    permitNumber: "",
+    permitDate: "",
+    details: {},
+  }
+}
+
+export function emptyAttachment(documentTypeCode = ""): CustomsAttachmentDraft {
+  return {
+    documentTypeCode,
+    number: "",
+    date: "",
+    facilityCode: "",
+    permit: "",
+    officeCode: "",
+    file: null,
+  }
+}
+
+export function emptyLine(): CustomsLineDraft {
+  return {
+    ...(Object.fromEntries(CUSTOMS_LINE_COLUMNS.map((key) => [key, ""])) as Record<
+      CustomsLineColumn,
+      string
+    >),
+    productId: "",
+    product: null,
+    details: {},
+    attachments: [],
+    vdEntries: [],
+  }
+}
+
+export function emptyDraft(): CustomsDocumentDraft {
+  return {
+    header: Object.fromEntries(CUSTOMS_HEADER_COLUMNS.map((key) => [key, ""])) as Record<
+      CustomsHeaderColumn,
+      string
+    >,
+    details: {},
+    parties: [],
+    lines: [emptyLine()],
+    attachments: [emptyAttachment("380")],
+    packages: [],
+    containers: [],
+    transports: [],
+    taxes: [],
+    guarantees: [],
+    bankAccounts: [],
+  }
+}
+
+// Nilai satu isian di data form (dokumen, entitas, sarana angkut pertama, atau baris barang).
+export function customsFieldValue(
+  draft: CustomsDocumentDraft,
+  field: CustomsField,
+  line?: CustomsLineDraft,
+): string {
+  switch (field.store) {
+    case "details":
+      return draft.details[field.key] ?? ""
+    case "party":
+    case "partyDetails": {
+      const party = draft.parties.find((entry) => entry.entityTypeCode === field.role)
+      if (!party) return ""
+      return field.store === "party"
+        ? ((party as unknown as Record<string, string>)[field.key] ?? "")
+        : (party.details[field.key] ?? "")
+    }
+    case "transport":
+      return draft.transports[0]?.[field.key] ?? ""
+    case "line":
+      return line ? ((line as unknown as Record<string, string>)[field.key] ?? "") : ""
+    case "lineDetails":
+      return line?.details[field.key] ?? ""
+    default:
+      return (draft.header as Record<string, string>)[field.key] ?? ""
+  }
+}
+
+// Data form dengan satu isian diubah (dokumen, entitas, atau sarana angkut pertama).
+export function setCustomsFieldValue(
+  draft: CustomsDocumentDraft,
+  field: CustomsField,
+  value: string,
+): CustomsDocumentDraft {
+  switch (field.store) {
+    case "details":
+      return { ...draft, details: { ...draft.details, [field.key]: value } }
+    case "party":
+    case "partyDetails": {
+      const role = field.role ?? ""
+      const current =
+        draft.parties.find((entry) => entry.entityTypeCode === role) ?? emptyParty(role)
+      const next =
+        field.store === "party"
+          ? { ...current, [field.key]: value }
+          : { ...current, details: { ...current.details, [field.key]: value } }
+      const others = draft.parties.filter((entry) => entry !== current)
+      return { ...draft, parties: [...others, next] }
+    }
+    case "transport": {
+      const [first = emptyRow(CUSTOMS_ROW_KEYS.transports), ...rest] = draft.transports
+      return { ...draft, transports: [{ ...first, [field.key]: value }, ...rest] }
+    }
+    default:
+      return { ...draft, header: { ...draft.header, [field.key]: value } }
+  }
 }
 
 // Lampiran: maksimal 5 MB (batas body server action 6 MB di next.config.ts), jenis yang umum
@@ -365,69 +404,6 @@ export const ATTACHMENT_TYPES: Record<string, string> = {
 // Semua file lampiran satu dokumen ada di bawah awalan ini.
 export function attachmentKeyPrefix(documentId: string) {
   return `customs/${documentId}/`
-}
-export type CustomsPackageDraft = { qty: string; packageTypeCode: string; marks: string }
-export type CustomsContainerDraft = {
-  number: string
-  sizeCode: string
-  typeCode: string
-  loadTypeCode: string
-}
-export type CustomsTransportDraft = {
-  transportModeCode: string
-  name: string
-  voyageNumber: string
-  flagCountryCode: string
-}
-
-export type CustomsDocumentDraft = {
-  header: Record<CustomsHeaderColumn, string>
-  details: Record<string, string>
-  parties: CustomsPartyDraft[]
-  lines: CustomsLineDraft[]
-  attachments: CustomsAttachmentDraft[]
-  packages: CustomsPackageDraft[]
-  containers: CustomsContainerDraft[]
-  transports: CustomsTransportDraft[]
-}
-
-export function emptyLine(taxes: string[] | null): CustomsLineDraft {
-  return {
-    ...(Object.fromEntries(CUSTOMS_LINE_COLUMNS.map((key) => [key, ""])) as Record<
-      CustomsLineColumn,
-      string
-    >),
-    productId: "",
-    product: null,
-    details: {},
-    taxes: (taxes ?? []).map((levyTypeCode) => ({
-      levyTypeCode,
-      rate: "",
-      facilityCode: "",
-      facilityRate: "",
-      amount: "",
-    })),
-  }
-}
-
-export function emptyDraft(spec: CustomsFormSpec): CustomsDocumentDraft {
-  return {
-    header: Object.fromEntries(CUSTOMS_HEADER_COLUMNS.map((key) => [key, ""])) as Record<
-      CustomsHeaderColumn,
-      string
-    >,
-    details: {},
-    parties: [],
-    lines: [emptyLine(spec.taxes)],
-    attachments: [{ documentTypeCode: "380", number: "", date: "", file: null }],
-    packages: [],
-    containers: [],
-    transports: spec.transport ? [emptyTransport()] : [],
-  }
-}
-
-export function emptyTransport(): CustomsTransportDraft {
-  return { transportModeCode: "", name: "", voyageNumber: "", flagCountryCode: "" }
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -475,12 +451,12 @@ const HEADER_KINDS: Record<CustomsHeaderColumn, z.ZodType<string | null, string>
   fobValue: amount("Nilai FOB", 2),
   freightValue: amount("Freight", 2),
   insuranceValue: amount("Asuransi", 2),
-  deliveryPrice: amount("Harga penyerahan", 2),
+  deliveryPrice: amount("Harga barang", 2),
   grossWeight: amount("Berat kotor", 4),
   netWeight: amount("Berat bersih", 4),
   signerName: text("Nama penandatangan", 100),
   signerPosition: text("Jabatan penandatangan", 100),
-  signerCity: text("Kota pernyataan", 100),
+  signerCity: text("Tempat pernyataan", 100),
   signedDate: date("Tanggal pernyataan"),
   notes: text("Catatan", 2000),
 }
@@ -488,6 +464,7 @@ const HEADER_KINDS: Record<CustomsHeaderColumn, z.ZodType<string | null, string>
 function lineKinds(seq: number): Record<CustomsLineColumn, z.ZodType<string | null, string>> {
   const label = (name: string) => `Barang seri ${seq}: ${name}`
   return {
+    itemCode: text(label("Kode barang"), 50),
     hsCode: code,
     description: text(label("Uraian"), 1000),
     brand: text(label("Merek"), 100),
@@ -496,7 +473,7 @@ function lineKinds(seq: number): Record<CustomsLineColumn, z.ZodType<string | nu
     specification: text(label("Spesifikasi"), 1000),
     qty: amount(label("Jumlah"), 4),
     ceisaUnitCode: code,
-    stockQty: amount(label("Qty satuan stok"), 4),
+    stockQty: amount(label("Jumlah dalam satuan stok"), 4),
     packageQty: amount(label("Jumlah kemasan"), 4),
     packageTypeCode: code,
     netWeight: amount(label("Berat bersih"), 4),
@@ -507,7 +484,7 @@ function lineKinds(seq: number): Record<CustomsLineColumn, z.ZodType<string | nu
     fobValue: amount(label("Nilai FOB"), 2),
     freightValue: amount(label("Freight"), 2),
     insuranceValue: amount(label("Asuransi"), 2),
-    deliveryPrice: amount(label("Harga penyerahan"), 2),
+    deliveryPrice: amount(label("Harga barang"), 2),
     customsValue: amount(label("Nilai pabean"), 2),
   }
 }
@@ -522,6 +499,15 @@ const details = z
     ),
   )
 
+// Baris daftar sederhana yang disimpan sebagai jsonb (Voluntary Declaration): baris kosong dibuang.
+const jsonRows = z
+  .array(z.record(z.string(), z.string().max(200, "Isian maksimal 200 karakter.")))
+  .transform((rows) =>
+    rows
+      .map((row) => Object.fromEntries(Object.entries(row).map(([key, v]) => [key, v.trim()])))
+      .filter((row) => Object.values(row).some(Boolean)),
+  )
+
 const partySchema = z.object({
   entityTypeCode: z.string().trim().min(1),
   partnerId: z.uuid().nullable(),
@@ -533,14 +519,24 @@ const partySchema = z.object({
   nib: text("NIB", 20),
   permitNumber: text("Nomor izin", 100),
   permitDate: date("Tanggal izin"),
+  details,
 })
 
-const taxSchema = z.object({
-  levyTypeCode: z.string().trim().min(1, "Jenis pungutan wajib dipilih."),
-  rate: amount("Tarif", 4),
+const attachmentSchema = z.object({
+  documentTypeCode: z.string().trim().min(1, "Jenis lampiran wajib dipilih."),
+  number: text("Nomor lampiran", 100),
+  date: date("Tanggal lampiran"),
   facilityCode: code,
-  facilityRate: amount("Tarif fasilitas", 4),
-  amount: amount("Nilai pungutan", 2),
+  permit: text("Izin lampiran", 100),
+  officeCode: text("Kantor lampiran", 100),
+  file: z
+    .object({
+      fileKey: z.string().min(1).max(300),
+      fileName: z.string().trim().min(1).max(255),
+      contentType: z.string().max(100),
+      fileSize: z.number().int().positive(),
+    })
+    .nullable(),
 })
 
 const lineSchema = z
@@ -549,7 +545,8 @@ const lineSchema = z
     // Hanya untuk tampilan pilihan produk di form.
     product: z.unknown(),
     details,
-    taxes: z.array(taxSchema),
+    attachments: z.array(attachmentSchema),
+    vdEntries: jsonRows,
   })
   .catchall(z.string())
 
@@ -559,21 +556,7 @@ export const customsDocumentInputSchema = z
     details,
     parties: z.array(partySchema),
     lines: z.array(lineSchema),
-    attachments: z.array(
-      z.object({
-        documentTypeCode: z.string().trim().min(1, "Jenis lampiran wajib dipilih."),
-        number: text("Nomor lampiran", 100),
-        date: date("Tanggal lampiran"),
-        file: z
-          .object({
-            fileKey: z.string().min(1).max(300),
-            fileName: z.string().trim().min(1).max(255),
-            contentType: z.string().max(100),
-            fileSize: z.number().int().positive(),
-          })
-          .nullable(),
-      }),
-    ),
+    attachments: z.array(attachmentSchema),
     packages: z.array(
       z.object({
         qty: amount("Jumlah kemasan", 4),
@@ -593,10 +576,31 @@ export const customsDocumentInputSchema = z
       z.object({
         transportModeCode: code,
         name: text("Nama sarana angkut", 200),
-        voyageNumber: text("Nomor voyage/flight", 50),
+        voyageNumber: text("Nomor pengangkut", 50),
         flagCountryCode: code,
       }),
     ),
+    taxes: z.array(
+      z.object({
+        levyTypeCode: z.string().trim().min(1, "Jenis pungutan wajib dipilih."),
+        rate: amount("Tarif pungutan", 4),
+        amount: amount("Nilai pungutan", 2),
+        status: z.enum(["", "uncomputed", "computed", "paid"]).transform((value) => value || null),
+      }),
+    ),
+    guarantees: z.array(
+      z.object({
+        typeCode: code,
+        number: text("Nomor jaminan", 100),
+        date: date("Tanggal jaminan"),
+        value: amount("Nilai jaminan", 2),
+        dueDate: date("Tanggal jatuh tempo jaminan"),
+        guarantor: text("Penjamin", 200),
+        bpjNumber: text("Nomor BPJ", 100),
+        bpjDate: date("Tanggal BPJ"),
+      }),
+    ),
+    bankAccounts: z.array(z.object({ code: text("Kode bank devisa", 30), bankCode: code })),
   })
   .transform((input, ctx) => {
     const header = parseRecord(HEADER_KINDS, input.header, ctx)
@@ -604,20 +608,24 @@ export const customsDocumentInputSchema = z
     const lines = input.lines.map((line, index) => ({
       productId: line.productId,
       details: line.details,
-      taxes: line.taxes,
+      attachments: line.attachments,
+      vdEntries: line.vdEntries,
       ...parseRecord(lineKinds(index + 1), line as unknown as Record<string, string>, ctx),
     }))
-    const parties = input.parties.filter((party) => party.name)
+    // Entitas tanpa nama dibuang; peran yang boleh berulang (pemilik barang di daftar) diberi seri.
+    const seqs = new Map<string, number>()
+    const parties = input.parties
+      .filter((party) => party.name)
+      .map((party) => {
+        const seq = (seqs.get(party.entityTypeCode) ?? 0) + 1
+        seqs.set(party.entityTypeCode, seq)
+        return { ...party, seq }
+      })
     const packages = input.packages.filter((row) => row.qty !== null)
     const transports = input.transports.filter((row) => Object.values(row).some(Boolean))
-    for (const [index, line] of lines.entries()) {
-      const levies = line.taxes.map((tax) => tax.levyTypeCode)
-      if (new Set(levies).size !== levies.length) {
-        ctx.addIssue({
-          code: "custom",
-          message: `Barang seri ${index + 1}: jenis pungutan tidak boleh sama.`,
-        })
-      }
+    const levies = input.taxes.map((tax) => tax.levyTypeCode)
+    if (new Set(levies).size !== levies.length) {
+      ctx.addIssue({ code: "custom", message: "Jenis pungutan tidak boleh sama." })
     }
     for (const row of packages) {
       if (row.qty === "0") ctx.addIssue({ code: "custom", message: "Jumlah kemasan harus > 0." })
@@ -635,6 +643,9 @@ export const customsDocumentInputSchema = z
       packages,
       containers: input.containers.map((row, index) => ({ ...row, number: numbers[index] })),
       transports,
+      taxes: input.taxes,
+      guarantees: input.guarantees.filter((row) => Object.values(row).some(Boolean)),
+      bankAccounts: input.bankAccounts.filter((row) => row.code || row.bankCode),
     }
   })
 
@@ -680,38 +691,30 @@ export function customsDraftChanges(
 ): string[] {
   const changes: string[] = []
   const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
-  const fields: CustomsField[] = [
-    { key: "customsOfficeCode", label: "Kantor pabean", kind: "ref", refType: "customs_office" },
-    ...spec.header,
-    ...(spec.transport?.fields ?? []),
-    ...spec.transaction,
-    ...CUSTOMS_STATEMENT_FIELDS,
-    { key: "notes", label: "Catatan", kind: "text" },
-  ]
-  const value = (draft: CustomsDocumentDraft, field: CustomsField) =>
-    field.detail
-      ? (draft.details[field.key] ?? "")
-      : ((draft.header as Record<string, string>)[field.key] ?? "")
-  for (const field of fields) {
-    if (value(before, field) !== value(after, field)) changes.push(field.label)
+  for (const field of customsDocumentFields(spec)) {
+    if (field.store === "party" || field.store === "partyDetails") continue
+    if (customsFieldValue(before, field) !== customsFieldValue(after, field)) {
+      if (!changes.includes(field.label)) changes.push(field.label)
+    }
   }
   for (const role of spec.parties) {
-    const party = (draft: CustomsDocumentDraft) =>
-      draft.parties.find((entry) => entry.entityTypeCode === role.code) ?? null
-    if (!same(party(before), party(after))) changes.push(`Entitas ${role.label}`)
+    const parties = (draft: CustomsDocumentDraft) =>
+      draft.parties.filter((entry) => entry.entityTypeCode === role.code)
+    if (!same(parties(before), parties(after))) changes.push(role.label)
   }
   const lineCount = Math.max(before.lines.length, after.lines.length)
   for (let index = 0; index < lineCount; index++) {
     if (!same(before.lines[index], after.lines[index])) changes.push(`Barang seri ${index + 1}`)
   }
-  const parts = [
-    ["attachments", "Lampiran"],
-    ["packages", "Kemasan"],
-    ["containers", "Peti kemas"],
-    ["transports", "Pengangkutan"],
-  ] as const
-  for (const [key, label] of parts) {
-    if (!same(before[key], after[key])) changes.push(label)
+  for (const tab of spec.tabs) {
+    for (const block of tab.blocks) {
+      if (!isListBlock(block) || block.list === "lines" || block.list === "vdEntries") continue
+      const rows = (draft: CustomsDocumentDraft) =>
+        block.list === "owners"
+          ? draft.parties.filter((entry) => entry.entityTypeCode === OWNER_CODE)
+          : draft[block.list as Exclude<CustomsListKind, "owners" | "lines" | "vdEntries">]
+      if (!same(rows(before), rows(after))) changes.push(block.title)
+    }
   }
   return changes
 }
@@ -736,6 +739,8 @@ export function formatCustomsValue(
       return formatDecimal(value.replace(",", "."))
     case "date":
       return value.split("-").reverse().join("/")
+    case "boolean":
+      return value === "Y" ? "Ya" : "Tidak"
     default:
       return value
   }

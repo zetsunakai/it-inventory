@@ -9,8 +9,8 @@ import {
   customsContainers,
   customsDocumentLines,
   customsDocumentParties,
+  customsDocumentTaxes,
   customsDocuments,
-  customsLineTaxes,
   customsPackages,
   customsTransports,
   locations,
@@ -132,10 +132,17 @@ describe("customs_documents", () => {
           stockQty: "100",
         })
         .returning()
-      await tx.insert(customsLineTaxes).values([
-        { lineId: line.id, levyTypeCode: "BM", rate: "10", facilityCode: "3", amount: "120.05" },
-        { lineId: line.id, levyTypeCode: "PPN", rate: "11", facilityCode: "3" },
+      await tx.insert(customsDocumentTaxes).values([
+        { documentId: doc.id, seq: 1, levyTypeCode: "BM", rate: "10", amount: "120.05" },
+        { documentId: doc.id, seq: 2, levyTypeCode: "PPN", rate: "11", status: "computed" },
       ])
+      await tx.insert(customsAttachments).values({
+        documentId: doc.id,
+        lineId: line.id,
+        seq: 1,
+        documentTypeCode: "911",
+        number: "LARTAS-1",
+      })
       await tx.insert(customsAttachments).values({
         documentId: doc.id,
         seq: 1,
@@ -171,7 +178,7 @@ describe("customs_documents", () => {
       } = await tx.execute<{ count: number }>(sql`
         select (select count(*) from customs_document_parties where document_id = ${doc.id})
           + (select count(*) from customs_document_lines where document_id = ${doc.id})
-          + (select count(*) from customs_line_taxes where line_id = ${line.id})
+          + (select count(*) from customs_document_taxes where document_id = ${doc.id})
           + (select count(*) from customs_attachments where document_id = ${doc.id})
           + (select count(*) from customs_packages where document_id = ${doc.id})
           + (select count(*) from customs_containers where document_id = ${doc.id})

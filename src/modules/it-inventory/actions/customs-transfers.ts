@@ -10,7 +10,11 @@ import {
   CUSTOMS_DOC_CODES,
   CUSTOMS_MOVEMENT_DOC_CODES,
 } from "@/modules/it-inventory/lib/customs"
-import { customsDocumentInputSchema, emptyLine } from "@/modules/it-inventory/lib/customs-form"
+import {
+  customsDocumentInputSchema,
+  emptyLine,
+  emptyParty,
+} from "@/modules/it-inventory/lib/customs-form"
 import { CUSTOMS_SPECS } from "@/modules/it-inventory/lib/customs-specs"
 import { persistCustomsDocument } from "@/modules/it-inventory/server/customs-persist"
 import {
@@ -86,11 +90,8 @@ export const createCustomsDocumentFromTransfer = defineAction({
     const partner = transfer.partnerId ? await customsPartyFromPartner(transfer.partnerId) : null
     if (partnerRole && partner) {
       draft.parties.push({
-        entityTypeCode: partnerRole.code,
+        ...emptyParty(partnerRole.code),
         ...partner,
-        nib: "",
-        permitNumber: "",
-        permitDate: "",
       })
     }
     const lines = await tx
@@ -103,7 +104,7 @@ export const createCustomsDocumentFromTransfer = defineAction({
       .groupBy(transferLines.productId)
       .orderBy(sql`min(${transferLines.position})`)
     draft.lines = lines.map((line) => ({
-      ...emptyLine(spec.taxes),
+      ...emptyLine(),
       productId: line.productId,
       stockQty: line.qty,
     }))

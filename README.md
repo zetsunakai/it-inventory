@@ -389,12 +389,19 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 - Semua jenis dokumen (MVP: BC 2.3, 4.0, 2.5, 3.0, 4.1; lalu BC 2.0, 2.6.1, 2.6.2, 2.7, 1.6, 2.8,
   3.3, dan P3BET, backlog D-01–D-08) disimpan di satu set tabel yang dibedakan
   `doc_code` (backlog M3-01, `src/server/db/schema/customs.ts`): `customs_documents` (header),
-  `customs_document_parties` (entitas, satu per kode entitas CEISA), `customs_document_lines`
-  (barang), `customs_line_taxes` (pungutan per barang), `customs_attachments`, `customs_packages`,
-  `customs_containers`, dan `customs_transports`. Field yang hanya dipakai sebagian jenis
+  `customs_document_parties` (entitas, satu per kode entitas CEISA; pemilik barang BC 3.0, 3.3, dan
+  P3BET berseri), `customs_document_lines` (barang, termasuk Voluntary Declaration BC 2.0),
+  `customs_document_taxes` (pungutan per dokumen), `customs_guarantees` (jaminan BC 2.6.1/2.6.2),
+  `customs_bank_accounts` (bank devisa), `customs_attachments` (lampiran dokumen, dan Dokumen
+  Lartas per barang bila `line_id` terisi), `customs_packages`, `customs_containers`, dan
+  `customs_transports`. Field yang hanya dipakai sebagian jenis
   (pelabuhan, TPS, data BC 1.1, DPP, uang muka, dst.) ada di kolom `details` (jsonb, selalu objek),
-  jadi jenis baru tidak butuh tabel baru. Tampilannya tetap terpisah per jenis (M3-04 dan
-  seterusnya).
+  jadi jenis baru tidak butuh tabel baru. Tampilannya terpisah per jenis dan sama persis dengan
+  form hmx (tab, grup, field, label; backlog D-09): susunannya dibangkitkan dari view dan model hmx
+  `core_it_inventory` oleh `scripts/import-customs-forms-from-hmx.py` ke
+  `src/modules/it-inventory/lib/customs-layouts.generated.ts`. Jangan ubah file itu manual; ubah
+  pemetaan field di script, jalankan ulang, lalu `npx prettier --write` file hasilnya. Label pesan
+  aturan validasi harus sama dengan label field di form (dicek `tests/db/customs-specs.test.ts`).
 - `doc_code` sama dengan kodeDokumen CEISA (`23`, `40`, `25`, `30`, `41`, `20`, `261`, `262`,
   `27`, `16`, `28`, `33`, dan `331` untuk P3BET); label, arah, dan status ada di
   `src/modules/it-inventory/lib/customs.ts`. Arah di database: `customs_doc_direction()`; nama

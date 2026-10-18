@@ -152,14 +152,15 @@ describe("export draft", () => {
     const workbook = new ExcelJS.Workbook()
     await workbook.xlsx.load(await excel.arrayBuffer())
     expect(workbook.worksheets.map((sheet) => sheet.name)).toEqual([
+      "Dokumen",
       "Header",
       "Entitas",
-      "Dokumen lampiran",
-      "Pengangkutan",
+      "Dokumen Lampiran",
+      "Pengangkut",
       "Kemasan",
-      "Peti kemas",
+      "Peti Kemas",
       "Barang",
-      "Pungutan",
+      "Dokumen Lartas",
       "Transaksi",
       "Pernyataan",
     ])
@@ -168,9 +169,9 @@ describe("export draft", () => {
         .getWorksheet(name)!
         .getSheetValues()
         .flatMap((row) => (Array.isArray(row) ? row.slice(1).map(String) : []))
-    expect(values("Header")).toEqual(expect.arrayContaining(["Nomor aju", doc!.ajuNumber]))
+    expect(values("Dokumen")).toEqual(expect.arrayContaining(["Nomor aju", doc!.ajuNumber]))
     expect(values("Barang")).toEqual(expect.arrayContaining(["ZBX1", "52081100"]))
-    expect(values("Dokumen lampiran")).toEqual(expect.arrayContaining(["Invoice.pdf"]))
+    expect(values("Dokumen Lampiran")).toEqual(expect.arrayContaining(["Invoice.pdf"]))
 
     const invalid = await request("docx")
     expect(invalid.status).toBe(400)

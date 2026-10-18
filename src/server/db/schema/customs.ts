@@ -129,7 +129,9 @@ export const customsDocuments = pgTable(
 )
 
 // Entitas per peran (PRD 7.2): pengusaha TPB, pemilik, pemasok, pembeli, penerima, PPJK, dst.
-// Peran memakai kode entitas CEISA (ref_codes jenis entity_type), satu baris per peran. Data
+// Peran memakai kode entitas CEISA (ref_codes jenis entity_type; 23 = konsolidator). Satu baris per
+// peran, kecuali daftar Pemilik Barang BC 3.0, 3.3, dan P3BET (pemilik berseri, seq). Isian entitas
+// hmx tanpa kolom sendiri (NITKU, status, jenis API) ada di details. Data
 // disalin dari profil perusahaan atau partner (companyAsCustomsParty, partnerAsCustomsParty)
 // supaya dokumen tidak berubah saat master berubah; partner_id hanya penanda asalnya.
 export const customsDocumentParties = pgTable(
@@ -140,6 +142,7 @@ export const customsDocumentParties = pgTable(
       .notNull()
       .references(() => customsDocuments.id, { onDelete: "cascade" }),
     entityTypeCode: text().notNull(),
+    seq: integer().notNull().default(1),
     partnerId: uuid().references(() => partners.id, { onDelete: "restrict" }),
     name: text().notNull(),
     address: text(),
@@ -155,7 +158,12 @@ export const customsDocumentParties = pgTable(
     ...timestamps,
   },
   (table) => [
-    unique("customs_document_parties_role_unique").on(table.documentId, table.entityTypeCode),
+    unique("customs_document_parties_role_unique").on(
+      table.documentId,
+      table.entityTypeCode,
+      table.seq,
+    ),
+    check("customs_document_parties_seq_positive", sql`${table.seq} >= 1`),
     index("customs_document_parties_partner_idx").on(table.partnerId),
     check("customs_document_parties_name_not_blank", sql`btrim(${table.name}) <> ''`),
     check(
@@ -214,9 +222,15 @@ export const customsDocumentLines = pgTable(
     // Nilai pabean dalam rupiah.
     customsValue: money(),
     details: details(),
+    // Voluntary Declaration per barang (BC 2.0): [{ valuationTypeCode, dueDate, amount }].
+    vdEntries: jsonb().notNull().default([]),
     ...timestamps,
   },
   (table) => [
+    check(
+      "customs_document_lines_vd_entries_array",
+      sql`jsonb_typeof(${table.vdEntries}) = 'array'`,
+    ),
     unique("customs_document_lines_seq_unique").on(table.documentId, table.seq),
     index("customs_document_lines_product_idx").on(table.productId),
     check("customs_document_lines_seq_positive", sql`${table.seq} >= 1`),
@@ -232,35 +246,86 @@ export const customsDocumentLines = pgTable(
   ],
 )
 
-// Pungutan per barang (PRD 7.2): BM, PPN, PPh, PPnBM, satu baris per jenis. facility_code adalah
-// kode fasilitas tarif CEISA (mis. ditangguhkan, dibebaskan); rate dalam persen.
-export const customsLineTaxes = pgTable(
-  "customs_line_taxes",
+// Pungutan per dokumen (tab Pungutan hmx, document_tax): jenis pungutan, tarif (persen), nilai,
+// dan status perhitungan. Menggantikan pungutan per barang (keputusan user 18/10/2026).
+export const customsDocumentTaxes = pgTable(
+  "customs_document_taxes",
   {
     id: id(),
-    lineId: uuid()
+    documentId: uuid()
       .notNull()
-      .references(() => customsDocumentLines.id, { onDelete: "cascade" }),
+      .references(() => customsDocuments.id, { onDelete: "cascade" }),
+    seq: seq(),
     // Kode ref_codes jenis levy_type.
     levyTypeCode: text().notNull(),
     rate: qty(),
-    facilityCode: text(),
-    facilityRate: qty(),
     amount: money(),
+    // uncomputed = belum dihitung, computed = sudah dihitung, paid = sudah dilunasi.
+    status: text(),
     ...timestamps,
   },
   (table) => [
-    unique("customs_line_taxes_levy_unique").on(table.lineId, table.levyTypeCode),
+    unique("customs_document_taxes_seq_unique").on(table.documentId, table.seq),
+    unique("customs_document_taxes_levy_unique").on(table.documentId, table.levyTypeCode),
+    check("customs_document_taxes_seq_positive", sql`${table.seq} >= 1`),
+    check("customs_document_taxes_not_negative", sql`${table.rate} >= 0 and ${table.amount} >= 0`),
     check(
-      "customs_line_taxes_not_negative",
-      sql`${table.rate} >= 0 and ${table.facilityRate} >= 0 and ${table.amount} >= 0`,
+      "customs_document_taxes_status_valid",
+      sql`${table.status} in ('uncomputed', 'computed', 'paid')`,
     ),
+  ],
+)
+
+// Jaminan (tab Jaminan hmx BC 2.6.1 dan 2.6.2, document_guarantee).
+export const customsGuarantees = pgTable(
+  "customs_guarantees",
+  {
+    id: id(),
+    documentId: uuid()
+      .notNull()
+      .references(() => customsDocuments.id, { onDelete: "cascade" }),
+    seq: seq(),
+    // Kode jenis jaminan CEISA (tunai, bank garansi, dst.).
+    typeCode: text(),
+    number: text(),
+    date: date({ mode: "string" }),
+    value: money(),
+    dueDate: date({ mode: "string" }),
+    guarantor: text(),
+    bpjNumber: text(),
+    bpjDate: date({ mode: "string" }),
+    ...timestamps,
+  },
+  (table) => [
+    unique("customs_guarantees_seq_unique").on(table.documentId, table.seq),
+    check("customs_guarantees_seq_positive", sql`${table.seq} >= 1`),
+    check("customs_guarantees_value_not_negative", sql`${table.value} >= 0`),
+  ],
+)
+
+// Bank devisa (BC 3.0 dan 3.3, document_bank_devisa): kode bank CEISA dan kode isian hmx.
+export const customsBankAccounts = pgTable(
+  "customs_bank_accounts",
+  {
+    id: id(),
+    documentId: uuid()
+      .notNull()
+      .references(() => customsDocuments.id, { onDelete: "cascade" }),
+    seq: seq(),
+    bankCode: text(),
+    code: text(),
+    ...timestamps,
+  },
+  (table) => [
+    unique("customs_bank_accounts_seq_unique").on(table.documentId, table.seq),
+    check("customs_bank_accounts_seq_positive", sql`${table.seq} >= 1`),
   ],
 )
 
 // Lampiran (PRD 7.2): invoice, packing list, B/L atau AWB, kontrak, izin. Jenisnya kode ref_codes
 // jenis document_type (380 invoice, 217 packing list, 705 B/L, 740 AWB, 315 kontrak). File
-// disimpan lewat modul storage (M3-10); di sini hanya kuncinya.
+// disimpan lewat modul storage (M3-10); di sini hanya kuncinya. line_id terisi untuk Dokumen Lartas
+// per barang (form Barang hmx); kosong = Dokumen Lampiran dokumen.
 export const customsAttachments = pgTable(
   "customs_attachments",
   {
@@ -268,10 +333,15 @@ export const customsAttachments = pgTable(
     documentId: uuid()
       .notNull()
       .references(() => customsDocuments.id, { onDelete: "cascade" }),
+    lineId: uuid().references(() => customsDocumentLines.id, { onDelete: "cascade" }),
     seq: seq(),
     documentTypeCode: text().notNull(),
     number: text(),
     date: date({ mode: "string" }),
+    // Kode ref_codes jenis facility, izin, dan kantor (kolom Facility, Izin, Kantor hmx).
+    facilityCode: text(),
+    permit: text(),
+    officeCode: text(),
     fileKey: text(),
     fileName: text(),
     contentType: text(),
@@ -279,7 +349,9 @@ export const customsAttachments = pgTable(
     ...timestamps,
   },
   (table) => [
-    unique("customs_attachments_seq_unique").on(table.documentId, table.seq),
+    unique("customs_attachments_seq_unique")
+      .on(table.documentId, table.lineId, table.seq)
+      .nullsNotDistinct(),
     index("customs_attachments_type_idx").on(table.documentId, table.documentTypeCode),
     // Unduh lampiran lewat kunci file (/api/customs-files).
     index("customs_attachments_file_key_idx").on(table.fileKey),

@@ -2,6 +2,7 @@
 
 import { FormField } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Input } from "@/components/ui/input"
 import {
   Select,
@@ -14,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea"
 import {
   CUSTOMS_OPTION_LISTS,
   type CustomsField,
+  type CustomsFieldGroup,
   type CustomsFieldKind,
 } from "@/modules/it-inventory/lib/customs-form"
 import { cn } from "@/lib/utils"
@@ -63,7 +65,8 @@ export function CustomsControl({
       )
     }
     case "option": {
-      const items = CUSTOMS_OPTION_LISTS[field.list].map(([code, name]) => ({
+      const list: readonly (readonly [string, string])[] = CUSTOMS_OPTION_LISTS[field.list]
+      const items = list.map(([code, name]) => ({
         value: code,
         label: `[${code}] ${name}`,
       }))
@@ -92,6 +95,17 @@ export function CustomsControl({
           onChange={(event) => onChange(event.target.value)}
         />
       )
+    case "boolean":
+      return (
+        <div className="flex min-h-9 items-center">
+          <Checkbox
+            id={id}
+            aria-label={ariaLabel ?? field.label}
+            checked={value === "Y"}
+            onCheckedChange={(checked) => onChange(checked ? "Y" : "")}
+          />
+        </div>
+      )
     case "money":
     case "qty":
       return (
@@ -101,9 +115,13 @@ export function CustomsControl({
           aria-label={ariaLabel}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="text-right tabular-nums"
+          className="tabular-nums"
         />
       )
+    case "product":
+    case "file":
+      // Dirender khusus oleh pemanggil (pilihan produk, unggah file).
+      return null
     case "text":
       return field.long ? (
         <Textarea
@@ -148,6 +166,41 @@ export function CustomsFormField({
         onChange={onChange}
         refLabels={refLabels}
       />
+    </FormField>
+  )
+}
+
+// Beberapa isian sebaris di bawah satu label (grup side_by_side hmx, mis. Jenis Identitas: jenis
+// dan nomor). Setiap kontrol tetap punya label aksesibel sendiri.
+export function CustomsGroupField({
+  group,
+  id,
+  value,
+  onChange,
+  refLabels,
+}: {
+  group: CustomsFieldGroup
+  id: string
+  value: (field: CustomsField) => string
+  onChange: (field: CustomsField) => FieldChange
+  refLabels: RefLabels
+}) {
+  return (
+    <FormField label={group.group} htmlFor={`${id}-${group.fields[0]?.key}`} span={6}>
+      <div className="flex flex-col gap-2 sm:flex-row">
+        {group.fields.map((field) => (
+          <div key={field.key} className="min-w-0 flex-1">
+            <CustomsControl
+              field={field}
+              id={`${id}-${field.key}`}
+              value={value(field)}
+              onChange={onChange(field)}
+              refLabels={refLabels}
+              ariaLabel={field.label}
+            />
+          </div>
+        ))}
+      </div>
     </FormField>
   )
 }

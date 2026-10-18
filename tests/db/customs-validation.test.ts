@@ -54,15 +54,15 @@ describe("customs_document_errors", () => {
       const errors = await errorsOf(tx, doc.id)
       expect(errors.slice(0, 5)).toEqual([
         "Dokumen belum punya barang.",
-        "Kantor pabean belum diisi.",
+        "Kantor Pabean belum diisi.",
         "Entitas Pengusaha TPB belum diisi.",
-        "Entitas Pemilik barang belum diisi.",
-        "Entitas Penerima belum diisi.",
+        "Entitas Pemilik Barang belum diisi.",
+        "Entitas Penerima Barang belum diisi.",
       ])
       expect(errors).toContain("Lampiran Invoice belum ada.")
-      expect(errors).toContain("Tujuan pengeluaran belum diisi.")
+      expect(errors).toContain("Alasan Pengiriman belum diisi.")
       expect(errors).toContain("Kemasan: Jenis kemasan belum diisi.")
-      expect(errors).toContain("Nama penandatangan belum diisi.")
+      expect(errors).toContain("Nama Penandatangan belum diisi.")
     })
   })
 
@@ -85,7 +85,7 @@ describe("customs_document_errors", () => {
           .set({ name: " " })
           .where(eq(customsTransports.documentId, doc.id))
         expect(await errorsOf(tx, doc.id)).toEqual([
-          "Pengangkutan: Nama sarana angkut belum diisi.",
+          "Pengangkutan: Nama Sarana Angkut belum diisi.",
         ])
       }
     })
@@ -112,8 +112,8 @@ describe("customs_document_errors", () => {
         .where(eq(customsDocuments.id, doc.id))
       expect(await errorsOf(tx, doc.id)).toEqual([
         "Nomor BC 1.1 belum diisi.",
-        "Barang seri 2: Uraian barang belum diisi.",
-        "Barang seri 2: Negara asal belum diisi.",
+        "Barang seri 2: Uraian Jenis Barang belum diisi.",
+        "Barang seri 2: Negara Asal Barang belum diisi.",
       ])
     })
   })

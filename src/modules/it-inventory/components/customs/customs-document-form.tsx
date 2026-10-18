@@ -1,6 +1,6 @@
 "use client"
 
-import { Plus } from "lucide-react"
+import { Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useId, useState, type ReactNode } from "react"
 
@@ -13,33 +13,42 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { FormState } from "@/lib/action-result"
 import { saveCustomsDocument } from "@/modules/it-inventory/actions/customs-documents"
 import {
-  CUSTOMS_STATEMENT_FIELDS,
+  CUSTOMS_ROW_KEYS,
+  OWNER_CODE,
+  customsFieldValue,
   emptyLine,
-  emptyTransport,
+  emptyParty,
+  emptyRow,
+  isFieldGroup,
+  isListBlock,
+  setCustomsFieldValue,
+  type CustomsBlock,
   type CustomsDocumentDraft,
   type CustomsField,
-  type CustomsFieldKind,
+  type CustomsFieldBlock,
   type CustomsFormSpec,
   type CustomsLineDraft,
+  type CustomsListBlock,
   type CustomsPartyDraft,
-  type CustomsPartySpec,
-  type CustomsTaxDraft,
+  type CustomsRowDraft,
 } from "@/modules/it-inventory/lib/customs-form"
 
 import { AttachmentsEditor } from "./attachments-editor"
-import { CustomsFormField, type FieldChange, type RefLabels } from "./customs-field"
+import {
+  CustomsControl,
+  CustomsFormField,
+  CustomsGroupField,
+  type FieldChange,
+  type RefLabels,
+} from "./customs-field"
 import { RowCard } from "./row-card"
 
 type ProductChoice = { id: string; sku: string; name: string; hsCode: string; uomCode: string }
 type PartnerChoice = { id: string; name: string; identityNumber: string }
-type Column<T> = CustomsFieldKind & {
-  key: keyof T & string
-  label: string
-  span?: CustomsField["span"]
-}
+type OnLabel = (label?: { key: string; name: string }) => void
 
-// Form dokumen BC (backlog M3-04): bagian-bagiannya sama untuk semua jenis seperti tab form hmx,
-// isinya diatur spec jenis dokumen. Semua isian disimpan di satu state dan dikirim sebagai JSON;
+// Form dokumen BC: tab, grup, field, dan label sama dengan form hmx jenisnya (spec dari
+// customs-layouts.generated.ts). Semua isian disimpan di satu state dan dikirim sebagai JSON;
 // Draft boleh belum lengkap (kelengkapan diperiksa aturan validasi saat menuju Siap ajukan).
 export function CustomsDocumentForm({
   spec,
@@ -66,278 +75,151 @@ export function CustomsDocumentForm({
     if (state?.ok && !documentId) router.push(`${spec.path}/${state.data.id}`)
   }, [state, documentId, router, spec.path])
 
-  function change<K extends keyof CustomsDocumentDraft>(key: K, value: CustomsDocumentDraft[K]) {
-    setDraft((current) => ({ ...current, [key]: value }))
-  }
-
-  // Penangan perubahan untuk isian header (kolom atau details).
-  const headerChange =
-    (field: CustomsField): FieldChange =>
-    (value, label) => {
-      if (label) setLabels((current) => ({ ...current, [label.key]: label.name }))
-      setDraft((current) =>
-        field.detail
-          ? { ...current, details: { ...current.details, [field.key]: value } }
-          : { ...current, header: { ...current.header, [field.key]: value } },
-      )
-    }
-  const headerValue = (field: CustomsField) =>
-    field.detail
-      ? (draft.details[field.key] ?? "")
-      : ((draft.header as Record<string, string>)[field.key] ?? "")
-  const rememberLabel = (label?: { key: string; name: string }) => {
+  const rememberLabel: OnLabel = (label) => {
     if (label) setLabels((current) => ({ ...current, [label.key]: label.name }))
   }
+  const fieldChange =
+    (field: CustomsField): FieldChange =>
+    (value, label) => {
+      rememberLabel(label)
+      setDraft((current) => setCustomsFieldValue(current, field, value))
+    }
+  const value = (field: CustomsField) => customsFieldValue(draft, field)
+  const setRows = (list: RowList, rows: CustomsRowDraft[]) =>
+    setDraft((current) => ({ ...current, [list]: rows }))
 
-  const headerFields = (fields: CustomsField[]) =>
-    fields.map((field) => (
-      <CustomsFormField
-        key={field.key}
-        field={field}
-        id={fieldId(field.key)}
-        value={headerValue(field)}
-        onChange={headerChange(field)}
-        refLabels={labels}
-      />
-    ))
-
-  const tabs: { value: string; label: string; content: ReactNode }[] = [
-    {
-      value: "header",
-      label: "Header",
-      content: (
-        <FormSection title="Kantor pabean">
-          <CustomsFormField
-            field={{
-              key: "customsOfficeCode",
-              label: "Kantor pabean",
-              kind: "ref",
-              refType: "customs_office",
-              span: 6,
-            }}
-            id={fieldId("customsOfficeCode")}
-            value={draft.header.customsOfficeCode}
-            onChange={headerChange({
-              key: "customsOfficeCode",
-              label: "Kantor pabean",
-              kind: "ref",
-              refType: "customs_office",
-            })}
-            refLabels={labels}
-          />
-          {headerFields(spec.header)}
-        </FormSection>
-      ),
-    },
-    {
-      value: "entitas",
-      label: "Entitas",
-      content: (
-        <div className="flex flex-col gap-10">
-          {spec.parties.map((role) => (
-            <PartyEditor
-              key={role.code}
-              role={role}
-              idPrefix={fieldId(`party-${role.code}`)}
-              party={draft.parties.find((party) => party.entityTypeCode === role.code)}
+  const fieldBlock = (block: CustomsFieldBlock, key: string) => {
+    const role = block.role ? spec.parties.find((party) => party.code === block.role) : undefined
+    return (
+      <FormSection key={key} title={block.title ?? undefined}>
+        {block.fields.map((item, itemIndex) => {
+          if (isFieldGroup(item)) {
+            return (
+              <CustomsGroupField
+                key={itemIndex}
+                group={item}
+                id={fieldId(`${key}-${item.group}`)}
+                value={value}
+                onChange={fieldChange}
+                refLabels={labels}
+              />
+            )
+          }
+          // Nama entitas partner dipilih dari master partner (field nama hmx adalah pilihan).
+          if (role?.source === "partner" && item.store === "party" && item.key === "name") {
+            return (
+              <PartnerField
+                key={itemIndex}
+                id={fieldId(`${key}-partner`)}
+                label={item.label}
+                party={draft.parties.find((entry) => entry.entityTypeCode === role.code)}
+                onChange={(party) =>
+                  setDraft((current) => ({
+                    ...current,
+                    parties: [
+                      ...current.parties.filter((entry) => entry.entityTypeCode !== role.code),
+                      party,
+                    ],
+                  }))
+                }
+                roleCode={role.code}
+              />
+            )
+          }
+          return (
+            <CustomsFormField
+              key={itemIndex}
+              field={item}
+              id={fieldId(`${key}-${item.key}`)}
+              value={value(item)}
+              onChange={fieldChange(item)}
               refLabels={labels}
-              onLabel={rememberLabel}
-              onChange={(party) =>
-                change("parties", [
-                  ...draft.parties.filter((entry) => entry.entityTypeCode !== role.code),
-                  party,
-                ])
-              }
             />
-          ))}
-        </div>
-      ),
-    },
-    {
-      value: "dokumen",
-      label: "Dokumen",
-      content: (
-        <AttachmentsEditor
-          documentId={documentId}
-          idPrefix={fieldId("attachment")}
-          rows={draft.attachments}
-          onChange={(rows) => change("attachments", rows)}
-          refLabels={labels}
-          onLabel={rememberLabel}
-        />
-      ),
-    },
-  ]
-
-  if (spec.transport) {
-    tabs.push({
-      value: "pengangkut",
-      label: "Pengangkut",
-      content: (
-        <div className="flex flex-col gap-10">
-          <RowsEditor
-            title="Sarana angkut"
-            noun="sarana angkut"
-            idPrefix={fieldId("transport")}
-            rows={draft.transports}
-            onChange={(rows) => change("transports", rows)}
-            newRow={emptyTransport}
-            refLabels={labels}
-            onLabel={rememberLabel}
-            columns={[
-              {
-                key: "transportModeCode",
-                label: "Cara angkut",
-                kind: "ref",
-                refType: "transport_mode",
-                span: 3,
-              },
-              { key: "name", label: "Nama sarana angkut", kind: "text", span: 3 },
-              { key: "voyageNumber", label: "Nomor voyage/flight", kind: "text", span: 3 },
-              {
-                key: "flagCountryCode",
-                label: "Bendera",
-                kind: "ref",
-                refType: "country",
-                span: 3,
-              },
-            ]}
-          />
-          {spec.transport.fields.length > 0 && (
-            <FormSection title="Pelabuhan dan penimbunan">
-              {headerFields(spec.transport.fields)}
-            </FormSection>
-          )}
-        </div>
-      ),
-    })
+          )
+        })}
+      </FormSection>
+    )
   }
 
-  tabs.push(
-    {
-      value: "kemasan",
-      label: spec.containers ? "Kemasan dan peti kemas" : "Kemasan",
-      content: (
-        <div className="flex flex-col gap-10">
-          <RowsEditor
-            title="Kemasan"
-            noun="kemasan"
-            idPrefix={fieldId("package")}
-            rows={draft.packages}
-            onChange={(rows) => change("packages", rows)}
-            newRow={() => ({ qty: "", packageTypeCode: "", marks: "" })}
+  const listBlock = (block: CustomsListBlock, key: string): ReactNode => {
+    switch (block.list) {
+      case "attachments":
+        return (
+          <AttachmentsEditor
+            key={key}
+            title={block.title}
+            columns={block.columns}
+            documentId={documentId}
+            idPrefix={fieldId(key)}
+            rows={draft.attachments}
+            onChange={(rows) => setDraft((current) => ({ ...current, attachments: rows }))}
             refLabels={labels}
             onLabel={rememberLabel}
-            columns={[
-              { key: "qty", label: "Jumlah", kind: "qty", span: 3 },
-              {
-                key: "packageTypeCode",
-                label: "Jenis kemasan",
-                kind: "ref",
-                refType: "package_type",
-                span: 6,
-              },
-              { key: "marks", label: "Merek", kind: "text", span: 3 },
-            ]}
           />
-          {spec.containers && (
-            <RowsEditor
-              title="Peti kemas"
-              noun="peti kemas"
-              idPrefix={fieldId("container")}
-              rows={draft.containers}
-              onChange={(rows) => change("containers", rows)}
-              newRow={() => ({ number: "", sizeCode: "", typeCode: "", loadTypeCode: "" })}
-              refLabels={labels}
-              onLabel={rememberLabel}
-              columns={[
-                { key: "number", label: "Nomor", kind: "text", mono: true, span: 3 },
-                {
-                  key: "sizeCode",
-                  label: "Ukuran",
-                  kind: "ref",
-                  refType: "container_size",
-                  span: 3,
-                },
-                {
-                  key: "typeCode",
-                  label: "Tipe",
-                  kind: "ref",
-                  refType: "container_type",
-                  span: 3,
-                },
-                {
-                  key: "loadTypeCode",
-                  label: "Jenis muatan",
-                  kind: "option",
-                  list: "containerLoad",
-                  span: 3,
-                },
-              ]}
-            />
-          )}
-        </div>
-      ),
-    },
-    {
-      value: "barang",
-      label: "Barang",
-      content: (
-        <LinesEditor
-          spec={spec}
-          idPrefix={fieldId("line")}
-          lines={draft.lines}
-          onChange={(lines) => change("lines", lines)}
-          refLabels={labels}
-          onLabel={rememberLabel}
-        />
-      ),
-    },
-  )
-
-  if (spec.taxes) {
-    tabs.push({
-      value: "pungutan",
-      label: "Pungutan",
-      content: (
-        <TaxesEditor
-          idPrefix={fieldId("tax")}
-          lines={draft.lines}
-          onChange={(lines) => change("lines", lines)}
-          refLabels={labels}
-          onLabel={rememberLabel}
-        />
-      ),
-    })
+        )
+      case "lines":
+        return (
+          <LinesEditor
+            key={key}
+            spec={spec}
+            title={block.title}
+            documentId={documentId}
+            idPrefix={fieldId(key)}
+            lines={draft.lines}
+            onChange={(lines) => setDraft((current) => ({ ...current, lines }))}
+            refLabels={labels}
+            onLabel={rememberLabel}
+          />
+        )
+      case "owners": {
+        const owners = draft.parties.filter((party) => party.entityTypeCode === OWNER_CODE)
+        return (
+          <RowsEditor
+            key={key}
+            title={block.title}
+            idPrefix={fieldId(key)}
+            columns={block.columns}
+            rows={owners.map(ownerRow)}
+            onChange={(rows) =>
+              setDraft((current) => ({
+                ...current,
+                parties: [
+                  ...current.parties.filter((party) => party.entityTypeCode !== OWNER_CODE),
+                  ...rows.map(ownerParty),
+                ],
+              }))
+            }
+            newRow={() => emptyRow(OWNER_KEYS)}
+            refLabels={labels}
+            onLabel={rememberLabel}
+          />
+        )
+      }
+      case "vdEntries":
+        return null
+      default: {
+        const list = block.list
+        // Kemasan dan peti kemas: daftar yang diisi langsung per baris, seperti list editable hmx.
+        const Editor = list === "packages" || list === "containers" ? RowsTable : RowsEditor
+        return (
+          <Editor
+            key={key}
+            title={block.title}
+            idPrefix={fieldId(key)}
+            columns={block.columns}
+            rows={draft[list]}
+            onChange={(rows) => setRows(list, rows)}
+            newRow={() => emptyRow(CUSTOMS_ROW_KEYS[list])}
+            refLabels={labels}
+            onLabel={rememberLabel}
+          />
+        )
+      }
+    }
   }
 
-  tabs.push(
-    {
-      value: "transaksi",
-      label: "Transaksi",
-      content: (
-        <FormSection title="Nilai transaksi dan berat">
-          {headerFields(spec.transaction)}
-        </FormSection>
-      ),
-    },
-    {
-      value: "pernyataan",
-      label: "Pernyataan",
-      content: (
-        <FormSection title="Penandatangan">
-          {headerFields(CUSTOMS_STATEMENT_FIELDS)}
-          <CustomsFormField
-            field={{ key: "notes", label: "Catatan", kind: "text", long: true, span: 12 }}
-            id={fieldId("notes")}
-            value={draft.header.notes}
-            onChange={headerChange({ key: "notes", label: "Catatan", kind: "text" })}
-            refLabels={labels}
-          />
-        </FormSection>
-      ),
-    },
-  )
+  const blockContent = (block: CustomsBlock, key: string) =>
+    isListBlock(block) ? listBlock(block, key) : fieldBlock(block, key)
 
   return (
     <form action={formAction} className={FORM_CLASS}>
@@ -356,18 +238,31 @@ export function CustomsDocumentForm({
       <input type="hidden" name="docCode" value={spec.code} />
       <input type="hidden" name="document" value={JSON.stringify(draft)} />
 
-      <Tabs defaultValue="header">
+      <Tabs defaultValue={spec.tabs[0]?.key}>
         <TabsList>
-          {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
+          {spec.tabs.map((tab) => (
+            <TabsTrigger key={tab.key} value={tab.key}>
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
-        {tabs.map((tab) => (
+        {spec.tabs.map((tab) => (
           // Isi tab tetap terpasang supaya pilihan yang belum disimpan tidak hilang saat pindah tab.
-          <TabsContent key={tab.value} value={tab.value} keepMounted>
-            {tab.content}
+          <TabsContent key={tab.key} value={tab.key} keepMounted>
+            <div className="flex flex-col gap-10">
+              {sideBySide(tab.blocks).map((group, index) =>
+                group.length > 1 ? (
+                  // Kemasan dan peti kemas berdampingan (kiri–kanan) di layar lebar.
+                  <div key={index} className="grid items-start gap-10 lg:grid-cols-2">
+                    {group.map((block) =>
+                      blockContent(block, `${tab.key}-${tab.blocks.indexOf(block)}`),
+                    )}
+                  </div>
+                ) : (
+                  blockContent(group[0], `${tab.key}-${tab.blocks.indexOf(group[0])}`)
+                ),
+              )}
+            </div>
           </TabsContent>
         ))}
       </Tabs>
@@ -375,50 +270,77 @@ export function CustomsDocumentForm({
   )
 }
 
-// Entitas satu peran. Peran perusahaan terisi dari profil perusahaan; peran partner dipilih dari
-// master partner lalu datanya disalin (bisa diubah tanpa mengubah master).
-function PartyEditor({
-  role,
-  idPrefix,
+// Blok tab dikelompokkan: kemasan dan peti kemas yang berurutan jadi satu kelompok berdampingan.
+function sideBySide(blocks: CustomsBlock[]): CustomsBlock[][] {
+  const paired = (block: CustomsBlock | undefined) =>
+    block !== undefined &&
+    isListBlock(block) &&
+    (block.list === "packages" || block.list === "containers")
+  const groups: CustomsBlock[][] = []
+  for (const [index, block] of blocks.entries()) {
+    const previous = groups.at(-1)
+    if (previous?.length === 1 && paired(block) && paired(blocks[index - 1])) previous.push(block)
+    else groups.push([block])
+  }
+  return groups
+}
+
+type RowList = keyof typeof CUSTOMS_ROW_KEYS & keyof CustomsDocumentDraft
+
+// Daftar Pemilik Barang: setiap baris adalah entitas pemilik (kode 7) berseri.
+const OWNER_KEYS = ["code", "identityTypeCode", "identityNumber", "nitku", "name", "address"]
+const ownerRow = (party: CustomsPartyDraft): CustomsRowDraft => ({
+  code: party.details.code ?? "",
+  identityTypeCode: party.identityTypeCode,
+  identityNumber: party.identityNumber,
+  nitku: party.details.nitku ?? "",
+  name: party.name,
+  address: party.address,
+})
+const ownerParty = (row: CustomsRowDraft): CustomsPartyDraft => {
+  const details = Object.fromEntries(
+    Object.entries({ code: row.code, nitku: row.nitku }).filter(([, entry]) => entry),
+  )
+  return {
+    ...emptyParty(OWNER_CODE),
+    identityTypeCode: row.identityTypeCode ?? "",
+    identityNumber: row.identityNumber ?? "",
+    name: row.name ?? "",
+    address: row.address ?? "",
+    details,
+  }
+}
+
+// Nama entitas peran partner: dipilih dari master partner lalu datanya disalin (bisa diubah tanpa
+// mengubah master).
+function PartnerField({
+  id,
+  label,
+  roleCode,
   party,
-  refLabels,
-  onLabel,
   onChange,
 }: {
-  role: CustomsPartySpec
-  idPrefix: string
+  id: string
+  label: string
+  roleCode: string
   party: CustomsPartyDraft | undefined
-  refLabels: RefLabels
-  onLabel: (label?: { key: string; name: string }) => void
   onChange: (party: CustomsPartyDraft) => void
 }) {
-  const current: CustomsPartyDraft = party ?? {
-    entityTypeCode: role.code,
-    partnerId: null,
-    name: "",
-    address: "",
-    countryCode: "",
-    identityTypeCode: "",
-    identityNumber: "",
-    nib: "",
-    permitNumber: "",
-    permitDate: "",
-  }
+  const current = party ?? emptyParty(roleCode)
   const [partner, setPartner] = useState<PartnerChoice | null>(
-    current.partnerId ? { id: current.partnerId, name: current.name, identityNumber: "" } : null,
+    current.name
+      ? { id: current.partnerId ?? current.name, name: current.name, identityNumber: "" }
+      : null,
   )
   const [loadError, setLoadError] = useState<string | null>(null)
-  const set =
-    (key: keyof CustomsPartyDraft): FieldChange =>
-    (value, label) => {
-      onLabel(label)
-      onChange({ ...current, [key]: value })
-    }
 
   async function pickPartner(choice: PartnerChoice | null) {
     setPartner(choice)
     setLoadError(null)
-    if (!choice) return
+    if (!choice) {
+      onChange({ ...current, partnerId: null, name: "" })
+      return
+    }
     const response = await fetch(`/api/customs-parties?partner=${choice.id}`)
     if (!response.ok) {
       setLoadError("Data partner gagal dimuat. Coba pilih lagi.")
@@ -426,75 +348,47 @@ function PartyEditor({
     }
     const data: Pick<
       CustomsPartyDraft,
-      "partnerId" | "name" | "address" | "countryCode" | "identityTypeCode" | "identityNumber"
+      | "partnerId"
+      | "name"
+      | "address"
+      | "countryCode"
+      | "identityTypeCode"
+      | "identityNumber"
+      | "details"
     > = await response.json()
-    onChange({ ...current, ...data })
+    onChange({ ...current, ...data, details: { ...current.details, ...data.details } })
   }
 
-  const field = (
-    key: keyof CustomsPartyDraft,
-    spec: CustomsFieldKind & { label: string; span?: CustomsField["span"] },
-  ) => (
-    <CustomsFormField
-      field={{ ...spec, key }}
-      id={`${idPrefix}-${key}`}
-      value={(current[key] as string | null) ?? ""}
-      onChange={set(key)}
-      refLabels={refLabels}
-    />
-  )
-
   return (
-    <FormSection
-      title={role.label}
-      description={role.source === "company" ? "Dari profil perusahaan." : undefined}
-    >
-      {role.source === "partner" && (
-        <FormField
-          label="Partner"
-          htmlFor={`${idPrefix}-partner`}
-          span={12}
-          errors={loadError ? [loadError] : undefined}
-        >
-          <SearchSelect<PartnerChoice>
-            id={`${idPrefix}-partner`}
-            endpoint="/api/partners"
-            value={partner}
-            onValueChange={pickPartner}
-            getKey={(choice) => choice.id}
-            getLabel={(choice) => choice.name}
-            placeholder="Cari nama atau NPWP partner"
-          />
-        </FormField>
-      )}
-      {field("name", { label: "Nama", kind: "text", span: 12 })}
-      {field("identityTypeCode", {
-        label: "Jenis identitas",
-        kind: "option",
-        list: "identityType",
-        span: 4,
-      })}
-      {/* NITKU 22 digit perlu lebar. */}
-      {field("identityNumber", { label: "Nomor identitas", kind: "text", mono: true, span: 8 })}
-      {field("address", { label: "Alamat", kind: "text", long: true, span: role.country ? 8 : 12 })}
-      {role.country &&
-        field("countryCode", { label: "Negara", kind: "ref", refType: "country", span: 4 })}
-      {role.permit && (
-        <>
-          {field("nib", { label: "NIB", kind: "text", mono: true, span: 4 })}
-          {field("permitNumber", { label: "Nomor izin TPB", kind: "text", span: 4 })}
-          {field("permitDate", { label: "Tanggal izin TPB", kind: "date", span: 4 })}
-        </>
-      )}
-    </FormSection>
+    <FormField label={label} htmlFor={id} errors={loadError ? [loadError] : undefined}>
+      <SearchSelect<PartnerChoice>
+        id={id}
+        endpoint="/api/partners"
+        value={partner}
+        onValueChange={pickPartner}
+        getKey={(choice) => choice.id}
+        getLabel={(choice) => choice.name}
+        placeholder="Cari nama atau NPWP partner"
+      />
+    </FormField>
   )
 }
 
-// Daftar baris sederhana (lampiran, kemasan, peti kemas, sarana angkut): satu kartu per baris.
-function RowsEditor<T extends Record<string, string>>({
+type RowsProps = {
+  title: string
+  idPrefix: string
+  rows: CustomsRowDraft[]
+  onChange: (rows: CustomsRowDraft[]) => void
+  newRow: () => CustomsRowDraft
+  columns: CustomsField[]
+  refLabels: RefLabels
+  onLabel: OnLabel
+}
+
+// Daftar dalam bentuk tabel (list editable hmx): judul kolom, satu baris isian per data, hapus per
+// baris, dan tombol Tambah di bawah. Di layar sempit setiap baris menjadi kartu dua kolom.
+function RowsTable({
   title,
-  description,
-  noun,
   idPrefix,
   rows,
   onChange,
@@ -502,40 +396,105 @@ function RowsEditor<T extends Record<string, string>>({
   columns,
   refLabels,
   onLabel,
-}: {
-  title: string
-  description?: string
-  noun: string
-  idPrefix: string
-  rows: T[]
-  onChange: (rows: T[]) => void
-  newRow: () => T
-  columns: Column<T>[]
-  refLabels: RefLabels
-  onLabel: (label?: { key: string; name: string }) => void
-}) {
+}: RowsProps) {
+  const template = `1.75rem repeat(${columns.length}, minmax(0, 1fr)) 2.25rem`
+  return (
+    <FormSection title={title}>
+      <div data-span={12} className="space-y-3">
+        <div
+          aria-hidden
+          style={{ gridTemplateColumns: template }}
+          className="hidden gap-2 text-caption font-medium text-muted-foreground md:grid"
+        >
+          <span>Seri</span>
+          {columns.map((column) => (
+            <span key={column.key}>{column.label}</span>
+          ))}
+        </div>
+        {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada.</p>}
+        {rows.map((row, index) => {
+          const label = `${title} seri ${index + 1}`
+          return (
+            <div
+              key={index}
+              style={{ "--rows-template": template } as React.CSSProperties}
+              className="grid grid-cols-2 items-center gap-2 rounded-lg border p-3 md:grid-cols-[var(--rows-template)] md:border-0 md:p-0"
+            >
+              <span className="text-control tabular-nums">{index + 1}</span>
+              {columns.map((column) => (
+                <div key={column.key} className="min-w-0">
+                  <CustomsControl
+                    field={column}
+                    id={`${idPrefix}-${index}-${column.key}`}
+                    value={row[column.key] ?? ""}
+                    ariaLabel={`${column.label} ${label}`}
+                    onChange={(value, refLabel) => {
+                      onLabel(refLabel)
+                      onChange(
+                        rows.map((entry, position) =>
+                          position === index ? { ...entry, [column.key]: value } : entry,
+                        ),
+                      )
+                    }}
+                    refLabels={refLabels}
+                  />
+                </div>
+              ))}
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                aria-label={`Hapus ${label}`}
+                onClick={() => onChange(rows.filter((_, position) => position !== index))}
+                className="justify-self-end"
+              >
+                <Trash2 />
+              </Button>
+            </div>
+          )
+        })}
+        <Button type="button" variant="outline" onClick={() => onChange([...rows, newRow()])}>
+          <Plus />
+          Tambah
+        </Button>
+      </div>
+    </FormSection>
+  )
+}
+
+// Daftar baris sederhana (kemasan, peti kemas, sarana angkut, pungutan, jaminan, bank devisa,
+// pemilik barang): satu kartu per baris, kolom sesuai daftar hmx.
+function RowsEditor({
+  title,
+  idPrefix,
+  rows,
+  onChange,
+  newRow,
+  columns,
+  refLabels,
+  onLabel,
+}: RowsProps) {
   return (
     <FormSection
       title={title}
-      description={description}
       actions={
         <Button type="button" variant="outline" onClick={() => onChange([...rows, newRow()])}>
           <Plus />
-          Tambah {noun}
+          Tambah
         </Button>
       }
     >
-      {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada {noun}.</p>}
+      {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada.</p>}
       {rows.map((row, index) => (
         <RowCard
           key={index}
-          label={`${noun} ${index + 1}`}
+          label={`${title} ${index + 1}`}
           onRemove={() => onChange(rows.filter((_, position) => position !== index))}
         >
           {columns.map((column) => (
             <CustomsFormField
               key={column.key}
-              field={column}
+              field={{ ...column, span: columns.length > 4 ? 4 : columns.length === 4 ? 3 : 6 }}
               id={`${idPrefix}-${index}-${column.key}`}
               value={row[column.key] ?? ""}
               onChange={(value, label) => {
@@ -555,9 +514,13 @@ function RowsEditor<T extends Record<string, string>>({
   )
 }
 
-// Barang: produk siap BC; kode HS dan uraian terisi dari produk, satuan CEISA diisi per baris.
+// Barang: satu kartu per seri berisi form Barang hmx jenis ini (produk siap BC; kode HS dan uraian
+// terisi dari produk), ditambah jumlah dalam satuan stok untuk mencocokkan transfer, Dokumen
+// Lartas, dan Voluntary Declaration bila ada di form hmx.
 function LinesEditor({
   spec,
+  title,
+  documentId,
   idPrefix,
   lines,
   onChange,
@@ -565,151 +528,167 @@ function LinesEditor({
   onLabel,
 }: {
   spec: CustomsFormSpec
+  title: string
+  documentId?: string
   idPrefix: string
   lines: CustomsLineDraft[]
   onChange: (lines: CustomsLineDraft[]) => void
   refLabels: RefLabels
-  onLabel: (label?: { key: string; name: string }) => void
+  onLabel: OnLabel
 }) {
   const update = (index: number, patch: Partial<CustomsLineDraft>) =>
     onChange(lines.map((line, position) => (position === index ? { ...line, ...patch } : line)))
+  const lineValue = (line: CustomsLineDraft) => (field: CustomsField) =>
+    field.store === "lineDetails"
+      ? (line.details[field.key] ?? "")
+      : ((line as unknown as Record<string, string>)[field.key] ?? "")
+  const lineChange =
+    (index: number, line: CustomsLineDraft) =>
+    (field: CustomsField): FieldChange =>
+    (value, label) => {
+      onLabel(label)
+      update(
+        index,
+        field.store === "lineDetails"
+          ? { details: { ...line.details, [field.key]: value } }
+          : ({ [field.key]: value } as Partial<CustomsLineDraft>),
+      )
+    }
 
   return (
     <FormSection
-      title="Barang"
-      description="Hanya produk yang sudah punya kode HS. Qty satuan stok dicocokkan dengan transfer."
+      title={title}
+      description="Hanya produk yang sudah punya kode HS. Jumlah dalam satuan stok dicocokkan dengan transfer."
       actions={
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onChange([...lines, emptyLine(spec.taxes)])}
-        >
+        <Button type="button" variant="outline" onClick={() => onChange([...lines, emptyLine()])}>
           <Plus />
-          Tambah barang
+          Tambah Barang
         </Button>
       }
     >
       {lines.length === 0 && (
         <p className="text-control text-muted-foreground">Belum ada barang.</p>
       )}
-      {lines.map((line, index) => (
-        <RowCard
-          key={index}
-          label={`barang seri ${index + 1}`}
-          onRemove={() => onChange(lines.filter((_, position) => position !== index))}
-        >
-          <FormField label="Produk" htmlFor={`${idPrefix}-${index}-product`} span={12}>
-            <SearchSelect<ProductChoice>
-              id={`${idPrefix}-${index}-product`}
-              endpoint="/api/customs-products"
-              value={line.product ? { ...line.product, hsCode: line.hsCode, uomCode: "" } : null}
-              onValueChange={(product) =>
-                update(index, {
-                  productId: product?.id ?? "",
-                  product: product
-                    ? { id: product.id, sku: product.sku, name: product.name }
-                    : null,
-                  hsCode: product?.hsCode ?? line.hsCode,
-                  description: line.description || product?.name || "",
-                })
-              }
-              getKey={(choice) => choice.id}
-              getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
-              placeholder="Cari product code atau nama produk"
-            />
-          </FormField>
-          {spec.line.map((field) => (
-            <CustomsFormField
-              key={field.key}
-              field={field}
-              id={`${idPrefix}-${index}-${field.key}`}
-              value={
-                field.detail
-                  ? (line.details[field.key] ?? "")
-                  : ((line as unknown as Record<string, string>)[field.key] ?? "")
-              }
-              onChange={(value, label) => {
-                onLabel(label)
-                update(
-                  index,
-                  field.detail
-                    ? { details: { ...line.details, [field.key]: value } }
-                    : ({ [field.key]: value } as Partial<CustomsLineDraft>),
+      {lines.map((line, index) => {
+        const valueOf = lineValue(line)
+        const changeOf = lineChange(index, line)
+        const prefix = `${idPrefix}-${index}`
+        return (
+          <RowCard
+            key={index}
+            label={`Seri ${index + 1}`}
+            onRemove={() => onChange(lines.filter((_, position) => position !== index))}
+          >
+            {spec.line.blocks.map((block, blockIndex) => {
+              // Daftar (Voluntary Declaration) tampil setelah isian, lihat di bawah.
+              if (isListBlock(block)) return null
+              return block.fields.map((item, itemIndex) => {
+                if (isFieldGroup(item)) {
+                  return (
+                    <CustomsGroupField
+                      key={`${blockIndex}-${itemIndex}`}
+                      group={item}
+                      id={`${prefix}-${item.group}`}
+                      value={valueOf}
+                      onChange={changeOf}
+                      refLabels={refLabels}
+                    />
+                  )
+                }
+                if (item.kind === "product") {
+                  return (
+                    <FormField
+                      key="product"
+                      label={item.label}
+                      htmlFor={`${prefix}-product`}
+                      span={12}
+                    >
+                      <SearchSelect<ProductChoice>
+                        id={`${prefix}-product`}
+                        endpoint="/api/customs-products"
+                        value={
+                          line.product
+                            ? { ...line.product, hsCode: line.hsCode, uomCode: "" }
+                            : null
+                        }
+                        onValueChange={(product) =>
+                          update(index, {
+                            productId: product?.id ?? "",
+                            product: product
+                              ? { id: product.id, sku: product.sku, name: product.name }
+                              : null,
+                            itemCode: product?.sku ?? line.itemCode,
+                            hsCode: product?.hsCode ?? line.hsCode,
+                            description: line.description || product?.name || "",
+                          })
+                        }
+                        getKey={(choice) => choice.id}
+                        getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
+                        placeholder="Cari product code atau nama produk"
+                      />
+                    </FormField>
+                  )
+                }
+                return (
+                  <CustomsFormField
+                    key={`${blockIndex}-${itemIndex}`}
+                    field={item}
+                    id={`${prefix}-${item.key}`}
+                    value={valueOf(item)}
+                    onChange={changeOf(item)}
+                    refLabels={refLabels}
+                  />
                 )
-              }}
+              })
+            })}
+            <CustomsFormField
+              field={STOCK_QTY}
+              id={`${prefix}-stockQty`}
+              value={line.stockQty}
+              onChange={changeOf(STOCK_QTY)}
               refLabels={refLabels}
             />
-          ))}
-        </RowCard>
-      ))}
+            {spec.line.blocks.map((block, blockIndex) =>
+              isListBlock(block) && block.list === "vdEntries" ? (
+                <div key={blockIndex} data-span={12} className="form-field">
+                  <RowsEditor
+                    title={block.title || "Voluntary Declaration"}
+                    idPrefix={`${prefix}-vd`}
+                    columns={block.columns}
+                    rows={line.vdEntries}
+                    onChange={(rows) => update(index, { vdEntries: rows })}
+                    newRow={() => emptyRow(CUSTOMS_ROW_KEYS.vdEntries)}
+                    refLabels={refLabels}
+                    onLabel={onLabel}
+                  />
+                </div>
+              ) : null,
+            )}
+            {spec.line.lartas && (
+              <div data-span={12} className="form-field">
+                <AttachmentsEditor
+                  title={spec.line.lartas.title}
+                  columns={spec.line.lartas.columns}
+                  documentId={documentId}
+                  idPrefix={`${prefix}-lartas`}
+                  rows={line.attachments}
+                  onChange={(rows) => update(index, { attachments: rows })}
+                  refLabels={refLabels}
+                  onLabel={onLabel}
+                />
+              </div>
+            )}
+          </RowCard>
+        )
+      })}
     </FormSection>
   )
 }
 
-// Pungutan per barang: satu baris per jenis pungutan (BM, PPN, PPh, PPnBM).
-function TaxesEditor({
-  idPrefix,
-  lines,
-  onChange,
-  refLabels,
-  onLabel,
-}: {
-  idPrefix: string
-  lines: CustomsLineDraft[]
-  onChange: (lines: CustomsLineDraft[]) => void
-  refLabels: RefLabels
-  onLabel: (label?: { key: string; name: string }) => void
-}) {
-  const setTaxes = (index: number, taxes: CustomsTaxDraft[]) =>
-    onChange(lines.map((line, position) => (position === index ? { ...line, taxes } : line)))
-
-  if (lines.length === 0) {
-    return (
-      <FormSection title="Pungutan">
-        <p className="text-control text-muted-foreground">Tambahkan barang dulu.</p>
-      </FormSection>
-    )
-  }
-  return (
-    <div className="flex flex-col gap-10">
-      {lines.map((line, index) => (
-        <RowsEditor
-          key={index}
-          title={`Seri ${index + 1}${line.product ? ` · ${line.product.sku} ${line.product.name}` : ""}`}
-          noun="pungutan"
-          idPrefix={`${idPrefix}-${index}`}
-          rows={line.taxes}
-          onChange={(taxes) => setTaxes(index, taxes)}
-          newRow={() => ({
-            levyTypeCode: "",
-            rate: "",
-            facilityCode: "",
-            facilityRate: "",
-            amount: "",
-          })}
-          refLabels={refLabels}
-          onLabel={onLabel}
-          columns={[
-            {
-              key: "levyTypeCode",
-              label: "Jenis pungutan",
-              kind: "ref",
-              refType: "levy_type",
-              span: 4,
-            },
-            { key: "rate", label: "Tarif (%)", kind: "qty", span: 4 },
-            { key: "amount", label: "Nilai", kind: "money", span: 4 },
-            {
-              key: "facilityCode",
-              label: "Fasilitas",
-              kind: "option",
-              list: "taxFacility",
-              span: 4,
-            },
-            { key: "facilityRate", label: "Tarif fasilitas (%)", kind: "qty", span: 4 },
-          ]}
-        />
-      ))}
-    </div>
-  )
+// Tidak ada di form hmx: qty dalam satuan stok produk dipakai gerbang transfer (M4-02).
+const STOCK_QTY: CustomsField = {
+  key: "stockQty",
+  label: "Jumlah dalam Satuan Stok",
+  kind: "qty",
+  store: "line",
 }

@@ -69,12 +69,13 @@ describe("companyProfileSchema", () => {
 })
 
 describe("companyAsCustomsParty", () => {
-  test("NITKU menjadi nomor identitas dengan jenis identitas NPWP 16 digit", () => {
+  test("NPWP dan NITKU terpisah dengan jenis identitas NPWP 16 digit", () => {
     expect(companyAsCustomsParty(companyProfileSchema.parse(VALID))).toEqual({
       name: "PT Uji Berikat",
       address: "Jl. Industri No. 1, Bekasi",
       identityType: "6",
-      identityNumber: "0012345678901000000000",
+      npwp: "0012345678901000",
+      nitku: "0012345678901000000000",
       nib: "1234567890123",
       permitNumber: "KEP-123/WBC.08/2024",
       permitDate: "2024-03-15",

@@ -56,12 +56,13 @@ export type CompanyProfileInput = z.output<typeof companyProfileSchema>
 export type CompanyProfile = CompanyProfileInput & { updatedAt: Date }
 
 // Data perusahaan sebagai entitas Pengusaha TPB / Pemilik barang di dokumen BC (PRD bagian 7.2).
-// Nomor identitas memakai NITKU, sesuai aturan CEISA untuk jenis identitas NPWP 15/16 digit.
+// NPWP dan NITKU diisi terpisah seperti form entitas hmx (Nomor Identitas dan NITKU).
 export type CustomsParty = {
   name: string
   address: string
   identityType: "5" | "6"
-  identityNumber: string
+  npwp: string
+  nitku: string
   nib: string
   permitNumber: string
   permitDate: string
@@ -73,7 +74,8 @@ export function companyAsCustomsParty(profile: CompanyProfileInput): CustomsPart
     address: profile.address,
     // NPWP disimpan 16 digit, jadi selalu jenis 6.
     identityType: npwpIdentityType(profile.npwp) ?? "6",
-    identityNumber: profile.nitku,
+    npwp: profile.npwp,
+    nitku: profile.nitku,
     nib: profile.nib,
     permitNumber: profile.permitNumber,
     permitDate: profile.permitDate,

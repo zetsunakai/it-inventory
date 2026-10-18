@@ -45,7 +45,10 @@ PRD bagian 15.4.
    hmx (`views/document_XX_views.xml`), dirakit dari komponen form bersama (tab Header, Entitas,
    Dokumen, Pengangkut, Kemasan dan Peti Kemas, Transaksi, Barang, Pungutan, Pernyataan; backlog
    M3-04). Field tiap form mengikuti `models/document_XX.py` hmx; jangan membuat satu form generik
-   yang menyembunyikan field per jenis.
+   yang menyembunyikan field per jenis. Sejak D-09 (keputusan user 18/10/2026) tab, grup, field,
+   label, form Barang, pungutan per dokumen, jaminan, bank devisa, dan Dokumen Lartas sama persis
+   dengan form hmx: susunannya dibangkitkan `scripts/import-customs-forms-from-hmx.py` ke
+   `customs-layouts.generated.ts`; ubah pemetaan di script, bukan file hasilnya.
 2. **Alur status lengkap** (PRD 7.3): Draft → Siap ajukan → Diajukan → Terdaftar / Ditolak, Batal
    (Manajer). Penguncian setelah Diajukan/Terdaftar dipaksakan trigger database, seperti pola kunci
    hmx-002 tapi di DB, bukan di kode aplikasi.
