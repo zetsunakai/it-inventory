@@ -259,3 +259,44 @@ export async function getStockProduct(productId: string) {
     ? { id: row.id, sku: row.sku, name: row.name, uomCode: row.uom_code, category: row.category }
     : undefined
 }
+
+export type WarehouseStock = {
+  warehouseId: string
+  warehouseCode: string
+  warehouseName: string
+  qty: string
+  reservedQty: string
+  uomCode: string
+}
+
+// Stok satu produk per gudang yang boleh dilihat user (I-07, detail produk): saldo, dipesan, dan
+// tersedia dari stock_balances, sama dengan halaman Stok.
+export async function productStockByWarehouse(userId: string, productId: string) {
+  const result = await db.execute<{
+    warehouse_id: string
+    warehouse_code: string
+    warehouse_name: string
+    qty: string
+    reserved_qty: string
+    uom_code: string
+  }>(sql`
+    select w.id as warehouse_id, w.code as warehouse_code, w.name as warehouse_name,
+      sum(b.qty)::numeric(18,4)::text as qty, sum(b.reserved_qty)::numeric(18,4)::text as reserved_qty,
+      u.code as uom_code
+    from stock_balances b
+    join warehouses w on w.id = b.warehouse_id
+    join products p on p.id = b.product_id
+    join uoms u on u.id = p.uom_id
+    where b.product_id = ${productId} and can_access_warehouse(${userId}, w.id)
+    group by w.id, w.code, w.name, u.code
+    having sum(b.qty) <> 0 or sum(b.reserved_qty) <> 0
+    order by w.code`)
+  return result.rows.map((row): WarehouseStock => ({
+    warehouseId: row.warehouse_id,
+    warehouseCode: row.warehouse_code,
+    warehouseName: row.warehouse_name,
+    qty: row.qty,
+    reservedQty: row.reserved_qty,
+    uomCode: row.uom_code,
+  }))
+}

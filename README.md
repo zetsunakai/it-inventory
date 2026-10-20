@@ -116,6 +116,11 @@ dimatikan: user baru dibuat oleh Administrator.
   diperlakukan seperti tidak ada (404).
 - Lokasi virtual VENDOR, CUSTOMER, SCRAP, PENYESUAIAN, dan TRANSIT dibuat oleh seed. PENYESUAIAN
   tetap dipakai opname dan penyesuaian, tapi tidak ditampilkan di halaman Gudang.
+- Lokasi stok utama gudang (`warehouses.stock_location_id`, I-07, `stock_location` hmx): lokasi
+  internal aktif di gudang itu (trigger `warehouses_stock_location_guard`), terisi otomatis dengan
+  lokasi internal teratas pertama yang dibuat, tidak bisa diarsipkan selama dipakai, dan menjadi
+  lokasi baris produk tanpa stok di opname seluruh gudang. Daftar gudang menandai gudang yang sedang
+  dibekukan opname; detail produk menampilkan stok per gudang (`productStockByWarehouse`).
 
 ## Satuan dan konversi
 

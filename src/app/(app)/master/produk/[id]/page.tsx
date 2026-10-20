@@ -16,6 +16,13 @@ import { formatRefCode } from "@/lib/ref-codes"
 import { requirePermission } from "@/server/auth/session"
 import { listProductCategoryOptions } from "@/modules/inventory/server/queries/product-categories"
 import { getProduct } from "@/modules/inventory/server/queries/products"
+import {
+  productStockByWarehouse,
+  type WarehouseStock,
+} from "@/modules/inventory/server/queries/stock"
+import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
+import { Section } from "@/components/layout/section"
+import { formatDecimal } from "@/lib/decimal"
 
 import { ProductForm } from "../product-form"
 import { recordActivity } from "@/server/queries/activity"
@@ -39,9 +46,12 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
   if (!z.uuid().safeParse(id).success) notFound()
   const product = await getProduct(id)
   if (!product) notFound()
-  const [neighbors, activity] = await Promise.all([
+  // Stok per gudang hanya untuk peran yang boleh melihat stok (I-07).
+  const canSeeStock = hasPermission(user.roles, "inventory:read")
+  const [neighbors, activity, stock] = await Promise.all([
     masterNeighbors("products", product.sku),
     recordActivity("products", product.id, PRODUCT_ACTIVITY_LABELS),
+    canSeeStock ? productStockByWarehouse(user.id, product.id) : [],
   ])
 
   const canEdit = hasPermission(user.roles, "master:write")
@@ -105,9 +115,49 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
           )
         }
       />
+      {canSeeStock && (
+        <Section title="Stok per gudang">
+          <DataTable
+            columns={STOCK_COLUMNS}
+            rows={stock}
+            rowKey={(row) => row.warehouseId}
+            rowHref={(row) => `/inventory/stok/${product.id}?gudang=${row.warehouseId}`}
+            empty={{ title: "Belum ada stok di gudang yang boleh Anda lihat." }}
+          />
+        </Section>
+      )}
     </DocumentLayout>
   )
 }
+
+// Stok per gudang (I-07); baris membuka kartu stok produk di gudang itu.
+const STOCK_COLUMNS: DataTableColumn<WarehouseStock>[] = [
+  {
+    header: "Gudang",
+    className: "w-full",
+    cell: (row) => (
+      <span>
+        <span className="font-mono text-foreground">{row.warehouseCode}</span> · {row.warehouseName}
+      </span>
+    ),
+  },
+  {
+    header: "Saldo",
+    align: "right",
+    cell: (row) => `${formatDecimal(row.qty)} ${row.uomCode}`,
+  },
+  {
+    header: "Dipesan",
+    align: "right",
+    cell: (row) => (Number(row.reservedQty) ? formatDecimal(row.reservedQty) : "—"),
+  },
+  {
+    header: "Tersedia",
+    align: "right",
+    cell: (row) =>
+      `${formatDecimal((Number(row.qty) - Number(row.reservedQty)).toFixed(4))} ${row.uomCode}`,
+  },
+]
 
 // Label log aktivitas (RU-23).
 const PRODUCT_ACTIVITY_LABELS = {

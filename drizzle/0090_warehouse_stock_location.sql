@@ -1,0 +1,2 @@
+ALTER TABLE "warehouses" ADD COLUMN "stock_location_id" uuid;--> statement-breakpoint
+ALTER TABLE "warehouses" ADD CONSTRAINT "warehouses_stock_location_id_locations_id_fk" FOREIGN KEY ("stock_location_id") REFERENCES "public"."locations"("id") ON DELETE restrict ON UPDATE no action;

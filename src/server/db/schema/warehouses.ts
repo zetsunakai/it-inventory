@@ -35,6 +35,9 @@ export const warehouses = pgTable("warehouses", {
   code: text().notNull().unique(),
   name: text().notNull(),
   address: text().notNull(),
+  // Lokasi stok utama (I-07, stock_location hmx): lokasi bawaan gudang, mis. untuk baris produk
+  // tanpa stok di opname. Harus lokasi internal aktif di gudang ini (trigger warehouses_rules).
+  stockLocationId: uuid().references((): AnyPgColumn => locations.id, { onDelete: "restrict" }),
   active: boolean().notNull().default(true),
   ...timestamps,
 })

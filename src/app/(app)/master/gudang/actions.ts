@@ -1,6 +1,6 @@
 "use server"
 
-import { eq } from "drizzle-orm"
+import { and, eq, isNull } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox, requiredText } from "@/lib/form-fields"
@@ -44,7 +44,16 @@ export const createWarehouse = defineFormAction({
 export const updateWarehouse = defineFormAction({
   name: "updateWarehouse",
   permission: "master:write",
-  schema: z.object({ id: z.uuid("Gudang tidak valid."), ...warehouseFields, active: checkbox }),
+  schema: z.object({
+    id: z.uuid("Gudang tidak valid."),
+    ...warehouseFields,
+    // Lokasi stok utama (I-07); aturannya di trigger warehouses_stock_location_guard.
+    stockLocationId: z
+      .union([z.uuid("Lokasi stok utama tidak valid."), z.literal("")])
+      .optional()
+      .transform((value) => value || null),
+    active: checkbox,
+  }),
   successMessage: "Perubahan disimpan.",
   handler: async ({ input: { id, ...values }, tx }) => {
     const [row] = await tx
@@ -96,6 +105,13 @@ export const createLocation = defineFormAction({
 
     // Induk di gudang yang sama dan tanpa lingkaran dicek trigger locations_guard.
     const [row] = await tx.insert(locations).values(input).returning({ id: locations.id })
+    // Lokasi internal teratas pertama jadi lokasi stok utama gudang yang belum punya (I-07).
+    if (input.type === "internal" && !input.parentId) {
+      await tx
+        .update(warehouses)
+        .set({ stockLocationId: row.id })
+        .where(and(eq(warehouses.id, input.warehouseId), isNull(warehouses.stockLocationId)))
+    }
     return row
   },
 })

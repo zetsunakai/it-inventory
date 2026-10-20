@@ -96,10 +96,31 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
             <StaticField label="Kode gudang" value={warehouse.code} mono span={4} />
             <StaticField label="Nama gudang" value={warehouse.name} span={8} />
             <StaticField label="Alamat" value={warehouse.address} span={12} />
+            <StaticField
+              label="Lokasi stok utama"
+              value={
+                locations.find((location) => location.id === warehouse.stockLocationId)?.path ??
+                "Belum dipilih"
+              }
+              mono={Boolean(warehouse.stockLocationId)}
+            />
             <StaticField label="Status" value={warehouse.active ? "Aktif" : "Diarsipkan"} />
           </ViewSection>
         }
-        form={canEdit && <WarehouseForm warehouse={warehouse} />}
+        form={
+          canEdit && (
+            <WarehouseForm
+              warehouse={warehouse}
+              stockLocations={locations
+                .filter(
+                  (location) =>
+                    location.type === "internal" &&
+                    (location.active || location.id === warehouse.stockLocationId),
+                )
+                .map((location) => ({ id: location.id, path: location.path }))}
+            />
+          )
+        }
       />
 
       <Section title="Lokasi">

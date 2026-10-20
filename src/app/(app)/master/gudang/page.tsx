@@ -8,7 +8,7 @@ import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ImportExportActions } from "@/components/import/import-export-actions"
 import { PageHeader } from "@/components/page-header"
-import { NameCell } from "@/components/status-badge"
+import { NameCell, StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatNumber } from "@/lib/format"
@@ -37,7 +37,9 @@ import { deleteWarehouse } from "./actions"
 
 export const metadata: Metadata = { title: "Gudang & lokasi · IT Inventory" }
 
-const COLUMNS: DataTableColumn<WarehouseRow & { locationCount: number }>[] = [
+const COLUMNS: DataTableColumn<
+  WarehouseRow & { locationCount: number; freezingCount: string | null }
+>[] = [
   { header: "Kode", cell: (row) => <span className="font-mono text-foreground">{row.code}</span> },
   {
     header: "Nama",
@@ -46,6 +48,16 @@ const COLUMNS: DataTableColumn<WarehouseRow & { locationCount: number }>[] = [
   },
   { header: "Alamat", cell: (row) => row.address, className: "min-w-64 whitespace-normal" },
   { header: "Lokasi", cell: (row) => formatNumber(row.locationCount), align: "right" },
+  {
+    // Gudang yang sedang dibekukan stock opname (I-07); keadaan normal tidak ditandai.
+    header: "Opname",
+    cell: (row) =>
+      row.freezingCount ? (
+        <StatusBadge tone="warning" title="Transfer di gudang ini belum bisa divalidasi">
+          Beku · {row.freezingCount}
+        </StatusBadge>
+      ) : null,
+  },
 ]
 
 const VIRTUAL_COLUMNS: DataTableColumn<LocationRow>[] = [
@@ -59,7 +71,7 @@ export default function WarehousesPage({ searchParams }: PageProps<"/master/guda
     <>
       <PageHeader
         title="Gudang & lokasi"
-        description="Semua gudang adalah gudang berikat: stok tidak boleh minus dan setiap pergerakan barang wajib punya dokumen BC."
+        description="Semua gudang adalah gudang berikat: stok tidak boleh minus di gudang mana pun."
         actions={
           <ImportExportActions
             exportHref="/master/gudang/lokasi/export"

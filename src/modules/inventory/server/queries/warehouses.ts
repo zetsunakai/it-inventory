@@ -44,6 +44,12 @@ export async function listWarehouses({
       .select({
         warehouse: warehouses,
         locationCount: sql<number>`coalesce(${locationCounts.total}, 0)::int`,
+        // Opname yang sedang membekukan gudang ini (I-07).
+        freezingCount: sql<string | null>`(
+          select c.number from stock_counts c
+          where c.warehouse_id = ${warehouses.id}
+            and c.status::text in ('counting', 'counted', 'review')
+          limit 1)`,
       })
       .from(warehouses)
       .leftJoin(locationCounts, eq(locationCounts.warehouseId, warehouses.id))
@@ -54,7 +60,11 @@ export async function listWarehouses({
     db.select({ total: count() }).from(warehouses).where(where),
   ])
   return {
-    rows: rows.map((row) => ({ ...row.warehouse, locationCount: row.locationCount })),
+    rows: rows.map((row) => ({
+      ...row.warehouse,
+      locationCount: row.locationCount,
+      freezingCount: row.freezingCount,
+    })),
     total,
   }
 }

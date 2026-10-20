@@ -72,6 +72,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await db.delete(users).where(like(users.email, "zq-%@gudang.test"))
+  await db.update(warehouses).set({ stockLocationId: null }).where(like(warehouses.code, "ZQ%"))
   // Lokasi anak dulu: foreign key induk memakai ON DELETE RESTRICT.
   for (;;) {
     const deleted = await db.execute(sql`
@@ -320,5 +321,58 @@ describe("aksi gudang dan lokasi", () => {
       .from(locations)
       .where(inArray(locations.code, ["ZQNO"]))
     expect(row.count).toBe(0)
+  })
+})
+
+describe("lokasi stok utama (I-07)", () => {
+  test("lokasi internal teratas pertama jadi lokasi stok utama; hanya lokasi internal aktif gudang itu", async () => {
+    const warehouse = await createWarehouse(
+      null,
+      form({ code: "ZQGB4", name: "Gudang Empat", address: "Bekasi" }),
+    )
+    const id = warehouse.ok ? warehouse.data.id : ""
+    const first = await createLocation(
+      null,
+      form({ warehouseId: id, code: "ZQSTK", name: "Stok", type: "internal" }),
+    )
+    const firstId = first.ok ? first.data.id : ""
+    const second = await createLocation(
+      null,
+      form({ warehouseId: id, code: "ZQSTK2", name: "Stok 2", type: "internal" }),
+    )
+    const secondId = second.ok ? second.data.id : ""
+    const stockOf = async () =>
+      (
+        await db
+          .select({ id: warehouses.stockLocationId })
+          .from(warehouses)
+          .where(eq(warehouses.id, id))
+      )[0].id
+    expect(await stockOf()).toBe(firstId)
+
+    const other = await createLocation(
+      null,
+      form({ warehouseId: gb1, code: "ZQLAIN", name: "Gudang lain", type: "internal" }),
+    )
+    const save = (stockLocationId: string) =>
+      updateWarehouse(
+        null,
+        form({ id, name: "Gudang Empat", address: "Bekasi", stockLocationId, active: "on" }),
+      )
+    expect(await save(other.ok ? other.data.id : "")).toMatchObject({
+      ok: false,
+      errors: ["Lokasi stok utama harus lokasi internal aktif di gudang ini."],
+    })
+    expect(await save(secondId)).toMatchObject({ ok: true })
+    expect(await stockOf()).toBe(secondId)
+
+    expect(
+      await updateLocation(null, form({ id: secondId, name: "Stok 2", parentId: "" })),
+    ).toMatchObject({
+      ok: false,
+      errors: [
+        "Lokasi ZQSTK2 adalah lokasi stok utama gudang ZQGB4. Ganti lokasi stok utamanya dulu.",
+      ],
+    })
   })
 })

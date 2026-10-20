@@ -15,7 +15,11 @@ import {
   uoms,
   warehouses,
 } from "@/server/db/schema"
-import { listStock, stockCard } from "@/modules/inventory/server/queries/stock"
+import {
+  listStock,
+  productStockByWarehouse,
+  stockCard,
+} from "@/modules/inventory/server/queries/stock"
 
 import { purgeInventory, withLine } from "./helpers"
 
@@ -187,6 +191,20 @@ describe("saldo", () => {
     // Saldo per tanggal tidak punya qty dipesan; selain itu sama.
     expect(fromLedger.rows).toEqual(fromBalances.rows.map((row) => ({ ...row, reservedQty: null })))
     expect(fromBalances.rows.every((row) => row.reservedQty === "0.0000")).toBe(true)
+  })
+
+  test("stok per gudang di detail produk sama dengan jumlah saldo per lokasi (I-07)", async () => {
+    expect(
+      (await productStockByWarehouse(people.admin, ids.product)).map((row) => [
+        row.warehouseId,
+        row.qty,
+        row.reservedQty,
+      ]),
+    ).toEqual([
+      [ids.one, "8.0000", "0.0000"],
+      [ids.two, "5.0000", "0.0000"],
+    ])
+    expect(await productStockByWarehouse(people.gudang, ids.product)).toEqual([])
   })
 
   test("hanya gudang yang boleh diakses user", async () => {

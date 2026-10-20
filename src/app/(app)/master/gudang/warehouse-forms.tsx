@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect } from "react"
+import { useActionState, useEffect, useState } from "react"
 
 import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FormErrors } from "@/components/form-errors"
@@ -9,6 +9,13 @@ import { CheckboxField } from "@/components/checkbox-field"
 import { FormField, FormSection, StaticField } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
 
 import { createWarehouse, updateWarehouse } from "./actions"
@@ -19,11 +26,26 @@ type Warehouse = {
   code: string
   name: string
   address: string
+  stockLocationId: string | null
   active: boolean
 }
 
-// Form tambah (tanpa warehouse) dan ubah gudang.
-export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
+// Form tambah (tanpa warehouse) dan ubah gudang. Lokasi stok utama dipilih dari lokasi internal
+// aktif gudang itu (I-07), jadi hanya ada saat mengubah gudang.
+export function WarehouseForm({
+  warehouse,
+  stockLocations = [],
+}: {
+  warehouse?: Warehouse
+  stockLocations?: { id: string; path: string }[]
+}) {
+  const [stockLocationId, setStockLocationId] = useState<string | null>(
+    warehouse?.stockLocationId ?? "",
+  )
+  const stockItems = [
+    { value: "", label: "Belum dipilih" },
+    ...stockLocations.map((location) => ({ value: location.id, label: location.path })),
+  ]
   const router = useRouter()
   const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
     warehouse ? updateWarehouse : createWarehouse,
@@ -85,6 +107,32 @@ export function WarehouseForm({ warehouse }: { warehouse?: Warehouse }) {
             maxLength={500}
           />
         </FormField>
+        {warehouse && (
+          <FormField
+            label="Lokasi stok utama"
+            htmlFor="stock-location"
+            errors={fieldErrors?.stockLocationId}
+            hint="Lokasi bawaan gudang, mis. untuk produk tanpa stok di stock opname."
+          >
+            <Select
+              name="stockLocationId"
+              items={stockItems}
+              value={stockLocationId}
+              onValueChange={setStockLocationId}
+            >
+              <SelectTrigger id="stock-location" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {stockItems.map((item) => (
+                  <SelectItem key={item.value || "kosong"} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
         {warehouse && (
           <CheckboxField
             name="active"
