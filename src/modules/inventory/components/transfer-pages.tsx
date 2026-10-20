@@ -114,7 +114,6 @@ async function TransferTable({
     usageType,
   })
   const createHref = `${kind.path}/baru`
-  const createLabel = `Buat ${kind.noun}`
 
   const columns: DataTableColumn<TransferRow>[] = [
     {
@@ -185,7 +184,7 @@ async function TransferTable({
           kind.creatable !== false && (
             <Link href={createHref} className={buttonVariants()}>
               <Plus />
-              {createLabel}
+              Buat
             </Link>
           )
         }

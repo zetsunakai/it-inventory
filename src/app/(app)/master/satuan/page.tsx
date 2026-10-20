@@ -110,7 +110,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
           canEdit && (
             <Link href="/master/satuan/baru" className={buttonVariants()}>
               <Plus />
-              Tambah satuan
+              Buat
             </Link>
           )
         }

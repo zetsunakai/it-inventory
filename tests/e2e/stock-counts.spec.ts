@@ -20,7 +20,7 @@ test("selisih opname yang disetujui tercatat sebagai penyesuaian; gudang beku se
   await waitInteractive(page.getByLabel("Gudang"))
   await page.getByLabel("Gudang").click()
   await page.getByRole("option", { name: new RegExp(fixture.warehouse.code) }).click()
-  await page.getByRole("button", { name: "Buat sesi opname" }).click()
+  await page.getByRole("button", { name: "Buat", exact: true }).click()
   await expect(page.getByRole("heading", { name: /^Stock opname OPN\// })).toBeVisible()
   await expect(page.getByText("Draft", { exact: true }).first()).toBeVisible()
   const countUrl = page.url()

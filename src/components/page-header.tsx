@@ -24,7 +24,9 @@ export function PageHeader({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight text-balance">{title}</h1>
+          <h1 className="font-display text-page-title font-bold tracking-tight text-balance">
+            {title}
+          </h1>
           {description && <div className="text-control text-muted-foreground">{description}</div>}
         </div>
         {actions && (

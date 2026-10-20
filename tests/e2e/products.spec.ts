@@ -51,7 +51,7 @@ test("Auditor melihat detail produk tanpa form ubah", async ({ page }) => {
   await expect(page).toHaveURL(/\/$/)
 
   await page.goto(`/master/produk?q=${SKU}`)
-  await expect(page.getByRole("link", { name: "Tambah produk" })).toHaveCount(0)
+  await expect(page.getByRole("link", { name: "Buat", exact: true })).toHaveCount(0)
   await page.getByRole("link", { name: SKU }).click()
 
   // Mode baca: nilai tampil sebagai teks, kode HS dari tes sebelumnya.

@@ -1,17 +1,24 @@
 import type { Metadata } from "next"
-import { IBM_Plex_Mono, Plus_Jakarta_Sans } from "next/font/google"
+import { Figtree, JetBrains_Mono, Montserrat } from "next/font/google"
 import "./globals.css"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
 
-// Plus Jakarta Sans mengikuti hmx-002 (backlog RU-20); IBM Plex Mono untuk kode resmi yang dicocokkan
+// Font brand kit Veltics (keputusan user 20/10/2026): Figtree untuk seluruh antarmuka, Montserrat
+// hanya untuk judul halaman (utilitas font-display), JetBrains Mono untuk kode resmi yang dicocokkan
 // karakter per karakter (nomor aju, NPWP, kode HS, SKU). shadcn/ui membaca --font-sans.
-const jakartaSans = Plus_Jakarta_Sans({
+const figtree = Figtree({
   variable: "--font-sans",
   subsets: ["latin"],
 })
 
-const plexMono = IBM_Plex_Mono({
+const montserrat = Montserrat({
+  variable: "--font-display",
+  subsets: ["latin"],
+  weight: ["700"],
+})
+
+const jetbrainsMono = JetBrains_Mono({
   variable: "--font-mono",
   subsets: ["latin"],
   weight: ["400", "500"],
@@ -24,7 +31,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="id" className={`${jakartaSans.variable} ${plexMono.variable} h-full antialiased`}>
+    <html
+      lang="id"
+      className={`${figtree.variable} ${montserrat.variable} ${jetbrainsMono.variable} h-full antialiased`}
+    >
       <body className="flex min-h-full flex-col">
         <TooltipProvider>{children}</TooltipProvider>
       </body>

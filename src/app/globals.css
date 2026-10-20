@@ -12,6 +12,9 @@
   --text-control--line-height: 1.25rem;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
+  /* Judul halaman (h1): Heading 1 brand kit Veltics, 28px Montserrat 700. */
+  --text-page-title: 1.75rem;
+  --text-page-title--line-height: 2.25rem;
 }
 
 @theme inline {
@@ -20,6 +23,7 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-mono);
   --font-heading: var(--font-sans);
+  --font-display: var(--font-display);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -27,6 +31,7 @@
   --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
   --color-sidebar-primary: var(--sidebar-primary);
   --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
   --color-sidebar: var(--sidebar);
   --color-chart-5: var(--chart-5);
   --color-chart-4: var(--chart-4);
@@ -38,12 +43,15 @@
   --color-border: var(--border);
   --color-destructive: var(--destructive);
   --color-destructive-soft: var(--destructive-soft);
+  --color-destructive-foreground: var(--destructive-foreground);
   --color-success: var(--success);
   --color-success-soft: var(--success-soft);
   --color-warning: var(--warning);
   --color-warning-soft: var(--warning-soft);
   --color-info: var(--info);
   --color-info-soft: var(--info-soft);
+  --color-cyan: var(--cyan);
+  --color-cyan-soft: var(--cyan-soft);
   --color-bonded: var(--bonded);
   --color-bonded-soft: var(--bonded-soft);
   --color-accent-foreground: var(--accent-foreground);
@@ -59,113 +67,127 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  /* Skala radius brand kit Veltics: 8, 10, 12, 16, 20. */
+  --radius-sm: 8px;
+  --radius-md: 8px;
+  --radius-lg: 10px;
+  --radius-xl: 12px;
+  --radius-2xl: 16px;
+  --radius-3xl: 20px;
+  --radius-4xl: 20px;
 }
 
 /*
- * Token warna (skill ui-it-inventory, RU-20: mengikuti shell hmx-002): dasar netral, satu aksen biru
- * hmx untuk aksi utama, menu aktif, dan fokus, dan warna semantik yang hanya dipakai untuk artinya:
- *   bonded  = gudang/lokasi berikat
+ * Token warna (skill ui-it-inventory): brand kit Veltics (keputusan user 20/10/2026), dasar netral
+ * kebiruan, satu aksen biru untuk aksi utama, menu aktif, dan fokus, sidebar navy, dan warna
+ * semantik yang hanya dipakai untuk artinya:
+ *   bonded  = gudang/lokasi berikat (violet brand)
  *   success = selesai/terdaftar/siap
  *   warning = perlu perhatian (belum siap, menunggu persetujuan, selisih)
  *   destructive = ditolak/gagal
  *   info    = sedang diproses (diajukan, menunggu respon)
- * Setiap warna semantik punya pasangan -soft untuk latar. Kontras teks memenuhi WCAG AA.
+ * Setiap warna semantik punya pasangan -soft untuk latar. Kontras teks memenuhi WCAG AA. Brand kit
+ * hanya memberi warna terang; nilai -soft semantik, --input, dan mode gelap diturunkan darinya.
  */
 :root {
-  /* Token shell hmx-002 (webx/static/css/layout/layout.css, buttons.css). */
-  --background: #fbfdff;
-  --foreground: #1e1e1e;
+  /* Netral: Ink, Ink 2, Ink 3, Border, Background. */
+  --background: #f4f6fa;
+  --foreground: #0e1a33;
   --card: #ffffff;
-  --card-foreground: #1e1e1e;
+  --card-foreground: #0e1a33;
   --popover: #ffffff;
-  --popover-foreground: #1e1e1e;
-  --primary: #2a5ea2;
-  --primary-dark: #1c4f92;
+  --popover-foreground: #0e1a33;
+  /* Brand: Primary, Primary hover, Primary soft, Cyan accent, Cyan soft. */
+  --primary: #0061fc;
+  --primary-dark: #004fd1;
   --primary-foreground: #ffffff;
-  --secondary: #f2f3f5;
-  --secondary-foreground: #1e1e1e;
-  --muted: #f2f3f5;
-  --muted-foreground: #585959;
-  --accent: #e8e9eb;
-  --accent-foreground: #1e1e1e;
+  --secondary: #f4f6fa;
+  --secondary-foreground: #0e1a33;
+  --muted: #f4f6fa;
+  --muted-foreground: #4a5672;
+  --accent: #e6f0ff;
+  --accent-foreground: #0e1a33;
+  --cyan: #1fbdf9;
+  --cyan-soft: #e1f6fe;
+  /* Status. */
   --destructive: #b42318;
-  --destructive-soft: #fde5e3;
-  --success: oklch(0.5 0.12 150);
-  --success-soft: oklch(0.96 0.035 150);
-  --warning: oklch(0.5 0.11 65);
-  --warning-soft: oklch(0.96 0.05 85);
-  --info: #2a5ea2;
-  --info-soft: #e8f1ff;
-  --bonded: oklch(0.48 0.16 295);
-  --bonded-soft: oklch(0.955 0.03 295);
-  --border: #e1e2e3;
-  --input: #cacbcc;
-  --ring: #3082ed;
-  --chart-1: #2a5ea2;
-  --chart-2: oklch(0.48 0.16 295);
-  --chart-3: oklch(0.5 0.12 150);
-  --chart-4: oklch(0.5 0.11 65);
-  --chart-5: #3082ed;
-  --radius: 0.5rem;
-  --sidebar: #f2f3f5;
-  --sidebar-foreground: #1e1e1e;
-  --sidebar-primary: #2a5ea2;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8e9eb;
-  --sidebar-accent-foreground: #1e1e1e;
-  --sidebar-border: #e1e2e3;
-  --sidebar-ring: #3082ed;
+  --destructive-foreground: #ffffff;
+  --destructive-soft: #fde8e6;
+  --success: #17744a;
+  --success-soft: #e3f3ea;
+  --warning: #9a5b00;
+  --warning-soft: #fdf0d9;
+  --info: #0a79a6;
+  --info-soft: #eef9fe;
+  --bonded: #5b3fa8;
+  --bonded-soft: #efebf8;
+  --border: #e1e6ef;
+  --input: #c6cedc;
+  --ring: #0061fc;
+  --chart-1: #0061fc;
+  --chart-2: #1fbdf9;
+  --chart-3: #17744a;
+  --chart-4: #9a5b00;
+  --chart-5: #5b3fa8;
+  --radius: 10px;
+  /* Sidebar: latar navigasi, item aktif, teks menu, label grup; ikon aktif cyan. */
+  --sidebar: #081734;
+  --sidebar-foreground: #a3b3d1;
+  --sidebar-muted: #6a7ba3;
+  --sidebar-primary: #1fbdf9;
+  --sidebar-primary-foreground: #081734;
+  --sidebar-accent: #12306a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #16294f;
+  --sidebar-ring: #1fbdf9;
 }
 
 .dark {
-  --background: #111827;
-  --foreground: #f8fafc;
-  --card: #161f2e;
-  --card-foreground: #f8fafc;
-  --popover: #1d2839;
-  --popover-foreground: #f8fafc;
-  --primary: #4a7fc7;
-  --primary-dark: #2a5ea2;
+  --background: #0a1428;
+  --foreground: #eef2f8;
+  --card: #0f1d38;
+  --card-foreground: #eef2f8;
+  --popover: #132446;
+  --popover-foreground: #eef2f8;
+  --primary: #1668fc;
+  --primary-dark: #0061fc;
   --primary-foreground: #ffffff;
-  --secondary: #202b3d;
-  --secondary-foreground: #f8fafc;
-  --muted: #202b3d;
-  --muted-foreground: #cbd5e1;
-  --accent: #263449;
-  --accent-foreground: #f8fafc;
-  --destructive: oklch(0.7 0.19 22);
-  --destructive-soft: oklch(0.3 0.08 25);
-  --success: oklch(0.75 0.14 150);
-  --success-soft: oklch(0.3 0.06 150);
-  --warning: oklch(0.8 0.13 80);
-  --warning-soft: oklch(0.32 0.06 75);
-  --info: #6ea8fe;
-  --info-soft: #1e3a5f;
-  --bonded: oklch(0.75 0.13 295);
-  --bonded-soft: oklch(0.3 0.08 295);
-  --border: #334155;
-  --input: #475569;
-  --ring: #6ea8fe;
-  --chart-1: #4a7fc7;
-  --chart-2: oklch(0.75 0.13 295);
-  --chart-3: oklch(0.75 0.14 150);
-  --chart-4: oklch(0.8 0.13 80);
-  --chart-5: #6ea8fe;
-  --sidebar: #161f2e;
-  --sidebar-foreground: #f8fafc;
-  --sidebar-primary: #4a7fc7;
-  --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #263449;
-  --sidebar-accent-foreground: #f8fafc;
-  --sidebar-border: #334155;
-  --sidebar-ring: #6ea8fe;
+  --secondary: #16294f;
+  --secondary-foreground: #eef2f8;
+  --muted: #16294f;
+  --muted-foreground: #a3b3d1;
+  --accent: #1a3466;
+  --accent-foreground: #eef2f8;
+  --cyan: #1fbdf9;
+  --cyan-soft: #0c3349;
+  --destructive: #ff8a7a;
+  --destructive-foreground: #3a0d08;
+  --destructive-soft: #4a1812;
+  --success: #5fd49a;
+  --success-soft: #0f3a26;
+  --warning: #f3b552;
+  --warning-soft: #432a05;
+  --info: #5fcdf9;
+  --info-soft: #0c3349;
+  --bonded: #b9a5f0;
+  --bonded-soft: #2c2052;
+  --border: #22365e;
+  --input: #34497a;
+  --ring: #5fa0ff;
+  --chart-1: #1668fc;
+  --chart-2: #1fbdf9;
+  --chart-3: #5fd49a;
+  --chart-4: #f3b552;
+  --chart-5: #b9a5f0;
+  --sidebar: #060f24;
+  --sidebar-foreground: #a3b3d1;
+  --sidebar-muted: #6a7ba3;
+  --sidebar-primary: #1fbdf9;
+  --sidebar-primary-foreground: #060f24;
+  --sidebar-accent: #12306a;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: #142649;
+  --sidebar-ring: #1fbdf9;
 }
 
 @layer base {

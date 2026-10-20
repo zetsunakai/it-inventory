@@ -105,7 +105,7 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
           canEdit && (
             <Link href="/master/gudang/baru" className={buttonVariants()}>
               <Plus />
-              Tambah gudang
+              Buat
             </Link>
           )
         }

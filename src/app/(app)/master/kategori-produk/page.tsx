@@ -85,7 +85,7 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
           canEdit && (
             <Link href="/master/kategori-produk/baru" className={buttonVariants()}>
               <Plus />
-              Tambah kategori
+              Buat
             </Link>
           )
         }

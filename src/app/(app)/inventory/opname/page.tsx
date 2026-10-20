@@ -86,7 +86,7 @@ async function StockCountTable({ searchParams }: { searchParams: Promise<RawSear
           canCreate && (
             <Link href="/inventory/opname/baru" className={buttonVariants()}>
               <Plus />
-              Buat sesi opname
+              Buat
             </Link>
           )
         }

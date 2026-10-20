@@ -81,7 +81,7 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
           canEdit && (
             <Link href="/master/partner/baru" className={buttonVariants()}>
               <Plus />
-              Tambah partner
+              Buat
             </Link>
           )
         }

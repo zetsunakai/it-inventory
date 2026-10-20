@@ -174,7 +174,6 @@ async function CustomsTable({
     officeCode,
     period,
   })
-  const createLabel = `Buat ${spec.title}`
 
   return (
     <div className="space-y-4">
@@ -183,7 +182,7 @@ async function CustomsTable({
           canWrite && (
             <Link href={`${spec.path}/baru`} className={buttonVariants()}>
               <Plus />
-              {createLabel}
+              Buat
             </Link>
           )
         }

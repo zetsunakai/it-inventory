@@ -73,7 +73,7 @@ export function StockCountForm({
     <form action={formAction} className={FORM_CLASS}>
       <FormActions>
         <Button type="submit" disabled={pending || !warehouseId}>
-          {pending ? "Membuat sesi…" : "Buat sesi opname"}
+          {pending ? "Membuat sesi…" : "Buat"}
         </Button>
       </FormActions>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />

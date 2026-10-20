@@ -2,10 +2,9 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-// Status bersama (skill ui-it-inventory). Warna hanya untuk arti, teks selalu ada:
-//   warning/danger = perlu tindakan → pill berlatar, supaya menonjol
-//   success/info/bonded/neutral   = keterangan → titik + teks, tenang
-// Keadaan normal (mis. "Aktif") tidak perlu ditandai sama sekali.
+// Status bersama (skill ui-it-inventory), mengikuti brand kit Veltics: pill berlatar pucat dengan
+// titik dan teks berwarna sesuai arti. Warna hanya untuk arti, teks selalu ada. Keadaan normal
+// (mis. "Aktif") tidak perlu ditandai sama sekali.
 export type StatusTone = "success" | "warning" | "danger" | "info" | "bonded" | "neutral"
 
 const DOT: Record<StatusTone, string> = {
@@ -26,9 +25,13 @@ const TEXT: Record<StatusTone, string> = {
   neutral: "text-muted-foreground",
 }
 
-const PILL: Partial<Record<StatusTone, string>> = {
+const PILL: Record<StatusTone, string> = {
+  success: "bg-success-soft",
   warning: "bg-warning-soft",
   danger: "bg-destructive-soft",
+  info: "bg-info-soft",
+  bonded: "bg-bonded-soft",
+  neutral: "bg-muted",
 }
 
 export function StatusBadge({
@@ -42,14 +45,13 @@ export function StatusBadge({
   title?: string
   className?: string
 }) {
-  const pill = PILL[tone]
   return (
     <span
       title={title}
       className={cn(
-        "inline-flex items-center gap-1.5 text-caption font-medium whitespace-nowrap",
+        "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-caption font-medium whitespace-nowrap",
         TEXT[tone],
-        pill && `rounded-full px-2 py-0.5 ${pill}`,
+        PILL[tone],
         className,
       )}
     >

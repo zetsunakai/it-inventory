@@ -44,7 +44,7 @@ export function DocumentLayout({
             {(!hideTitle || neighbors?.prev || neighbors?.next) && (
               <div className="flex items-center gap-3">
                 {!hideTitle && (
-                  <h1 className="min-w-0 text-2xl font-semibold tracking-tight text-balance">
+                  <h1 className="min-w-0 font-display text-page-title font-bold tracking-tight text-balance">
                     {title}
                   </h1>
                 )}

@@ -90,7 +90,7 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
           canWrite && (
             <Link href={`${PATH}/baru`} className={buttonVariants()}>
               <Plus />
-              Buat permintaan
+              Buat
             </Link>
           )
         }

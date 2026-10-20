@@ -50,7 +50,7 @@ import { cn } from "@/lib/utils"
 // menu tetap mencari ke semua modul.
 
 const ITEM =
-  "h-10 rounded-md px-3 text-control text-sidebar-foreground hover:bg-sidebar-accent data-active:bg-linear-to-r data-active:from-primary data-active:from-40% data-active:to-primary-dark data-active:font-medium data-active:text-primary-foreground data-active:hover:text-primary-foreground"
+  "h-10 rounded-md px-3 text-control text-sidebar-foreground hover:bg-sidebar-accent/60 hover:text-sidebar-accent-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-sidebar-accent-foreground data-active:[&_svg]:text-sidebar-primary"
 
 export function AppSidebarNav({ roles }: { roles: Role[] }) {
   // Menu aktif mengikuti modul dokumen induk bila halaman punya (sama dengan breadcrumb), mis.
@@ -104,7 +104,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
           tooltip={collapsed ? item.title : undefined}
           // Modul yang belum dikerjakan diredupkan; tiketnya muncul saat kursor diarahkan.
           title={item.plannedIn ? `Belum tersedia, dijadwalkan di ${item.plannedIn}` : undefined}
-          className={cn(ITEM, item.plannedIn && "text-muted-foreground", className)}
+          className={cn(ITEM, item.plannedIn && "text-sidebar-muted", className)}
         >
           {icon}
           <span>{item.title}</span>
@@ -117,7 +117,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
   const search = !collapsed && (
     <div className="relative px-2 pt-1 pb-2">
       <Search
-        className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2 text-muted-foreground"
+        className="pointer-events-none absolute top-1/2 left-5 size-4 -translate-y-1/2 text-sidebar-muted"
         aria-hidden
       />
       <input
@@ -127,14 +127,14 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
         onKeyDown={(event) => event.key === "Escape" && setQuery("")}
         placeholder="Cari menu"
         aria-label="Cari menu"
-        className="h-10 w-full rounded-lg border border-sidebar-border bg-background pr-8 pl-9 text-control outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 [&::-webkit-search-cancel-button]:hidden"
+        className="h-10 w-full rounded-lg border border-sidebar-border bg-sidebar-accent/40 pr-8 pl-9 text-control text-sidebar-accent-foreground outline-none placeholder:text-sidebar-muted focus-visible:border-sidebar-ring focus-visible:ring-3 focus-visible:ring-sidebar-ring/40 [&::-webkit-search-cancel-button]:hidden"
       />
       {query && (
         <button
           type="button"
           onClick={() => setQuery("")}
           aria-label="Hapus pencarian menu"
-          className="absolute top-1/2 right-4 flex size-6 -translate-y-1/2 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          className="absolute top-1/2 right-4 flex size-6 -translate-y-1/2 items-center justify-center rounded text-sidebar-muted hover:text-sidebar-accent-foreground"
         >
           <X className="size-4" aria-hidden />
         </button>
@@ -184,7 +184,7 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
               ))}
             </SidebarMenu>
           ) : (
-            <p className="px-3 py-2 text-control text-muted-foreground">
+            <p className="px-3 py-2 text-control text-sidebar-foreground">
               Tidak ada menu yang cocok.
             </p>
           )}
@@ -230,14 +230,14 @@ export function AppSidebarNav({ roles }: { roles: Role[] }) {
               <Icon
                 className={cn(
                   "size-[18px] shrink-0",
-                  hasActive ? "text-primary" : "text-muted-foreground",
+                  hasActive ? "text-sidebar-primary" : "text-sidebar-muted",
                 )}
                 aria-hidden
               />
               <span className="flex-1 truncate">{group.label}</span>
               <ChevronRight
                 className={cn(
-                  "size-4 shrink-0 text-muted-foreground transition-transform duration-200",
+                  "size-4 shrink-0 text-sidebar-muted transition-transform duration-200",
                   expanded && "rotate-90",
                 )}
                 aria-hidden
@@ -421,18 +421,18 @@ function ModuleSwitcher({
                   tooltip={collapsed ? `Modul: ${current?.label ?? "-"}` : undefined}
                   aria-label={`Ganti modul, sekarang ${current?.label ?? "belum dipilih"}`}
                   className={cn(
-                    "h-11 rounded-lg border border-sidebar-border bg-background px-3 text-control font-semibold text-sidebar-foreground hover:bg-sidebar-accent",
+                    "h-11 rounded-lg border border-sidebar-border bg-sidebar-accent/40 px-3 text-control font-semibold text-sidebar-accent-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                     // Sidebar ciut: ikon modul saja, seukuran ikon menu lain.
                     collapsed && "justify-center px-0",
                   )}
                 />
               }
             >
-              {Icon && <Icon className="size-[18px] shrink-0 text-primary" aria-hidden />}
+              {Icon && <Icon className="size-[18px] shrink-0 text-sidebar-primary" aria-hidden />}
               {!collapsed && (
                 <>
                   <span className="flex-1 truncate text-left">{current?.label}</span>
-                  <ArrowLeftRight className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+                  <ArrowLeftRight className="size-4 shrink-0 text-sidebar-muted" aria-hidden />
                 </>
               )}
             </DropdownMenuTrigger>

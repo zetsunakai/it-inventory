@@ -13,7 +13,7 @@ type Fixture = Awaited<ReturnType<typeof createInventoryFixture>>
 
 async function createReadyReceipt(page: Page, fixture: Fixture, qty: string) {
   await page.goto("/inventory/penerimaan")
-  await page.getByRole("link", { name: "Buat penerimaan" }).first().click()
+  await page.getByRole("link", { name: "Buat", exact: true }).first().click()
   await fillInteractive(page.getByLabel("Vendor", { exact: true }), fixture.partner.code)
   await page.getByRole("option", { name: new RegExp(fixture.partner.code) }).click()
   await page.getByLabel("Lokasi tujuan").click()

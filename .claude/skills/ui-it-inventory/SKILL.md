@@ -54,7 +54,7 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 | Hapus data master                            | `DataTable bulkDelete` di halaman daftar: centang baris → baris aksi "N dipilih · Hapus · Batal pilih" di atas tabel, konfirmasi `AlertDialog`, pesan tolak per data ke slot pesan halaman; filter `Status` di daftar                                                                                                                                   | Tombol Hapus di form/halaman detail, hapus tanpa konfirmasi                      |
 | Detail data master                           | `RecordModes` (view + form): dibuka dalam mode baca (`ViewSection` + `StaticField` dengan `span` sama seperti form) dengan tombol Edit dan Buat; Edit → form dengan Simpan dan Buang; form memanggil `useSaveFeedback(state)`                                                                                                                           | Form langsung terbuka di halaman detail, tampilan baca yang beda tata letaknya   |
 | Ikon menu                                    | Hanya untuk menu induk (area kerja) di `NAVIGATION`, masing-masing berbeda; menu anak tanpa ikon dan menjorok                                                                                                                                                                                                                                           | Ikon di setiap menu anak                                                         |
-| Logo                                         | `public/brand/logo.png` di header sidebar (ganti file untuk ganti logo); `public/brand` dikecualikan dari proxy login                                                                                                                                                                                                                                   | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)                 |
+| Logo                                         | `public/brand/veltics-logo.png` di header sidebar (ganti logo dengan file bernama baru supaya cache gambar lama tidak terpakai); `public/brand` dikecualikan dari proxy login                                                                                                                                                                                                                                   | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)                 |
 
 Masih tersisa untuk putaran berikutnya: halaman login masih kartu generik; tabel di HP belum
 menyembunyikan kolom sekunder; belum ada pemilih tema gelap (token gelap sudah ada); layar scan
@@ -70,15 +70,28 @@ tablet baru ada untuk penerimaan (RU-03), pengiriman dan opname menyusul (I-01, 
   - `--success`, `--warning`, `--destructive`: selesai/terdaftar, perlu perhatian (belum siap,
     menunggu persetujuan, selisih), ditolak/gagal.
   - `--info`: status proses (diajukan, menunggu respon).
-  - Aksen biru hmx (`--primary` #2a5ea2, tombol utama bergradasi ke `--primary-dark`) hanya untuk
-    aksi utama, menu aktif, dan fokus; jangan pakai warna untuk dekorasi.
+  - Warna dasar dari brand kit Veltics (keputusan user 20/10/2026): aksen biru (`--primary`
+    #0061fc, tombol utama rata tanpa gradasi, hover `--primary-dark` #004fd1) hanya untuk aksi utama, link, dan
+    fokus; jangan pakai warna untuk dekorasi. Sidebar navy (`--sidebar` #081734, item aktif
+    `--sidebar-accent` #12306a, ikon aktif cyan `--sidebar-primary`); di dalam sidebar pakai token
+    `sidebar-*` (termasuk `text-sidebar-muted`), bukan `muted-foreground` atau `bg-background`.
+  - Radius mengikuti skala brand kit 8/10/12/16/20 (`rounded-md` 8, `rounded-lg` 10 untuk tombol
+    dan input, `rounded-xl` 12, `rounded-2xl` 16 untuk kartu form, `rounded-3xl` 20); teks tombol
+    medium (500).
+  - Tombol dan status mengikuti brand kit: tombol hapus/batal dokumen (`variant="destructive"`)
+    merah penuh dengan teks putih; `StatusBadge` selalu pill berlatar `-soft` dengan titik dan teks
+    berwarna sesuai tone.
+  - Tombol buat data baru di action bar daftar cukup berlabel "Buat", tanpa nama data di
+    belakangnya (bukan "Buat BC 2.0" atau "Tambah produk"; keputusan user 20/10/2026). Judul
+    halaman buat tetap menyebut datanya.
 - **Acuan tampilan: hmx-002** (`~/hmx/hmx-002/hmx/module/basic/webx/static`, keputusan user
   15/10/2026, backlog RU-20–RU-23): token shell di `css/layout/layout.css`, tombol di
   `css/buttons.css`, sidebar di `css/layout/sidebar/`, action bar dan pencarian di
   `css/layout/action-manager/` dan `css/views/search/`, form di `vue/views/form/`. Ambil susunan,
   ukuran, dan perilakunya; tetap pakai komponen shadcn base-ui repo ini.
-- **Tipografi**: Plus Jakarta Sans untuk UI (seperti hmx) dan IBM Plex Mono untuk kode (diatur di
-  `src/app/layout.tsx`); teks kontrol dan tabel 14px (`text-control`), teks kecil 12px
+- **Tipografi** (brand kit Veltics): Figtree untuk UI, Montserrat 700 hanya untuk judul halaman
+  (`font-display text-page-title` = 28px di `h1` PageHeader dan dokumen; judul kartu, dialog, dan sheet tetap Figtree), dan
+  JetBrains Mono untuk kode (diatur di `src/app/layout.tsx`); teks kontrol dan tabel 14px (`text-control`), teks kecil 12px
   (`text-caption`), kontrol 40px, header tabel 48px, baris 44px; angka dengan
   `tabular-nums`; font mono hanya untuk kode resmi yang dicocokkan karakter per karakter (nomor aju,
   NPWP/NITKU, kode HS, SKU). Hierarki dari ukuran dan bobot, bukan dari warna abu-abu bertingkat.

@@ -99,7 +99,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
           canEdit && (
             <Link href="/master/produk/baru" className={buttonVariants()}>
               <Plus />
-              Tambah produk
+              Buat
             </Link>
           )
         }

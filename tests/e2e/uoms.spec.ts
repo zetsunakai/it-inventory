@@ -47,6 +47,6 @@ test("Auditor melihat satuan seed tanpa bisa mengubah", async ({ page }) => {
 
   await page.goto("/master/satuan")
   await expect(page.getByRole("row").filter({ hasText: "LUSIN" })).toContainText("1 LUSIN = 12 PCS")
-  await expect(page.getByRole("link", { name: "Tambah satuan" })).toHaveCount(0)
+  await expect(page.getByRole("link", { name: "Buat", exact: true })).toHaveCount(0)
   await expect(page.getByRole("button", { name: "Tambah kategori" })).toHaveCount(0)
 })

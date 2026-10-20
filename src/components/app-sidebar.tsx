@@ -21,20 +21,20 @@ export function AppSidebar() {
           href="/"
           className="flex items-center gap-3 rounded-md p-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          {/* Logo di public/brand/logo.png (ganti filenya untuk mengganti logo). */}
+          {/* Logo di public/brand/veltics-logo.png (ganti filenya untuk mengganti logo). */}
           <Image
-            src="/brand/logo.png"
-            alt="Bea Cukai"
+            src="/brand/veltics-logo.png"
+            alt="Veltics"
             width={256}
-            height={201}
+            height={237}
             preload
-            className="h-9 w-auto shrink-0"
+            className="h-10 w-auto shrink-0"
           />
           <span className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
-            <span className="block truncate text-control font-semibold tracking-tight">
+            <span className="block truncate text-control font-semibold tracking-tight text-sidebar-accent-foreground">
               IT Inventory
             </span>
-            <span className="block truncate text-caption text-muted-foreground">
+            <span className="block truncate text-caption text-sidebar-foreground">
               Kawasan Berikat
             </span>
           </span>
@@ -74,7 +74,7 @@ function NavSkeleton() {
   return (
     <div className="space-y-3 p-3" aria-busy="true" aria-label="Memuat menu">
       {SKELETON_WIDTHS.map((width) => (
-        <Skeleton key={width} className={`h-4 ${width}`} />
+        <Skeleton key={width} className={`h-4 bg-sidebar-accent ${width}`} />
       ))}
     </div>
   )
