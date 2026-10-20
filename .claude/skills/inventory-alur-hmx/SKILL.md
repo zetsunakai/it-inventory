@@ -255,3 +255,11 @@ lama M2 terbukti termigrasi tanpa selisih saldo (`npm run db:check` setelah migr
   dengan penolakan beralasan, opname per produk dengan impor/ekspor, pindah lokasi dan antar
   gudang, stok/periode dengan aturan tanggal, master data, lintas menu. Mesin persetujuan yang bisa
   diatur seperti hmx belum diputuskan; sementara tetap persetujuan Manajer.
+
+## Status (20/10/2026)
+
+Bagian I selesai (I-01–I-08): penolakan pemakaian/penyesuaian beralasan dan antrean persetujuan
+(`reject_transfer`, status `rejected`), opname per produk dengan stok nol, qty hitung awal, impor/
+ekspor, dan layar scan, scan pindah lokasi (`moveByScan`), progres permintaan antar gudang, aturan
+tanggal rencana (`transfer_scheduled_date_errors`) dan alasan tutup periode
+(`period_close_errors`), lokasi stok utama gudang (`warehouses.stock_location_id`).

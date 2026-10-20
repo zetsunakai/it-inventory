@@ -94,6 +94,12 @@ export function DataTable<Row>({
   // yang didefinisikan; lebar per kolom dari halaman diabaikan dan isi panjang dipotong (…).
   const fixed = Boolean(empty.minRows)
   const fixedCell = fixed && "w-auto min-w-0 truncate"
+  // Daftar (I-08, seperti relational-table hmx): tabel di-scroll di dalam kotaknya sendiri, judul
+  // kolom menempel di atas dan kolom pengenal (pertama, beserta kotak centang) menempel di kiri.
+  const stickyLeft = fixed && cn("sticky z-10", bulkDelete ? "left-10" : "left-0")
+  const stickyBody = "bg-card group-hover/row:bg-[color-mix(in_oklch,var(--card),var(--muted)_50%)]"
+  // Kolom sekunder (opsional) disembunyikan di layar kecil (I-08).
+  const secondary = (column: DataTableColumn<Row>) => column.optional && "max-md:hidden"
   const fillerRows = Array.from({ length: fillers }, (_, index) => (
     <TableRow key={`kosong-${index}`} aria-hidden className="hover:bg-transparent">
       <TableCell colSpan={span} className="h-11" />
@@ -106,12 +112,18 @@ export function DataTable<Row>({
       <TableRow
         key={rowKey(row)}
         className={cn(
+          "group/row",
           href && "relative cursor-pointer",
           rowMuted?.(row) && "text-muted-foreground",
         )}
       >
         {bulkDelete && (
-          <TableCell className="relative z-10 w-10 py-3 pr-0 pl-4">
+          <TableCell
+            className={cn(
+              "relative z-10 w-10 py-3 pr-0 pl-4",
+              fixed && cn("sticky left-0", stickyBody),
+            )}
+          >
             <RowCheckbox id={bulkDelete.id(row)} label={bulkDelete.label(row)} />
           </TableCell>
         )}
@@ -123,20 +135,42 @@ export function DataTable<Row>({
               "px-4 py-3",
               column.align === "right" && "text-right",
               // Kontrol lain di baris tetap bisa diklik di atas link baris.
-              href && index > 0 && "[&_a]:relative [&_a]:z-10 [&_button]:relative [&_button]:z-10",
+              href &&
+                index > 0 &&
+                "[&_a:not([data-row-link])]:relative [&_a:not([data-row-link])]:z-10 [&_button]:relative [&_button]:z-10",
               column.className,
               fixedCell,
+              index === 0 && stickyLeft && cn(stickyLeft, stickyBody),
+              secondary(column),
             )}
           >
             {href && index === 0 ? (
               <Link
                 href={href}
-                className="outline-none after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset"
+                className={cn(
+                  "outline-none",
+                  // Kolom pengenal yang menempel menjadi wadah posisi, jadi tautan selebar baris
+                  // dipasang di sel berikutnya (lihat data-row-link).
+                  fixed && columns.length > 1
+                    ? "focus-visible:underline"
+                    : "after:absolute after:inset-0 after:content-[''] focus-visible:after:ring-2 focus-visible:after:ring-ring focus-visible:after:ring-inset",
+                )}
               >
                 {column.cell(row)}
               </Link>
             ) : (
-              column.cell(row)
+              <>
+                {href && fixed && index === 1 && (
+                  <Link
+                    href={href}
+                    aria-hidden
+                    tabIndex={-1}
+                    data-row-link
+                    className="absolute inset-0"
+                  />
+                )}
+                {column.cell(row)}
+              </>
             )}
           </TableCell>
         ))}
@@ -156,15 +190,20 @@ export function DataTable<Row>({
             .join("")}
         </style>
       )}
-      <Table className={cn(fixed && "min-w-[600px] table-fixed")}>
-        <TableHeader className="bg-muted/60">
+      <Table
+        className={cn(fixed && "min-w-[600px] table-fixed")}
+        containerClassName={cn(fixed && "max-h-[calc(100dvh-13rem)] overflow-auto")}
+      >
+        <TableHeader className={cn(!fixed && "bg-muted/60")}>
           <TableRow className="hover:bg-transparent">
             {bulkDelete && (
-              <TableHead className="h-12 w-10 pr-0 pl-4">
+              <TableHead
+                className={cn("h-12 w-10 pr-0 pl-4", fixed && "sticky top-0 left-0 z-30 bg-muted")}
+              >
                 {rows.length > 0 && <SelectAllCheckbox />}
               </TableHead>
             )}
-            {columns.map((column) => (
+            {columns.map((column, index) => (
               <TableHead
                 key={column.header}
                 data-col={column.optional ? columnId(column.header) : undefined}
@@ -173,13 +212,18 @@ export function DataTable<Row>({
                   column.align === "right" && "text-right",
                   column.className,
                   fixedCell,
+                  fixed && "sticky top-0 z-20 bg-muted",
+                  index === 0 && stickyLeft && cn(stickyLeft, "z-30"),
+                  secondary(column),
                 )}
               >
                 {column.header}
               </TableHead>
             ))}
             {optional.length > 0 && (
-              <TableHead className="h-12 w-10 px-1 text-right">
+              <TableHead
+                className={cn("h-12 w-10 px-1 text-right", fixed && "sticky top-0 z-20 bg-muted")}
+              >
                 <ColumnMenu
                   tableId={id!}
                   columns={optional.map((column) => ({

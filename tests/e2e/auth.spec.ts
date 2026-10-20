@@ -10,7 +10,7 @@ test("halaman tanpa sesi diarahkan ke login dan menyimpan tujuan awal", async ({
   await page.goto("/admin/users")
 
   await expect(page).toHaveURL(/\/login\?next=%2Fadmin%2Fusers$/)
-  await expect(page.getByText("Masuk ke IT Inventory")).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Masuk", exact: true })).toBeVisible()
 })
 
 test("password salah ditolak tanpa membedakan email terdaftar atau tidak", async ({ page }) => {

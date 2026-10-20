@@ -389,6 +389,10 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   periode sebelumnya belum ditutup, opname periode itu belum selesai) dan tampil di halaman Tutup
   periode. Halaman Stok bisa difilter per kategori produk (beserta sub-kategorinya) dan dicari
   lewat nomor lot.
+- Tampilan lintas menu (I-08): daftar (`DataTable` dengan `listEmptyState`) di-scroll di dalam
+  kotaknya dengan judul kolom dan kolom pengenal menempel; kolom opsional disembunyikan di layar
+  kecil; halaman masuk dan verifikasi memakai `AuthLayout` dengan panel brand; Pengaturan memakai
+  kartu form seperti halaman lain.
 - `npm run db:check` (`scripts/check-ledger.ts`, R-15) hanya membaca dan memeriksa: saldo
   `stock_balances` sama dengan ledger, qty dipesan sama dengan pergerakan transfer terbuka, dan
   transfer Selesai punya pergerakan Selesai berkode sama. Jalankan setelah migrasi data lama.

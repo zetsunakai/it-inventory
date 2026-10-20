@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Suspense } from "react"
 
 import { ActivityLog } from "@/components/document/activity-log"
+import { FormSection } from "@/components/form-field"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
@@ -34,17 +35,17 @@ async function SettingList() {
       meta="Setiap perubahan tercatat di audit log."
       activity={<ActivityLog entries={activity} noun="pengaturan" />}
     >
-      <ul className="space-y-6">
+      {/* Satu kartu seperti form lain (I-08); tiap pengaturan disimpan sendiri-sendiri. */}
+      <FormSection title="Pengaturan sistem">
         {rows.map((row) => (
-          <li key={row.key} className="space-y-2">
-            <div>
-              <p className="font-medium">{row.description ?? row.key}</p>
-              <p className="font-mono text-caption text-muted-foreground">{row.key}</p>
-            </div>
-            <SettingForm settingKey={row.key} value={String(row.value)} />
-          </li>
+          <SettingForm
+            key={row.key}
+            settingKey={row.key}
+            label={row.description ?? row.key}
+            value={String(row.value)}
+          />
         ))}
-      </ul>
+      </FormSection>
     </DocumentLayout>
   )
 }

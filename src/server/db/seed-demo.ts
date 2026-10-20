@@ -55,6 +55,11 @@ export async function seedDemoCustoms(db: Db) {
       .insert(locations)
       .values({ code: "DEMO-RAK", name: "Rak demo", type: "internal", warehouseId: warehouse.id })
       .returning()
+    // Lokasi stok utama gudang demo (I-07).
+    await tx
+      .update(warehouses)
+      .set({ stockLocationId: rack.id })
+      .where(eq(warehouses.id, warehouse.id))
     const [supplier] = await tx
       .insert(partners)
       .values({

@@ -54,11 +54,14 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 | Hapus data master                            | `DataTable bulkDelete` di halaman daftar: centang baris → baris aksi "N dipilih · Hapus · Batal pilih" di atas tabel, konfirmasi `AlertDialog`, pesan tolak per data ke slot pesan halaman; filter `Status` di daftar                                                                                                                                   | Tombol Hapus di form/halaman detail, hapus tanpa konfirmasi                      |
 | Detail data master                           | `RecordModes` (view + form): dibuka dalam mode baca (`ViewSection` + `StaticField` dengan `span` sama seperti form) dengan tombol Edit dan Buat; Edit → form dengan Simpan dan Buang; form memanggil `useSaveFeedback(state)`                                                                                                                           | Form langsung terbuka di halaman detail, tampilan baca yang beda tata letaknya   |
 | Ikon menu                                    | Hanya untuk menu induk (area kerja) di `NAVIGATION`, masing-masing berbeda; menu anak tanpa ikon dan menjorok                                                                                                                                                                                                                                           | Ikon di setiap menu anak                                                         |
-| Logo                                         | `public/brand/veltics-logo.png` di header sidebar (ganti logo dengan file bernama baru supaya cache gambar lama tidak terpakai); `public/brand` dikecualikan dari proxy login                                                                                                                                                                                                                                   | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)                 |
+| Logo                                         | `public/brand/veltics-logo.png` di header sidebar (ganti logo dengan file bernama baru supaya cache gambar lama tidak terpakai); `public/brand` dikecualikan dari proxy login                                                                                                                                                                           | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)                 |
 
-Masih tersisa untuk putaran berikutnya: halaman login masih kartu generik; tabel di HP belum
-menyembunyikan kolom sekunder; belum ada pemilih tema gelap (token gelap sudah ada); layar scan
-tablet baru ada untuk penerimaan (RU-03), pengiriman dan opname menyusul (I-01, I-04).
+Sejak I-08: halaman masuk dan verifikasi memakai `AuthLayout` (`src/app/login/auth-layout.tsx`,
+panel brand navy di kiri, form tanpa kartu di kanan); daftar (`listEmptyState`) di-scroll di dalam
+kotak tabelnya dengan judul kolom dan kolom pengenal yang menempel; kolom `optional` disembunyikan di
+bawah 768px. Layar scan ada untuk penerimaan, pengiriman (RU-03, I-01), opname
+(`/inventory/opname/<id>/scan`, I-04), dan pindah lokasi (`/inventory/transfer/scan`, I-05).
+Masih tersisa: pemilih tema gelap (token gelap sudah ada).
 
 ## Arah visual
 
@@ -171,12 +174,15 @@ tambahkan barisnya di sini setelah padanannya dibuat.
 ### Tabel lebar
 
 Di hmx, header tabel menempel saat di-scroll dan kolom penting menempel di kiri (`relational-table-v2.css`:
-`.is-sticky`, `.pinned-divider`); kolom tambahan ditandai opsional. Di repo ini:
+`.is-sticky`, `.pinned-divider`); kolom tambahan ditandai opsional. Di repo ini (I-08):
 
-- Kolom pengenal (nomor/SKU + nama) paling kiri; kolom tambahan diberi `optional`.
-- Header dan kolom pengenal yang menempel **belum ada** di `DataTable`. Bila tabel perlu di-scroll
-  ke samping (terutama di HP 390px), tambahkan sebagai opsi `DataTable` (langkah 2 di atas), bukan
-  CSS per halaman. Tombol aksi baris jangan sampai hanya terlihat setelah scroll ke samping.
+- Kolom pengenal (nomor/SKU + nama) paling kiri; kolom tambahan diberi `optional` (juga
+  disembunyikan otomatis di bawah 768px).
+- `DataTable` daftar (`listEmptyState`) di-scroll di dalam kotaknya (`max-h` setinggi layar); judul
+  kolom menempel di atas dan kolom pertama (beserta kotak centang) menempel di kiri. Tautan baris
+  dipasang di sel kedua (`data-row-link`) karena sel yang menempel menjadi wadah posisi. Jangan
+  menambah CSS sticky per halaman. Tombol aksi baris jangan sampai hanya terlihat setelah scroll ke
+  samping.
 
 ## Aturan per pola
 

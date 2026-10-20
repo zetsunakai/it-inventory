@@ -16,6 +16,8 @@ export function LoginForm() {
   return (
     <form action={formAction} className="space-y-4">
       <input type="hidden" name="next" value={next} />
+      {/* Ringkasan kesalahan di atas field (skill UI). */}
+      <FormErrors errors={state.errors} />
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
         <Input
@@ -37,7 +39,6 @@ export function LoginForm() {
           required
         />
       </div>
-      <FormErrors errors={state.errors} />
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Memproses…" : "Masuk"}
       </Button>
