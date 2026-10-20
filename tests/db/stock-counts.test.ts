@@ -7,9 +7,11 @@ import {
   cancelStockCount,
   completeStockCount,
   createStockCount,
+  importStockCount,
   recordCount,
   rejectStockCount,
   reopenStockCount,
+  scanCountItem,
   startStockCount,
   submitStockCount,
 } from "@/modules/inventory/actions/stock-counts"
@@ -23,6 +25,7 @@ import {
   products,
   stockBalances,
   stockCountLines,
+  stockCountProducts,
   stockCounts,
   stockMoves,
   transfers,
@@ -152,6 +155,9 @@ async function purgeCounts() {
     await tx
       .delete(stockCountLines)
       .where(inArray(stockCountLines.productId, [ids.product, ids.other]))
+    await tx
+      .delete(stockCountProducts)
+      .where(inArray(stockCountProducts.productId, [ids.product, ids.other]))
     await tx.delete(stockCounts).where(eq(stockCounts.warehouseId, ids.warehouse))
   })
 }
@@ -458,5 +464,133 @@ describe("menghitung, mengajukan, dan menyetujui", () => {
     })
     expect(await startStockCount({ id: countId })).toMatchObject({ ok: false })
     expect(await stockAt(ids.product, ids.rack)).toBe(1)
+  })
+})
+
+describe("lingkup produk, isi awal, impor, dan scan (I-04)", () => {
+  const csv = (rows: string[][]) =>
+    new File([rows.map((row) => row.join(";")).join("\r\n")], "hitung.csv", { type: "text/csv" })
+  const header = ["Lokasi", "Product code", "Nama produk", "Lot/seri", "Satuan", "Qty hitung"]
+
+  test("produk tertentu dan produk tanpa stok ikut dihitung dengan qty hitung awal 0", async () => {
+    await receive(ids.product, ids.rack, "10")
+    const countId = await newCount({
+      locationId: ids.rack,
+      productIds: JSON.stringify([ids.other]),
+      includeZeroStock: "true",
+      initialCounted: "zero",
+    })
+    expect(
+      (await lines(countId)).map((line) => [
+        line.locationId,
+        line.productId,
+        line.systemQty,
+        line.countedQty,
+      ]),
+    ).toEqual([[ids.rack, ids.other, "0.0000", "0.0000"]])
+    loginAs("gudang")
+    expect(
+      await addCountLine({ countId, productId: ids.product, locationId: ids.rack, lotName: "" }),
+    ).toMatchObject({ ok: false, errors: ["Produk di luar kategori sesi opname."] })
+  })
+
+  test("qty hitung awal sama dengan qty sistem; lingkup terkunci setelah Draft", async () => {
+    await receive(ids.product, ids.rack, "10")
+    const countId = await newCount({ initialCounted: "system" })
+    expect((await lines(countId)).map((line) => [line.systemQty, line.countedQty])).toEqual([
+      ["10.0000", "10.0000"],
+    ])
+    expect(
+      await pgErrorMessage(
+        db.update(stockCounts).set({ includeZeroStock: true }).where(eq(stockCounts.id, countId)),
+      ),
+    ).toBe("Lingkup sesi opname hanya bisa diubah selama Draft.")
+  })
+
+  test("impor hasil hitung: kesalahan per baris tanpa menyimpan, lalu baris lama diperbarui dan barang temuan ditambah", async () => {
+    await receive(ids.product, ids.rack, "10")
+    const countId = await newCount({ locationId: ids.rack })
+    loginAs("gudang")
+    const bad = form({ countId })
+    bad.set(
+      "file",
+      csv([
+        header,
+        ["ZORAK", "ZOP1", "", "", "", "7"],
+        ["ZOLAIN", "ZOP1", "", "", "", "1"],
+        ["ZORAK", "ZOXX", "", "", "", "1"],
+        ["ZORAK/ZOBIN", "ZOP1", "", "", "", "-1"],
+      ]),
+    )
+    const wrong = await importStockCount(null, bad)
+    expect(wrong).toMatchObject({
+      ok: true,
+      data: {
+        status: "invalid",
+        errors: [
+          { line: 3, messages: ["Lokasi ZOLAIN di luar lingkup sesi opname."] },
+          { line: 4, messages: ["Product code ZOXX tidak dikenal."] },
+          {
+            line: 5,
+            messages: ["Qty hitung harus angka 0 atau lebih, maksimal 4 desimal."],
+          },
+        ],
+      },
+    })
+    expect((await lines(countId)).map((line) => line.countedQty)).toEqual([null])
+
+    const data = form({ countId })
+    data.set(
+      "file",
+      csv([
+        header,
+        ["ZORAK", "ZOP1", "Baut", "", "PCS", "7"],
+        ["ZORAK/ZOBIN", "ZOP2", "", "", "", "3"],
+      ]),
+    )
+    expect(await importStockCount(null, data)).toMatchObject({
+      ok: true,
+      data: { status: "imported", total: 2, created: 1, updated: 1, unchanged: 0 },
+    })
+    expect(
+      (await lines(countId))
+        .map((line) => [line.locationId, line.productId, line.systemQty, line.countedQty])
+        .sort(),
+    ).toEqual(
+      [
+        [ids.rack, ids.product, "10.0000", "7.0000"],
+        [ids.bin, ids.other, "0.0000", "3.0000"],
+      ].sort(),
+    )
+  })
+
+  test("scan menambah qty hitung 1; produk di beberapa lokasi butuh kode lokasi; barang temuan di lokasi terpilih", async () => {
+    await receive(ids.product, ids.rack, "10")
+    await receive(ids.product, ids.bin, "2")
+    await receive(ids.other, ids.rack, "1")
+    const countId = await newCount({ locationId: ids.rack })
+    loginAs("gudang")
+    const scan = (code: string, locationId: string | null = null) =>
+      scanCountItem({ countId, code, locationId, lot: null })
+
+    expect(await scan("zop2")).toMatchObject({
+      ok: true,
+      data: { status: "counted", qty: "1.0000" },
+    })
+    expect(await scan("ZOP2")).toMatchObject({ ok: true, data: { qty: "2.0000" } })
+    const ambiguous = await scan("ZOP1")
+    expect(!ambiguous.ok && ambiguous.errors[0]).toMatch(/^ZOP1 ada di beberapa lokasi/)
+    expect(await scan("ZOP1", ids.bin)).toMatchObject({
+      ok: true,
+      data: { qty: "1.0000", found: false },
+    })
+    expect(await scan("ZOP2", ids.bin)).toMatchObject({
+      ok: true,
+      data: { qty: "1.0000", found: true, locationPath: expect.stringMatching(/ZOBIN$/) },
+    })
+    expect(await scan("TIDAKADA")).toMatchObject({
+      ok: false,
+      errors: ["Kode TIDAKADA bukan product code yang dikenal."],
+    })
   })
 })

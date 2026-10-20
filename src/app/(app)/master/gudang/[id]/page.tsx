@@ -25,6 +25,7 @@ import { deleteLocation } from "../actions"
 import { LocationCreateForm } from "../location-forms"
 import { WarehouseForm } from "../warehouse-forms"
 import { Section } from "@/components/layout/section"
+import { FrozenWarehouseBanner } from "@/modules/inventory/components/frozen-warehouse-banner"
 
 export const metadata: Metadata = { title: "Detail gudang · IT Inventory" }
 
@@ -85,6 +86,7 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
         </span>
       }
     >
+      <FrozenWarehouseBanner warehouseIds={[warehouse.id]} context="warehouse" />
       <RecordModes
         key={warehouse.id}
         canEdit={canEdit}

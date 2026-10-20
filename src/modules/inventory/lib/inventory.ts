@@ -318,6 +318,16 @@ export const STOCK_COUNT_STATUS_LABELS: Record<StockCountStatus, string> = {
   cancelled: "Batal",
 }
 
+// Qty hitung awal saat mulai hitung (I-04).
+export const STOCK_COUNT_INITIAL_COUNTED = ["empty", "zero", "system"] as const
+export type StockCountInitialCounted = (typeof STOCK_COUNT_INITIAL_COUNTED)[number]
+
+export const STOCK_COUNT_INITIAL_COUNTED_LABELS: Record<StockCountInitialCounted, string> = {
+  empty: "Kosong, wajib diisi",
+  zero: "0",
+  system: "Sama dengan qty sistem",
+}
+
 // Status yang membekukan gudang: transfer di gudang itu tidak bisa divalidasi.
 export const FROZEN_STOCK_COUNT_STATUSES: readonly StockCountStatus[] = [
   "counting",

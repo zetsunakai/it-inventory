@@ -50,6 +50,7 @@ import { StatusBadge } from "@/components/status-badge"
 
 import { ApprovalQueueActions } from "./approval-queue-actions"
 import { CreateReturnButton } from "./create-return-button"
+import { FrozenWarehouseBanner } from "./frozen-warehouse-banner"
 import { LineLotEditor, type LotLine } from "./line-lot-editor"
 import { TransferActions } from "./transfer-actions"
 import { TransferForm } from "./transfer-form"
@@ -513,6 +514,12 @@ async function TransferDetail({
         )
       }
     >
+      {transfer.status !== "done" && transfer.status !== "cancelled" && (
+        <FrozenWarehouseBanner
+          warehouseIds={[transfer.sourceWarehouseId, transfer.destinationWarehouseId]}
+          context="transfer"
+        />
+      )}
       {panel?.({ id: transfer.id })}
       {editable ? (
         <TransferForm

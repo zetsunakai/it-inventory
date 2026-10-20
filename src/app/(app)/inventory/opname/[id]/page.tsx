@@ -1,4 +1,4 @@
-import { Snowflake } from "lucide-react"
+import { Download, ScanLine, Snowflake, Upload } from "lucide-react"
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
@@ -8,10 +8,12 @@ import { z } from "zod"
 import { CountActions } from "@/modules/inventory/components/count-actions"
 import { CountReview } from "@/modules/inventory/components/count-review"
 import { CountSheet } from "@/modules/inventory/components/count-sheet"
+import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDateTime, formatNumber } from "@/lib/format"
 import {
   FROZEN_STOCK_COUNT_STATUSES,
+  STOCK_COUNT_INITIAL_COUNTED_LABELS,
   STOCK_COUNT_STATUS_LABELS,
 } from "@/modules/inventory/lib/inventory"
 import { hasPermission } from "@/lib/permissions"
@@ -69,16 +71,47 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
   return (
     <DocumentLayout
       actions={
-        <CountActions
-          id={count.id}
-          number={count.number}
-          status={count.status}
-          warehouseCode={count.warehouseCode}
-          differing={differing}
-          completedAt={count.completedAt ? formatDateTime(count.completedAt) : null}
-          canWrite={canWrite}
-          canApprove={canApprove}
-        />
+        <>
+          <CountActions
+            id={count.id}
+            number={count.number}
+            status={count.status}
+            warehouseCode={count.warehouseCode}
+            differing={differing}
+            completedAt={count.completedAt ? formatDateTime(count.completedAt) : null}
+            canWrite={canWrite}
+            canApprove={canApprove}
+          />
+          {/* Hitung lewat scan atau file Excel (I-04). */}
+          {canCount && (
+            <>
+              <Link
+                href={`/inventory/opname/${count.id}/scan`}
+                className={buttonVariants({ variant: "outline", className: "pointer-coarse:h-11" })}
+              >
+                <ScanLine />
+                Scan
+              </Link>
+              <Link
+                href={`/inventory/opname/${count.id}/import`}
+                className={buttonVariants({ variant: "outline", className: "pointer-coarse:h-11" })}
+              >
+                <Upload />
+                Import
+              </Link>
+            </>
+          )}
+          {count.status !== "draft" && (
+            <a
+              href={`/inventory/opname/${count.id}/export?format=xlsx`}
+              download
+              className={buttonVariants({ variant: "ghost", className: "pointer-coarse:h-11" })}
+            >
+              <Download />
+              Export
+            </a>
+          )}
+        </>
       }
       title={`Stock opname ${count.number}`}
       crumbs={[{ label: count.number }]}
@@ -88,6 +121,21 @@ async function StockCountDetail({ params }: { params: Promise<{ id: string }> })
             {count.warehouseCode} · {count.locationPath ?? "seluruh gudang"}
             {count.productCategoryPath && ` · kategori ${count.productCategoryPath}`}
           </span>
+          {count.scopeProducts.length > 0 && (
+            <span>
+              Produk:{" "}
+              <span className="font-mono">
+                {count.scopeProducts.map((product) => product.sku).join(", ")}
+              </span>
+            </span>
+          )}
+          {count.includeZeroStock && <span>Termasuk produk tanpa stok</span>}
+          {count.initialCounted !== "empty" && (
+            <span>
+              Qty hitung awal:{" "}
+              {STOCK_COUNT_INITIAL_COUNTED_LABELS[count.initialCounted].toLowerCase()}
+            </span>
+          )}
           {count.status !== "draft" && <span>Mulai {formatDateTime(count.cutOffAt)}</span>}
           {count.completedAt && <span>Selesai hitung {formatDateTime(count.completedAt)}</span>}
         </span>

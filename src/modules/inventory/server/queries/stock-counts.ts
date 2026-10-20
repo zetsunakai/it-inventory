@@ -1,15 +1,17 @@
 import "server-only"
 
-import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm"
 
 import type { StockCountStatus } from "@/modules/inventory/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import {
   locationPaths,
+  locations,
   lots,
   products,
   stockCountLines,
+  stockCountProducts,
   stockCounts,
   transfers,
   uoms,
@@ -130,7 +132,7 @@ export async function getStockCount(userId: string, id: string) {
     .where(and(eq(stockCounts.id, id), accessibleBy(userId)))
   if (!header) return undefined
 
-  const [lines, adjustments] = await Promise.all([
+  const [lines, adjustments, scopeProducts] = await Promise.all([
     db
       .select({
         id: stockCountLines.id,
@@ -158,6 +160,13 @@ export async function getStockCount(userId: string, id: string) {
       .from(transfers)
       .where(eq(transfers.stockCountId, id))
       .orderBy(asc(transfers.number)),
+    // Lingkup produk tertentu (I-04).
+    db
+      .select({ sku: products.sku, name: products.name })
+      .from(stockCountProducts)
+      .innerJoin(products, eq(products.id, stockCountProducts.productId))
+      .where(eq(stockCountProducts.stockCountId, id))
+      .orderBy(asc(products.sku)),
   ])
 
   return {
@@ -169,7 +178,49 @@ export async function getStockCount(userId: string, id: string) {
     approvedByName: header.approvedByName,
     lines: lines as StockCountLine[],
     adjustments,
+    scopeProducts,
   }
 }
 
 export type StockCountDetail = NonNullable<Awaited<ReturnType<typeof getStockCount>>>
+
+// Lokasi internal aktif di lingkup sesi (stock_count_covers), untuk layar scan (I-04).
+export async function countScopeLocations(countId: string) {
+  return db
+    .select({ id: locations.id, code: locations.code, path: locationPaths.path })
+    .from(locations)
+    .innerJoin(locationPaths, eq(locationPaths.id, locations.id))
+    .innerJoin(stockCounts, eq(stockCounts.id, countId))
+    .where(
+      and(
+        eq(locations.warehouseId, stockCounts.warehouseId),
+        eq(locations.type, "internal"),
+        eq(locations.active, true),
+        sql`stock_count_covers(${countId}, ${locations.id})`,
+      ),
+    )
+    .orderBy(asc(locationPaths.path))
+}
+
+// Opname yang sedang membekukan gudang-gudang ini (R-13), untuk banner di layar gudang dan transfer
+// (I-04). Status yang membekukan sama dengan stock_count_freeze_errors().
+export async function freezingCounts(warehouseIds: (string | null)[]) {
+  const ids = [...new Set(warehouseIds.filter((id): id is string => Boolean(id)))]
+  if (!ids.length) return []
+  return db
+    .select({
+      id: stockCounts.id,
+      number: stockCounts.number,
+      status: stockCounts.status,
+      warehouseCode: warehouses.code,
+    })
+    .from(stockCounts)
+    .innerJoin(warehouses, eq(warehouses.id, stockCounts.warehouseId))
+    .where(
+      and(
+        inArray(stockCounts.warehouseId, ids),
+        sql`${stockCounts.status}::text in ('counting', 'counted', 'review')`,
+      ),
+    )
+    .orderBy(asc(warehouses.code))
+}

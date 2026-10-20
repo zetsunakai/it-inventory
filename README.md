@@ -385,6 +385,15 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   bertanggal selesai hitung, `transfers.stock_count_id`, gudang dibuka) atau `reject_stock_count()`
   (kembali ke Selesai hitung). `cancel_stock_count()` membuka gudang. Status hanya berubah lewat
   fungsi-fungsi itu.
+  Sejak I-04: lingkup bisa dibatasi ke produk tertentu (`stock_count_products`), produk tanpa stok
+  (tanpa pelacakan) ikut sebagai baris qty sistem 0 (`include_zero_stock`), dan qty hitung awal bisa
+  kosong, 0, atau sama dengan qty sistem (`initial_counted`); semuanya terkunci setelah Draft.
+  Daftar hitung bisa diekspor (`/inventory/opname/<id>/export`, tanpa qty sistem) dan diimpor
+  kembali (`/import`, dicocokkan lewat lokasi + product code + lot, kombinasi baru = barang temuan,
+  semua atau tidak sama sekali dengan pesan per baris). Layar `/scan` untuk tablet: kode lokasi
+  memilih lokasi, setiap pindaian product code (dan lot/nomor seri) menambah qty hitung 1 dan langsung
+  tersimpan (`scanCountItem`). Detail transfer dan gudang menampilkan banner bila gudangnya sedang
+  dibekukan opname.
 - Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`. Isi pemilih
   berpencarian dengan `fillInteractive()` (`tests/e2e/interactive.ts`), yang menunggu hidrasi React
   dulu; label dicari dengan `exact: true` supaya tidak cocok dengan placeholder lain.

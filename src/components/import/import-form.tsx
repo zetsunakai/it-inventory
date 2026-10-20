@@ -30,6 +30,8 @@ export function ImportForm({
   keyLabel,
   listHref,
   exportHref,
+  fields,
+  resultLabel = "Lihat daftar",
 }: {
   action: ImportAction
   // Kata benda untuk ringkasan, mis. "produk".
@@ -39,6 +41,10 @@ export function ImportForm({
   listHref: string
   // Export Excel data sekarang, sebagai titik awal file import.
   exportHref: string
+  // Field tambahan yang ikut dikirim, mis. id sesi opname.
+  fields?: Record<string, string>
+  // Tautan setelah import berhasil, mis. "Kembali ke sesi opname".
+  resultLabel?: string
 }) {
   const [state, formAction, pending] = useActionState(action, null)
 
@@ -55,6 +61,9 @@ export function ImportForm({
           </a>
         </FormActions>
         <FormErrors errors={state?.ok === false ? state.errors : undefined} />
+        {Object.entries(fields ?? {}).map(([name, value]) => (
+          <input key={name} type="hidden" name={name} value={value} />
+        ))}
         <FormField
           label="File Excel atau CSV"
           htmlFor="import-file"
@@ -70,7 +79,13 @@ export function ImportForm({
         </FormField>
       </form>
       {state?.ok && (
-        <ImportResultView result={state.data} noun={noun} keyLabel={keyLabel} listHref={listHref} />
+        <ImportResultView
+          result={state.data}
+          noun={noun}
+          keyLabel={keyLabel}
+          listHref={listHref}
+          resultLabel={resultLabel}
+        />
       )}
     </div>
   )
@@ -81,11 +96,13 @@ function ImportResultView({
   noun,
   keyLabel,
   listHref,
+  resultLabel,
 }: {
   result: ImportResult
   noun: string
   keyLabel: string
   listHref: string
+  resultLabel: string
 }) {
   const ref = useRef<HTMLDivElement>(null)
   // Hasil dibacakan dan terlihat walau form panjang.
@@ -114,7 +131,7 @@ function ImportResultView({
             href={listHref}
             className="inline-block font-medium text-primary underline-offset-4 hover:underline"
           >
-            Lihat daftar {noun}
+            {resultLabel === "Lihat daftar" ? `Lihat daftar ${noun}` : resultLabel}
           </Link>
         </div>
       </div>

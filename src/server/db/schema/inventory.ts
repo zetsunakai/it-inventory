@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm"
 import {
+  boolean,
   check,
   date,
   smallint,
@@ -24,6 +25,7 @@ import {
   RETURN_LINE_ACTIONS,
   RETURN_REQUEST_STATUSES,
   RETURN_REQUEST_TYPES,
+  STOCK_COUNT_INITIAL_COUNTED,
   STOCK_COUNT_STATUSES,
   TRANSACTION_CLASSIFICATIONS,
   STOCK_MOVE_STATUSES,
@@ -352,6 +354,12 @@ export const stockCounts = pgTable(
     locationId: uuid().references(() => locations.id, { onDelete: "restrict" }),
     // Kosong = semua kategori; diisi = kategori ini dan sub-kategorinya (R-13).
     productCategoryId: uuid().references(() => productCategories.id, { onDelete: "restrict" }),
+    // Produk tanpa stok di lingkup sesi ikut dihitung dengan qty sistem 0 (I-04,
+    // include_zero_stock_product hmx): untuk memastikan rak memang kosong.
+    includeZeroStock: boolean().notNull().default(false),
+    // Qty hitung awal saat mulai hitung (I-04, counted_qty_default hmx): kosong (harus diisi),
+    // 0, atau sama dengan qty sistem.
+    initialCounted: text({ enum: STOCK_COUNT_INITIAL_COUNTED }).notNull().default("empty"),
     // Saat mulai hitung (qty sistem diambil dari saldo saat itu, gudang dibekukan).
     cutOffAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
     // Tanpa default: sesi baru selalu Draft, dipaksakan trigger (nilai enum baru R-13 belum boleh
@@ -371,6 +379,20 @@ export const stockCounts = pgTable(
     index("stock_counts_warehouse_idx").on(table.warehouseId),
     index("stock_counts_status_idx").on(table.status),
   ],
+)
+
+// Lingkup produk tertentu sesi opname (I-04). Kosong = semua produk (sesuai kategori sesi).
+export const stockCountProducts = pgTable(
+  "stock_count_products",
+  {
+    stockCountId: uuid()
+      .notNull()
+      .references(() => stockCounts.id, { onDelete: "cascade" }),
+    productId: uuid()
+      .notNull()
+      .references(() => products.id, { onDelete: "restrict" }),
+  },
+  (table) => [primaryKey({ columns: [table.stockCountId, table.productId] })],
 )
 
 // Baris hitung per produk × lokasi × lot. counted_qty kosong = belum dihitung.

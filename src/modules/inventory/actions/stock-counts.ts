@@ -4,9 +4,20 @@ import { and, eq, sql } from "drizzle-orm"
 import { z } from "zod"
 
 import { optionalText } from "@/lib/form-fields"
+import { STOCK_COUNT_INITIAL_COUNTED } from "@/modules/inventory/lib/inventory"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
-import { lots, stockCountLines, stockCounts, warehouses } from "@/server/db/schema"
+import { importFileSchema, readImportFile } from "@/server/master-io/common"
+import { COUNT_COLUMNS, importStockCountRows } from "@/modules/inventory/server/stock-count-io"
+import {
+  locationPaths,
+  lots,
+  products,
+  stockCountLines,
+  stockCountProducts,
+  stockCounts,
+  warehouses,
+} from "@/server/db/schema"
 
 // Stock opname (backlog M2-09 dan R-13, PRD bagian 6.5). Manajer membuat, memulai (gudang
 // dibekukan), menyetujui, menolak, dan membatalkan sesi (izin inventory:approve); admin gudang
@@ -32,8 +43,25 @@ const optionalCategory = z
   .optional()
   .transform((value) => value || null)
 
-// Sesi baru berstatus Draft (R-13): lingkup gudang, opsional lokasi (beserta sub-lokasinya) dan
-// kategori produk (beserta sub-kategorinya). Daftar hitung baru diisi saat mulai hitung.
+// Produk tertentu (I-04): daftar id produk sebagai JSON di satu field form.
+const productIdsField = z
+  .string()
+  .optional()
+  .transform((value, ctx) => {
+    if (!value) return []
+    try {
+      const parsed = z.array(z.uuid()).safeParse(JSON.parse(value))
+      if (parsed.success) return [...new Set(parsed.data)]
+    } catch {
+      // ditangani di bawah
+    }
+    ctx.addIssue({ code: "custom", message: "Daftar produk tidak terbaca. Muat ulang halaman." })
+    return z.NEVER
+  })
+
+// Sesi baru berstatus Draft (R-13, I-04): lingkup gudang, opsional lokasi (beserta sub-lokasinya),
+// kategori produk (beserta sub-kategorinya), dan produk tertentu; produk tanpa stok ikut dihitung
+// bila dipilih; qty hitung awal kosong, 0, atau qty sistem. Daftar hitung diisi saat mulai hitung.
 export const createStockCount = defineFormAction({
   name: "createStockCount",
   permission: "inventory:approve",
@@ -41,6 +69,12 @@ export const createStockCount = defineFormAction({
     warehouseId: z.uuid("Pilih gudang."),
     locationId: optionalUuid,
     productCategoryId: optionalCategory,
+    productIds: productIdsField,
+    includeZeroStock: z
+      .string()
+      .optional()
+      .transform((value) => value === "on" || value === "true"),
+    initialCounted: z.enum(STOCK_COUNT_INITIAL_COUNTED, "Pilih qty hitung awal.").default("empty"),
     notes: optionalText("Catatan", 1000),
   }),
   successMessage: "Sesi opname dibuat sebagai Draft.",
@@ -53,9 +87,16 @@ export const createStockCount = defineFormAction({
         warehouseId: input.warehouseId,
         locationId: input.locationId,
         productCategoryId: input.productCategoryId,
+        includeZeroStock: input.includeZeroStock,
+        initialCounted: input.initialCounted,
         notes: input.notes,
       })
       .returning({ id: stockCounts.id })
+    if (input.productIds.length) {
+      await tx
+        .insert(stockCountProducts)
+        .values(input.productIds.map((productId) => ({ stockCountId: session.id, productId })))
+    }
     return session
   },
 })
@@ -238,5 +279,161 @@ export const cancelStockCount = defineAction({
   handler: async ({ input, user, tx }) => {
     await assertCountAccess(tx, user.id, input.id)
     await tx.execute(sql`select cancel_stock_count(${input.id})`)
+  },
+})
+
+// Impor hasil hitung dari Excel/CSV daftar hitung (I-04): semua baris diperiksa dulu, kesalahan
+// dilaporkan per baris, dan tidak ada yang disimpan bila satu saja salah.
+export const importStockCount = defineFormAction({
+  name: "importStockCount",
+  permission: "inventory:write",
+  schema: importFileSchema.extend({ countId: z.uuid("Sesi opname tidak valid.") }),
+  handler: async ({ input, user, tx }) => {
+    await assertCountAccess(tx, user.id, input.countId)
+    return importStockCountRows(
+      tx,
+      input.countId,
+      user.id,
+      await readImportFile(input.file, COUNT_COLUMNS, "sku"),
+    )
+  },
+})
+
+export type CountScanResult =
+  | { status: "needs_lot"; sku: string; productName: string; tracking: "lot" | "serial" }
+  | {
+      status: "counted"
+      lineId: string
+      sku: string
+      productName: string
+      locationPath: string
+      lot: string | null
+      qty: string
+      found: boolean
+    }
+
+// Layar scan opname (I-04): setiap pindaian product code (dan lot/nomor seri untuk produk
+// berpelacakan) menambah qty hitung 1 dan langsung disimpan. Lokasi dipilih dengan memindai kode
+// lokasi; tanpa lokasi, produk harus punya tepat satu baris di daftar hitung. Barang yang tidak
+// ada di daftar ditambahkan sebagai barang temuan di lokasi yang dipilih.
+export const scanCountItem = defineAction({
+  name: "scanCountItem",
+  permission: "inventory:write",
+  refresh: false,
+  schema: z.object({
+    countId: z.uuid("Sesi opname tidak valid."),
+    code: z.string().trim().min(1, "Pindai product code.").max(100),
+    locationId: z.uuid().nullable(),
+    lot: z.string().trim().max(50, "Lot/seri maksimal 50 karakter.").nullable(),
+  }),
+  handler: async ({ input, user, tx }): Promise<CountScanResult> => {
+    await assertCountAccess(tx, user.id, input.countId)
+    const [product] = await tx
+      .select({
+        id: products.id,
+        sku: products.sku,
+        name: products.name,
+        tracking: products.tracking,
+      })
+      .from(products)
+      .where(sql`lower(${products.sku}) = lower(${input.code})`)
+    if (!product) throw new AppError(`Kode ${input.code} bukan product code yang dikenal.`)
+    const lot = input.lot || null
+    if (product.tracking !== "none" && !lot) {
+      return {
+        status: "needs_lot",
+        sku: product.sku,
+        productName: product.name,
+        tracking: product.tracking,
+      }
+    }
+
+    const candidates = await tx
+      .select({
+        id: stockCountLines.id,
+        locationId: stockCountLines.locationId,
+        locationPath: locationPaths.path,
+        counted: stockCountLines.countedQty,
+      })
+      .from(stockCountLines)
+      .innerJoin(locationPaths, eq(locationPaths.id, stockCountLines.locationId))
+      .leftJoin(lots, eq(lots.id, stockCountLines.lotId))
+      .where(
+        and(
+          eq(stockCountLines.stockCountId, input.countId),
+          eq(stockCountLines.productId, product.id),
+          lot ? sql`lower(${lots.name}) = lower(${lot})` : sql`${stockCountLines.lotId} is null`,
+          input.locationId ? eq(stockCountLines.locationId, input.locationId) : undefined,
+        ),
+      )
+      .for("update", { of: stockCountLines })
+    if (candidates.length > 1) {
+      throw new AppError(
+        `${product.sku} ada di beberapa lokasi (${candidates.map((line) => line.locationPath).join(", ")}). Pindai kode lokasi dulu.`,
+      )
+    }
+
+    let line = candidates[0]
+    let found = false
+    if (!line) {
+      if (!input.locationId) {
+        throw new AppError(
+          `${product.sku}${lot ? ` ${lot}` : ""} tidak ada di daftar hitung. Pindai kode lokasinya dulu untuk mencatatnya sebagai barang temuan.`,
+        )
+      }
+      let lotId: string | null = null
+      if (lot) {
+        const [saved] = await tx
+          .select({ id: lots.id })
+          .from(lots)
+          .where(and(eq(lots.productId, product.id), eq(lots.name, lot)))
+        lotId =
+          saved?.id ??
+          (
+            await tx
+              .insert(lots)
+              .values({ productId: product.id, name: lot })
+              .returning({ id: lots.id })
+          )[0].id
+      }
+      const [inserted] = await tx
+        .insert(stockCountLines)
+        .values({
+          stockCountId: input.countId,
+          productId: product.id,
+          locationId: input.locationId,
+          lotId,
+        })
+        .returning({ id: stockCountLines.id, locationId: stockCountLines.locationId })
+      const [path] = await tx
+        .select({ path: locationPaths.path })
+        .from(locationPaths)
+        .where(eq(locationPaths.id, inserted.locationId))
+      line = { ...inserted, locationPath: path.path, counted: null }
+      found = true
+    }
+
+    if (product.tracking === "serial" && Number(line.counted ?? 0) >= 1) {
+      throw new AppError(`Nomor seri ${lot} sudah dihitung.`)
+    }
+    const [saved] = await tx
+      .update(stockCountLines)
+      .set({
+        countedQty: sql`coalesce(${stockCountLines.countedQty}, 0) + 1`,
+        countedBy: user.id,
+        countedAt: new Date(),
+      })
+      .where(eq(stockCountLines.id, line.id))
+      .returning({ qty: stockCountLines.countedQty })
+    return {
+      status: "counted",
+      lineId: line.id,
+      sku: product.sku,
+      productName: product.name,
+      locationPath: line.locationPath,
+      lot,
+      qty: saved.qty ?? "1",
+      found,
+    }
   },
 })
