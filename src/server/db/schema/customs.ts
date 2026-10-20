@@ -52,23 +52,20 @@ export const customsDocCode = pgEnum("customs_doc_code", CUSTOMS_DOC_CODES)
 export const customsDocumentStatus = pgEnum("customs_document_status", CUSTOMS_DOCUMENT_STATUSES)
 export const customsRuleTarget = pgEnum("customs_rule_target", CUSTOMS_RULE_TARGETS)
 
-// Header dokumen. Nomor aju dibuat database saat dokumen dibuat (M3-02) dan tidak berubah
-// walaupun direvisi; version naik setiap revisi (M3-12).
+// Header dokumen, seperti form hmx-002 (backlog H-01): nomor urut IT Inventory per jenis dibuat
+// database saat dokumen dibuat (IT/23/00001); No. Aju, No. Daftar, dan Tgl. Daftar diisi user.
+// Status Draft → Submitted (document_state.py hmx); Submitted terkunci.
 export const customsDocuments = pgTable(
   "customs_documents",
   {
     id: id(),
+    // Diisi trigger saat insert (kosong = nomor baru).
+    number: text().notNull().unique().default(""),
     docCode: customsDocCode().notNull(),
     status: customsDocumentStatus().notNull().default("draft"),
-    version: integer().notNull().default(1),
-    // Diisi trigger saat insert lewat next_aju_number() (M3-02); default null hanya supaya insert
-    // tidak wajib mengisinya.
-    ajuNumber: text()
-      .notNull()
-      .default(sql`null`),
-    ajuDate: date({ mode: "string" })
-      .notNull()
-      .default(sql`null`),
+    // No. Aju, diisi manual seperti hmx (dulu dibuat next_aju_number, M3-02).
+    ajuNumber: text(),
+    ajuDate: date({ mode: "string" }),
     // Kode ref_codes jenis customs_office: kantor pabean tempat dokumen diajukan.
     customsOfficeCode: text(),
     registrationNumber: text(),
@@ -95,29 +92,17 @@ export const customsDocuments = pgTable(
     signedDate: date({ mode: "string" }),
     details: details(),
     notes: text(),
-    // Alur status (M3-11): kapan diajukan, alasan penolakan Bea Cukai.
+    // Kapan dokumen di-Submit (H-01).
     submittedAt: timestamp({ withTimezone: true }),
-    rejectionReason: text(),
-    cancelledAt: timestamp({ withTimezone: true }),
     // Diisi trigger dari app.user_id, tanpa foreign key seperti transfers.
     createdBy: uuid(),
     ...timestamps,
   },
   (table) => [
-    unique("customs_documents_aju_number_unique").on(table.ajuNumber),
     index("customs_documents_doc_code_status_idx").on(table.docCode, table.status),
     index("customs_documents_registration_idx").on(table.docCode, table.registrationNumber),
-    index("customs_documents_aju_date_idx").on(table.ajuDate),
-    check("customs_documents_version_positive", sql`${table.version} >= 1`),
+    index("customs_documents_aju_number_idx").on(table.ajuNumber),
     check("customs_documents_details_object", sql`jsonb_typeof(${table.details}) = 'object'`),
-    check(
-      "customs_documents_registered_has_number",
-      sql`${table.status} <> 'registered' or (${table.registrationNumber} is not null and ${table.registrationDate} is not null)`,
-    ),
-    check(
-      "customs_documents_cancelled_has_date",
-      sql`(${table.status} = 'cancelled') = (${table.cancelledAt} is not null)`,
-    ),
     check("customs_documents_ndpbm_positive", sql`${table.ndpbm} > 0`),
     check(
       "customs_documents_values_not_negative",
@@ -452,53 +437,5 @@ export const docValidationRules = pgTable(
   (table) => [
     unique("doc_validation_rules_field_unique").on(table.docCode, table.target, table.field),
     check("doc_validation_rules_label_not_blank", sql`btrim(${table.label}) <> ''`),
-  ],
-)
-
-// Revisi dokumen Terdaftar (PRD 7.5, backlog M3-12): snapshot jsonb versi lama (dokumen beserta
-// semua bagiannya, dari customs_document_snapshot()) dan alasan revisinya. Append-only; dokumen
-// lanjut ke versi berikutnya dengan nomor aju yang sama.
-export const customsDocumentRevisions = pgTable(
-  "customs_document_revisions",
-  {
-    id: id(),
-    documentId: uuid()
-      .notNull()
-      .references(() => customsDocuments.id, { onDelete: "cascade" }),
-    // Versi yang disimpan snapshot ini.
-    version: integer().notNull(),
-    snapshot: jsonb().notNull(),
-    reason: text().notNull(),
-    // Diisi fungsi dari app.user_id, tanpa foreign key seperti audit_logs.
-    createdBy: uuid(),
-    createdAt: timestamp({ withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    unique("customs_document_revisions_version_unique").on(table.documentId, table.version),
-    check("customs_document_revisions_reason_not_blank", sql`btrim(${table.reason}) <> ''`),
-  ],
-)
-
-// Alokasi dokumen asal (PRD 8.5, backlog M4-03): qty (satuan stok) baris barang dokumen keluar yang
-// diambil dari baris barang dokumen masuk (saldo asal). Pasangan jenis, produk, dan sisa saldo
-// asal diperiksa trigger origin_allocations_before_write; dikunci bersama dokumen keluarnya.
-export const originAllocations = pgTable(
-  "origin_allocations",
-  {
-    id: id(),
-    outLineId: uuid()
-      .notNull()
-      .references(() => customsDocumentLines.id, { onDelete: "cascade" }),
-    originLineId: uuid()
-      .notNull()
-      .references(() => customsDocumentLines.id, { onDelete: "restrict" }),
-    qty: qty().notNull(),
-    createdBy: uuid(),
-    ...timestamps,
-  },
-  (table) => [
-    unique("origin_allocations_pair_unique").on(table.outLineId, table.originLineId),
-    index("origin_allocations_origin_idx").on(table.originLineId),
-    check("origin_allocations_qty_positive", sql`${table.qty} > 0`),
   ],
 )

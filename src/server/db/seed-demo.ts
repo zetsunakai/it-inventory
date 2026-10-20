@@ -7,6 +7,7 @@ import {
   customsDocumentLines,
   customsDocumentParties,
   customsDocuments,
+  customsDocumentTransfers,
   customsPackages,
   customsTransports,
   locations,
@@ -19,9 +20,9 @@ import {
   warehouses,
 } from "./schema"
 
-// Data demo alur dokumen BC (backlog M4-07), hanya bila SEED_DEMO_DATA=true dan profil perusahaan
-// sudah diisi: BC 2.3 Terdaftar → penerimaan yang ditautkan dan divalidasi lewat gerbang → BC 2.5
-// Draft dengan alokasi dokumen asal ke BC 2.3. Idempoten: dilewati bila produk demo sudah ada.
+// Data demo alur dokumen BC (backlog M4-07, H-01), hanya bila SEED_DEMO_DATA=true dan profil
+// perusahaan sudah diisi: penerimaan Selesai → BC 2.3 Submitted yang memilih penerimaan itu → BC 2.5
+// Draft. Idempoten: dilewati bila produk demo sudah ada.
 
 const PRODUCT_SKU = "DEMO-KAIN"
 
@@ -156,14 +157,7 @@ export async function seedDemoCustoms(db: Db) {
       return { doc, line }
     }
 
-    // BC 2.3 Terdaftar.
-    const incoming = await insertDocument("23", "5")
-    await tx.execute(sql`select refresh_customs_document_status(${incoming.doc.id})`)
-    await tx.execute(sql`select submit_customs_document(${incoming.doc.id})`)
-    await tx.execute(sql`select register_customs_document(${incoming.doc.id}, '000001',
-      (now() at time zone 'Asia/Jakarta')::date)`)
-
-    // Penerimaan yang ditautkan ke BC 2.3, divalidasi lewat gerbang dokumen.
+    // Penerimaan divalidasi; validasi transfer tidak menunggu dokumen BC (mengikuti hmx).
     const [receipt] = await tx
       .insert(transfers)
       .values({
@@ -171,7 +165,6 @@ export async function seedDemoCustoms(db: Db) {
         sourceLocationId: vendor.id,
         destinationLocationId: rack.id,
         partnerId: supplier.id,
-        customsDocumentId: incoming.doc.id,
         reference: "PO-DEMO-001",
       })
       .returning()
@@ -195,14 +188,24 @@ export async function seedDemoCustoms(db: Db) {
     })
     await tx.execute(sql`select validate_transfer(${receipt.id})`)
 
-    // BC 2.5 Draft dengan alokasi asal ke BC 2.3.
-    const outgoing = await insertDocument("25", "8")
-    await tx.execute(
-      sql`select allocate_origin(${outgoing.line.id}, ${JSON.stringify([
-        { origin_line_id: incoming.line.id, qty: "1500" },
-      ])}::jsonb)`,
-    )
-    await tx.execute(sql`select refresh_customs_document_status(${outgoing.doc.id})`)
+    // BC 2.3 memilih penerimaan itu, nomor aju dan pendaftaran diisi manual, lalu Submitted.
+    const incoming = await insertDocument("23", "5")
+    await tx
+      .update(customsDocuments)
+      .set({
+        ajuNumber: "000023DEMO0120261001000001",
+        ajuDate: sql`(now() at time zone 'Asia/Jakarta')::date`,
+        registrationNumber: "000001",
+        registrationDate: sql`(now() at time zone 'Asia/Jakarta')::date`,
+      })
+      .where(eq(customsDocuments.id, incoming.doc.id))
+    await tx
+      .insert(customsDocumentTransfers)
+      .values({ documentId: incoming.doc.id, transferId: receipt.id })
+    await tx.execute(sql`select submit_customs_document(${incoming.doc.id})`)
+
+    // BC 2.5 Draft, belum memilih transfer.
+    await insertDocument("25", "8")
   })
-  console.log("Data demo dokumen BC dibuat (produk DEMO-KAIN, BC 2.3, penerimaan, BC 2.5).")
+  console.log("Data demo dokumen BC dibuat (produk DEMO-KAIN, penerimaan, BC 2.3, BC 2.5).")
 }

@@ -645,6 +645,20 @@
       "when": 1792461956659,
       "tag": "0091_warehouse_stock_location_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 92,
+      "version": "7",
+      "when": 1792477115528,
+      "tag": "0092_customs_hmx_flow",
+      "breakpoints": true
+    },
+    {
+      "idx": 93,
+      "version": "7",
+      "when": 1792477216724,
+      "tag": "0093_customs_hmx_flow_rules",
+      "breakpoints": true
     }
   ]
 }

@@ -14,19 +14,17 @@ import { DocumentLayout } from "@/components/document/document-layout"
 import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 import { ListToolbar } from "@/components/layout/list-toolbar"
-import { Section } from "@/components/layout/section"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
-import { formatDate, formatDateTime, formatNumber } from "@/lib/format"
+import { formatDate } from "@/lib/format"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import {
   CUSTOMS_DOCUMENT_STATUS_LABELS,
   CUSTOMS_DOCUMENT_STATUS_TONES,
   CUSTOMS_DOCUMENT_STATUSES,
-  CUSTOMS_ORIGIN_DOC_CODES,
   CUSTOMS_PERIOD_LABELS,
   CUSTOMS_PERIODS,
   type CustomsDocumentStatus,
@@ -35,14 +33,10 @@ import type { CustomsFormSpec } from "@/modules/it-inventory/lib/customs-form"
 import {
   customsOfficeOptions,
   getCustomsDocument,
-  getCustomsRevision,
   listCustomsDocuments,
-  listCustomsRevisions,
   newCustomsDraft,
   requiredCustomsSpec,
-  type CustomsDocumentDetail,
   type CustomsDocumentRow,
-  type CustomsRevisionEntry,
 } from "@/modules/it-inventory/server/queries/customs-documents"
 import { requirePermission } from "@/server/auth/session"
 import { recordActivity, statusDates } from "@/server/queries/activity"
@@ -51,7 +45,6 @@ import { CustomsDocumentActions } from "./customs-document-actions"
 import { CustomsDocumentForm } from "./customs-document-form"
 import { CustomsDocumentView } from "./customs-document-view"
 import { DocumentTransfersSection } from "./document-transfers-section"
-import { OriginAllocationsSection } from "./origin-allocations-section"
 
 // Halaman daftar, buat, dan detail dokumen BC, sama untuk semua jenis (M3-04). Halaman di
 // src/app/(app)/dokumen-bc/<jenis>/ hanya meneruskan spec jenisnya (M3-05–M3-09).
@@ -66,30 +59,30 @@ export function customsStatusBadge(status: CustomsDocumentStatus) {
 
 const wibDate = (value: string) => formatDate(new Date(`${value}T00:00:00+07:00`))
 
+// Kolom daftar seperti list view hmx (backlog H-01): IT Inventory document sequence, No. Aju,
+// No. Daftar, Tgl. Daftar, kantor pengawas, status.
 const COLUMNS: DataTableColumn<CustomsDocumentRow>[] = [
   {
-    header: "Nomor aju",
-    cell: (row) => <span className="font-mono text-foreground">{row.ajuNumber}</span>,
-  },
-  { header: "Tanggal aju", cell: (row) => wibDate(row.ajuDate) },
-  {
-    header: "Pemasok/penerima",
-    className: "w-full",
-    cell: (row) => row.counterparty ?? "—",
+    header: "Nomor",
+    cell: (row) => <span className="font-mono text-foreground">{row.number}</span>,
   },
   {
-    header: "Nomor daftar",
+    header: "No. Aju",
+    cell: (row) => (row.ajuNumber ? <span className="font-mono">{row.ajuNumber}</span> : "—"),
+  },
+  {
+    header: "No. Daftar",
     cell: (row) =>
-      row.registrationNumber ? (
-        <span className="font-mono">
-          {row.registrationNumber}
-          {row.registrationDate && ` · ${wibDate(row.registrationDate)}`}
-        </span>
-      ) : (
-        "—"
-      ),
+      row.registrationNumber ? <span className="font-mono">{row.registrationNumber}</span> : "—",
   },
-  { header: "Barang", align: "right", cell: (row) => formatNumber(row.lineCount) },
+  {
+    header: "Tgl. Daftar",
+    cell: (row) => (row.registrationDate ? wibDate(row.registrationDate) : "—"),
+  },
+  {
+    header: "Kantor Pabean Pengawasan",
+    cell: (row) => (row.officeCode ? `[${row.officeCode}] ${row.officeName ?? ""}`.trim() : "—"),
+  },
   { header: "Status", cell: (row) => customsStatusBadge(row.status) },
 ]
 
@@ -196,7 +189,7 @@ async function CustomsTable({
         }
       >
         <ListSearchBar
-          placeholder="Cari nomor aju, nomor daftar, atau partner"
+          placeholder="Cari nomor, No. Aju, No. Daftar, atau partner"
           filters={[
             {
               name: "status",
@@ -208,7 +201,7 @@ async function CustomsTable({
             },
             {
               name: "periode",
-              label: "Tanggal aju",
+              label: "Tanggal dibuat",
               options: CUSTOMS_PERIODS.map((value) => ({
                 value,
                 label: CUSTOMS_PERIOD_LABELS[value],
@@ -225,7 +218,6 @@ async function CustomsTable({
         rows={rows}
         rowKey={(row) => row.id}
         rowHref={(row) => `${spec.path}/${row.id}`}
-        rowMuted={(row) => row.status === "cancelled"}
         empty={listEmptyState({
           searchParams: raw,
           noun: `dokumen ${spec.title}`,
@@ -240,7 +232,7 @@ export function NewCustomsDocumentPage({ spec }: { spec: CustomsFormSpec }) {
     <NewRecordLayout
       title={`Buat ${spec.title}`}
       hideTitle
-      description="Disimpan sebagai Draft dengan nomor aju baru."
+      description="Disimpan sebagai Draft dengan nomor urut baru."
       noun="dokumen"
       status={<StatusSteps steps={STEPS} current="draft" />}
     >
@@ -261,7 +253,7 @@ async function NewCustomsForm({ spec }: { spec: CustomsFormSpec }) {
     <div className="space-y-4">
       {!companyReady && (
         <p role="alert" className="rounded-lg bg-warning-soft p-3 text-control">
-          Profil perusahaan belum diisi, jadi entitas perusahaan dan nomor aju belum bisa dibuat.{" "}
+          Profil perusahaan belum diisi, jadi entitas perusahaan belum bisa diisi otomatis.{" "}
           <Link href="/master/perusahaan" className="font-medium underline underline-offset-4">
             Isi profil perusahaan
           </Link>
@@ -286,11 +278,10 @@ export function CustomsDocumentDetailPage({
   )
 }
 
+// Status seperti statusbar form hmx: Draft → Submitted.
 const STEPS = [
   { code: "draft", label: "Draft" },
-  { code: "ready", label: "Siap ajukan" },
-  { code: "submitted", label: "Diajukan" },
-  { code: "registered", label: "Terdaftar" },
+  { code: "submitted", label: "Submitted" },
 ]
 
 async function CustomsDetail({
@@ -309,55 +300,38 @@ async function CustomsDetail({
     recordActivity("customs_documents", doc.id, CUSTOMS_ACTIVITY_LABELS),
     statusDates("customs_documents", doc.id),
   ])
-  const [revisions, formSpec] = await Promise.all([
-    listCustomsRevisions(spec, doc.id, doc.draft),
-    requiredCustomsSpec(spec),
-  ])
+  const formSpec = await requiredCustomsSpec(spec)
   const canWrite = hasPermission(user.roles, "bc:write")
-  const editable = canWrite && (doc.status === "draft" || doc.status === "ready")
+  const editable = canWrite && doc.status === "draft"
 
   return (
     <DocumentLayout
-      title={`${spec.title} ${doc.ajuNumber}`}
+      title={`${spec.title} ${doc.number}`}
       hideTitle
       actions={
         !editable && (
           <CustomsDocumentActions
             id={doc.id}
             path={spec.path}
-            ajuNumber={doc.ajuNumber}
+            number={doc.number}
             status={doc.status}
             canWrite={canWrite}
           />
         )
       }
-      crumbs={[{ label: doc.ajuNumber }]}
+      crumbs={[{ label: doc.number }]}
       meta={
         [
-          doc.registrationNumber && `Nomor daftar ${doc.registrationNumber}`,
-          doc.version > 1 && `Versi ${doc.version}`,
+          doc.ajuNumber && `No. Aju ${doc.ajuNumber}`,
+          doc.registrationNumber && `No. Daftar ${doc.registrationNumber}`,
         ]
           .filter(Boolean)
           .join(" · ") || undefined
       }
-      status={
-        <StatusSteps
-          steps={STEPS}
-          current={doc.status}
-          dates={dates}
-          outside={
-            doc.status === "rejected"
-              ? { label: "Ditolak", tone: "danger", code: "rejected" }
-              : doc.status === "cancelled"
-                ? { label: "Batal", tone: "neutral", code: "cancelled" }
-                : undefined
-          }
-        />
-      }
+      status={<StatusSteps steps={STEPS} current={doc.status} dates={dates} />}
       activity={<ActivityLog entries={activity} noun="dokumen" />}
     >
       <div className="space-y-4">
-        <StatusNotice doc={doc} />
         {editable ? (
           <CustomsDocumentForm
             spec={formSpec}
@@ -368,7 +342,7 @@ async function CustomsDetail({
               <CustomsDocumentActions
                 id={doc.id}
                 path={spec.path}
-                ajuNumber={doc.ajuNumber}
+                number={doc.number}
                 status={doc.status}
                 canWrite={canWrite}
                 includeDuplicate={false}
@@ -378,117 +352,8 @@ async function CustomsDetail({
         ) : (
           <CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />
         )}
-        {CUSTOMS_ORIGIN_DOC_CODES[spec.code] && (
-          <OriginAllocationsSection
-            documentId={doc.id}
-            origins={CUSTOMS_ORIGIN_DOC_CODES[spec.code] ?? []}
-            editable={editable}
-          />
-        )}
         <DocumentTransfersSection documentId={doc.id} />
-        {revisions.length > 0 && (
-          <RevisionHistory path={`${spec.path}/${doc.id}`} revisions={revisions} />
-        )}
       </div>
-    </DocumentLayout>
-  )
-}
-
-// Keterangan siap diajukan dan alasan penolakan di atas isi dokumen.
-function StatusNotice({ doc }: { doc: CustomsDocumentDetail }) {
-  if (doc.status === "ready") {
-    return (
-      <p className="rounded-lg bg-success-soft p-3 text-control">
-        Isian lengkap. Input dokumen di portal CEISA, lalu tekan Ajukan.
-      </p>
-    )
-  }
-  if (doc.status === "rejected" && doc.rejectionReason) {
-    return (
-      <p role="alert" className="rounded-lg bg-destructive/10 p-3 text-control">
-        <span className="font-medium">Ditolak Bea Cukai:</span> {doc.rejectionReason}
-      </p>
-    )
-  }
-  return null
-}
-
-// Riwayat revisi (M3-12): siapa, kapan, alasan, dan apa yang berubah di versi berikutnya.
-function RevisionHistory({ path, revisions }: { path: string; revisions: CustomsRevisionEntry[] }) {
-  return (
-    <Section title="Riwayat revisi">
-      <ol className="divide-y rounded-lg border">
-        {[...revisions].reverse().map((revision) => (
-          <li key={revision.version} className="space-y-1 p-3 text-control">
-            <p>
-              <Link
-                href={`${path}/versi/${revision.version}`}
-                className="font-medium text-primary underline-offset-4 hover:underline"
-              >
-                Versi {revision.version}
-              </Link>{" "}
-              <span className="text-muted-foreground">
-                direvisi {revision.userName ?? "sistem"} · {formatDateTime(revision.createdAt)}
-              </span>
-            </p>
-            <p>Alasan: {revision.reason}</p>
-            <p className="text-caption text-muted-foreground">
-              {revision.changes.length
-                ? `Berubah di versi ${revision.version + 1}: ${revision.changes.join(", ")}`
-                : `Belum ada perubahan di versi ${revision.version + 1}.`}
-            </p>
-          </li>
-        ))}
-      </ol>
-    </Section>
-  )
-}
-
-// Versi lama dokumen (snapshot revisi), hanya baca.
-export function CustomsRevisionPage({
-  spec,
-  params,
-}: {
-  spec: CustomsFormSpec
-  params: Promise<{ id: string; version: string }>
-}) {
-  return (
-    <Suspense fallback={<Skeleton className="h-[32rem] w-full" />}>
-      <RevisionDetail spec={spec} params={params} />
-    </Suspense>
-  )
-}
-
-async function RevisionDetail({
-  spec,
-  params,
-}: {
-  spec: CustomsFormSpec
-  params: Promise<{ id: string; version: string }>
-}) {
-  await requirePermission("bc:read")
-  const { id, version } = await params
-  const number = Number(version)
-  if (!z.uuid().safeParse(id).success || !Number.isInteger(number) || number < 1) notFound()
-  const revision = await getCustomsRevision(spec, id, number)
-  if (!revision) notFound()
-  return (
-    <DocumentLayout
-      title={`${spec.title} ${revision.ajuNumber} versi ${revision.version}`}
-      hideTitle
-      crumbs={[
-        { label: revision.ajuNumber, href: `${spec.path}/${id}` },
-        { label: `Versi ${revision.version}` },
-      ]}
-      meta={
-        <span>
-          Versi lama, hanya baca
-          {revision.registrationNumber && ` · Nomor daftar ${revision.registrationNumber}`} · Alasan
-          revisi: {revision.reason}
-        </span>
-      }
-    >
-      <CustomsDocumentView spec={spec} draft={revision.draft} refLabels={revision.refLabels} />
     </DocumentLayout>
   )
 }
@@ -498,12 +363,9 @@ const CUSTOMS_ACTIVITY_LABELS = {
   fields: {
     status: "Status",
     customs_office_code: "Kantor pabean",
-    registration_number: "Nomor daftar",
-    registration_date: "Tanggal daftar",
-    response_code: "Respon",
-    response_number: "Nomor respon",
-    response_date: "Tanggal respon",
-    rejection_reason: "Alasan penolakan",
+    registration_number: "No. Daftar",
+    registration_date: "Tgl. Daftar",
+    aju_number: "No. Aju",
     currency_code: "Valuta",
     ndpbm: "NDPBM",
     cif_value: "Nilai CIF",
@@ -513,8 +375,7 @@ const CUSTOMS_ACTIVITY_LABELS = {
     net_weight: "Berat bersih",
     signer_name: "Penandatangan",
     notes: "Catatan",
-    version: "Versi",
-    submitted_at: "Tanggal diajukan",
+    submitted_at: "Tanggal Submit",
   },
   values: { status: CUSTOMS_DOCUMENT_STATUS_LABELS as Record<string, string> },
 }

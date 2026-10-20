@@ -409,7 +409,7 @@ export function attachmentKeyPrefix(documentId: string) {
 
 // ---------------------------------------------------------------------------------------------
 // Validasi input di server. Kelengkapan (field wajib) TIDAK dicek di sini: Draft boleh belum
-// lengkap; kelengkapan diperiksa aturan validasi database (M3-03) saat menuju Siap ajukan.
+// lengkap; kelengkapan diperiksa aturan validasi database (M3-03) saat Submit.
 
 const text = (label: string, max: number) =>
   z
@@ -682,43 +682,6 @@ export const customsDocumentField = z
     }
   })
   .pipe(customsDocumentInputSchema)
-
-// Bagian dan isian yang berbeda antara dua versi dokumen (riwayat revisi, M3-12), sebagai label
-// yang dibaca user, urut sesuai form.
-export function customsDraftChanges(
-  spec: CustomsFormSpec,
-  before: CustomsDocumentDraft,
-  after: CustomsDocumentDraft,
-): string[] {
-  const changes: string[] = []
-  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
-  for (const field of customsDocumentFields(spec)) {
-    if (field.store === "party" || field.store === "partyDetails") continue
-    if (customsFieldValue(before, field) !== customsFieldValue(after, field)) {
-      if (!changes.includes(field.label)) changes.push(field.label)
-    }
-  }
-  for (const role of spec.parties) {
-    const parties = (draft: CustomsDocumentDraft) =>
-      draft.parties.filter((entry) => entry.entityTypeCode === role.code)
-    if (!same(parties(before), parties(after))) changes.push(role.label)
-  }
-  const lineCount = Math.max(before.lines.length, after.lines.length)
-  for (let index = 0; index < lineCount; index++) {
-    if (!same(before.lines[index], after.lines[index])) changes.push(`Barang seri ${index + 1}`)
-  }
-  for (const tab of spec.tabs) {
-    for (const block of tab.blocks) {
-      if (!isListBlock(block) || block.list === "lines" || block.list === "vdEntries") continue
-      const rows = (draft: CustomsDocumentDraft) =>
-        block.list === "owners"
-          ? draft.parties.filter((entry) => entry.entityTypeCode === OWNER_CODE)
-          : draft[block.list as Exclude<CustomsListKind, "owners" | "lines" | "vdEntries">]
-      if (!same(rows(before), rows(after))) changes.push(block.title)
-    }
-  }
-  return changes
-}
 
 // Nilai isian untuk dibaca (tampilan baca, export PDF/Excel): kode referensi sebagai [kode] nama,
 // angka format Indonesia, tanggal DD/MM/YYYY.

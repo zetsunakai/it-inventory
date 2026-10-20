@@ -80,111 +80,36 @@ export const uploadCustomsAttachment = defineFormAction({
   },
 })
 
-// Alur status (M3-11). Aturan dan penguncian dipaksakan fungsi database; di sini hanya meneruskan
-// input dan pesannya.
+// Alur status seperti hmx-002 (backlog H-01): Draft → Submitted lewat submit_customs_document(),
+// yang memeriksa field wajib dan transfer sekaligus. Draft boleh dihapus; Submitted dikunci database.
 const idInput = z.object({ id: z.uuid("Dokumen tidak valid.") })
-
-const optionalDate = z
-  .string()
-  .optional()
-  .transform((value) => value || null)
-  .refine((value) => value === null || /^\d{4}-\d{2}-\d{2}$/.test(value), "Tanggal tidak valid.")
-
-const response = {
-  responseCode: z
-    .string()
-    .trim()
-    .max(10)
-    .optional()
-    .transform((value) => value || null),
-  responseNumber: z
-    .string()
-    .trim()
-    .max(50, "Nomor respon maksimal 50 karakter.")
-    .optional()
-    .transform((value) => value || null),
-  responseDate: optionalDate,
-}
 
 export const submitCustomsDocument = defineAction({
   name: "submitCustomsDocument",
   permission: "bc:write",
   schema: idInput,
-  successMessage: "Dokumen dicatat Diajukan. Catat nomor daftar setelah respon Bea Cukai keluar.",
+  successMessage: "Dokumen Submitted. Dokumen dan barangnya sekarang terkunci.",
   handler: async ({ input, tx }) => {
     await tx.execute(sql`select submit_customs_document(${input.id})`)
   },
 })
 
-export const registerCustomsDocument = defineAction({
-  name: "registerCustomsDocument",
-  permission: "bc:write",
-  schema: idInput.extend({
-    registrationNumber: z.string().trim().max(50, "Nomor daftar maksimal 50 karakter."),
-    registrationDate: optionalDate,
-    ...response,
-  }),
-  successMessage: "Dokumen dicatat Terdaftar.",
-  handler: async ({ input, tx }) => {
-    await tx.execute(
-      sql`select register_customs_document(${input.id}, ${input.registrationNumber},
-        ${input.registrationDate}::date, ${input.responseCode}, ${input.responseNumber},
-        ${input.responseDate}::date)`,
-    )
-  },
-})
-
-export const rejectCustomsDocument = defineAction({
-  name: "rejectCustomsDocument",
-  permission: "bc:write",
-  schema: idInput.extend({
-    reason: z.string().trim().max(1000, "Alasan maksimal 1000 karakter."),
-    ...response,
-  }),
-  successMessage: "Dokumen dicatat Ditolak. Kembalikan ke Draft untuk memperbaikinya.",
-  handler: async ({ input, tx }) => {
-    await tx.execute(
-      sql`select reject_customs_document(${input.id}, ${input.reason}, ${input.responseCode},
-        ${input.responseNumber}, ${input.responseDate}::date)`,
-    )
-  },
-})
-
-export const resetCustomsDocumentToDraft = defineAction({
-  name: "resetCustomsDocumentToDraft",
+export const deleteCustomsDocument = defineAction({
+  name: "deleteCustomsDocument",
   permission: "bc:write",
   schema: idInput,
-  successMessage: "Dokumen kembali ke Draft.",
+  successMessage: "Dokumen dihapus.",
   handler: async ({ input, tx }) => {
-    await tx.execute(sql`select reset_customs_document_to_draft(${input.id})`)
+    const deleted = await tx
+      .delete(customsDocuments)
+      .where(eq(customsDocuments.id, input.id))
+      .returning({ id: customsDocuments.id })
+    if (!deleted.length) throw new AppError("Dokumen tidak ditemukan.")
   },
 })
 
-export const cancelCustomsDocument = defineAction({
-  name: "cancelCustomsDocument",
-  permission: "bc:cancel",
-  schema: idInput,
-  successMessage: "Dokumen dibatalkan.",
-  handler: async ({ input, tx }) => {
-    await tx.execute(sql`select cancel_customs_document(${input.id})`)
-  },
-})
-
-// Revisi dokumen Terdaftar (M3-12): versi lama disimpan, dokumen kembali ke Draft dengan nomor
-// aju yang sama.
-export const reviseCustomsDocument = defineAction({
-  name: "reviseCustomsDocument",
-  permission: "bc:write",
-  schema: idInput.extend({
-    reason: z.string().trim().max(1000, "Alasan maksimal 1000 karakter."),
-  }),
-  successMessage: "Versi baru dibuat. Koreksi dokumen, ajukan, lalu catat terdaftar lagi.",
-  handler: async ({ input, tx }) => {
-    await tx.execute(sql`select revise_customs_document(${input.id}, ${input.reason})`)
-  },
-})
-
-// Duplikat (M3-13): Draft baru dengan nomor aju baru; file lampiran tidak ikut.
+// Duplikat (M3-13): Draft baru dengan nomor urut baru; No. Aju, nomor daftar, transfer, dan file
+// lampiran tidak ikut.
 export const duplicateCustomsDocument = defineAction({
   name: "duplicateCustomsDocument",
   permission: "bc:write",

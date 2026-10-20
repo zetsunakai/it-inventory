@@ -1,4 +1,4 @@
-import { eq, like, sql } from "drizzle-orm"
+import { eq, like } from "drizzle-orm"
 import ExcelJS from "exceljs"
 import { NextRequest } from "next/server"
 import { PDFDocument } from "pdf-lib"
@@ -27,6 +27,7 @@ import {
 import {
   insertCompleteDocument,
   insertCustomsProduct,
+  forceCustomsStatus,
   insertTestCompany,
   purgeCustomsDocuments,
 } from "./customs-fixtures"
@@ -61,20 +62,17 @@ beforeAll(async () => {
       .update(customsAttachments)
       .set({ fileKey: `customs/${doc.id}/a.pdf`, fileName: "Invoice.pdf" })
       .where(eq(customsAttachments.documentId, doc.id))
-    await tx.execute(sql`select refresh_customs_document_status(${doc.id})`)
+    await forceCustomsStatus(tx, doc.id, { status: "submitted", submittedAt: new Date() })
     ids.complete = doc.id
-    // Dokumen lain di kantor berbeda dan bertanggal aju tahun lalu.
+    // Dokumen lain di kantor berbeda dan dibuat tahun 2020.
     const [other] = await tx
       .insert(customsDocuments)
       .values({ docCode: "23", customsOfficeCode: "040300" })
       .returning({ id: customsDocuments.id })
-    // Tanggal aju dikunci trigger; untuk data uji trigger dimatikan sementara.
-    await tx.execute(sql`set local session_replication_role = replica`)
     await tx
       .update(customsDocuments)
-      .set({ ajuDate: "2020-01-15" })
+      .set({ createdAt: new Date("2020-01-15T03:00:00Z") })
       .where(eq(customsDocuments.id, other.id))
-    await tx.execute(sql`set local session_replication_role = origin`)
     ids.other = other.id
   })
 })
@@ -99,9 +97,9 @@ const list = (filters: Partial<Parameters<typeof listCustomsDocuments>[0]> = {})
   }).then(({ rows }) => rows.map((row) => row.id).sort())
 
 describe("daftar per jenis", () => {
-  test("filter status, kantor, dan periode tanggal aju", async () => {
+  test("filter status, kantor, dan periode tanggal dibuat", async () => {
     expect(await list()).toEqual([ids.complete, ids.other].sort())
-    expect(await list({ status: "ready" })).toEqual([ids.complete])
+    expect(await list({ status: "submitted" })).toEqual([ids.complete])
     expect(await list({ officeCode: "040300" })).toEqual([ids.other])
     expect(await list({ period: "bulan-ini" })).toEqual([ids.complete])
     expect(await list({ docCode: "25" })).toEqual([])
@@ -109,7 +107,7 @@ describe("daftar per jenis", () => {
 })
 
 describe("duplikat", () => {
-  test("Draft baru dengan nomor aju baru, semua bagian tersalin kecuali file lampiran", async () => {
+  test("Draft baru dengan nomor baru tanpa No. Aju, semua bagian tersalin kecuali file lampiran", async () => {
     loginAs(["staf_exim"])
     const result = await duplicateCustomsDocument({ id: ids.complete })
     if (!result.ok) throw new Error(result.errors.join("\n"))
@@ -117,13 +115,12 @@ describe("duplikat", () => {
       getCustomsDocument(BC23, ids.complete),
       getCustomsDocument(BC23, result.data.id),
     ])
-    expect(copy!.ajuNumber).not.toBe(original!.ajuNumber)
-    expect(copy!.version).toBe(1)
+    expect(copy!.number).not.toBe(original!.number)
+    expect(copy!.ajuNumber).toBeNull()
     expect(copy!.draft.parties).toEqual(original!.draft.parties)
     expect(copy!.draft.lines).toEqual(original!.draft.lines)
     expect(copy!.draft.attachments).toEqual([{ ...original!.draft.attachments[0], file: null }])
-    // Aturan invoice memeriksa baris lampiran (M3-03), bukan filenya.
-    expect(copy!.status).toBe("ready")
+    expect(copy!.status).toBe("draft")
   })
 })
 
@@ -142,11 +139,11 @@ describe("export draft", () => {
     const pdf = await request("pdf")
     expect(pdf.status).toBe(200)
     expect(pdf.headers.get("content-disposition")).toBe(
-      `attachment; filename="BC23-${doc!.ajuNumber}.pdf"`,
+      `attachment; filename="BC23-${doc!.number.replace(/\W/g, "")}.pdf"`,
     )
     const loaded = await PDFDocument.load(await pdf.arrayBuffer())
     expect(loaded.getPageCount()).toBeGreaterThanOrEqual(1)
-    expect(loaded.getTitle()).toBe(`BC 2.3 ${doc!.ajuNumber}`)
+    expect(loaded.getTitle()).toBe(`BC 2.3 ${doc!.number}`)
 
     const excel = await request("xlsx")
     expect(excel.status).toBe(200)
@@ -170,7 +167,7 @@ describe("export draft", () => {
         .getWorksheet(name)!
         .getSheetValues()
         .flatMap((row) => (Array.isArray(row) ? row.slice(1).map(String) : []))
-    expect(values("Dokumen")).toEqual(expect.arrayContaining(["Nomor aju", doc!.ajuNumber]))
+    expect(values("Dokumen")).toEqual(expect.arrayContaining(["Nomor", doc!.number]))
     expect(values("Barang")).toEqual(expect.arrayContaining(["ZBX1", "52081100"]))
     expect(values("Dokumen Lampiran")).toEqual(expect.arrayContaining(["Invoice.pdf"]))
 
@@ -192,7 +189,7 @@ describe("export daftar BC", () => {
     await workbook.xlsx.load(await excel.arrayBuffer())
     const sheet = workbook.worksheets[0]
     expect(sheet.rowCount).toBe(2)
-    expect(sheet.getCell("A2").value).toBe(doc!.ajuNumber)
+    expect(sheet.getCell("A2").value).toBe(doc!.number)
     expect(excel.headers.get("content-disposition")).toContain("Daftar-BC23.xlsx")
 
     const pdf = await exportList(

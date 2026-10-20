@@ -88,6 +88,9 @@ export async function purgeInventory(db: Db, productIds: string[]) {
       delete from return_request_lines
       where return_request_id in (select id from purged_returns)`)
     await tx.execute(sql`delete from return_requests where id in (select id from purged_returns)`)
+    await tx.execute(sql`
+      delete from customs_document_transfers
+      where transfer_id in (select id from purged_transfers)`)
     await tx.execute(sql`delete from transfers where id in (select id from purged_transfers)`)
     await tx.execute(sql`delete from lots where product_id in (${ids})`)
     await tx.execute(sql`

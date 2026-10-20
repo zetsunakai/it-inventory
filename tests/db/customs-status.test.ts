@@ -1,4 +1,4 @@
-import { eq, like, sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, test } from "vitest"
 
 import { CUSTOMS_DOC_CODES } from "@/modules/it-inventory/lib/customs"
@@ -8,82 +8,85 @@ import {
   customsAttachments,
   customsDocumentLines,
   customsDocuments,
-  userRoles,
-  users,
+  customsDocumentTransfers,
 } from "@/server/db/schema"
 
-import { insertCompleteDocument, insertCustomsProduct, insertTestCompany } from "./customs-fixtures"
-import { inRollback, pgErrorInSavepoint, setAuditUser } from "./helpers"
+import {
+  insertCompleteDocument,
+  insertCustomsProduct,
+  insertSourceTransfer,
+  insertTestCompany,
+  submitDocument,
+} from "./customs-fixtures"
+import { inRollback, pgErrorInSavepoint } from "./helpers"
 
-// Alur status dokumen BC (backlog M3-11, PRD 7.3): Draft ⇄ Siap ajukan → Diajukan → Terdaftar /
-// Ditolak → Draft, Batal hanya Manajer; dokumen yang sudah diajukan dikunci database.
+// Alur status dokumen BC mengikuti hmx (backlog H-01, PRD 7.3): Draft → Submitted lewat Submit.
+// Dokumen Submitted dikunci database beserta semua bagiannya; Draft boleh dihapus.
 
 type Tx = Parameters<Parameters<typeof inRollback>[1]>[0]
 
-const ids = { manajer: "", exim: "" }
-
 beforeAll(async () => {
   await insertTestCompany(db)
-  for (const role of ["manajer", "staf_exim"] as const) {
-    const [user] = await db
-      .insert(users)
-      .values({ name: `Uji ${role}`, email: `zb-${role}@status-bc.test`, emailVerified: true })
-      .returning({ id: users.id })
-    await db.insert(userRoles).values({ userId: user.id, role })
-    ids[role === "manajer" ? "manajer" : "exim"] = user.id
-  }
 })
 
 afterAll(async () => {
-  await db.delete(users).where(like(users.email, "zb-%@status-bc.test"))
   await db.delete(company)
   await db.$client.end()
 })
 
-const call = (tx: Tx, query: ReturnType<typeof sql>) => tx.execute(query)
-
 async function status(tx: Tx, id: string) {
   const [row] = await tx
-    .select({ status: customsDocuments.status })
+    .select({ status: customsDocuments.status, submittedAt: customsDocuments.submittedAt })
     .from(customsDocuments)
     .where(eq(customsDocuments.id, id))
-  return row.status
+  return row
 }
 
-async function readyDocument(tx: Tx) {
+async function completeDocument(tx: Tx) {
   const product = await insertCustomsProduct(tx)
-  const doc = await insertCompleteDocument(tx, "25", product)
-  await call(tx, sql`select refresh_customs_document_status(${doc.id})`)
-  return doc
+  return insertCompleteDocument(tx, "25", product)
 }
 
-describe("Draft dan Siap ajukan", () => {
-  test("otomatis Siap ajukan bila lengkap, kembali Draft bila tidak lengkap lagi", async () => {
+describe("Draft", () => {
+  test("dokumen baru Draft dengan nomor urut per jenis IT/<kode>/<5 digit>", async () => {
     await inRollback(db, async (tx) => {
-      const doc = await readyDocument(tx)
-      expect(await status(tx, doc.id)).toBe("ready")
-
-      await tx.delete(customsAttachments).where(eq(customsAttachments.documentId, doc.id))
-      await call(tx, sql`select refresh_customs_document_status(${doc.id})`)
-      expect(await status(tx, doc.id)).toBe("draft")
+      const product = await insertCustomsProduct(tx)
+      const first = await insertCompleteDocument(tx, "25", product)
+      const second = await insertCompleteDocument(tx, "25", product)
+      expect(first.status).toBe("draft")
+      expect(first.number).toMatch(/^IT\/25\/\d{5}$/)
+      expect(Number(second.number.slice(-5))).toBe(Number(first.number.slice(-5)) + 1)
+      expect(first.ajuNumber).toBeNull()
+      expect(
+        await pgErrorInSavepoint(tx, (sp) =>
+          sp
+            .update(customsDocuments)
+            .set({ number: "IT/25/99999" })
+            .where(eq(customsDocuments.id, first.id)),
+        ),
+      ).toBe("Nomor dokumen IT Inventory tidak bisa diubah.")
     })
   })
 
-  test("Ajukan dokumen belum lengkap melaporkan semua kekurangannya", async () => {
+  test("Submit dokumen belum lengkap melaporkan semua kekurangannya", async () => {
     await inRollback(db, async (tx) => {
       const [doc] = await tx.insert(customsDocuments).values({ docCode: "41" }).returning()
       const message = await pgErrorInSavepoint(tx, (sp) =>
         sp.execute(sql`select submit_customs_document(${doc.id})`),
       )
       expect(message.split("\n")).toEqual(
-        expect.arrayContaining(["Dokumen belum punya barang.", "Lampiran Invoice belum ada."]),
+        expect.arrayContaining([
+          "Dokumen belum punya barang.",
+          "Lampiran Invoice belum ada.",
+          "Inventory Transfer Documents wajib diisi.",
+        ]),
       )
     })
   })
 
-  test("status hanya berubah lewat fungsi alur", async () => {
+  test("status hanya berubah lewat Submit", async () => {
     await inRollback(db, async (tx) => {
-      const doc = await readyDocument(tx)
+      const doc = await completeDocument(tx)
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
           sp
@@ -91,21 +94,40 @@ describe("Draft dan Siap ajukan", () => {
             .set({ status: "submitted" })
             .where(eq(customsDocuments.id, doc.id)),
         ),
-      ).toBe(
-        "Status dokumen BC hanya berubah lewat Ajukan, Catat terdaftar, Catat ditolak, Kembali ke Draft, atau Batal.",
-      )
+      ).toBe("Gunakan tombol Submit untuk mengubah status dokumen.")
+    })
+  })
+
+  test("Draft boleh dihapus beserta tautan transfernya", async () => {
+    await inRollback(db, async (tx) => {
+      const doc = await completeDocument(tx)
+      const [line] = await tx
+        .select({ productId: customsDocumentLines.productId })
+        .from(customsDocumentLines)
+        .where(eq(customsDocumentLines.documentId, doc.id))
+      const transferId = await insertSourceTransfer(tx, "25", line.productId)
+      await tx.insert(customsDocumentTransfers).values({ documentId: doc.id, transferId })
+      await tx.delete(customsDocuments).where(eq(customsDocuments.id, doc.id))
+      expect(
+        await tx
+          .select()
+          .from(customsDocumentTransfers)
+          .where(eq(customsDocumentTransfers.transferId, transferId)),
+      ).toEqual([])
     })
   })
 })
 
-describe("Diajukan, Terdaftar, Ditolak", () => {
-  test("dokumen Diajukan dan Terdaftar tidak bisa diubah, termasuk bagian-bagiannya", async () => {
+describe("Submitted", () => {
+  test("dokumen Submitted tidak bisa diubah atau dihapus, termasuk bagian-bagiannya", async () => {
     await inRollback(db, async (tx) => {
-      const doc = await readyDocument(tx)
-      await call(tx, sql`select submit_customs_document(${doc.id})`)
-      expect(await status(tx, doc.id)).toBe("submitted")
+      const doc = await completeDocument(tx)
+      await submitDocument(tx, doc)
+      const row = await status(tx, doc.id)
+      expect(row.status).toBe("submitted")
+      expect(row.submittedAt).not.toBeNull()
 
-      const locked = `Dokumen BC ${doc.ajuNumber} sudah Diajukan dan tidak bisa diubah.`
+      const locked = `Dokumen ${doc.number} sudah Submitted dan tidak dapat diubah atau dihapus.`
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
           sp.update(customsDocuments).set({ notes: "x" }).where(eq(customsDocuments.id, doc.id)),
@@ -126,106 +148,32 @@ describe("Diajukan, Terdaftar, Ditolak", () => {
       ).toBe(locked)
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
+          sp
+            .delete(customsDocumentTransfers)
+            .where(eq(customsDocumentTransfers.documentId, doc.id)),
+        ),
+      ).toBe(locked)
+      expect(
+        await pgErrorInSavepoint(tx, (sp) =>
           sp.delete(customsDocuments).where(eq(customsDocuments.id, doc.id)),
         ),
-      ).toBe(`Dokumen BC ${doc.ajuNumber} sudah Diajukan dan tidak bisa dihapus.`)
-
-      // Nomor dan tanggal daftar wajib; tanggal tidak boleh di masa depan.
+      ).toBe(locked)
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
-          sp.execute(sql`select register_customs_document(${doc.id}, ' ', null)`),
+          sp.execute(sql`select submit_customs_document(${doc.id})`),
         ),
-      ).toBe("Nomor daftar wajib diisi.\nTanggal daftar wajib diisi.")
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp.execute(sql`select register_customs_document(${doc.id}, '000123', current_date + 2)`),
-        ),
-      ).toBe("Tanggal daftar tidak boleh di masa depan.")
-
-      await call(
-        tx,
-        sql`select register_customs_document(${doc.id}, ' 000123 ', ${doc.ajuDate}::date,
-          '2503', 'S-123/KPU.01/2026', ${doc.ajuDate}::date)`,
-      )
-      const [registered] = await tx
-        .select()
-        .from(customsDocuments)
-        .where(eq(customsDocuments.id, doc.id))
-      expect(registered).toMatchObject({
-        status: "registered",
-        registrationNumber: "000123",
-        registrationDate: doc.ajuDate,
-        responseCode: "2503",
-      })
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp.update(customsDocuments).set({ notes: "x" }).where(eq(customsDocuments.id, doc.id)),
-        ),
-      ).toBe(`Dokumen BC ${doc.ajuNumber} sudah Terdaftar dan tidak bisa diubah.`)
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp.execute(sql`select cancel_customs_document(${doc.id})`),
-        ),
-      ).toBe(`Dokumen BC ${doc.ajuNumber} sudah Terdaftar dan tidak bisa dibatalkan.`)
-    })
-  })
-
-  test("Ditolak wajib alasan, lalu kembali ke Draft untuk diperbaiki", async () => {
-    await inRollback(db, async (tx) => {
-      const doc = await readyDocument(tx)
-      await call(tx, sql`select submit_customs_document(${doc.id})`)
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp.execute(sql`select reject_customs_document(${doc.id}, '  ')`),
-        ),
-      ).toBe("Alasan penolakan wajib diisi.")
-      await call(tx, sql`select reject_customs_document(${doc.id}, 'HS tidak sesuai uraian')`)
-      expect(await status(tx, doc.id)).toBe("rejected")
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp.update(customsDocuments).set({ notes: "x" }).where(eq(customsDocuments.id, doc.id)),
-        ),
-      ).toBe(`Dokumen BC ${doc.ajuNumber} sudah Ditolak dan tidak bisa diubah.`)
-
-      await call(tx, sql`select reset_customs_document_to_draft(${doc.id})`)
-      // Masih lengkap, jadi langsung Siap ajukan lagi; alasan penolakan tetap tersimpan.
-      const [row] = await tx.select().from(customsDocuments).where(eq(customsDocuments.id, doc.id))
-      expect(row).toMatchObject({ status: "ready", rejectionReason: "HS tidak sesuai uraian" })
+      ).toBe(locked)
     })
   })
 })
 
 describe("semua jenis dokumen", () => {
-  test.each(CUSTOMS_DOC_CODES)("BC %s bisa dicatat sampai Terdaftar", async (code) => {
+  test.each(CUSTOMS_DOC_CODES)("BC %s bisa di-Submit", async (code) => {
     await inRollback(db, async (tx) => {
       const product = await insertCustomsProduct(tx)
       const doc = await insertCompleteDocument(tx, code, product)
-      await call(tx, sql`select refresh_customs_document_status(${doc.id})`)
-      await call(tx, sql`select submit_customs_document(${doc.id})`)
-      await call(
-        tx,
-        sql`select register_customs_document(${doc.id}, '000777', ${doc.ajuDate}::date)`,
-      )
-      expect(await status(tx, doc.id)).toBe("registered")
-    })
-  })
-})
-
-describe("Batal", () => {
-  test("hanya Manajer, sebelum Terdaftar", async () => {
-    await inRollback(db, async (tx) => {
-      const doc = await readyDocument(tx)
-      await setAuditUser(tx, ids.exim)
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp.execute(sql`select cancel_customs_document(${doc.id})`),
-        ),
-      ).toBe("Hanya Manajer yang bisa membatalkan dokumen BC.")
-      await setAuditUser(tx, ids.manajer)
-      await call(tx, sql`select cancel_customs_document(${doc.id})`)
-      const [row] = await tx.select().from(customsDocuments).where(eq(customsDocuments.id, doc.id))
-      expect(row.status).toBe("cancelled")
-      expect(row.cancelledAt).not.toBeNull()
+      await submitDocument(tx, doc)
+      expect((await status(tx, doc.id)).status).toBe("submitted")
     })
   })
 })

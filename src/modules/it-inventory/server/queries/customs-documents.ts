@@ -16,7 +16,6 @@ import {
   CUSTOMS_LINE_COLUMNS,
   CUSTOMS_ROW_KEYS,
   customsDocumentFields,
-  customsDraftChanges,
   customsFieldValue,
   customsLineFields,
   emptyDraft,
@@ -40,7 +39,6 @@ import {
   customsContainers,
   customsDocumentLines,
   customsDocumentParties,
-  customsDocumentRevisions,
   customsDocumentTaxes,
   customsDocuments,
   customsGuarantees,
@@ -50,7 +48,6 @@ import {
   products,
   refCodes,
   uoms,
-  users,
 } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
 
@@ -190,7 +187,7 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     id: doc.id,
     docCode: doc.docCode,
     status: doc.status,
-    version: doc.version,
+    number: doc.number,
     ajuNumber: doc.ajuNumber,
     ajuDate: doc.ajuDate,
     registrationNumber: doc.registrationNumber,
@@ -198,7 +195,6 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     responseCode: doc.responseCode,
     responseNumber: doc.responseNumber,
     responseDate: doc.responseDate,
-    rejectionReason: doc.rejectionReason,
     submittedAt: doc.submittedAt,
     // Kekurangan menurut aturan validasi (M3-03), untuk Draft.
     missing:
@@ -353,15 +349,17 @@ async function refLabelsFor(spec: CustomsFormSpec, draft: CustomsDocumentDraft) 
   return Object.fromEntries(rows.map((row) => [`${row.type}|${row.code}`, row.name])) as RefLabels
 }
 
+// Baris daftar per jenis seperti list view hmx (backlog H-01): nomor, No. Aju, No. Daftar,
+// Tgl. Daftar, kantor pengawas, status.
 export type CustomsDocumentRow = {
   id: string
-  ajuNumber: string
-  ajuDate: string
+  number: string
+  ajuNumber: string | null
   status: CustomsDocumentStatus
   registrationNumber: string | null
   registrationDate: string | null
-  counterparty: string | null
-  lineCount: number
+  officeCode: string | null
+  officeName: string | null
 }
 
 const TODAY = sql`(now() at time zone 'Asia/Jakarta')::date`
@@ -389,7 +387,7 @@ const COUNTERPARTY = sql`(
   where p.document_id = d.id and p.entity_type_code not in ('2', '3', '7')
   order by p.partner_id is null, p.entity_type_code limit 1)`
 
-// Rentang tanggal aju per pilihan periode, dalam tanggal WIB.
+// Rentang tanggal dibuat per pilihan periode, dalam tanggal WIB.
 const PERIOD_RANGES: Record<CustomsPeriod, SQL> = {
   "bulan-ini": sql`date_trunc('month', ${TODAY}) and ${TODAY}`,
   "bulan-lalu": sql`date_trunc('month', ${TODAY}) - interval '1 month'
@@ -415,34 +413,37 @@ export async function listCustomsDocuments({
   const conditions: SQL[] = [sql`d.doc_code = ${docCode}`]
   if (status) conditions.push(sql`d.status = ${status}`)
   if (officeCode) conditions.push(sql`d.customs_office_code = ${officeCode}`)
-  if (period) conditions.push(sql`d.aju_date between ${PERIOD_RANGES[period]}`)
+  if (period) {
+    conditions.push(
+      sql`(d.created_at at time zone 'Asia/Jakarta')::date between ${PERIOD_RANGES[period]}`,
+    )
+  }
   if (search) {
     const pattern = containsPattern(search)
     conditions.push(
-      sql`(d.aju_number ilike ${pattern} or d.registration_number ilike ${pattern}
-        or ${COUNTERPARTY} ilike ${pattern})`,
+      sql`(d.number ilike ${pattern} or d.aju_number ilike ${pattern}
+        or d.registration_number ilike ${pattern} or ${COUNTERPARTY} ilike ${pattern})`,
     )
   }
   const where = sql.join(conditions, sql` and `)
   const [rows, totals] = await Promise.all([
     db.execute<{
       id: string
-      aju_number: string
-      aju_date: string
+      number: string
+      aju_number: string | null
       status: CustomsDocumentStatus
       registration_number: string | null
       registration_date: string | null
-      counterparty: string | null
-      line_count: number
+      office_code: string | null
+      office_name: string | null
     }>(sql`
-      select d.id, d.aju_number, d.aju_date::text, d.status, d.registration_number,
-        d.registration_date::text, ${COUNTERPARTY} as counterparty,
-        (select count(*)::int from customs_document_lines l where l.document_id = d.id)
-          as line_count
+      select d.id, d.number, d.aju_number, d.status, d.registration_number,
+        d.registration_date::text, d.customs_office_code as office_code, r.name as office_name
       from customs_documents d
+      left join ref_codes r on r.type = 'customs_office' and r.code = d.customs_office_code
+        and r.parent_code is null
       where ${where}
-      order by case when d.status in ('registered', 'cancelled') then 1 else 0 end,
-        d.created_at desc
+      order by d.number
       limit ${pageSize} offset ${offset}`),
     db.execute<{ total: number }>(
       sql`select count(*)::int as total from customs_documents d where ${where}`,
@@ -451,13 +452,13 @@ export async function listCustomsDocuments({
   return {
     rows: rows.rows.map((row): CustomsDocumentRow => ({
       id: row.id,
+      number: row.number,
       ajuNumber: row.aju_number,
-      ajuDate: row.aju_date,
       status: row.status,
       registrationNumber: row.registration_number,
       registrationDate: row.registration_date,
-      counterparty: row.counterparty,
-      lineCount: row.line_count,
+      officeCode: row.office_code,
+      officeName: row.office_name,
     })),
     total: totals.rows[0]?.total ?? 0,
   }
@@ -476,105 +477,6 @@ function stringRecord(value: unknown) {
   return Object.fromEntries(
     Object.entries(value as Record<string, unknown>).map(([key, entry]) => [key, String(entry)]),
   )
-}
-
-// Snapshot revisi (jsonb, kolom snake_case) sebagai DocumentRows.
-function snapshotRows(snapshot: unknown): DocumentRows {
-  const camel = (value: unknown): unknown => {
-    if (Array.isArray(value)) return value.map(camel)
-    if (value && typeof value === "object") {
-      return Object.fromEntries(
-        Object.entries(value).map(([key, entry]) => [
-          key.replace(/_([a-z0-9])/g, (_, letter: string) => letter.toUpperCase()),
-          // details sudah camelCase dan isinya bukan kolom.
-          key === "details" ? entry : camel(entry),
-        ]),
-      )
-    }
-    return value
-  }
-  // Snapshot sebelum migrasi customs_forms_hmx belum punya pungutan dokumen, jaminan, dan bank
-  // devisa.
-  return {
-    taxes: [],
-    guarantees: [],
-    bankAccounts: [],
-    ...(camel(snapshot) as Partial<DocumentRows>),
-  } as DocumentRows
-}
-
-export type CustomsRevisionEntry = {
-  version: number
-  reason: string
-  createdAt: Date
-  userName: string | null
-  // Bagian/isian yang berubah di versi berikutnya.
-  changes: string[]
-}
-
-// Riwayat revisi: siapa, kapan, alasan, dan apa yang berubah dibanding versi sesudahnya (versi
-// terakhir dibandingkan dengan dokumen sekarang).
-export async function listCustomsRevisions(
-  spec: CustomsFormSpec,
-  documentId: string,
-  current: CustomsDocumentDraft,
-): Promise<CustomsRevisionEntry[]> {
-  const rows = await db
-    .select({
-      version: customsDocumentRevisions.version,
-      reason: customsDocumentRevisions.reason,
-      createdAt: customsDocumentRevisions.createdAt,
-      snapshot: customsDocumentRevisions.snapshot,
-      userName: users.name,
-    })
-    .from(customsDocumentRevisions)
-    .leftJoin(users, eq(users.id, customsDocumentRevisions.createdBy))
-    .where(eq(customsDocumentRevisions.documentId, documentId))
-    .orderBy(asc(customsDocumentRevisions.version))
-  const drafts = rows.map((row) => buildDraft(spec, snapshotRows(row.snapshot)))
-  return rows.map((row, index) => ({
-    version: row.version,
-    reason: row.reason,
-    createdAt: row.createdAt,
-    userName: row.userName,
-    changes: customsDraftChanges(spec, drafts[index], drafts[index + 1] ?? current),
-  }))
-}
-
-// Satu versi lama (read-only) untuk ditampilkan.
-export async function getCustomsRevision(
-  spec: CustomsFormSpec,
-  documentId: string,
-  version: number,
-) {
-  const [row] = await db
-    .select({
-      snapshot: customsDocumentRevisions.snapshot,
-      reason: customsDocumentRevisions.reason,
-      createdAt: customsDocumentRevisions.createdAt,
-    })
-    .from(customsDocumentRevisions)
-    .innerJoin(customsDocuments, eq(customsDocuments.id, customsDocumentRevisions.documentId))
-    .where(
-      and(
-        eq(customsDocumentRevisions.documentId, documentId),
-        eq(customsDocumentRevisions.version, version),
-        eq(customsDocuments.docCode, spec.code),
-      ),
-    )
-  if (!row) return null
-  const rows = snapshotRows(row.snapshot)
-  const draft = buildDraft(spec, rows)
-  return {
-    version,
-    reason: row.reason,
-    createdAt: row.createdAt,
-    ajuNumber: String(rows.document.ajuNumber),
-    registrationNumber: (rows.document.registrationNumber as string | null) ?? null,
-    registrationDate: (rows.document.registrationDate as string | null) ?? null,
-    draft,
-    refLabels: await refLabelsFor(spec, draft),
-  }
 }
 
 // Penanda wajib mengikuti aturan kelengkapan aktif per jenis dokumen.

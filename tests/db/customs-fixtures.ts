@@ -1,4 +1,4 @@
-import { sql } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import type { Db } from "@/server/db/client"
 import {
@@ -7,16 +7,27 @@ import {
   customsDocumentLines,
   customsDocumentParties,
   customsDocuments,
+  customsDocumentTransfers,
   customsPackages,
   customsTransports,
+  locations,
+  partners,
   products,
+  stockMoves,
+  transfers,
   uomCategories,
   uoms,
+  warehouses,
 } from "@/server/db/schema"
-import { CUSTOMS_ORIGIN_DOC_CODES, type CustomsDocCode } from "@/modules/it-inventory/lib/customs"
+import {
+  CUSTOMS_DOCUMENT_SOURCE_CODES,
+  type CustomsDocCode,
+} from "@/modules/it-inventory/lib/customs"
 
-// Data uji dokumen BC (M3): profil perusahaan (dibutuhkan nomor aju), produk siap BC, dan dokumen
-// yang lolos semua aturan validasi seed. Kode data uji berawalan ZB.
+import { todayWib, withLine } from "./helpers"
+
+// Data uji dokumen BC (M3, H-01): profil perusahaan, produk siap BC, dokumen yang lolos semua
+// aturan validasi seed, dan transfer sumber yang bisa dipilih dokumen. Kode data uji berawalan ZB.
 
 type Tx = Parameters<Parameters<Db["transaction"]>[0]>[0]
 
@@ -125,22 +136,19 @@ export async function insertCompleteDocument(tx: Tx, docCode: CustomsDocCode, pr
       name: `Entitas ${entityTypeCode}`,
     })),
   )
-  const [line] = await tx
-    .insert(customsDocumentLines)
-    .values({
-      documentId: doc.id,
-      seq: 1,
-      productId,
-      qty: "100",
-      ceisaUnitCode: "MTR",
-      stockQty: "100",
-      netWeight: "100",
-      originCountryCode: "CN",
-      cifValue: "1000",
-      fobValue: "900",
-      deliveryPrice: "15000000",
-    })
-    .returning({ id: customsDocumentLines.id })
+  await tx.insert(customsDocumentLines).values({
+    documentId: doc.id,
+    seq: 1,
+    productId,
+    qty: "100",
+    ceisaUnitCode: "MTR",
+    stockQty: "100",
+    netWeight: "100",
+    originCountryCode: "CN",
+    cifValue: "1000",
+    fobValue: "900",
+    deliveryPrice: "15000000",
+  })
   await tx
     .insert(customsAttachments)
     .values({ documentId: doc.id, seq: 1, documentTypeCode: "380", number: "INV-1" })
@@ -150,34 +158,85 @@ export async function insertCompleteDocument(tx: Tx, docCode: CustomsDocCode, pr
   await tx
     .insert(customsTransports)
     .values({ documentId: doc.id, seq: 1, transportModeCode: "1", name: "EVER GIVEN" })
-  // Dokumen keluar MVP butuh alokasi dokumen asal (M4-03): BC 4.0 Terdaftar boleh untuk BC 2.5,
-  // 3.0, dan 4.1.
-  if (CUSTOMS_ORIGIN_DOC_CODES[docCode]) {
-    const origin = await insertCompleteDocument(tx, "40", productId)
-    await registerDocument(tx, origin.id, origin.ajuDate)
-    const [originLine] = await tx
-      .select({ id: customsDocumentLines.id })
-      .from(customsDocumentLines)
-      .where(sql`${customsDocumentLines.documentId} = ${origin.id}`)
-    await tx.execute(
-      sql`select allocate_origin(${line.id}, ${JSON.stringify([{ origin_line_id: originLine.id, qty: "100" }])}::jsonb)`,
-    )
-  }
   return doc
 }
 
-// Draft lengkap → Siap ajukan → Diajukan → Terdaftar.
-export async function registerDocument(tx: Tx, id: string, ajuDate: string) {
-  await tx.execute(sql`select refresh_customs_document_status(${id})`)
-  await tx.execute(sql`select submit_customs_document(${id})`)
-  await tx.execute(sql`select register_customs_document(${id}, '000777', ${ajuDate}::date)`)
+// Transfer Siap yang boleh dipilih dokumen jenis ini (customs_document_source_codes): penerimaan
+// (gr) untuk dokumen masuk, pengiriman (gi) dari stok penerimaan Selesai untuk dokumen keluar.
+export async function insertSourceTransfer(tx: Tx, docCode: CustomsDocCode, productId: string) {
+  const suffix = crypto.randomUUID().slice(0, 8)
+  const [product] = await tx
+    .select({ uomId: products.uomId })
+    .from(products)
+    .where(eq(products.id, productId))
+  const [warehouse] = await tx
+    .insert(warehouses)
+    .values({ code: `ZBW${suffix}`, name: "Gudang uji BC", address: "Bekasi" })
+    .returning({ id: warehouses.id })
+  const [vendor, customer, rack] = await tx
+    .insert(locations)
+    .values([
+      { code: `ZBV${suffix}`, name: "Vendor", type: "vendor" as const },
+      { code: `ZBC${suffix}`, name: "Customer", type: "customer" as const },
+      { code: `ZBR${suffix}`, name: "Rak", type: "internal" as const, warehouseId: warehouse.id },
+    ])
+    .returning({ id: locations.id })
+  const [partner] = await tx
+    .insert(partners)
+    .values({
+      code: `ZBP${suffix}`,
+      name: "Partner uji BC",
+      address: "Bekasi",
+      countryCode: "ID",
+      identityType: "other",
+      identityNumber: suffix,
+    })
+    .returning({ id: partners.id })
+  const transfer = async (type: "receipt" | "delivery", from: string, to: string) => {
+    const [row] = await tx
+      .insert(transfers)
+      .values({
+        type,
+        sourceLocationId: from,
+        destinationLocationId: to,
+        partnerId: partner.id,
+        scheduledDate: todayWib(),
+      })
+      .returning({ id: transfers.id })
+    const move = await withLine(tx, {
+      transferId: row.id,
+      productId,
+      inputQty: "100",
+      inputUomId: product.uomId,
+    })
+    await tx
+      .insert(stockMoves)
+      .values({ ...move, sourceLocationId: from, destinationLocationId: to })
+    await tx.execute(sql`select confirm_transfer(${row.id})`)
+    return row.id
+  }
+  const receipt = await transfer("receipt", vendor.id, rack.id)
+  if (CUSTOMS_DOCUMENT_SOURCE_CODES[docCode].includes("gr")) return receipt
+  await tx.execute(sql`select validate_transfer(${receipt})`)
+  return transfer("delivery", rack.id, customer.id)
 }
 
-// Hapus semua dokumen BC uji, termasuk yang sudah Diajukan/Terdaftar (biasanya dikunci trigger).
+// Pilih transfer sumber lalu Submit (Draft → Submitted).
+export async function submitDocument(tx: Tx, doc: { id: string; docCode: CustomsDocCode }) {
+  const [line] = await tx
+    .select({ productId: customsDocumentLines.productId })
+    .from(customsDocumentLines)
+    .where(eq(customsDocumentLines.documentId, doc.id))
+  const transferId = await insertSourceTransfer(tx, doc.docCode, line.productId)
+  await tx.insert(customsDocumentTransfers).values({ documentId: doc.id, transferId })
+  await tx.execute(sql`select submit_customs_document(${doc.id})`)
+  return transferId
+}
+
+// Hapus semua dokumen BC uji, termasuk yang sudah Submitted (biasanya dikunci trigger).
 export async function purgeCustomsDocuments(db: Db) {
   await db.transaction(async (tx) => {
     await tx.execute(sql`select set_config('app.customs_status_write', 'on', true)`)
-    await tx.execute(sql`delete from origin_allocations`)
     await tx.delete(customsDocuments)
   })
 }

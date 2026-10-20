@@ -23,7 +23,12 @@ import { statusDates } from "@/server/queries/activity"
 import { db } from "@/server/db"
 import { company, customsDocumentLines, products, uomCategories, uoms } from "@/server/db/schema"
 
-import { CUSTOMS_TEST_OFFICE, insertTestCompany, purgeCustomsDocuments } from "./customs-fixtures"
+import {
+  CUSTOMS_TEST_OFFICE,
+  forceCustomsStatus,
+  insertTestCompany,
+  purgeCustomsDocuments,
+} from "./customs-fixtures"
 
 // Form dokumen BC bersama (backlog M3-04): simpan Draft lewat server action, entitas perusahaan
 // terisi sesuai arah dokumen, isi dokumen dibaca kembali utuh untuk form.
@@ -145,7 +150,8 @@ describe("saveCustomsDocument", () => {
     if (!created.ok) return
     const saved = await getCustomsDocument(SPEC_IN, created.data.id)
     expect(saved).toMatchObject({ status: "draft", docCode: "23" })
-    expect(saved?.ajuNumber).toHaveLength(26)
+    expect(saved?.number).toMatch(/^IT\/23\/\d{5}$/)
+    expect(saved?.ajuNumber).toBeNull()
     expect(saved?.draft.details).toEqual({ loadingPortCode: "CNSHA" })
     expect(saved?.draft.header.ndpbm).toBe("15750,5")
     expect(saved?.draft.parties.map((party) => party.entityTypeCode)).toEqual(["3", "7"])
@@ -211,16 +217,18 @@ describe("saveCustomsDocument", () => {
     loginAs(["staf_exim"])
     const created = await saveCustomsDocument(null, form("30", empty))
     if (!created.ok) throw new Error(created.errors.join("\n"))
-    await db.execute(sql`select cancel_customs_document(${created.data.id})`)
+    await db.transaction((tx) =>
+      forceCustomsStatus(tx, created.data.id, { status: "submitted", submittedAt: new Date() }),
+    )
     // Tanggal tiap status untuk kartu status (dari audit log).
     expect(Object.keys(await statusDates("customs_documents", created.data.id)).sort()).toEqual([
-      "cancelled",
       "draft",
+      "submitted",
     ])
     const blocked = await saveCustomsDocument(null, form("30", empty, created.data.id))
     expect(blocked).toMatchObject({
       ok: false,
-      errors: ["Hanya dokumen Draft atau Siap ajukan yang bisa diubah."],
+      errors: ["Dokumen sudah Submitted dan tidak dapat diubah atau dihapus."],
     })
     // Jenis lain dengan id yang sama tidak ditemukan.
     const wrongKind = await saveCustomsDocument(null, form("23", empty, created.data.id))

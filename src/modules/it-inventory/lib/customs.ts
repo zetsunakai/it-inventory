@@ -58,23 +58,13 @@ export const CUSTOMS_DOC_DIRECTIONS: Record<CustomsDocCode, "in" | "out"> = {
 }
 
 // Status dokumen (PRD 7.3). "Gagal kirim" baru ada di fase 2 (CEISA).
-export const CUSTOMS_DOCUMENT_STATUSES = [
-  "draft",
-  "ready",
-  "submitted",
-  "registered",
-  "rejected",
-  "cancelled",
-] as const
+// Status dokumen BC seperti hmx-002 document_state.py (backlog H-01): Submitted = final, terkunci.
+export const CUSTOMS_DOCUMENT_STATUSES = ["draft", "submitted"] as const
 export type CustomsDocumentStatus = (typeof CUSTOMS_DOCUMENT_STATUSES)[number]
 
 export const CUSTOMS_DOCUMENT_STATUS_LABELS: Record<CustomsDocumentStatus, string> = {
   draft: "Draft",
-  ready: "Siap ajukan",
-  submitted: "Diajukan",
-  registered: "Terdaftar",
-  rejected: "Ditolak",
-  cancelled: "Batal",
+  submitted: "Submitted",
 }
 
 // Bagian dokumen yang diperiksa aturan validasi (doc_validation_rules, M3-03). field berisi nama
@@ -97,11 +87,7 @@ export const CUSTOMS_DOCUMENT_STATUS_TONES: Record<
   "neutral" | "info" | "success" | "warning" | "danger"
 > = {
   draft: "neutral",
-  ready: "warning",
-  submitted: "info",
-  registered: "success",
-  rejected: "danger",
-  cancelled: "neutral",
+  submitted: "success",
 }
 
 // Filter tanggal aju di daftar dokumen (M3-13), dihitung dalam WIB oleh database.
@@ -115,18 +101,21 @@ export const CUSTOMS_PERIOD_LABELS: Record<CustomsPeriod, string> = {
   "tahun-ini": "Tahun ini",
 }
 
-// Jenis dokumen BC yang boleh ditautkan per kode pergerakan transfer (M4-01, keputusan 18/10/2026):
-// hanya penerimaan dan pengiriman. Sama dengan customs_movement_doc_codes() di database.
-export const CUSTOMS_MOVEMENT_DOC_CODES: Partial<Record<string, readonly CustomsDocCode[]>> = {
-  gr: ["23", "40"],
-  gi: ["25", "30", "41"],
+// Sumber transfer yang boleh dipilih per jenis dokumen (DOCUMENT_SOURCE_MAP hmx-002, backlog H-01):
+// penerimaan gr, pengiriman gi, antar gudang itw_in/itw_out; status Siap atau Selesai. Sama dengan
+// customs_document_source_codes() di database.
+export const CUSTOMS_DOCUMENT_SOURCE_CODES: Record<CustomsDocCode, readonly string[]> = {
+  "16": ["gr"],
+  "20": ["gr"],
+  "23": ["itw_in", "itw_out", "gr"],
+  "25": ["gi"],
+  "27": ["itw_in", "itw_out", "gr", "gi"],
+  "261": ["gi"],
+  "262": ["gr"],
+  "28": ["gi"],
+  "30": ["gi"],
+  "33": ["gr", "gi"],
+  "331": ["gi"],
+  "40": ["itw_in", "itw_out", "gr"],
+  "41": ["itw_in", "itw_out", "gi"],
 }
-
-// Jenis dokumen asal yang boleh per jenis dokumen keluar (PRD 8.5, M4-03). Sama dengan
-// customs_origin_doc_codes() di database.
-export const CUSTOMS_ORIGIN_DOC_CODES: Partial<Record<CustomsDocCode, readonly CustomsDocCode[]>> =
-  {
-    "25": ["23", "40"],
-    "30": ["23", "40"],
-    "41": ["40"],
-  }

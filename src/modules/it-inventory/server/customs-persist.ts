@@ -1,6 +1,6 @@
 import "server-only"
 
-import { eq, inArray, sql } from "drizzle-orm"
+import { eq, inArray } from "drizzle-orm"
 
 import type { CustomsDocCode } from "@/modules/it-inventory/lib/customs"
 import {
@@ -25,9 +25,9 @@ import {
 // Penyimpanan isi dokumen BC di dalam transaksi aksi (M3-04, M4-04). Bukan file "use server":
 // fungsi di sini hanya dipanggil aksi yang sudah memeriksa izin.
 
-// Dokumen yang sudah diajukan dikunci database (M3-11); pesan ini untuk kasus yang dicek lebih dulu.
-export const EDITABLE: string[] = ["draft", "ready"]
-export const NOT_EDITABLE = "Hanya dokumen Draft atau Siap ajukan yang bisa diubah."
+// Dokumen Submitted dikunci database (H-01); pesan ini untuk kasus yang dicek lebih dulu.
+export const EDITABLE: string[] = ["draft"]
+export const NOT_EDITABLE = "Dokumen sudah Submitted dan tidak dapat diubah atau dihapus."
 
 // Simpan isi dokumen (baru atau Draft yang ada); dipakai form dan "Buat dokumen BC" dari transfer
 // (M4-04). Mengembalikan id dokumen.
@@ -89,8 +89,6 @@ export async function persistCustomsDocument(
   if (document.bankAccounts.length) {
     await tx.insert(customsBankAccounts).values(numbered(document.bankAccounts))
   }
-  // Draft ⇄ Siap ajukan sesuai kelengkapan (M3-11).
-  await tx.execute(sql`select refresh_customs_document_status(${documentId})`)
   return documentId
 }
 

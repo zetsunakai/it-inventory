@@ -167,7 +167,7 @@ dimatikan: user baru dibuat oleh Administrator.
   `assign_auto_lots()`: per lot satu lot baru per baris, per nomor seri baris qty n dipecah jadi n
   baris ber-qty 1. Nomor urut `next_number('lot:<id produk>', '')` ikut batal bila validasi gagal.
 - `validate_transfer()` sekarang memanggil `transfer_validation_errors()` untuk semua syarat
-  (akses, tanggal, periode, persetujuan, pelacakan, stok, retur, gerbang dokumen BC).
+  (akses, tanggal, periode, persetujuan, pelacakan, stok, retur).
 - Import/export produk: kolom Pelacakan (judul lama "Wajib lot" dengan Ya/Tidak tetap diterima),
   Nomor lot/seri otomatis (Ya/Tidak; kolom lama "Prefix nomor lot/seri" yang terisi dianggap Ya),
   Digit nomor lot/seri.
@@ -291,8 +291,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate
   hanya Manajer, tidak boleh masa depan), alasan dan persetujuan untuk scrap/penyesuaian, nomor lot
   untuk produk wajib lot, stok cukup (selalu; stok di lokasi gudang
-  tidak pernah boleh minus, pengaturan `inventory.allow_negative_stock` dihapus di RM-02), dan gerbang dokumen BC (`customs_gate_errors()`, diisi di
-  M4). Bila lolos, baris menjadi Selesai dengan salinan kategori produk, saldo diperbarui, dan
+  tidak pernah boleh minus, pengaturan `inventory.allow_negative_stock` dihapus di RM-02). Dokumen BC tidak menahan validasi
+  (H-01, mengikuti hmx). Bila lolos, baris menjadi Selesai dengan salinan kategori produk, saldo diperbarui, dan
   transfer dikunci, semuanya dalam satu transaksi. Saldo dikunci baris per baris, jadi dua
   validasi bersamaan tidak bisa menghabiskan stok yang sama.
 - Trigger menolak: perubahan dan penghapusan transfer/baris Selesai atau Batal, baris baru di
@@ -442,18 +442,16 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 - `doc_code` sama dengan kodeDokumen CEISA (`23`, `40`, `25`, `30`, `41`, `20`, `261`, `262`,
   `27`, `16`, `28`, `33`, dan `331` untuk P3BET); label, arah, dan status ada di
   `src/modules/it-inventory/lib/customs.ts`. Arah di database: `customs_doc_direction()`; nama
-  jenis untuk pesan: `customs_doc_title()`. Jenis di luar MVP baru punya form dan aturan validasi;
-  gerbang transfer dan alokasi asal tetap hanya untuk jenis MVP.
+  jenis untuk pesan: `customs_doc_title()`. Semua jenis memakai alur dan
+  pilihan transfer yang sama (H-01).
 - Menambah nilai `customs_doc_code`: drizzle menjalankan semua migrasi dalam satu transaksi, dan
   nilai dari `ALTER TYPE ... ADD VALUE` tidak bisa dipakai di transaksi itu. Bila aturan validasi
   jenis baru ikut di-seed, buat ulang tipenya seperti migrasi `customs_doc_codes_all`.
-- Nomor aju (M3-02) dibuat trigger saat dokumen dibuat lewat `next_aju_number(doc_code, kantor,
-tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar/angka) + kode
-  dokumen 3 digit + kode kantor 6 digit (kantor pabean dokumen, atau kantor pengawas di profil
-  perusahaan) + tanggal WIB + nomor urut 6 digit per jenis (`next_number('aju:<kode>', '')`). Nomor
-  dan tanggal aju tidak bisa diubah, termasuk saat revisi; nilai yang dikirim aplikasi diabaikan.
-- Dokumen baru selalu Draft, pembuatnya diisi dari `app.user_id`, dan jenisnya tidak bisa diubah.
-  Status Terdaftar wajib punya nomor dan tanggal daftar.
+- Nomor dokumen (H-01, sequence `IT/23/` hmx): trigger mengisi `number` = `IT/<kode>/<5 digit>`
+  urut per jenis (`next_number('customs_document:<kode>', 'all')`) saat dokumen dibuat; nomor dan
+  jenis tidak bisa diubah. No. Aju, tanggal aju, No. Daftar, dan tanggal daftar diisi manual dari
+  portal CEISA (boleh kosong selama Draft).
+- Dokumen baru selalu Draft dan pembuatnya diisi dari `app.user_id`.
 - Field wajib per jenis dokumen ada di tabel `doc_validation_rules` (M3-03): `target` header
   (kolom `customs_documents`), details (kunci jsonb, camelCase), party (kode entitas CEISA),
   line (kolom baris, diperiksa per seri), attachment (kode jenis dokumen, mis. 380 invoice),
@@ -491,76 +489,48 @@ tanggal)`: kode perusahaan (pengaturan `customs.aju_company_code`, 3 huruf besar
   `bc:read`, hanya kunci yang tercatat sebagai lampiran). File yang dilepas atau tidak jadi
   disimpan tetap ada di storage; belum ada pembersihan otomatis.
 
-- Alur status (M3-11, migrasi `customs_status_rules`): Draft ⇄ Siap ajukan otomatis setiap kali
-  disimpan (`refresh_customs_document_status()`: Siap ajukan bila `customs_document_errors()`
-  kosong) → `submit_customs_document()` (Diajukan, setelah diinput di portal CEISA) →
-  `register_customs_document(id, nomor, tanggal, respon...)` (Terdaftar; nomor dan tanggal daftar
-  wajib, tanggal tidak di masa depan atau sebelum tanggal aju) atau
-  `reject_customs_document(id, alasan, respon...)` (Ditolak) → `reset_customs_document_to_draft()`.
-  `cancel_customs_document()` hanya Manajer/Administrator (izin `bc:cancel`), sebelum Terdaftar.
-  Status hanya berubah lewat fungsi itu (penanda transaksi `app.customs_status_write`); dokumen
-  Diajukan, Terdaftar, Ditolak, dan Batal beserta semua bagiannya dikunci trigger
-  (`customs_parts_guard`) dan tidak bisa dihapus. Halaman detail menampilkan kekurangan Draft,
-  tombol alur sesuai status, dan alasan penolakan.
-- Revisi (M3-12, migrasi `customs_revision_rules`): `revise_customs_document(id, alasan)` hanya untuk
-  dokumen Terdaftar; menyimpan `customs_document_snapshot()` (dokumen + semua bagian sebagai jsonb)
-  ke `customs_document_revisions` (append-only), lalu dokumen naik `version` dan kembali ke Draft
-  dengan nomor aju yang sama untuk dikoreksi, diajukan, dan didaftarkan ulang. Riwayat di halaman
-  detail menyebut siapa, kapan, alasan, dan isian yang berubah (`customsDraftChanges()`,
-  membandingkan snapshot dengan versi berikutnya); versi lama dibuka di
-  `/dokumen-bc/<jenis>/<id>/versi/<n>` (hanya baca). Angka di snapshot dibaca sebagai number
-  JavaScript, jadi tampilannya tepat sampai 15 digit.
-- Daftar per jenis (M3-13): cari nomor aju, nomor daftar, atau nama partner; filter status, tanggal
-  aju (bulan ini, bulan lalu, 3 bulan terakhir, tahun ini; WIB), dan kantor pabean (pilihannya
+- Alur status mengikuti hmx (H-01, migrasi `customs_hmx_flow_rules`): Draft → Submitted lewat
+  `submit_customs_document()`, yang memeriksa `customs_document_errors()` dan wajib ada Inventory
+  Transfer Documents; semua kekurangan dilaporkan sekaligus. Status hanya berubah lewat fungsi itu
+  (penanda transaksi `app.customs_status_write`, pesan "Gunakan tombol Submit untuk mengubah status
+  dokumen."). Dokumen Submitted beserta semua bagian dan tautan transfernya dikunci trigger
+  (`customs_parts_guard`) dan tidak bisa dihapus. Draft boleh dihapus (tombol Hapus di detail).
+  Tidak ada status Siap ajukan, Terdaftar, Ditolak, Batal, maupun revisi bernomor versi.
+- Daftar per jenis (M3-13, kolom list hmx): Nomor, No. Aju, No. Daftar, Tgl. Daftar, Kantor Pabean
+  Pengawasan, Status. Cari nomor, nomor aju, nomor daftar, atau nama partner; filter status, tanggal
+  dibuat (bulan ini, bulan lalu, 3 bulan terakhir, tahun ini; WIB), dan kantor pabean (pilihannya
   dari kantor yang dipakai dokumen jenis itu). Menu ⋯ di detail: Unduh PDF, Unduh Excel, Duplikat.
-- Duplikat: `duplicate_customs_document()` membuat Draft baru (nomor aju baru) dengan salinan
-  header, entitas, barang beserta pungutan, kemasan, peti kemas, pengangkutan, dan baris lampiran
-  tanpa file; status dihitung ulang (aturan invoice memeriksa baris lampiran, bukan filenya).
+- Duplikat: `duplicate_customs_document()` membuat Draft baru (nomor baru, tanpa No. Aju, nomor
+  daftar, dan tautan transfer) dengan salinan header, entitas, barang beserta pungutan, kemasan,
+  peti kemas, pengangkutan, dan baris lampiran tanpa file.
 - Export draft untuk input manual ke CEISA: `/api/customs-documents/<id>/export?format=pdf|xlsx`
   (izin `bc:read`), dibangun `customsExportSections()` di
   `src/modules/it-inventory/server/customs-export.ts`: Excel satu sheet per bagian (`exceljs`),
   PDF A4 (`pdf-lib`, font standar Latin-1; karakter lain diganti "?").
-- Tes yang perlu menghapus dokumen non-Draft memakai `purgeCustomsDocuments()` atau
-  `forceCustomsStatus()` (`tests/db/customs-fixtures.ts`).
-- Tautan ke inventory sudah disiapkan untuk gerbang dokumen (M4): `transfers.customs_document_id`
-  dan `stock_moves.customs_document_line_id`. Dokumen yang sudah dipakai transfer tidak bisa
-  dihapus.
+- Tes yang perlu menghapus dokumen Submitted memakai `purgeCustomsDocuments()` atau
+  `forceCustomsStatus()`; `submitDocument()` memilih transfer sumber lalu Submit
+  (`tests/db/customs-fixtures.ts`).
 
-## Gerbang dokumen BC dan ketertelusuran (M4)
+## Dokumen BC ↔ transfer (H-01, mengikuti hmx)
 
-- Hanya penerimaan (`gr`) dan pengiriman (`gi`) yang memakai dokumen BC (keputusan 18/10/2026,
-  PRD 15.4): `gr` → BC 2.3 atau 4.0, `gi` → BC 2.5, 3.0, atau 4.1 (`customs_movement_doc_codes()`,
-  `CUSTOMS_MOVEMENT_DOC_CODES`). Retur, pindah lokasi, antar gudang, pemakaian & scrap, dan
-  penyesuaian tidak bisa ditautkan.
-- Tautan (M4-01, migrasi `customs_transfer_links`, `customs_move_links`):
-  `transfers.customs_document_id` (jenis cocok, dokumen tidak Batal, tidak bisa diganti setelah
-  Selesai; transfer lanjutan mewarisi dokumen transfer asal) dan `stock_moves.customs_document_line_id`
-  yang diisi database per produk (saat transfer ditautkan, move dibuat, atau baris dokumen
-  ditambah). Baris dokumen yang dipakai move Selesai tidak bisa diganti produknya atau dihapus.
-  Form dokumen menyimpan barang per seri (`saveLines`) supaya id baris tetap.
-- Gerbang (M4-02, `customs_gate_errors()` di `transfer_validation_errors()`): penerimaan/pengiriman
-  hanya bisa Selesai bila dokumennya Terdaftar dan qty per produk (satuan stok) tidak melebihi sisa
-  dokumen (qty dokumen − transfer lain Selesai dengan dokumen sama). Parsial boleh, kelebihan
-  toleransi 0, tanpa override. Dokumen yang direvisi kembali Draft sehingga menahan transfer.
-  Penanda `app.customs_gate = 'off'` hanya untuk koneksi tes inventory lama (Vitest lewat
-  `tests/db/setup-env.ts`, server e2e lewat `playwright.config.ts`); aplikasi tidak pernah
-  menyetelnya. Tes gerbang (`tests/db/customs-gate.test.ts`) memakai koneksi dengan gerbang aktif.
-- Alokasi dokumen asal (M4-03, migrasi `origin_allocation_rules`): `origin_allocations` dari baris
-  dokumen keluar ke baris dokumen masuk Terdaftar (BC 2.5 dan 3.0 dari BC 2.3/4.0, BC 4.1 hanya dari
-  BC 4.0; produk sama; tidak melebihi sisa di view `customs_origin_balances`, baris asal dikunci).
-  `allocate_origin(baris, [{origin_line_id, qty}])` mengganti alokasi satu baris;
-  `suggest_origin_allocations(baris)` memberi saran FIFO. Alokasi lengkap jadi syarat Siap ajukan:
-  `customs_document_errors()` = `customs_rule_errors()` (aturan M3-03) + `customs_origin_errors()`.
-  Alokasi ikut terkunci bersama dokumen keluarnya; dokumen keluar Batal mengembalikan saldo asal.
-- Layar (M4-04, M4-05): panel Dokumen BC di detail penerimaan/pengiriman (dokumen tertaut, qty per
-  produk, alasan gerbang, tombol Buat BC …, tautkan dokumen yang ada lewat
-  `/api/customs-documents/linkable`, lepas tautan). Panel disisipkan halaman `src/app` lewat prop
-  `panel` `TransferDetailPage`, jadi modul inventory tidak mengimpor modul IT Inventory. Detail
-  dokumen punya bagian Transfer (qty dokumen vs Selesai vs berjalan) dan, untuk dokumen keluar,
-  Alokasi dokumen asal (pilih saldo lewat `/api/customs-origins`, Saran FIFO, Simpan alokasi).
+- Dokumen memilih transfer (Inventory Transfer Documents) lewat tabel `customs_document_transfers`
+  (dokumen, transfer). Satu dokumen boleh memilih beberapa transfer, dan satu transfer boleh dipilih
+  beberapa dokumen. Transfer yang sudah dipilih tidak bisa dihapus.
+- Sumber yang diizinkan per jenis mengikuti `DOCUMENT_SOURCE_MAP` hmx
+  (`customs_document_source_codes()`, `CUSTOMS_DOCUMENT_SOURCE_CODES`): BC 1.6/2.0/2.6.2 `gr`;
+  BC 2.3 dan 4.0 `itw_in`, `itw_out`, `gr`; BC 2.5/2.6.1/2.8/3.0/P3BET `gi`; BC 2.7 `itw_in`,
+  `itw_out`, `gr`, `gi`; BC 3.3 `gr`, `gi`; BC 4.1 `itw_in`, `itw_out`, `gi`. Transfer harus Siap atau
+  Selesai; selain itu trigger `customs_document_transfers_check` menolak dengan pesan hmx
+  "Dokumen … hanya dapat dikaitkan dengan sumber inventory yang diizinkan."
+- Tidak ada gerbang: validasi transfer tidak menunggu dokumen BC, dan tidak ada alokasi dokumen
+  asal. Data lama dipindahkan migrasi `customs_hmx_flow` (Terdaftar → Submitted, Siap
+  ajukan/Ditolak → Draft, Batal dihapus, tautan transfer lama → `customs_document_transfers`).
+- Layar: panel Dokumen BC di detail penerimaan/pengiriman hanya membaca dokumen yang memilih
+  transfer itu (disisipkan halaman `src/app` lewat prop `panel` `TransferDetailPage`, jadi modul
+  inventory tidak mengimpor modul IT Inventory). Detail dokumen punya bagian Transfer. Pemilih
+  transfer dan sinkron baris barang menyusul di H-03/H-04.
 - Data demo (M4-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat produk
-  `DEMO-KAIN`, BC 2.3 Terdaftar, penerimaan yang ditautkan dan divalidasi lewat gerbang, dan BC 2.5
-  Siap ajukan dengan alokasi asal ke BC 2.3.
+  `DEMO-KAIN`, penerimaan Selesai, BC 2.3 Submitted yang memilih penerimaan itu, dan BC 2.5 Draft.
 
 ## Penyimpanan file
 

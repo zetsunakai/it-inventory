@@ -42,7 +42,7 @@ export async function GET(
   if (!spec || !doc) return Response.json({ error: "Dokumen tidak ditemukan." }, { status: 404 })
 
   const body = await FORMATS[format].build(spec, doc)
-  const name = `${spec.title.replace(/\W/g, "")}-${doc.ajuNumber}.${format}`
+  const name = `${spec.title.replace(/\W/g, "")}-${doc.number.replace(/\W/g, "")}.${format}`
   return new Response(Buffer.from(body), {
     headers: {
       "content-type": FORMATS[format].type,

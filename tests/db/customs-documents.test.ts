@@ -11,31 +11,26 @@ import {
   customsDocumentParties,
   customsDocumentTaxes,
   customsDocuments,
+  customsDocumentTransfers,
   customsPackages,
   customsTransports,
-  locations,
-  partners,
   products,
-  systemSettings,
   transfers,
   uomCategories,
   uoms,
-  warehouses,
 } from "@/server/db/schema"
 
-import { CUSTOMS_TEST_OFFICE, insertTestCompany } from "./customs-fixtures"
+import { insertSourceTransfer, insertTestCompany } from "./customs-fixtures"
 import { inRollback, pgErrorInSavepoint, setAuditUser } from "./helpers"
 
 // Skema dokumen BC (backlog M3-01, PRD bagian 7 dan 13): satu set tabel untuk semua jenis
-// dokumen, dibedakan doc_code. Nomor aju (M3-02, PRD 7.4). Data uji dibuat di transaksi yang
+// dokumen, dibedakan doc_code. Nomor dokumen dan nomor aju manual (H-01, PRD 7.4). Data uji dibuat di transaksi yang
 // di-rollback, kecuali profil perusahaan dan dokumen dari tes penomoran bersamaan.
 
 type Tx = Parameters<Parameters<typeof inRollback>[1]>[0]
 
 const ACTOR = "7a2d3c4b-5e6f-4a1b-9c8d-0e1f2a3b4c5d"
 
-// Kantor pengawas di profil perusahaan menjadi kode kantor nomor aju bila dokumen belum memilih.
-const OFFICE = CUSTOMS_TEST_OFFICE
 const committedDocuments: string[] = []
 
 beforeAll(async () => {
@@ -52,10 +47,6 @@ afterAll(async () => {
   await db.delete(company)
   await db.$client.end()
 })
-
-function todayWib() {
-  return new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" }).replaceAll("-", "")
-}
 
 async function fixtures(tx: Tx) {
   const [category] = await tx
@@ -115,7 +106,11 @@ describe("customs_documents", () => {
         cifValue: "1200.50",
         details: { loadingPortCode: "CNSHA", bc11Number: "000123" },
       })
-      expect(doc).toMatchObject({ status: "draft", version: 1, createdBy: ACTOR })
+      expect(doc).toMatchObject({
+        status: "draft",
+        number: expect.stringMatching(/^IT\/23\//),
+        createdBy: ACTOR,
+      })
 
       await tx.insert(customsDocumentParties).values([
         { documentId: doc.id, entityTypeCode: "3", name: "PT Uji Berikat", identityTypeCode: "6" },
@@ -198,7 +193,7 @@ describe("customs_documents", () => {
 
   test("dokumen baru selalu Draft dan jenisnya tidak bisa diubah", async () => {
     await inRollback(db, async (tx) => {
-      expect(await pgErrorInSavepoint(tx, (sp) => draft(sp, { status: "ready" }))).toBe(
+      expect(await pgErrorInSavepoint(tx, (sp) => draft(sp, { status: "submitted" }))).toBe(
         "Dokumen BC baru selalu berstatus Draft.",
       )
       const doc = await draft(tx)
@@ -210,27 +205,8 @@ describe("customs_documents", () => {
     })
   })
 
-  test("constraint header: Terdaftar wajib nomor daftar, Batal wajib tanggal, details berupa objek", async () => {
+  test("constraint header: details berupa objek, NDPBM positif, nilai tidak negatif", async () => {
     await inRollback(db, async (tx) => {
-      const doc = await draft(tx)
-      // Status biasanya hanya lewat fungsi alur (M3-11); di sini constraint-nya yang diuji.
-      await tx.execute(sql`select set_config('app.customs_status_write', 'on', true)`)
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp
-            .update(customsDocuments)
-            .set({ status: "registered" })
-            .where(eq(customsDocuments.id, doc.id)),
-        ),
-      ).toContain("customs_documents_registered_has_number")
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp
-            .update(customsDocuments)
-            .set({ status: "cancelled" })
-            .where(eq(customsDocuments.id, doc.id)),
-        ),
-      ).toContain("customs_documents_cancelled_has_date")
       expect(await pgErrorInSavepoint(tx, (sp) => draft(sp, { details: [1, 2] }))).toContain(
         "customs_documents_details_object",
       )
@@ -260,70 +236,47 @@ describe("customs_documents", () => {
   })
 })
 
-describe("next_aju_number", () => {
-  test("format 26 karakter: kode perusahaan, kode dokumen, kantor, tanggal WIB, nomor urut per jenis", async () => {
+describe("nomor dokumen dan nomor aju", () => {
+  test("nomor IT/<kode>/<5 digit> urut per jenis; nomor yang dikirim aplikasi dipakai apa adanya", async () => {
     await inRollback(db, async (tx) => {
       const first = await draft(tx)
       const second = await draft(tx)
-      const other = await draft(tx, { docCode: "40", customsOfficeCode: "040300" })
-
-      const prefix = `000023${OFFICE}${todayWib()}`
-      expect(first.ajuNumber).toHaveLength(26)
-      expect(first.ajuNumber.startsWith(prefix)).toBe(true)
-      expect(Number(second.ajuNumber.slice(-6))).toBe(Number(first.ajuNumber.slice(-6)) + 1)
-      expect(other.ajuNumber.slice(0, 20)).toBe(`000040040300${todayWib()}`)
-      expect(first.ajuDate.replaceAll("-", "")).toBe(todayWib())
+      const other = await draft(tx, { docCode: "40" })
+      expect(first.number).toMatch(/^IT\/23\/\d{5}$/)
+      expect(Number(second.number.slice(-5))).toBe(Number(first.number.slice(-5)) + 1)
+      expect(other.number).toMatch(/^IT\/40\/\d{5}$/)
     })
   })
 
-  test("nomor aju yang dikirim aplikasi diabaikan dan tidak bisa diubah", async () => {
+  test("nomor aju diisi manual dan boleh diubah selama Draft", async () => {
     await inRollback(db, async (tx) => {
-      const doc = await draft(tx, { ajuNumber: "X".repeat(26) })
-      expect(doc.ajuNumber.startsWith("000023")).toBe(true)
-      expect(
-        await pgErrorInSavepoint(tx, (sp) =>
-          sp
-            .update(customsDocuments)
-            .set({ ajuNumber: "00002305050020260101000001" })
-            .where(eq(customsDocuments.id, doc.id)),
-        ),
-      ).toBe("Nomor dan tanggal aju tidak bisa diubah.")
-      // Perubahan lain (mis. naik versi saat revisi) tidak menyentuh nomor aju.
-      const [revised] = await tx
+      const doc = await draft(tx)
+      expect(doc.ajuNumber).toBeNull()
+      expect(doc.ajuDate).toBeNull()
+      const [updated] = await tx
         .update(customsDocuments)
-        .set({ version: 2 })
+        .set({ ajuNumber: "00002305050020260101000001", ajuDate: "2026-01-01" })
         .where(eq(customsDocuments.id, doc.id))
         .returning()
-      expect(revised.ajuNumber).toBe(doc.ajuNumber)
+      expect(updated).toMatchObject({
+        ajuNumber: "00002305050020260101000001",
+        ajuDate: "2026-01-01",
+        number: doc.number,
+      })
     })
   })
 
-  test("kode perusahaan dan kantor harus sesuai format", async () => {
-    await inRollback(db, async (tx) => {
-      expect(await pgErrorInSavepoint(tx, (sp) => draft(sp, { customsOfficeCode: "ABC" }))).toBe(
-        "Kode kantor pabean ABC harus 6 digit untuk nomor aju.",
-      )
-      await tx
-        .update(systemSettings)
-        .set({ value: "ab" })
-        .where(eq(systemSettings.key, "customs.aju_company_code"))
-      expect(await pgErrorInSavepoint(tx, (sp) => draft(sp))).toContain(
-        "Kode perusahaan untuk nomor aju harus 3 huruf besar atau angka",
-      )
-    })
-  })
-
-  test("10 dokumen dibuat bersamaan mendapat nomor aju unik", async () => {
+  test("10 dokumen dibuat bersamaan mendapat nomor unik", async () => {
     const rows = await Promise.all(
       Array.from({ length: 10 }, () =>
         db
           .insert(customsDocuments)
           .values({ docCode: "25" })
-          .returning({ id: customsDocuments.id, ajuNumber: customsDocuments.ajuNumber }),
+          .returning({ id: customsDocuments.id, number: customsDocuments.number }),
       ),
     )
     committedDocuments.push(...rows.map(([row]) => row.id))
-    expect(new Set(rows.map(([row]) => row.ajuNumber)).size).toBe(10)
+    expect(new Set(rows.map(([row]) => row.number)).size).toBe(10)
   })
 })
 
@@ -382,43 +335,17 @@ describe("customs_document_lines", () => {
 })
 
 describe("relasi ke transfer", () => {
-  test("dokumen yang sudah dipakai transfer tidak bisa dihapus", async () => {
+  test("transfer yang sudah dipilih dokumen tidak bisa dihapus", async () => {
     await inRollback(db, async (tx) => {
+      const product = await fixtures(tx)
       const doc = await draft(tx)
-      const [warehouse] = await tx
-        .insert(warehouses)
-        .values({ code: "ZBG1", name: "ZBG1", address: "Bekasi" })
-        .returning({ id: warehouses.id })
-      const [vendor, internal] = await tx
-        .insert(locations)
-        .values([
-          { code: "ZBVEND", name: "Vendor", type: "vendor" },
-          { code: "ZBRAK", name: "Rak", type: "internal", warehouseId: warehouse.id },
-        ])
-        .returning({ id: locations.id })
-      const [partner] = await tx
-        .insert(partners)
-        .values({
-          name: "ZB Vendor",
-          address: "Jl. Uji",
-          countryCode: "ID",
-          identityType: "other",
-          identityNumber: "ZB-1",
-        })
-        .returning({ id: partners.id })
-      await tx.insert(transfers).values({
-        type: "receipt",
-        sourceLocationId: vendor.id,
-        destinationLocationId: internal.id,
-        partnerId: partner.id,
-        customsDocumentId: doc.id,
-      })
-
+      const transferId = await insertSourceTransfer(tx, "23", product.ready)
+      await tx.insert(customsDocumentTransfers).values({ documentId: doc.id, transferId })
       expect(
         await pgErrorInSavepoint(tx, (sp) =>
-          sp.delete(customsDocuments).where(eq(customsDocuments.id, doc.id)),
+          sp.delete(transfers).where(eq(transfers.id, transferId)),
         ),
-      ).toContain("transfers_customs_document_id_customs_documents_id_fk")
+      ).toContain("customs_document_transfers_transfer_id_transfers_id_fk")
     })
   })
 })

@@ -29,10 +29,10 @@ import type { CustomsDocumentRow } from "./queries/customs-documents"
 // ke portal CEISA selama MVP. Isinya semua bagian dokumen, urut seperti tab form.
 
 export type ExportDocument = {
-  ajuNumber: string
-  ajuDate: string
+  number: string
+  ajuNumber: string | null
+  ajuDate: string | null
   status: CustomsDocumentStatus
-  version: number
   registrationNumber: string | null
   registrationDate: string | null
   draft: CustomsDocumentDraft
@@ -73,10 +73,10 @@ export function customsExportSections(spec: CustomsFormSpec, doc: ExportDocument
       title: "Dokumen",
       fields: [
         ["Jenis dokumen", `${spec.title} (${spec.code})`],
-        ["Nomor aju", doc.ajuNumber],
+        ["Nomor", doc.number],
+        ["Nomor aju", doc.ajuNumber ?? "—"],
         ["Tanggal aju", date(doc.ajuDate)],
         ["Status", CUSTOMS_DOCUMENT_STATUS_LABELS[doc.status]],
-        ["Versi", String(doc.version)],
         ["Nomor daftar", doc.registrationNumber ?? "—"],
         ["Tanggal daftar", date(doc.registrationDate)],
       ],
@@ -193,7 +193,7 @@ export async function customsExportExcel(spec: CustomsFormSpec, doc: ExportDocum
     for (let index = 2; names.has(name); index++) name = `${section.title.slice(0, 27)} (${index})`
     names.add(name)
     const sheet = workbook.addWorksheet(name)
-    sheet.addRow([`${spec.title} ${doc.ajuNumber} · ${section.title}`]).font = { bold: true }
+    sheet.addRow([`${spec.title} ${doc.number} · ${section.title}`]).font = { bold: true }
     sheet.addRow([DRAFT_NOTE]).font = { italic: true }
     sheet.addRow([])
     for (const [label, value] of section.fields ?? []) {
@@ -219,21 +219,19 @@ export async function customsListExport(
   format: "pdf" | "xlsx",
 ) {
   const columns = [
-    "Nomor aju",
-    "Tanggal aju",
-    "Pemasok/penerima",
-    "Nomor daftar",
-    "Tanggal daftar",
-    "Barang",
+    "Nomor",
+    "No. Aju",
+    "No. Daftar",
+    "Tgl. Daftar",
+    "Kantor Pabean Pengawasan",
     "Status",
   ]
   const values = rows.map((row) => [
-    row.ajuNumber,
-    date(row.ajuDate),
-    row.counterparty ?? "—",
+    row.number,
+    row.ajuNumber ?? "—",
     row.registrationNumber ?? "—",
     date(row.registrationDate),
-    String(row.lineCount),
+    row.officeName ?? row.officeCode ?? "—",
     CUSTOMS_DOCUMENT_STATUS_LABELS[row.status],
   ])
   if (format === "xlsx") {
@@ -273,13 +271,13 @@ export async function customsListExport(
 // supaya muat di kertas tegak. Font standar PDF hanya Latin-1; karakter lain diganti "?".
 export async function customsExportPdf(spec: CustomsFormSpec, doc: ExportDocument) {
   const pdf = await PDFDocument.create()
-  pdf.setTitle(`${spec.title} ${doc.ajuNumber}`)
+  pdf.setTitle(`${spec.title} ${doc.number}`)
   pdf.setCreator("IT Inventory")
   const regular = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
   const writer = new PdfWriter(pdf, regular, bold)
 
-  writer.text(`${spec.title} ${doc.ajuNumber}`, { font: bold, size: 14 })
+  writer.text(`${spec.title} ${doc.number}`, { font: bold, size: 14 })
   writer.text(spec.description, { size: 9 })
   writer.text(DRAFT_NOTE, { size: 9, color: 0.45 })
   for (const section of customsExportSections(spec, doc)) {

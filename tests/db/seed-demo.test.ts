@@ -4,6 +4,7 @@ import { afterAll, expect, test } from "vitest"
 import { createDb, type Db } from "@/server/db/client"
 import {
   customsDocuments,
+  customsDocumentTransfers,
   locations,
   products,
   transfers,
@@ -53,12 +54,13 @@ test("BC 2.3 Terdaftar, penerimaan Selesai lewat gerbang, BC 2.5 Siap ajukan den
       )
       .orderBy(customsDocuments.docCode)
     expect(docs).toEqual([
-      { docCode: "23", status: "registered" },
-      { docCode: "25", status: "ready" },
+      { docCode: "23", status: "submitted" },
+      { docCode: "25", status: "draft" },
     ])
     const [receipt] = await tx
-      .select({ status: transfers.status, documentId: transfers.customsDocumentId })
+      .select({ status: transfers.status, documentId: customsDocumentTransfers.documentId })
       .from(transfers)
+      .leftJoin(customsDocumentTransfers, eq(customsDocumentTransfers.transferId, transfers.id))
       .where(eq(transfers.reference, "PO-DEMO-001"))
     expect(receipt.status).toBe("done")
     expect(receipt.documentId).not.toBeNull()

@@ -7,12 +7,6 @@ import { TEST_DATABASE_URL } from "./tests/test-env"
 const PORT = 3100
 const BASE_URL = `http://localhost:${PORT}`
 
-// Gerbang dokumen BC (M4-02) dimatikan untuk server e2e, sama seperti koneksi tes Vitest
-// (tests/db/setup-env.ts): spec inventory memvalidasi penerimaan/pengiriman tanpa dokumen BC.
-// Gerbangnya diuji di tests/db/customs-gate.test.ts.
-const serverDatabaseUrl = new URL(TEST_DATABASE_URL)
-serverDatabaseUrl.searchParams.set("options", "-c app.customs_gate=off")
-
 export default defineConfig({
   testDir: "./tests/e2e",
   globalSetup: "./tests/e2e/global-setup.ts",
@@ -35,7 +29,7 @@ export default defineConfig({
     reuseExistingServer: !process.env.CI,
     timeout: 300_000,
     env: {
-      DATABASE_URL: serverDatabaseUrl.toString(),
+      DATABASE_URL: TEST_DATABASE_URL,
       BETTER_AUTH_URL: BASE_URL,
       // Hanya untuk server tes, bukan rahasia.
       BETTER_AUTH_SECRET: "e2e-only-secret-not-used-anywhere-else",

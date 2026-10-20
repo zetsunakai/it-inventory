@@ -49,34 +49,32 @@ PRD bagian 15.4.
    label, form Barang, pungutan per dokumen, jaminan, bank devisa, dan Dokumen Lartas sama persis
    dengan form hmx: susunannya dibangkitkan `scripts/import-customs-forms-from-hmx.py` ke
    `customs-layouts.generated.ts`; ubah pemetaan di script, bukan file hasilnya.
-2. **Alur status lengkap** (PRD 7.3): Draft → Siap ajukan → Diajukan → Terdaftar / Ditolak, Batal
-   (Manajer). Penguncian setelah Diajukan/Terdaftar dipaksakan trigger database, seperti pola kunci
-   hmx-002 tapi di DB, bukan di kode aplikasi.
-3. **Nomor aju** memakai format Equip3 (kode perusahaan 3 + kode dokumen 3 + kode kantor 6 +
-   YYYYMMDD + urut 6), dibuat fungsi database `next_aju_number(doc_code)` dengan `next_number()`
-   (aman bersamaan), tanggal WIB. Kode perusahaan dan kantor dari konfigurasi, bukan prefix
-   sequence.
+2. **Alur status mengikuti hmx** (keputusan user 20/10/2026, PRD 7.3, backlog H-01): Draft →
+   Submitted lewat `submit_customs_document()`. Dokumen Submitted beserta semua bagiannya dikunci
+   trigger database ("Dokumen … sudah Submitted dan tidak dapat diubah atau dihapus."); Draft boleh
+   dihapus. Tidak ada Siap ajukan, Terdaftar, Ditolak, Batal, atau revisi bernomor versi.
+3. **Nomor dokumen dan nomor aju seperti hmx**: nomor IT Inventory `IT/<kode>/<5 digit>` dibuat
+   trigger dengan `next_number('customs_document:<kode>', 'all')`. No. Aju, No. Daftar, dan
+   tanggalnya diisi manual dari portal CEISA; tidak ada pembangkit nomor aju.
 4. **Field wajib sebagai data** (`doc_validation_rules` per `doc_code`), semua yang kurang
    dilaporkan sekaligus. Seed awalnya dari `check_required_fields()` Equip3, tapi periksa baris yang
    dikomentari dan cocokkan ke spesifikasi CEISA; jangan menyalin buta.
 5. **Entitas sebagai baris per peran** (`customs_document_parties`): pengusaha, pemilik,
    pemasok/penjual, pembeli/penerima, PPJK. Terisi dari profil perusahaan dan partner
    (`companyAsCustomsParty`, `partnerAsCustomsParty`); NPWP memakai NITKU.
-6. **Gerbang dokumen dipaksakan database** (PRD 8.4, M4) lewat `customs_gate_errors()` di
-   `validate_transfer`. Kedua sistem lama tidak punya gerbang; ini pembeda utama. Penanda
-   `app.customs_gate = 'off'` hanya untuk koneksi tes inventory lama; jangan pernah menyetelnya di
-   kode aplikasi. Tes yang menguji gerbang membuka koneksi tanpa penanda itu (lihat README bagian
-   Gerbang dokumen BC).
-7. **Pemetaan dokumen ↔ jenis transfer** mengikuti pola `DOCUMENT_SOURCE_MAP` hmx-002, disesuaikan
-   PRD 8.3: masuk (penerimaan `gr`) → BC 2.3, 4.0; keluar (pengiriman `gi`) → BC 2.5, 3.0, 4.1.
-   Hanya `gr` dan `gi` yang wajib dokumen (keputusan 18/10/2026, PRD 15.4): retur, pindah lokasi,
-   antar gudang, pemakaian & scrap, dan penyesuaian tanpa dokumen BC. Satu dokumen boleh untuk
-   beberapa transfer parsial, selama total transfer Selesai per produk tidak melebihi qty dokumen.
-   Arah kode retur: `gr_rtn` pemasukan, `gi_rtn` pengeluaran (return_request hmx); jangan ikuti
-   arah terbalik di `stock_card_service.py`/`mutation_report.py` hmx.
-8. **Dokumen asal** (PRD 8.5) per baris dokumen keluar ke saldo asal baris dokumen masuk
-   (`origin_allocations`): BC 2.5 dan 3.0 dari BC 2.3 atau 4.0; BC 4.1 hanya dari BC 4.0. Saran
-   FIFO. Lebih ketat dari `source_sequence` hmx-002 (yang hanya mencatat seri asal).
+6. **Tanpa gerbang** (keputusan user 20/10/2026, mengikuti hmx): validasi transfer tidak menunggu
+   dokumen BC, dan tidak ada alokasi dokumen asal. Jangan menambah kembali `customs_gate_errors()`
+   atau `origin_allocations` tanpa keputusan baru di PRD.
+7. **Dokumen memilih transfer** (Inventory Transfer Documents hmx) lewat `customs_document_transfers`,
+   persis `DOCUMENT_SOURCE_MAP` hmx-002 (`customs_document_source_codes()`,
+   `CUSTOMS_DOCUMENT_SOURCE_CODES`): BC 1.6/2.0/2.6.2 `gr`; BC 2.3, 4.0 `itw_in`, `itw_out`, `gr`;
+   BC 2.5/2.6.1/2.8/3.0/P3BET `gi`; BC 2.7 keempatnya; BC 3.3 `gr`, `gi`; BC 4.1 `itw_in`, `itw_out`,
+   `gi`. Hanya transfer Siap atau Selesai (`SOURCE_TRANSFER_STATES`). Submit wajib minimal satu
+   transfer. Transfer hanya menampilkan dokumen yang memilihnya. Arah kode retur: `gr_rtn`
+   pemasukan, `gi_rtn` pengeluaran (return_request hmx); jangan ikuti arah terbalik di
+   `stock_card_service.py`/`mutation_report.py` hmx.
+8. **Seri barang asal** mengikuti `source_sequence` hmx (dicatat per baris barang, menyusul H-04),
+   bukan alokasi saldo asal.
 9. **Laporan mutasi** (M5) sama bentuknya dengan hmx-002 dan sudah disiapkan M2-10:
    `warehouse_movements()` (masuk/keluar per gudang, perpindahan di dalam gudang tidak dihitung,
    dari/ke lokasi penyesuaian = penyesuaian) dan `period_balances` untuk periode tertutup. Kategori
