@@ -275,6 +275,12 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   (`itw_rtn`) atau susut transit (scrap dari transit, alasan wajib, disetujui Manajer). Permintaan
   otomatis Selesai bila transit kosong dan tidak ada transfer terbuka. Transfer lanjutan
   (backorder) ikut membawa `interwarehouse_id`. Lokasi `TRANSIT` dibuat migrasi dan seed.
+  Sejak I-05 daftar punya kolom dan filter "Di perjalanan" (`?transit=ada`), dan detail menampilkan
+  qty per produk: diminta, dikirim, diterima, kembali/susut, di perjalanan, dan belum dikirim (qty di
+  transfer keluar yang masih terbuka).
+- Pindah lokasi lewat scan (`/inventory/transfer/scan`, I-05): pindai lokasi asal, lokasi tujuan
+  (gudang yang sama), lalu barang (dan lot/nomor seri); `moveByScan` membuat transfer `ilt`,
+  mengonfirmasi, dan memvalidasinya dalam satu transaksi.
 - Transfer hanya bisa Selesai lewat fungsi database `validate_transfer(transfer, tanggal_efektif)`
   (migrasi `validate_transfer`). Fungsi itu memeriksa semua syarat dan melaporkan semua alasan
   sekaligus (satu per baris pesan): ada baris barang, akses gudang user, tanggal efektif (backdate

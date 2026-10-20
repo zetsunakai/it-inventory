@@ -377,6 +377,7 @@ export type TransferDetail = NonNullable<Awaited<ReturnType<typeof getTransfer>>
 
 export type LocationOption = {
   id: string
+  code: string
   path: string
   warehouseId: string
   warehouseCode: string
@@ -388,6 +389,7 @@ export async function listInternalLocations(userId: string): Promise<LocationOpt
   return db
     .select({
       id: locations.id,
+      code: locations.code,
       path: locationPaths.path,
       warehouseId: warehouses.id,
       warehouseCode: warehouses.code,

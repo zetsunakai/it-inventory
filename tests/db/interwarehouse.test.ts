@@ -1,6 +1,10 @@
 import { and, eq, like, sql } from "drizzle-orm"
 import { afterAll, afterEach, beforeAll, expect, test } from "vitest"
 
+import {
+  getInterwarehouse,
+  listInterwarehouse,
+} from "@/modules/inventory/server/queries/interwarehouse"
 import { db } from "@/server/db"
 import {
   interwarehouseTransferLines,
@@ -10,8 +14,11 @@ import {
   products,
   stockBalances,
   stockMoves,
+  transferLines,
   transfers,
   uomCategories,
+  userRoles,
+  users,
   uoms,
   warehouses,
 } from "@/server/db/schema"
@@ -311,4 +318,59 @@ test("gudang asal dan tujuan harus berbeda", async () => {
       "Gudang asal dan tujuan harus berbeda. Untuk satu gudang, pakai Pindah lokasi.",
     )
   })
+})
+
+// Qty per produk dan barang di perjalanan untuk daftar dan detail (I-05). Data disimpan (bukan
+// rollback) karena query halaman memakai koneksi sendiri; afterEach membersihkannya.
+test("detail menghitung qty dikirim, diterima, di perjalanan, dan belum dikirim; daftar menampilkan barang di perjalanan", async () => {
+  const [admin] = await db
+    .insert(users)
+    .values({ name: "Uji admin", email: "ziw-admin@antar-gudang.test", emailVerified: true })
+    .returning({ id: users.id })
+  await db.insert(userRoles).values({ userId: admin.id, role: "administrator" })
+  try {
+    const req = await db.transaction(async (tx) => {
+      await receive(tx, "10")
+      const row = await request(tx, "8")
+      await tx.execute(sql`select confirm_interwarehouse(${row.id})`)
+      const [out] = await linked(tx, row.id)
+      const [line] = await tx
+        .select({ id: transferLines.id })
+        .from(transferLines)
+        .where(eq(transferLines.transferId, out.id))
+      // Kirim 5 dari 8; sisanya jadi transfer keluar lanjutan.
+      await tx.execute(
+        sql`select split_backorder(${out.id}, ${JSON.stringify({ [line.id]: "5" })}::jsonb, true)`,
+      )
+      await tx.execute(sql`select validate_transfer(${out.id})`)
+      return row
+    })
+    const detail = await getInterwarehouse(admin.id, req.id)
+    expect(detail?.progress).toEqual([
+      {
+        sku: "ZIWP",
+        name: "Baut",
+        uom: "ZIWPCS",
+        requested: "8.0000",
+        sent: "5.0000",
+        received: "0.0000",
+        returned: "0.0000",
+        lost: "0.0000",
+        pending: "3.0000",
+      },
+    ])
+    const list = await listInterwarehouse({
+      userId: admin.id,
+      inTransit: true,
+      search: "ZIW-UJI",
+      page: 1,
+      pageSize: 10,
+      offset: 0,
+    })
+    expect(list.rows.map((row) => [row.number, row.transitQty, row.transitUom])).toEqual([
+      [req.number, "5.0000", "ZIWPCS"],
+    ])
+  } finally {
+    await db.delete(users).where(eq(users.id, admin.id))
+  }
 })

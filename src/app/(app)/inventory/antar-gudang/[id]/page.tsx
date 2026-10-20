@@ -33,7 +33,7 @@ export const metadata: Metadata = { title: "Detail transfer antar gudang · IT I
 
 type LinkedTransfer = InterwarehouseDetail["transfers"][number]
 type TransitRow = InterwarehouseDetail["inTransit"][number]
-type RequestLine = InterwarehouseDetail["lines"][number]
+type ProgressRow = InterwarehouseDetail["progress"][number]
 
 const TRANSFER_COLUMNS: DataTableColumn<LinkedTransfer>[] = [
   {
@@ -56,21 +56,48 @@ const TRANSFER_COLUMNS: DataTableColumn<LinkedTransfer>[] = [
   { header: "Status", cell: (row) => <TransferStatusBadge status={row.status} /> },
 ]
 
-const LINE_COLUMNS: DataTableColumn<RequestLine>[] = [
+// Qty per produk dalam satuan stok (I-05): sisa di perjalanan = dikirim − diterima − kembali −
+// susut; belum dikirim = qty di transfer keluar yang masih terbuka.
+const qtyCell = (value: string, uom: string) =>
+  Number(value) === 0 ? "—" : `${formatDecimal(value)} ${uom}`
+const inTransitOf = (row: ProgressRow) =>
+  Number(row.sent) - Number(row.received) - Number(row.returned) - Number(row.lost)
+
+const PROGRESS_COLUMNS: DataTableColumn<ProgressRow>[] = [
   {
     header: "Produk",
     className: "w-full whitespace-normal",
-    cell: (line) => (
+    cell: (row) => (
       <span className="flex flex-col">
-        <span className="font-mono text-foreground">{line.product.sku}</span>
-        <span className="text-muted-foreground">{line.product.name}</span>
+        <span className="font-mono text-foreground">{row.sku}</span>
+        <span className="text-muted-foreground">{row.name}</span>
       </span>
     ),
   },
+  { header: "Diminta", align: "right", cell: (row) => qtyCell(row.requested, row.uom) },
+  { header: "Dikirim", align: "right", cell: (row) => qtyCell(row.sent, row.uom) },
+  { header: "Diterima", align: "right", cell: (row) => qtyCell(row.received, row.uom) },
   {
-    header: "Qty diminta",
+    header: "Kembali / susut",
     align: "right",
-    cell: (line) => `${formatDecimal(line.inputQty)} ${line.uomCode}`,
+    cell: (row) => qtyCell((Number(row.returned) + Number(row.lost)).toFixed(4), row.uom),
+  },
+  {
+    header: "Di perjalanan",
+    align: "right",
+    cell: (row) => {
+      const value = inTransitOf(row)
+      return value > 0 ? (
+        <span className="font-medium text-warning">{qtyCell(value.toFixed(4), row.uom)}</span>
+      ) : (
+        "—"
+      )
+    },
+  },
+  {
+    header: "Belum dikirim",
+    align: "right",
+    cell: (row) => qtyCell(row.pending, row.uom),
   },
 ]
 
@@ -199,13 +226,13 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
               wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
             }))}
           />
-          <Tabs defaultValue={request.inTransit.length > 0 ? "masih-di-perjalanan" : "transfer"}>
+          <Tabs defaultValue="barang">
             <TabsList>
+              <TabsTrigger value="barang">Barang</TabsTrigger>
               {request.inTransit.length > 0 && (
                 <TabsTrigger value="masih-di-perjalanan">Masih di perjalanan</TabsTrigger>
               )}
               <TabsTrigger value="transfer">Transfer</TabsTrigger>
-              <TabsTrigger value="barang-diminta">Barang diminta</TabsTrigger>
             </TabsList>
             {request.inTransit.length > 0 && (
               <TabsContent value="masih-di-perjalanan">
@@ -223,8 +250,12 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                 rowKey={(row) => row.id}
               />
             </TabsContent>
-            <TabsContent value="barang-diminta">
-              <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
+            <TabsContent value="barang">
+              <DataTable
+                columns={PROGRESS_COLUMNS}
+                rows={request.progress}
+                rowKey={(row) => row.sku}
+              />
             </TabsContent>
           </Tabs>
         </div>

@@ -9,6 +9,7 @@ import { listEmptyState } from "@/components/data-table/empty-state"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
+import { formatDecimal } from "@/lib/decimal"
 import { formatDate, formatNumber } from "@/lib/format"
 import {
   INTERWAREHOUSE_STATUS_LABELS,
@@ -52,6 +53,17 @@ const COLUMNS: DataTableColumn<InterwarehouseRow>[] = [
   },
   { header: "Baris", align: "right", cell: (row) => formatNumber(row.lineCount) },
   {
+    // Barang yang sudah keluar dari gudang asal tapi belum diterima (I-05).
+    header: "Di perjalanan",
+    align: "right",
+    cell: (row) =>
+      row.transitProducts === 0
+        ? "—"
+        : row.transitQty && row.transitUom
+          ? `${formatDecimal(row.transitQty)} ${row.transitUom}`
+          : `${formatNumber(row.transitProducts)} produk`,
+  },
+  {
     header: "Status",
     cell: (row) => (
       <StatusBadge tone={INTERWAREHOUSE_STATUS_TONES[row.status]}>
@@ -81,7 +93,13 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
   const raw = await searchParams
   const params = parseListParams(raw)
   const status = pickFilter(raw, "status", INTERWAREHOUSE_STATUSES)
-  const { rows, total } = await listInterwarehouse({ ...params, userId: user.id, status })
+  const inTransit = pickFilter(raw, "transit", ["ada"] as const) === "ada"
+  const { rows, total } = await listInterwarehouse({
+    ...params,
+    userId: user.id,
+    status,
+    inTransit,
+  })
 
   return (
     <div className="space-y-4">
@@ -106,6 +124,11 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
         <ListSearchBar
           placeholder="Cari nomor atau referensi"
           filters={[
+            {
+              name: "transit",
+              label: "Barang",
+              options: [{ value: "ada", label: "Masih di perjalanan" }],
+            },
             {
               name: "status",
               label: "Status",

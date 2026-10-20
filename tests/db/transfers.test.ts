@@ -6,6 +6,7 @@ import {
   cancelTransfer,
   confirmTransfer,
   reopenTransfer,
+  moveByScan,
   saveTransfer,
   validateTransfer,
 } from "@/modules/inventory/actions/transfers"
@@ -27,6 +28,7 @@ import {
   stockBalances,
   stockMoves,
   transferLines,
+  transfers,
   uomCategories,
   userRoles,
   users,
@@ -1036,5 +1038,62 @@ describe("scrap dan penyesuaian", () => {
       offset: 0,
     })
     expect(rows.rows.map((row) => row.id)).toContain(id)
+  })
+})
+
+describe("pindah lokasi lewat scan (I-05)", () => {
+  async function stockAt(locationId: string) {
+    const rows = await db
+      .select({ qty: stockBalances.qty })
+      .from(stockBalances)
+      .where(eq(stockBalances.locationId, locationId))
+    return rows.reduce((sum, row) => sum + Number(row.qty), 0)
+  }
+
+  test("membuat pindah lokasi Selesai dalam satu langkah; stok pindah antar rak", async () => {
+    loginAs("admin")
+    const id = await savedId(
+      await receipt([{ productId: ids.product, inputQty: "10", uomId: ids.pcs }]),
+    )
+    await confirmTransfer({ id })
+    await validateTransfer({ id })
+
+    const result = await moveByScan({
+      sourceLocationId: ids.rack,
+      destinationLocationId: ids.sameRack,
+      lines: [{ productId: ids.product, lotName: null, qty: "4" }],
+    })
+    expect(result).toMatchObject({ ok: true })
+    const moved = await getTransfer(people.admin.id, result.ok ? result.data.id : "")
+    expect([moved!.status, moved!.movementCode]).toEqual(["done", "ilt"])
+    expect([await stockAt(ids.rack), await stockAt(ids.sameRack)]).toEqual([6, 4])
+  })
+
+  test("lokasi di gudang lain dan stok kurang ditolak tanpa transfer tersisa", async () => {
+    loginAs("admin")
+    expect(
+      await moveByScan({
+        sourceLocationId: ids.rack,
+        destinationLocationId: ids.otherRack,
+        lines: [{ productId: ids.product, lotName: null, qty: "1" }],
+      }),
+    ).toEqual({
+      ok: false,
+      errors: [
+        "Pindah lokasi hanya di dalam satu gudang. Pindai lokasi tujuan di gudang yang sama.",
+      ],
+    })
+    const short = await moveByScan({
+      sourceLocationId: ids.rack,
+      destinationLocationId: ids.sameRack,
+      lines: [{ productId: ids.product, lotName: null, qty: "1" }],
+    })
+    expect(short.ok).toBe(false)
+    expect(!short.ok && short.errors.join(" ")).toMatch(/tidak cukup/)
+    const leftovers = await db
+      .select({ id: transfers.id })
+      .from(transfers)
+      .where(eq(transfers.sourceLocationId, ids.rack))
+    expect(leftovers).toEqual([])
   })
 })

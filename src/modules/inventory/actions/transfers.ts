@@ -17,7 +17,7 @@ import {
   mapDatabaseError,
 } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
-import { locations, lots, stockMoves, transferLines, transfers } from "@/server/db/schema"
+import { locations, lots, products, stockMoves, transferLines, transfers } from "@/server/db/schema"
 
 // Transfer inventory (PRD bagian 6, backlog M2-03 dst.): simpan draft, tandai siap, validasi,
 // batal. Aturan stok, lokasi, dan penguncian dipaksakan database (validate_transfer dan trigger
@@ -269,6 +269,87 @@ async function insertLines(
 }
 
 const idInput = z.object({ id: z.uuid("Transfer tidak valid.") })
+
+// Pindah lokasi dari layar scan (I-05): lokasi asal, lokasi tujuan, lalu barang yang dipindai.
+// Transfer pindah lokasi (ilt) dibuat, dikonfirmasi, dan divalidasi sekaligus seperti tombol
+// Validasi di Draft (R-09); stok, lot, akses, dan pembekuan gudang dipaksakan database.
+export const moveByScan = defineAction({
+  name: "moveByScan",
+  permission: "inventory:write",
+  schema: z.object({
+    sourceLocationId: z.uuid("Pindai lokasi asal."),
+    destinationLocationId: z.uuid("Pindai lokasi tujuan."),
+    lines: z
+      .array(
+        z.object({
+          productId: z.uuid("Produk tidak valid."),
+          lotName: z.string().trim().max(50).nullable(),
+          qty: z.string().refine((value) => /^\d+(\.\d{1,4})?$/.test(value) && Number(value) > 0, {
+            message: "Qty harus lebih dari 0, maksimal 4 desimal.",
+          }),
+        }),
+      )
+      .min(1, "Pindai minimal satu barang."),
+  }),
+  successMessage: "Barang dipindahkan. Stok di lokasi tujuan sudah diperbarui.",
+  handler: async ({ input, user, tx }) => {
+    const errors: string[] = []
+    if (input.sourceLocationId === input.destinationLocationId) {
+      errors.push("Lokasi asal dan tujuan harus berbeda.")
+    } else if (!(await sameWarehouse(tx, input.sourceLocationId, input.destinationLocationId))) {
+      errors.push(
+        "Pindah lokasi hanya di dalam satu gudang. Pindai lokasi tujuan di gudang yang sama.",
+      )
+    }
+    for (const [locationId, label] of [
+      [input.sourceLocationId, "asal"],
+      [input.destinationLocationId, "tujuan"],
+    ] as const) {
+      errors.push(
+        ...(await warehouseLocationErrors(tx, user.id, locationId, {
+          missing: `Lokasi ${label} bukan lokasi gudang.`,
+          forbidden: `Anda tidak punya akses ke gudang lokasi ${label}.`,
+        })),
+      )
+    }
+    if (errors.length) throw new AppError(errors)
+
+    const units = await tx
+      .select({ id: products.id, uomId: products.uomId })
+      .from(products)
+      .where(
+        inArray(
+          products.id,
+          input.lines.map((line) => line.productId),
+        ),
+      )
+    const uomOf = new Map(units.map((row) => [row.id, row.uomId]))
+    const header = {
+      sourceLocationId: input.sourceLocationId,
+      destinationLocationId: input.destinationLocationId,
+    }
+    const [row] = await tx
+      .insert(transfers)
+      .values({ type: "internal", ...header, scheduledDate: todayWib() })
+      .returning({ id: transfers.id, number: transfers.number })
+    await insertLines(
+      tx,
+      row.id,
+      header,
+      input.lines.map((line) => ({
+        productId: line.productId,
+        inputQty: line.qty,
+        uomId: uomOf.get(line.productId) ?? "",
+        lotName: line.lotName || null,
+      })),
+      false,
+    )
+    await tx.execute(sql`select confirm_transfer(${row.id})`)
+    await tx.execute(sql`select split_backorder(${row.id}, '{}'::jsonb, true)`)
+    await tx.execute(sql`select validate_transfer(${row.id}, now())`)
+    return row
+  },
+})
 
 // Alur status (PRD bagian 6.3, backlog R-06): semua perubahan status lewat fungsi database, yang
 // juga memeriksa syaratnya dan melaporkan semua alasan sekaligus.

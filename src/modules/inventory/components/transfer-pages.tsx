@@ -241,10 +241,25 @@ async function TransferTable({
         action={
           canWrite &&
           kind.creatable !== false && (
-            <Link href={createHref} className={buttonVariants()}>
-              <Plus />
-              Buat
-            </Link>
+            <>
+              <Link href={createHref} className={buttonVariants()}>
+                <Plus />
+                Buat
+              </Link>
+              {/* Pindah lokasi dari HP lewat scan (I-05). */}
+              {kind.sameWarehouse && (
+                <Link
+                  href={`${kind.path}/scan`}
+                  className={buttonVariants({
+                    variant: "outline",
+                    className: "pointer-coarse:h-11",
+                  })}
+                >
+                  <ScanLine />
+                  Scan
+                </Link>
+              )}
+            </>
           )
         }
         pager={

@@ -24,6 +24,10 @@ export type InterwarehouseRow = {
   scheduledDate: string | null
   reference: string | null
   lineCount: number
+  // Barang yang masih di lokasi transit (I-05): total qty bila satu satuan, selain itu jumlah produk.
+  transitQty: string | null
+  transitUom: string | null
+  transitProducts: number
 }
 
 const header = sql`
@@ -63,22 +67,39 @@ type RawHeader = {
 export async function listInterwarehouse({
   userId,
   status,
+  inTransit,
   search,
   pageSize,
   offset,
-}: ListParams & { userId: string; status?: InterwarehouseStatus }) {
+}: ListParams & { userId: string; status?: InterwarehouseStatus; inTransit?: boolean }) {
   const conditions: SQL[] = []
   if (status) conditions.push(sql`i.status = ${status}`)
+  if (inTransit) conditions.push(sql`exists (select 1 from interwarehouse_in_transit(i.id))`)
   if (search) {
     const pattern = containsPattern(search)
     conditions.push(sql`(i.number ilike ${pattern} or i.reference ilike ${pattern})`)
   }
   const where = conditions.length ? sql.join(conditions, sql` and `) : undefined
   const [rows, totals] = await Promise.all([
-    db.execute<RawHeader & { line_count: number }>(sql`
+    db.execute<
+      RawHeader & {
+        line_count: number
+        transit_qty: string | null
+        transit_uom: string | null
+        transit_products: number
+      }
+    >(sql`
       select ${header},
         (select count(*)::int from interwarehouse_transfer_lines l where l.interwarehouse_id = i.id)
-          as line_count
+          as line_count,
+        (select case when count(distinct u.code) = 1 then sum(it.qty)::numeric(18,4)::text end
+          from interwarehouse_in_transit(i.id) it
+          join products p on p.id = it.product_id join uoms u on u.id = p.uom_id) as transit_qty,
+        (select case when count(distinct u.code) = 1 then min(u.code) end
+          from interwarehouse_in_transit(i.id) it
+          join products p on p.id = it.product_id join uoms u on u.id = p.uom_id) as transit_uom,
+        (select count(distinct it.product_id)::int from interwarehouse_in_transit(i.id) it)
+          as transit_products
       ${from(userId, where)}
       order by case when i.status in ('done', 'cancelled') then 1 else 0 end, i.created_at desc
       limit ${pageSize} offset ${offset}`),
@@ -96,6 +117,9 @@ export async function listInterwarehouse({
       scheduledDate: row.scheduled_date,
       reference: row.reference,
       lineCount: row.line_count,
+      transitQty: row.transit_qty,
+      transitUom: row.transit_uom,
+      transitProducts: row.transit_products,
     })),
     total: totals.rows[0]?.total ?? 0,
   }
@@ -106,7 +130,7 @@ export async function getInterwarehouse(userId: string, id: string) {
     await db.execute<RawHeader>(sql`select ${header} ${from(userId, sql`i.id = ${id}`)}`)
   ).rows
   if (!row) return undefined
-  const [lines, linked, inTransit] = await Promise.all([
+  const [lines, linked, inTransit, progress] = await Promise.all([
     db.execute<{
       id: string
       product_id: string
@@ -148,6 +172,53 @@ export async function getInterwarehouse(userId: string, id: string) {
       join uoms u on u.id = p.uom_id
       left join lots l on l.id = it.lot_id
       order by p.sku, l.name`),
+    // Qty per produk (satuan stok, I-05): diminta, dikirim (itw_out), diterima (itw_in), kembali ke
+    // gudang asal (itw_rtn), susut transit (pemakaian dari lokasi transit), dan belum dikirim.
+    db.execute<{
+      sku: string
+      name: string
+      uom: string
+      requested: string
+      sent: string
+      received: string
+      returned: string
+      lost: string
+      pending: string
+    }>(sql`
+      with moved as (
+        select m.product_id, m.movement_code, m.source_location_id, sum(m.qty) as qty
+        from transfers t join stock_moves m on m.transfer_id = t.id and m.status = 'done'
+        where t.interwarehouse_id = ${id}
+        group by 1, 2, 3
+      ),
+      requested as (
+        select product_id, sum(qty) as qty from interwarehouse_transfer_lines
+        where interwarehouse_id = ${id} group by 1
+      ),
+      items as (select product_id from requested union select product_id from moved)
+      select p.sku, p.name, u.code as uom,
+        coalesce((select qty from requested r where r.product_id = items.product_id), 0)
+          ::numeric(18,4)::text as requested,
+        coalesce((select sum(qty) from moved where product_id = items.product_id
+          and movement_code = 'itw_out'), 0)::numeric(18,4)::text as sent,
+        coalesce((select sum(qty) from moved where product_id = items.product_id
+          and movement_code = 'itw_in'), 0)::numeric(18,4)::text as received,
+        coalesce((select sum(qty) from moved where product_id = items.product_id
+          and movement_code = 'itw_rtn'), 0)::numeric(18,4)::text as returned,
+        coalesce((select sum(mv.qty) from moved mv
+          join interwarehouse_transfers i on i.id = ${id}
+          where mv.product_id = items.product_id and mv.movement_code = 'pu'
+            and mv.source_location_id = i.transit_location_id), 0)::numeric(18,4)::text as lost,
+        -- Belum dikirim: qty di transfer keluar yang masih terbuka (sisa yang dibuang tidak dihitung).
+        coalesce((select sum(m.qty) from transfers t
+          join stock_moves m on m.transfer_id = t.id
+          where t.interwarehouse_id = ${id} and t.movement_code = 'itw_out'
+            and t.status not in ('done', 'cancelled')
+            and m.product_id = items.product_id), 0)::numeric(18,4)::text as pending
+      from items
+      join products p on p.id = items.product_id
+      join uoms u on u.id = p.uom_id
+      order by p.sku`),
   ])
   return {
     id: row.id,
@@ -187,6 +258,7 @@ export async function getInterwarehouse(userId: string, id: string) {
       doneAt: transfer.done_at ? new Date(transfer.done_at) : null,
     })),
     inTransit: inTransit.rows,
+    progress: progress.rows,
   }
 }
 
