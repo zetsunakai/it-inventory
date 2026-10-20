@@ -376,6 +376,14 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   ke Draft (diperbaiki lalu dikonfirmasi lagi) atau dibatalkan; persetujuan dan validasinya ditolak
   database. Daftar scrap/penyesuaian punya antrean `?antrean=persetujuan` dengan tombol Setujui dan
   Tolak per baris; penyesuaian hasil opname menampilkan sesi opnamenya (kolom Sumber, breadcrumb).
+- Aturan tanggal (I-06, `transfer.py` hmx): tanggal rencana transfer Draft/Menunggu tidak boleh
+  sebelum hari ini (WIB), saat disimpan (trigger `transfers_scheduled_date_guard`) maupun saat
+  Konfirmasi (`transfer_scheduled_date_errors()`); transfer turunan (lanjutan, retur/pengganti, antar
+  gudang, penyesuaian opname) dikecualikan. Tanggal efektif di masa depan tetap ditolak validasi.
+  Semua alasan periode belum bisa ditutup dikumpulkan `period_close_errors()` (belum berakhir,
+  periode sebelumnya belum ditutup, opname periode itu belum selesai) dan tampil di halaman Tutup
+  periode. Halaman Stok bisa difilter per kategori produk (beserta sub-kategorinya) dan dicari
+  lewat nomor lot.
 - `npm run db:check` (`scripts/check-ledger.ts`, R-15) hanya membaca dan memeriksa: saldo
   `stock_balances` sama dengan ledger, qty dipesan sama dengan pergerakan transfer terbuka, dan
   transfer Selesai punya pergerakan Selesai berkode sama. Jalankan setelah migrasi data lama.

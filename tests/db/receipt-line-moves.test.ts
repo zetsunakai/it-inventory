@@ -16,7 +16,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, purgeInventory, withLine } from "./helpers"
+import { inRollback, pgErrorInSavepoint, purgeInventory, todayWib, withLine } from "./helpers"
 
 // Rincian lot/nomor seri per baris penerimaan (backlog RU-03). Data uji berawalan ZRL.
 
@@ -103,7 +103,7 @@ async function readyReceipt(tx: Tx, productId: string, qty: string) {
       sourceLocationId: ids.vendor,
       destinationLocationId: ids.rack,
       partnerId: ids.partner,
-      scheduledDate: "2026-10-16",
+      scheduledDate: todayWib(),
     })
     .returning({ id: transfers.id })
   await tx.insert(stockMoves).values(

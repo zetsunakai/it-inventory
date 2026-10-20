@@ -16,7 +16,14 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, purgeInventory, setAuditUser, withLine } from "./helpers"
+import {
+  inRollback,
+  pgErrorInSavepoint,
+  purgeInventory,
+  setAuditUser,
+  todayWib,
+  withLine,
+} from "./helpers"
 
 // Penolakan scrap dan penyesuaian oleh Manajer (backlog I-03). Semua data uji berawalan ZRJ.
 
@@ -107,7 +114,7 @@ async function transfer(tx: Tx, type: "receipt" | "scrap", qty: string) {
       type,
       sourceLocationId: from,
       destinationLocationId: to,
-      scheduledDate: "2026-10-15",
+      scheduledDate: todayWib(),
       reason: type === "scrap" ? "Rusak" : null,
       partnerId: type === "receipt" ? ids.partner : null,
     })

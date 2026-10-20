@@ -132,3 +132,8 @@ export async function returnRequestFor(tx: Pick<Transaction, "execute">, originI
     returning id`)
   return result.rows[0].id
 }
+
+// Tanggal hari ini (WIB), untuk tanggal rencana transfer: tanggal lampau ditolak (I-06).
+export function todayWib() {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
+}

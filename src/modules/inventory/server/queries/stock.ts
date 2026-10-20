@@ -36,12 +36,15 @@ export async function listStock({
   userId,
   search,
   warehouseId,
+  productCategoryId,
   date,
   pageSize,
   offset,
 }: ListParams & {
   userId: string
   warehouseId?: string
+  // Kategori produk beserta sub-kategorinya (I-06).
+  productCategoryId?: string
   // YYYY-MM-DD: saldo per akhir hari itu (WIB). Kosong = sekarang.
   date?: string
 }) {
@@ -51,9 +54,18 @@ export async function listStock({
         from stock_balances where qty <> 0)`
   const conditions: SQL[] = [sql`can_access_warehouse(${userId}, w.id)`]
   if (warehouseId) conditions.push(sql`w.id = ${warehouseId}`)
+  if (productCategoryId) {
+    conditions.push(sql`exists (
+      select 1 from product_category_paths pp, product_category_paths root
+      where pp.id = p.category_id and root.id = ${productCategoryId}
+        and (pp.path = root.path or pp.path like root.path || ' / %'))`)
+  }
+  // Cari product code, nama produk, atau nomor lot/seri (I-06).
   if (search) {
     const pattern = containsPattern(search)
-    conditions.push(sql`(p.sku ilike ${pattern} or p.name ilike ${pattern})`)
+    conditions.push(
+      sql`(p.sku ilike ${pattern} or p.name ilike ${pattern} or lot.name ilike ${pattern})`,
+    )
   }
   const where = sql.join(conditions, sql` and `)
   const from = sql`

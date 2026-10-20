@@ -283,9 +283,10 @@ describe("tutup periode", () => {
   test("bulan berjalan belum bisa ditutup; hanya Manajer", async () => {
     const now = new Date()
     session.user = manajer
+    // Semua alasan dilaporkan sekaligus (I-06), di antaranya bulan yang belum berakhir.
     expect(await closePeriod({ year: now.getFullYear() + 1, month: 1 })).toMatchObject({
       ok: false,
-      errors: [expect.stringMatching(/belum berakhir\.$/)],
+      errors: expect.arrayContaining([expect.stringMatching(/belum berakhir\.$/)]),
     })
     session.user = { ...manajer, roles: ["admin_gudang"] }
     expect(await closePeriod({ year: 2019, month: 3 })).toMatchObject({

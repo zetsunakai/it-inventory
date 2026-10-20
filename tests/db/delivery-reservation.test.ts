@@ -16,7 +16,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, purgeInventory, withLine } from "./helpers"
+import { inRollback, pgErrorInSavepoint, purgeInventory, todayWib, withLine } from "./helpers"
 
 // Reservasi pengiriman dari sub-lokasi dengan FIFO tanggal masuk dan rincian lot pengiriman
 // (backlog I-01). Data uji berawalan ZDR. Lokasi: ZDRSTK (induk) dengan rak ZDRRA dan ZDRRB.
@@ -155,7 +155,7 @@ async function transfer(
       sourceLocationId: from,
       destinationLocationId: to,
       partnerId: ids.partner,
-      scheduledDate: "2026-10-16",
+      scheduledDate: todayWib(),
     })
     .returning({ id: transfers.id })
   await tx.insert(stockMoves).values(

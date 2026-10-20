@@ -17,7 +17,7 @@ import {
 } from "@/server/db/schema"
 import { attentionItems } from "@/modules/inventory/server/queries/home"
 
-import { purgeInventory, withLine } from "./helpers"
+import { purgeInventory, todayWib, withLine } from "./helpers"
 
 // Beranda "Perlu perhatian" untuk inventory (backlog RU-01). Data uji berawalan ZH.
 
@@ -51,7 +51,7 @@ async function transfer(
         destinationLocationId: to,
         partnerId: type === "scrap" ? null : ids.partner,
         reason: type === "scrap" ? "Rusak" : null,
-        scheduledDate: "2026-10-15",
+        scheduledDate: todayWib(),
       })
       .returning({ id: transfers.id })
     await tx.insert(stockMoves).values(

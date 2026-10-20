@@ -12,6 +12,8 @@ export type PeriodRow = {
   closedByName: string | null
   // Bulan berjalan (belum berakhir), jadi belum bisa ditutup.
   current: boolean
+  // Alasan periode yang belum ditutup belum bisa ditutup (period_close_errors, I-06).
+  blockers: string[]
 }
 
 // Bulan dari pergerakan Selesai pertama sampai bulan berjalan (WIB), terbaru di atas.
@@ -23,6 +25,7 @@ export async function listPeriods(): Promise<PeriodRow[]> {
     closed_at: Date | null
     closed_by_name: string | null
     current: boolean
+    blockers: string[] | null
   }>(sql`
     with bounds as (
       select
@@ -43,7 +46,10 @@ export async function listPeriods(): Promise<PeriodRow[]> {
     select extract(year from m.first_day)::int as year, extract(month from m.first_day)::int as month,
       coalesce(c.move_count, 0) as move_count, p.closed_at,
       (select u.name from users u where u.id = p.closed_by) as closed_by_name,
-      m.first_day = m.this_month as current
+      m.first_day = m.this_month as current,
+      case when p.closed_at is null then period_close_errors(
+        extract(year from m.first_day)::int, extract(month from m.first_day)::int
+      ) end as blockers
     from months m
     left join counts c on c.first_day = m.first_day
     left join inventory_periods p
@@ -56,5 +62,6 @@ export async function listPeriods(): Promise<PeriodRow[]> {
     closedAt: row.closed_at ? new Date(row.closed_at) : null,
     closedByName: row.closed_by_name,
     current: row.current,
+    blockers: row.blockers ?? [],
   }))
 }

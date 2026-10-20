@@ -13,7 +13,14 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, purgeInventory, withLine } from "./helpers"
+import {
+  enableLedgerWrite,
+  inRollback,
+  pgErrorInSavepoint,
+  purgeInventory,
+  todayWib,
+  withLine,
+} from "./helpers"
 
 // Alur status transfer (backlog R-06). Semua data uji berawalan ZS2.
 
@@ -96,7 +103,7 @@ async function draft(
       sourceLocationId: from,
       destinationLocationId: to,
       partnerId: ids.partner,
-      scheduledDate: scheduled ? "2026-10-15" : null,
+      scheduledDate: scheduled ? todayWib() : null,
     })
     .returning({ id: transfers.id })
   await tx.insert(stockMoves).values(
@@ -149,7 +156,7 @@ test("Konfirmasi mewajibkan baris dan tanggal rencana; hanya dari Draft", async 
     expect(await pgErrorInSavepoint(tx, (sp) => call(sp, "confirm_transfer", id))).toBe(
       "Tanggal rencana wajib diisi sebelum konfirmasi.",
     )
-    await tx.update(transfers).set({ scheduledDate: "2026-10-15" }).where(eq(transfers.id, id))
+    await tx.update(transfers).set({ scheduledDate: todayWib() }).where(eq(transfers.id, id))
     await call(tx, "confirm_transfer", id)
     expect(await pgErrorInSavepoint(tx, (sp) => call(sp, "confirm_transfer", id))).toBe(
       "Hanya transfer Draft yang bisa dikonfirmasi.",
@@ -186,5 +193,39 @@ test("Batal dari status mana pun sebelum Selesai", async () => {
     await call(tx, "confirm_transfer", id)
     await tx.execute(sql`select cancel_transfer(${id})`)
     expect(await statusOf(tx, id)).toBe("cancelled")
+  })
+})
+
+// Aturan tanggal (I-06, hmx _check_scheduled_date_not_past).
+test("tanggal rencana lampau ditolak saat disimpan dan saat Konfirmasi, kecuali transfer turunan", async () => {
+  const yesterday = new Date(Date.now() - 24 * 3600 * 1000).toLocaleDateString("en-CA", {
+    timeZone: "Asia/Jakarta",
+  })
+  await inRollback(db, async (tx) => {
+    const id = await draft(tx, "receipt", "1")
+    expect(
+      await pgErrorInSavepoint(tx, (sp) =>
+        sp.update(transfers).set({ scheduledDate: yesterday }).where(eq(transfers.id, id)),
+      ),
+    ).toBe("Tanggal rencana tidak boleh sebelum hari ini.")
+
+    // Draft lama yang tanggalnya sudah lewat (mis. dibuat kemarin) tidak bisa dikonfirmasi.
+    await enableLedgerWrite(tx)
+    await tx.update(transfers).set({ scheduledDate: yesterday }).where(eq(transfers.id, id))
+    await tx.execute(sql`select set_config('app.ledger_write', '', true)`)
+    expect(await pgErrorInSavepoint(tx, (sp) => call(sp, "confirm_transfer", id))).toBe(
+      "Tanggal rencana tidak boleh sebelum hari ini.",
+    )
+
+    // Transfer lanjutan mewarisi tanggal asalnya.
+    const origin = await draft(tx, "receipt", "1")
+    const child = await draft(tx, "receipt", "1")
+    await enableLedgerWrite(tx)
+    await tx
+      .update(transfers)
+      .set({ scheduledDate: yesterday, backorderOfId: origin })
+      .where(eq(transfers.id, child))
+    await tx.execute(sql`select set_config('app.ledger_write', '', true)`)
+    expect(await call(tx, "confirm_transfer", child)).toBe("ready")
   })
 })

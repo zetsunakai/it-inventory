@@ -102,6 +102,7 @@ export function TransferForm({
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
   const [partner, setPartner] = useState(transfer?.partner ?? null)
   const [locationId, setLocationId] = useState<string | null>(transfer?.locationId ?? null)
   const [otherLocationId, setOtherLocationId] = useState<string | null>(
@@ -309,6 +310,8 @@ export function TransferForm({
                 id={fieldId("transfer-date")}
                 name="scheduledDate"
                 type="date"
+                // Tanggal rencana tidak boleh lampau (I-06); database tetap memeriksanya.
+                min={today}
                 defaultValue={fieldValue(state, "scheduledDate", transfer?.scheduledDate)}
               />
             </FormField>

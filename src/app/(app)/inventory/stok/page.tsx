@@ -11,6 +11,7 @@ import { formatDate } from "@/lib/format"
 import { INVENTORY_CATEGORY_LABELS } from "@/modules/inventory/lib/inventory"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { requirePermission } from "@/server/auth/session"
+import { listProductCategoryOptions } from "@/modules/inventory/server/queries/product-categories"
 import {
   listAccessibleWarehouses,
   listStock,
@@ -23,6 +24,7 @@ import { ListPager } from "@/components/data-table/list-pager"
 export const metadata: Metadata = { title: "Stok · IT Inventory" }
 
 const WAREHOUSE_FILTER = "gudang"
+const CATEGORY_FILTER = "kategori"
 const DATE_FILTER = "tanggal"
 
 const COLUMNS: DataTableColumn<StockRow>[] = [
@@ -101,7 +103,15 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
   const user = await requirePermission("inventory:read")
   const raw = await searchParams
   const params = parseListParams(raw)
-  const warehouses = await listAccessibleWarehouses(user.id)
+  const [warehouses, categories] = await Promise.all([
+    listAccessibleWarehouses(user.id),
+    listProductCategoryOptions(),
+  ])
+  const productCategoryId = pickFilter(
+    raw,
+    CATEGORY_FILTER,
+    categories.map((category) => category.id),
+  )
   const warehouseId = pickFilter(
     raw,
     WAREHOUSE_FILTER,
@@ -110,7 +120,13 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
   const rawDate = typeof raw[DATE_FILTER] === "string" ? raw[DATE_FILTER] : undefined
   const date =
     rawDate && /^\d{4}-\d{2}-\d{2}$/.test(rawDate) && rawDate <= today() ? rawDate : undefined
-  const { rows, total } = await listStock({ ...params, userId: user.id, warehouseId, date })
+  const { rows, total } = await listStock({
+    ...params,
+    userId: user.id,
+    warehouseId,
+    productCategoryId,
+    date,
+  })
 
   return (
     <div className="space-y-4">
@@ -125,7 +141,7 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
         }
       >
         <ListSearchBar
-          placeholder="Cari product code atau nama produk"
+          placeholder="Cari product code, nama produk, atau lot"
           filters={[
             {
               name: WAREHOUSE_FILTER,
@@ -133,6 +149,14 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
               options: warehouses.map((warehouse) => ({
                 value: warehouse.id,
                 label: `${warehouse.code} · ${warehouse.name}`,
+              })),
+            },
+            {
+              name: CATEGORY_FILTER,
+              label: "Kategori",
+              options: categories.map((category) => ({
+                value: category.id,
+                label: `${category.path} dan sub-kategorinya`,
               })),
             },
           ]}

@@ -41,7 +41,6 @@ async function PeriodTable() {
   const columns: DataTableColumn<PeriodRow>[] = [
     {
       header: "Periode",
-      className: "w-full",
       cell: (row) => <span className="font-medium text-foreground">{periodLabel(row)}</span>,
     },
     { header: "Pergerakan", align: "right", cell: (row) => formatNumber(row.moveCount) },
@@ -62,10 +61,27 @@ async function PeriodTable() {
         row.closedAt ? `${formatDate(row.closedAt)} oleh ${row.closedByName ?? "sistem"}` : "—",
     },
     {
+      // Alasan periode belum bisa ditutup (I-06), dari aturan yang sama dengan Tutup periode.
+      header: "Keterangan",
+      className: "w-full min-w-64 whitespace-normal",
+      cell: (row) =>
+        row.closedAt || row.current ? (
+          "—"
+        ) : row.blockers.length ? (
+          <ul className="space-y-0.5 text-caption">
+            {row.blockers.map((blocker) => (
+              <li key={blocker}>{blocker}</li>
+            ))}
+          </ul>
+        ) : (
+          "Siap ditutup."
+        ),
+    },
+    {
       header: "",
       align: "right",
       cell: (row) =>
-        next && row.year === next.year && row.month === next.month ? (
+        next && row.year === next.year && row.month === next.month && !row.blockers.length ? (
           <ClosePeriodButton year={row.year} month={row.month} label={periodLabel(row)} />
         ) : null,
     },

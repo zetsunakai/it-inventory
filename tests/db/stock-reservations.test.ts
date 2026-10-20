@@ -16,7 +16,7 @@ import {
   warehouses,
 } from "@/server/db/schema"
 
-import { inRollback, pgErrorInSavepoint, purgeInventory, withLine } from "./helpers"
+import { inRollback, pgErrorInSavepoint, purgeInventory, todayWib, withLine } from "./helpers"
 
 // Reservasi stok (backlog R-07). Semua data uji berawalan ZRV.
 
@@ -117,7 +117,7 @@ async function draft(tx: Tx, type: "receipt" | "delivery", lines: Line[]) {
       sourceLocationId: from,
       destinationLocationId: to,
       partnerId: ids.partner,
-      scheduledDate: "2026-10-15",
+      scheduledDate: todayWib(),
     })
     .returning({ id: transfers.id })
   for (const line of lines) {

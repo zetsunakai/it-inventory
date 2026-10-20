@@ -5,6 +5,7 @@ import { db } from "@/server/db"
 import {
   locations,
   partners,
+  productCategories,
   products,
   stockMoves,
   transfers,
@@ -190,6 +191,27 @@ describe("saldo", () => {
 
   test("hanya gudang yang boleh diakses user", async () => {
     expect((await listStock({ ...page, userId: people.gudang })).total).toBe(0)
+  })
+
+  test("filter kategori produk termasuk sub-kategorinya (I-06)", async () => {
+    const [parent] = await db
+      .insert(productCategories)
+      .values({ name: "ZS Induk" })
+      .returning({ id: productCategories.id })
+    const [child] = await db
+      .insert(productCategories)
+      .values({ name: "ZS Anak", parentId: parent.id })
+      .returning({ id: productCategories.id })
+    try {
+      const filtered = () =>
+        listStock({ ...page, userId: people.admin, productCategoryId: parent.id })
+      expect((await filtered()).total).toBe(0)
+      await db.update(products).set({ categoryId: child.id }).where(eq(products.id, ids.product))
+      expect((await filtered()).total).toBe(3)
+    } finally {
+      await db.update(products).set({ categoryId: null }).where(eq(products.id, ids.product))
+      await db.delete(productCategories).where(inArray(productCategories.id, [child.id, parent.id]))
+    }
   })
 })
 

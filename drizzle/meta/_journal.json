@@ -624,6 +624,13 @@
       "when": 1792460657024,
       "tag": "0088_stock_count_scope_rules",
       "breakpoints": true
+    },
+    {
+      "idx": 89,
+      "version": "7",
+      "when": 1792461620529,
+      "tag": "0089_date_and_period_rules",
+      "breakpoints": true
     }
   ]
 }
