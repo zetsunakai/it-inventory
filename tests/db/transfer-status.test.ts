@@ -172,7 +172,7 @@ test("status hanya berubah lewat fungsi; transfer Selesai tidak bisa kembali ke 
     expect(
       await pgErrorInSavepoint(tx, (sp) => sp.execute(sql`select reset_transfer_to_draft(${id})`)),
     ).toBe(
-      "Hanya transfer yang sudah dikonfirmasi dan belum Selesai yang bisa dikembalikan ke Draft.",
+      "Hanya transfer yang sudah dikonfirmasi atau ditolak dan belum Selesai yang bisa dikembalikan ke Draft.",
     )
     expect(
       await pgErrorInSavepoint(tx, (sp) => sp.execute(sql`select cancel_transfer(${id})`)),

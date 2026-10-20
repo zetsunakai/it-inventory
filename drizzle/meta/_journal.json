@@ -596,6 +596,20 @@
       "when": 1792319565577,
       "tag": "0084_customs_forms_hmx",
       "breakpoints": true
+    },
+    {
+      "idx": 85,
+      "version": "7",
+      "when": 1792460105768,
+      "tag": "0085_transfer_rejection",
+      "breakpoints": true
+    },
+    {
+      "idx": 86,
+      "version": "7",
+      "when": 1792460110081,
+      "tag": "0086_transfer_rejection_rules",
+      "breakpoints": true
     }
   ]
 }

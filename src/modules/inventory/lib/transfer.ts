@@ -73,12 +73,13 @@ export const transferLinesField = z.string().transform((value, ctx): TransferLin
 
 export const TRANSFER_STATUS_TONES: Record<
   TransferStatus,
-  "neutral" | "info" | "success" | "warning"
+  "neutral" | "info" | "success" | "warning" | "danger"
 > = {
   draft: "neutral",
   waiting: "warning",
   partially_available: "warning",
   ready: "info",
+  rejected: "danger",
   done: "success",
   cancelled: "neutral",
 }
@@ -206,6 +207,9 @@ export function transferActions({
       return ["validate", "check", ...(reservable ? ["release" as const] : []), ...reopen, "cancel"]
     case "ready":
       return ["validate", ...(reservable ? ["release" as const] : []), ...reopen, "cancel"]
+    // Scrap/penyesuaian yang ditolak Manajer (I-03): diperbaiki lewat Draft, atau dibatalkan.
+    case "rejected":
+      return [...reopen, "cancel"]
     default:
       return []
   }

@@ -365,6 +365,11 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Manajer menekan "Setujui dan validasi" (`approveTransfer`, izin `inventory:approve`) sehingga
   pergerakan baru tercatat setelah disetujui. `validate_transfer` hanya menerima persetujuan dari
   user berperan Manajer atau Administrator; bila validasi gagal, persetujuan ikut batal.
+  Manajer juga bisa menolak dengan alasan wajib (`reject_transfer()`, I-03): status Ditolak, pesanan
+  stok dilepas, alasan tampil di detail dan log aktivitas. Transfer Ditolak hanya bisa dikembalikan
+  ke Draft (diperbaiki lalu dikonfirmasi lagi) atau dibatalkan; persetujuan dan validasinya ditolak
+  database. Daftar scrap/penyesuaian punya antrean `?antrean=persetujuan` dengan tombol Setujui dan
+  Tolak per baris; penyesuaian hasil opname menampilkan sesi opnamenya (kolom Sumber, breadcrumb).
 - `npm run db:check` (`scripts/check-ledger.ts`, R-15) hanya membaca dan memeriksa: saldo
   `stock_balances` sama dengan ledger, qty dipesan sama dengan pergerakan transfer terbuka, dan
   transfer Selesai punya pergerakan Selesai berkode sama. Jalankan setelah migrasi data lama.

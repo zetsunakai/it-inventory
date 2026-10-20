@@ -46,6 +46,9 @@ import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 
+import { StatusBadge } from "@/components/status-badge"
+
+import { ApprovalQueueActions } from "./approval-queue-actions"
 import { CreateReturnButton } from "./create-return-button"
 import { LineLotEditor, type LotLine } from "./line-lot-editor"
 import { TransferActions } from "./transfer-actions"
@@ -60,6 +63,9 @@ import { ListPager } from "@/components/data-table/list-pager"
 // dst.). Halaman di app/(app)/inventory/<jenis>/ hanya meneruskan TRANSFER_KINDS miliknya.
 
 const USAGE_FILTER = "jenis"
+// Antrean persetujuan Manajer untuk scrap dan penyesuaian (I-03).
+const QUEUE_FILTER = "antrean"
+const QUEUE_OPTIONS = [{ value: "persetujuan", label: "Menunggu persetujuan" }] as const
 const USAGE_OPTIONS = USAGE_TYPES.map((value) => ({ value, label: USAGE_TYPE_LABELS[value] }))
 const STATUS_FILTER = "status"
 const GROUPS = ["status"] as const
@@ -73,18 +79,21 @@ export function TransferListPage({
   kind,
   title,
   description,
+  effect,
   searchParams,
 }: {
   kind: TransferKind
   title: string
   description: string
+  // Akibat validasi untuk konfirmasi persetujuan dari daftar (scrap dan penyesuaian).
+  effect?: string
   searchParams: Promise<RawSearchParams>
 }) {
   return (
     <>
       <PageHeader title={title} description={description} />
       <Suspense fallback={<DataTableSkeleton />}>
-        <TransferTable kind={kind} searchParams={searchParams} />
+        <TransferTable kind={kind} effect={effect} searchParams={searchParams} />
       </Suspense>
     </>
   )
@@ -92,19 +101,29 @@ export function TransferListPage({
 
 async function TransferTable({
   kind,
+  effect,
   searchParams,
 }: {
   kind: TransferKind
+  effect?: string
   searchParams: Promise<RawSearchParams>
 }) {
   const user = await requirePermission("inventory:read")
   const canWrite = hasPermission(user.roles, "inventory:write")
+  const canApprove = Boolean(kind.needsApproval) && hasPermission(user.roles, "inventory:approve")
   const raw = await searchParams
   // Dikelompokkan (RU-22): semua baris dimuat sekaligus supaya jumlah per kelompok benar.
   const groupBy = pickFilter(raw, GROUP_PARAM, kind.partnerLabel ? GROUPS_WITH_PARTNER : GROUPS)
   const params = parseListParams(raw, groupBy ? { pageSize: GROUPED_PAGE_SIZE } : undefined)
   const status = pickFilter(raw, STATUS_FILTER, TRANSFER_STATUSES)
   const usageType = kind.usageTypes ? pickFilter(raw, USAGE_FILTER, USAGE_TYPES) : undefined
+  const queue = kind.needsApproval
+    ? pickFilter(
+        raw,
+        QUEUE_FILTER,
+        QUEUE_OPTIONS.map((option) => option.value),
+      )
+    : undefined
   const { rows, total } = await listTransfers({
     ...params,
     userId: user.id,
@@ -112,6 +131,7 @@ async function TransferTable({
     movementCodes: kind.movementCodes,
     status,
     usageType,
+    awaitingApproval: queue === "persetujuan",
   })
   const createHref = `${kind.path}/baru`
 
@@ -157,6 +177,20 @@ async function TransferTable({
         </span>
       ),
     },
+    ...(kind.type === "adjustment"
+      ? [
+          {
+            header: "Sumber",
+            optional: "show" as const,
+            cell: (row: TransferRow) =>
+              row.stockCountNumber ? (
+                <span className="font-mono">{row.stockCountNumber}</span>
+              ) : (
+                "Manual"
+              ),
+          },
+        ]
+      : []),
     { header: "Referensi", optional: "show", cell: (row) => row.reference ?? "—" },
     {
       header: "Tanggal",
@@ -173,7 +207,31 @@ async function TransferTable({
       optional: "show",
       cell: (row) => formatNumber(row.lineCount),
     },
-    { header: "Status", cell: (row) => <TransferStatusBadge status={row.status} /> },
+    {
+      header: "Status",
+      cell: (row) =>
+        row.awaitingApproval ? (
+          <StatusBadge tone="warning">Menunggu persetujuan</StatusBadge>
+        ) : (
+          <TransferStatusBadge status={row.status} />
+        ),
+    },
+    ...(canApprove
+      ? [
+          {
+            header: "Persetujuan",
+            cell: (row: TransferRow) =>
+              row.awaitingApproval ? (
+                <ApprovalQueueActions
+                  id={row.id}
+                  number={row.number}
+                  noun={kind.noun}
+                  effect={effect ?? "Stok diperbarui"}
+                />
+              ) : null,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -210,6 +268,9 @@ async function TransferTable({
             ...(kind.partnerLabel ? [{ value: "partner", label: kind.partnerLabel }] : []),
           ]}
           filters={[
+            ...(kind.needsApproval
+              ? [{ name: QUEUE_FILTER, label: "Antrean", options: [...QUEUE_OPTIONS] }]
+              : []),
             ...(kind.usageTypes
               ? [{ name: USAGE_FILTER, label: "Jenis", options: USAGE_OPTIONS }]
               : []),
@@ -378,6 +439,15 @@ async function TransferDetail({
               },
             ]
           : []),
+        // Penyesuaian hasil opname: sesi opnamenya jadi tingkat induk (I-03).
+        ...(transfer.stockCountId && transfer.stockCountNumber
+          ? [
+              {
+                label: transfer.stockCountNumber,
+                href: `/inventory/opname/${transfer.stockCountId}`,
+              },
+            ]
+          : []),
         ...(transfer.returnRequestId && transfer.returnRequestNumber
           ? [
               {
@@ -517,6 +587,7 @@ const TRANSFER_ACTIVITY_LABELS = {
     source_location_id: "Lokasi asal",
     destination_location_id: "Lokasi tujuan",
     approved_at: "Disetujui",
+    rejection_reason: "Alasan penolakan",
   },
   values: {
     status: TRANSFER_STATUS_LABELS as Record<string, string>,
@@ -540,12 +611,16 @@ function TransferStatusSteps({
   const steps = transferSteps({ reservable, instant })
   // Sebagian tersedia tampil di langkah Menunggu stok.
   const stepDates = { ...dates, waiting: dates.waiting ?? dates.partially_available }
-  if (status === "cancelled") {
+  if (status === "cancelled" || status === "rejected") {
     return (
       <StatusSteps
         steps={steps}
         dates={stepDates}
-        outside={{ label: "Batal", tone: "neutral", code: "cancelled" }}
+        outside={
+          status === "cancelled"
+            ? { label: "Batal", tone: "neutral", code: "cancelled" }
+            : { label: "Ditolak", tone: "danger", code: "rejected" }
+        }
       />
     )
   }

@@ -153,8 +153,13 @@ export const transfers = pgTable(
     doneAt: timestamp({ withTimezone: true }),
     cancelledAt: timestamp({ withTimezone: true }),
     approvedAt: timestamp({ withTimezone: true }),
+    // Penolakan Manajer untuk scrap dan penyesuaian (I-03): diisi reject_transfer(), status Ditolak.
+    // Tetap tersimpan setelah transfer dikembalikan ke Draft sampai ditolak lagi.
+    rejectedAt: timestamp({ withTimezone: true }),
+    rejectionReason: text(),
     createdBy: uuid(),
     approvedBy: uuid(),
+    rejectedBy: uuid(),
     doneBy: uuid(),
     ...timestamps,
   },

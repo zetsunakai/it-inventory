@@ -35,6 +35,10 @@ describe("transferActions", () => {
     ])
   })
 
+  it("transfer Ditolak hanya bisa kembali ke Draft atau dibatalkan (I-03)", () => {
+    expect(transferActions({ status: "rejected", reservable: true })).toEqual(["reopen", "cancel"])
+  })
+
   it("transfer dari permintaan tidak bisa dikembalikan ke Draft", () => {
     expect(transferActions({ status: "ready", reservable: true, fromRequest: true })).not.toContain(
       "reopen",

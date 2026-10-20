@@ -182,7 +182,7 @@ test("Manajer melihat transfer menunggu stok, persetujuan, dan gudang yang dibek
     "/inventory/pengiriman",
   )
   expect(items.find((item) => item.title.endsWith("menunggu persetujuan"))).toMatchObject({
-    href: "/inventory/scrap",
+    href: "/inventory/scrap?antrean=persetujuan",
     label: "Persetujuan",
   })
 })

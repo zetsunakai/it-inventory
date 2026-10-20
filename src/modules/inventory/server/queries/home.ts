@@ -126,7 +126,7 @@ async function inventoryItems(user: { id: string; roles: Role[] }) {
       items.push({
         title: `${row.total} ${kind.noun} menunggu persetujuan`,
         detail: "Stok baru berubah setelah Manajer menyetujui dan memvalidasinya.",
-        href: kind.path,
+        href: `${kind.path}?antrean=persetujuan`,
         tone: "warning",
         label: "Persetujuan",
       })

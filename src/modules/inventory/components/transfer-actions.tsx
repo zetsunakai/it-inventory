@@ -33,6 +33,8 @@ import type { ActionResult } from "@/lib/action-result"
 import type { TransferStatus } from "@/modules/inventory/lib/inventory"
 import { transferActions } from "@/modules/inventory/lib/transfer"
 
+import { RejectTransferButton } from "./reject-transfer-button"
+
 // Aksi transfer sesuai statusnya (PRD bagian 6.3, backlog R-06): Draft → Konfirmasi → Menunggu /
 // Sebagian tersedia / Siap → Validasi, Cek stok, Kembali ke Draft, atau Batal.
 // Tombol tampil di kanan header halaman; semua alasan gagal dari server (mis. stok tidak cukup per
@@ -349,6 +351,9 @@ export function TransferActions({
             </AlertDialog>
           </>
         )}
+        {needsApproval && canApprove && CONFIRMED.includes(status) && (
+          <RejectTransferButton id={id} number={number} noun={noun} />
+        )}
         {actions.has("release") && (
           <Button
             variant="outline"
@@ -405,6 +410,9 @@ export function TransferActions({
     </>
   )
 }
+
+// Scrap/penyesuaian yang sudah dikonfirmasi bisa ditolak Manajer (I-03), termasuk yang menunggu stok.
+const CONFIRMED: TransferStatus[] = ["waiting", "partially_available", "ready"]
 
 function backorderOf(result: ActionResult<unknown>) {
   if (!result.ok || !result.data || typeof result.data !== "object") return null

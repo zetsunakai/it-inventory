@@ -433,6 +433,11 @@ export const approveTransfer = defineAction({
     if (!NEEDS_APPROVAL.includes(saved.type)) {
       throw new AppError("Transfer ini tidak memerlukan persetujuan.")
     }
+    if (saved.status === "rejected") {
+      throw new AppError(
+        "Transfer ini ditolak. Kembalikan ke Draft, perbaiki, lalu konfirmasi lagi.",
+      )
+    }
     if (saved.status === "draft" || saved.status === "done" || saved.status === "cancelled") {
       throw new AppError("Hanya transfer yang sudah dikonfirmasi yang bisa disetujui.")
     }
@@ -443,6 +448,24 @@ export const approveTransfer = defineAction({
     await tx.execute(
       sql`select validate_transfer(${input.id}, ${effectiveTimestamp(input.effectiveDate)}::timestamptz)`,
     )
+  },
+})
+
+// Penolakan scrap dan penyesuaian (I-03): alasan wajib, tampil di detail dan log aktivitas. Syaratnya
+// (sudah dikonfirmasi, peran Manajer, alasan terisi) dipaksakan reject_transfer().
+export const rejectTransfer = defineAction({
+  name: "rejectTransfer",
+  permission: "inventory:approve",
+  schema: idInput.extend({
+    reason: z
+      .string()
+      .trim()
+      .min(1, "Alasan penolakan wajib diisi.")
+      .max(500, "Alasan penolakan maksimal 500 karakter."),
+  }),
+  successMessage: "Ditolak. Pembuatnya bisa mengembalikan ke Draft untuk diperbaiki.",
+  handler: async ({ input, tx }) => {
+    await tx.execute(sql`select reject_transfer(${input.id}, ${input.reason})`)
   },
 })
 

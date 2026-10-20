@@ -269,6 +269,32 @@ export function TransferView({
               ? `${formatDate(transfer.approvedAt)} oleh ${transfer.approvedByName ?? "—"}`
               : "Belum",
           ] as [string, ReactNode],
+          // Penolakan terakhir (I-03) tetap tampil setelah dikembalikan ke Draft.
+          ...(transfer.rejectedAt
+            ? [
+                [
+                  transfer.status === "rejected" ? "Ditolak" : "Ditolak sebelumnya",
+                  <span key="rejected" className="whitespace-pre-line">
+                    {formatDate(transfer.rejectedAt)} oleh {transfer.rejectedByName ?? "—"}:{" "}
+                    {transfer.rejectionReason}
+                  </span>,
+                ] as [string, ReactNode],
+              ]
+            : []),
+        ]
+      : []),
+    ...(transfer.stockCountId && transfer.stockCountNumber
+      ? [
+          [
+            "Sesi opname",
+            <Link
+              key="count"
+              href={`/inventory/opname/${transfer.stockCountId}`}
+              className="font-mono text-primary underline-offset-4 hover:underline"
+            >
+              {transfer.stockCountNumber}
+            </Link>,
+          ] as [string, ReactNode],
         ]
       : []),
   ]

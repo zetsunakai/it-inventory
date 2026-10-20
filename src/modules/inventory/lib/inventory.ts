@@ -154,6 +154,7 @@ export const TRANSFER_STATUSES = [
   "waiting",
   "partially_available",
   "ready",
+  "rejected",
   "done",
   "cancelled",
 ] as const
@@ -164,6 +165,7 @@ export const TRANSFER_STATUS_LABELS: Record<TransferStatus, string> = {
   waiting: "Menunggu",
   partially_available: "Sebagian tersedia",
   ready: "Siap",
+  rejected: "Ditolak",
   done: "Selesai",
   cancelled: "Batal",
 }
@@ -174,6 +176,7 @@ export const OPEN_TRANSFER_STATUSES: readonly TransferStatus[] = [
   "waiting",
   "partially_available",
   "ready",
+  "rejected",
 ]
 export const CONFIRMED_TRANSFER_STATUSES: readonly TransferStatus[] = [
   "waiting",

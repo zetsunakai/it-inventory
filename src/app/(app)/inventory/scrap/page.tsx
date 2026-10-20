@@ -11,6 +11,7 @@ export default function ScrapsPage({ searchParams }: PageProps<"/inventory/scrap
       kind={TRANSFER_KINDS.scrap}
       title="Pemakaian & scrap"
       description="Barang dipakai, rusak, reject, atau susut di perjalanan dipindah ke lokasi scrap. Stok berkurang setelah disetujui Manajer."
+      effect="Stok di lokasi asal berkurang ke lokasi scrap"
       searchParams={searchParams}
     />
   )

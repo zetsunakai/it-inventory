@@ -11,6 +11,7 @@ export default function AdjustmentsPage({ searchParams }: PageProps<"/inventory/
       kind={TRANSFER_KINDS.adjustment}
       title="Penyesuaian"
       description="Koreksi stok karena hilang, rusak, atau selisih hitung. Stok berubah setelah disetujui Manajer."
+      effect="Stok di lokasi gudang bertambah atau berkurang sesuai arah penyesuaian"
       searchParams={searchParams}
     />
   )

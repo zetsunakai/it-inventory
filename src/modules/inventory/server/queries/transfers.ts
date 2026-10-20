@@ -66,7 +66,16 @@ export type TransferRow = {
   scheduledDate: string | null
   doneAt: Date | null
   lineCount: number
+  // Scrap/penyesuaian (I-03): sudah dikonfirmasi dan belum disetujui/ditolak Manajer.
+  awaitingApproval: boolean
+  // Penyesuaian hasil stock opname (I-03).
+  stockCountNumber: string | null
 }
+
+// Scrap/penyesuaian yang menunggu keputusan Manajer (I-03): sudah dikonfirmasi, belum disetujui.
+const awaitingApprovalSql = sql<boolean>`(${transfers.type} in ('scrap', 'adjustment')
+  and ${transfers.approvedAt} is null
+  and ${transfers.status} in ('waiting', 'partially_available', 'ready'))`
 
 // Halaman daftar per jenis transfer: cari nomor, referensi, atau partner; filter status.
 export async function listTransfers({
@@ -75,6 +84,7 @@ export async function listTransfers({
   movementCodes,
   status,
   usageType,
+  awaitingApproval,
   search,
   pageSize,
   offset,
@@ -84,11 +94,13 @@ export async function listTransfers({
   movementCodes?: readonly MovementCode[]
   status?: TransferStatus
   usageType?: UsageType
+  awaitingApproval?: boolean
 }) {
   const conditions: SQL[] = [eq(transfers.type, type), accessibleBy(userId)]
   if (usageType) conditions.push(eq(transfers.usageType, usageType))
   if (movementCodes) conditions.push(inArray(transfers.movementCode, [...movementCodes]))
   if (status) conditions.push(eq(transfers.status, status))
+  if (awaitingApproval) conditions.push(awaitingApprovalSql)
   if (search) {
     const pattern = containsPattern(search)
     conditions.push(
@@ -122,6 +134,10 @@ export async function listTransfers({
         scheduledDate: transfers.scheduledDate,
         doneAt: transfers.doneAt,
         lineCount: sql<number>`coalesce(${lineCounts.total}, 0)::int`,
+        awaitingApproval: awaitingApprovalSql,
+        stockCountNumber: sql<
+          string | null
+        >`(select c.number from stock_counts c where c.id = ${transfers.stockCountId})`,
       })
       .from(transfers)
       .innerJoin(source, eq(source.id, transfers.sourceLocationId))
@@ -217,6 +233,12 @@ export async function getTransfer(userId: string, id: string) {
       approvedByName: sql<
         string | null
       >`(select u.name from users u where u.id = ${transfers.approvedBy})`,
+      rejectedByName: sql<
+        string | null
+      >`(select u.name from users u where u.id = ${transfers.rejectedBy})`,
+      stockCountNumber: sql<
+        string | null
+      >`(select c.number from stock_counts c where c.id = ${transfers.stockCountId})`,
       sourceWarehouseId: source.warehouseId,
       destinationWarehouseId: destination.warehouseId,
     })
@@ -335,6 +357,8 @@ export async function getTransfer(userId: string, id: string) {
     backorderOfNumber: header.backorderOfNumber,
     returnOfNumber: header.returnOfNumber,
     approvedByName: header.approvedByName,
+    rejectedByName: header.rejectedByName,
+    stockCountNumber: header.stockCountNumber,
     interwarehouseNumber: header.interwarehouseNumber,
     returnRequestNumber: header.returnRequestNumber,
     sourceWarehouseId: header.sourceWarehouseId,
