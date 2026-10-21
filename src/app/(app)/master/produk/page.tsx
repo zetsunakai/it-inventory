@@ -132,10 +132,10 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        bulkDelete={
+        selection={
           canEdit
             ? {
-                action: deleteProduct,
+                remove: deleteProduct,
                 noun: "produk",
                 id: (row) => row.id,
                 label: (row) => row.sku,

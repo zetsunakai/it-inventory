@@ -1,6 +1,7 @@
 "use client"
 
-import { Trash2, X } from "lucide-react"
+import { Copy, Trash2, X } from "lucide-react"
+import { useRouter } from "next/navigation"
 import { createContext, useContext, useState, useTransition, type ReactNode } from "react"
 
 import { usePageMessage } from "@/components/layout/page-message"
@@ -19,7 +20,7 @@ import type { ActionResult } from "@/lib/action-result"
 
 export type SelectableRow = { id: string; label: string }
 
-export type BulkDeleteAction = (input: { id: string }) => Promise<ActionResult<unknown>>
+export type BulkAction = (input: { id: string }) => Promise<ActionResult<unknown>>
 
 type Selection = {
   rows: SelectableRow[]
@@ -30,25 +31,35 @@ type Selection = {
 
 const SelectionContext = createContext<Selection | null>(null)
 
-// Pilih baris lalu Hapus di halaman daftar data master (backlog M1-08, pola hmx): baris aksi
-// muncul di atas tabel selama ada yang dipilih. Hapus dijalankan per data; data yang sudah
-// dipakai ditolak server dan alasannya tampil di slot pesan halaman bersama penandanya.
+// Pilih baris lalu Hapus atau Duplikat di halaman daftar (backlog M1-08, pola hmx): baris aksi
+// muncul di atas tabel selama ada yang dipilih; halaman detail tidak punya tombol Hapus/Duplikat.
+// Aksi dijalankan per data; yang ditolak server tampil di slot pesan halaman bersama penandanya.
 export function RowSelection({
   rows,
-  action,
   noun,
+  remove,
+  removeNote,
+  duplicate,
+  duplicatePath,
   children,
 }: {
   rows: SelectableRow[]
-  action: BulkDeleteAction
   // Kata benda huruf kecil, mis. "produk".
   noun: string
+  remove?: BulkAction
+  // Penjelasan di konfirmasi Hapus; bawaan untuk data master.
+  removeNote?: string
+  // Action duplikat yang mengembalikan { id } data baru.
+  duplicate?: BulkAction
+  // Duplikat satu data: buka data barunya di `${duplicatePath}/${id}`.
+  duplicatePath?: string
   children: ReactNode
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [open, setOpen] = useState(false)
   const [pending, startTransition] = useTransition()
   const { show } = usePageMessage()
+  const router = useRouter()
 
   // Baris yang sudah tidak ada di halaman (terhapus, pindah halaman) tidak ikut terpilih.
   const chosen = rows.filter((row) => selected.has(row.id))
@@ -62,19 +73,38 @@ export function RowSelection({
     })
   }
 
-  function confirm() {
+  async function runEach(action: BulkAction) {
+    const errors: string[] = []
+    const done: unknown[] = []
+    for (const row of chosen) {
+      const result = await action({ id: row.id })
+      if (result.ok) done.push(result.data)
+      else errors.push(...result.errors.map((error) => `${row.label}: ${error}`))
+    }
+    setSelected(new Set())
+    return { errors, done }
+  }
+
+  function confirmRemove() {
+    if (!remove) return
     startTransition(async () => {
-      const errors: string[] = []
-      let deleted = 0
-      for (const row of chosen) {
-        const result = await action({ id: row.id })
-        if (result.ok) deleted++
-        else errors.push(...result.errors.map((error) => `${row.label}: ${error}`))
-      }
+      const { errors, done } = await runEach(remove)
       setOpen(false)
-      setSelected(new Set())
       if (errors.length) show({ ok: false, errors })
-      else show({ ok: true, data: undefined, message: `${deleted} ${noun} dihapus.` })
+      else show({ ok: true, data: undefined, message: `${done.length} ${noun} dihapus.` })
+    })
+  }
+
+  function runDuplicate() {
+    if (!duplicate) return
+    startTransition(async () => {
+      const { errors, done } = await runEach(duplicate)
+      if (errors.length) return show({ ok: false, errors })
+      show({ ok: true, data: undefined, message: `${done.length} ${noun} diduplikat.` })
+      const created = done[0] as { id?: string } | undefined
+      if (done.length === 1 && duplicatePath && created?.id) {
+        router.push(`${duplicatePath}/${created.id}`)
+      }
     })
   }
 
@@ -92,10 +122,23 @@ export function RowSelection({
           <p className="text-control font-medium" aria-live="polite">
             {chosen.length} dipilih
           </p>
-          <Button type="button" variant="destructive" onClick={() => setOpen(true)}>
-            <Trash2 />
-            Hapus
-          </Button>
+          {duplicate && (
+            <Button type="button" variant="outline" onClick={runDuplicate} disabled={pending}>
+              <Copy />
+              {pending && !open ? "Menduplikat…" : "Duplikat"}
+            </Button>
+          )}
+          {remove && (
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => setOpen(true)}
+              disabled={pending}
+            >
+              <Trash2 />
+              Hapus
+            </Button>
+          )}
           <Button type="button" variant="ghost" onClick={() => setSelected(new Set())}>
             <X />
             Batal pilih
@@ -111,14 +154,13 @@ export function RowSelection({
               {chosen.length === 1 ? `${noun} ${chosen[0].label}` : `${chosen.length} ${noun}`}?
             </AlertDialogTitle>
             <AlertDialogDescription>
-              Hanya untuk {noun} yang belum pernah dipakai, misalnya salah input; yang sudah dipakai
-              ditolak dan cukup diarsipkan dengan mengosongkan centang Aktif. Data dihapus permanen
-              dan tidak bisa dikembalikan. Catatannya tetap ada di audit log.
+              {removeNote ??
+                `Hanya untuk ${noun} yang belum pernah dipakai, misalnya salah input; yang sudah dipakai ditolak dan cukup diarsipkan dengan mengosongkan centang Aktif. Data dihapus permanen dan tidak bisa dikembalikan. Catatannya tetap ada di audit log.`}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel disabled={pending}>Batal</AlertDialogCancel>
-            <Button type="button" variant="destructive" onClick={confirm} disabled={pending}>
+            <Button type="button" variant="destructive" onClick={confirmRemove} disabled={pending}>
               {pending ? "Menghapus…" : "Hapus"}
             </Button>
           </AlertDialogFooter>

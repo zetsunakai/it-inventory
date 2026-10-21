@@ -130,10 +130,10 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
           rowKey={(row) => row.id}
           rowHref={canEdit ? (row) => `/master/gudang/${warehouse.id}/lokasi/${row.id}` : undefined}
           rowMuted={(row) => !row.active}
-          bulkDelete={
+          selection={
             canEdit
               ? {
-                  action: deleteLocation,
+                  remove: deleteLocation,
                   noun: "lokasi",
                   id: (row) => row.id,
                   label: (row) => row.code,

@@ -103,10 +103,10 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        bulkDelete={
+        selection={
           canEdit
             ? {
-                action: deletePartner,
+                remove: deletePartner,
                 noun: "partner",
                 id: (row) => row.id,
                 label: (row) => row.name,

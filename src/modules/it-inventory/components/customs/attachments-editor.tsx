@@ -1,21 +1,23 @@
 "use client"
 
-import { Download, Plus, Upload, X } from "lucide-react"
+import { Download, Upload, X } from "lucide-react"
 import { useState, useTransition } from "react"
 
 import { FormSection } from "@/components/form-field"
+import { RelationalTable } from "@/components/relational/relational-table"
+import { newRelation, relationKey } from "@/components/relational/relational-utils"
 import { Button } from "@/components/ui/button"
 import { formatNumber } from "@/lib/format"
 import { uploadCustomsAttachment } from "@/modules/it-inventory/actions/customs-documents"
 import {
   ATTACHMENT_TYPES,
   emptyAttachment,
+  formatCustomsValue,
   type CustomsAttachmentDraft,
   type CustomsField,
 } from "@/modules/it-inventory/lib/customs-form"
 
-import { CustomsFormField, type RefLabels } from "./customs-field"
-import { RowCard } from "./row-card"
+import { CustomsControl, type RefLabels } from "./customs-field"
 
 // Lampiran dokumen BC (backlog M3-10) dan Dokumen Lartas per barang: kolom mengikuti daftar hmx
 // (Jenis, Nomor, Tanggal, Facility, Izin, Kantor, File). File diunggah langsung ke storage saat
@@ -45,43 +47,63 @@ export function AttachmentsEditor({
     onChange(rows.map((row, position) => (position === index ? { ...row, ...patch } : row)))
 
   return (
-    <FormSection
-      title={title}
-      description={description}
-      actions={
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => onChange([...rows, emptyAttachment()])}
-        >
-          <Plus />
-          Tambah
-        </Button>
-      }
-    >
-      {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada.</p>}
-      {rows.map((row, index) => (
-        <RowCard
-          key={index}
-          label={`${title} ${index + 1}`}
-          onRemove={() => onChange(rows.filter((_, position) => position !== index))}
-        >
-          {columns.map((column) =>
+    <FormSection title={title} description={description}>
+      <RelationalTable<CustomsAttachmentDraft>
+        id={`bc-${title}`}
+        label={title}
+        rows={rows}
+        rowKey={relationKey}
+        onReorder={onChange}
+        onRemove={(keys) => onChange(rows.filter((row) => !keys.includes(relationKey(row))))}
+        addLabel="Tambah"
+        onAdd={() => {
+          const row = newRelation(emptyAttachment())
+          onChange([...rows, row])
+          return relationKey(row)
+        }}
+        columns={columns.map((column) => ({
+          id: column.key,
+          label: column.label,
+          required: column.required,
+          optional: !column.required,
+          width: column.kind === "ref" || column.kind === "file" ? 300 : 200,
+          value: (row) =>
+            column.kind === "file"
+              ? (row.file?.fileName ?? "")
+              : formatCustomsValue(
+                  column,
+                  (row as unknown as Record<string, string>)[column.key],
+                  refLabels,
+                ),
+          render:
+            column.kind === "file"
+              ? (row) =>
+                  row.file ? (
+                    <a
+                      href={`/api/customs-files?key=${encodeURIComponent(row.file.fileKey)}`}
+                      className="text-primary hover:underline"
+                    >
+                      {row.file.fileName}
+                    </a>
+                  ) : (
+                    "—"
+                  )
+              : undefined,
+          edit: (row, index) =>
             column.kind === "file" ? (
               <AttachmentFile
-                key={column.key}
                 label={column.label}
                 documentId={documentId}
-                id={`${idPrefix}-${index}-file`}
+                id={`${idPrefix}-${relationKey(row)}-file`}
                 row={row}
                 onChange={(file) => update(index, { file })}
               />
             ) : (
-              <CustomsFormField
-                key={column.key}
-                field={{ ...column, span: column.kind === "ref" ? 6 : 3 }}
-                id={`${idPrefix}-${index}-${column.key}`}
+              <CustomsControl
+                field={column}
+                id={`${idPrefix}-${relationKey(row)}-${column.key}`}
                 value={(row as unknown as Record<string, string>)[column.key] ?? ""}
+                ariaLabel={`${column.label} ${title} seri ${index + 1}`}
                 onChange={(value, label) => {
                   onLabel(label)
                   update(index, { [column.key]: value })
@@ -89,9 +111,8 @@ export function AttachmentsEditor({
                 refLabels={refLabels}
               />
             ),
-          )}
-        </RowCard>
-      ))}
+        }))}
+      />
     </FormSection>
   )
 }

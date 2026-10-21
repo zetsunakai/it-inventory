@@ -112,18 +112,20 @@ export function ViewSection({
   description,
   children,
 }: {
-  title: string
+  title?: string
   description?: string
   children: ReactNode
 }) {
   return (
     <section className="form-sheet" aria-label={title}>
-      <div className="form-sheet-header">
-        <div aria-hidden className="min-w-0">
-          <p className="form-sheet-title">{title}</p>
-          {description && <p className="form-sheet-description">{description}</p>}
+      {(title || description) && (
+        <div className="form-sheet-header">
+          <div aria-hidden className="min-w-0">
+            {title && <p className="form-sheet-title">{title}</p>}
+            {description && <p className="form-sheet-description">{description}</p>}
+          </div>
         </div>
-      </div>
+      )}
       <div className="form-grid">{children}</div>
     </section>
   )

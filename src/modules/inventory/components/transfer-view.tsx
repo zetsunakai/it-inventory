@@ -23,7 +23,12 @@ const BASE_COLUMNS: DataTableColumn<TransferLine>[] = [
     className: "w-full whitespace-normal",
     cell: (line) => (
       <span className="flex flex-col">
-        <span className="font-mono whitespace-nowrap text-foreground">{line.sku}</span>
+        <Link
+          href={`/master/produk/${line.productId}`}
+          className="font-mono whitespace-nowrap text-primary hover:underline"
+        >
+          {line.sku}
+        </Link>
         <span className="text-muted-foreground">{line.productName}</span>
       </span>
     ),
@@ -183,7 +188,22 @@ export function TransferView({
 }) {
   const rows: [string, ReactNode][] = [
     ...(kind.partnerLabel
-      ? [[kind.partnerLabel, transfer.partner?.name ?? "—"] as [string, ReactNode]]
+      ? [
+          [
+            kind.partnerLabel,
+            transfer.partner ? (
+              <Link
+                key="partner"
+                href={`/master/partner/${transfer.partner.id}`}
+                className="text-primary hover:underline"
+              >
+                {transfer.partner.name}
+              </Link>
+            ) : (
+              "—"
+            ),
+          ] as [string, ReactNode],
+        ]
       : []),
     ["Jenis pergerakan", MOVEMENT_CODE_LABELS[transfer.movementCode]],
     ["Dari", transfer.sourcePath],

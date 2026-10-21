@@ -1,13 +1,17 @@
+import Link from "next/link"
+
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { InfoGrid } from "@/components/layout/info-grid"
-import { Section } from "@/components/layout/section"
+import { StaticField, ViewSection } from "@/components/form-field"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   OWNER_CODE,
   customsFieldValue,
   formatCustomsValue,
   isFieldGroup,
   isListBlock,
+  sideBySide,
   type CustomsAttachmentDraft,
+  type CustomsBlock,
   type CustomsDocumentDraft,
   type CustomsField,
   type CustomsFormSpec,
@@ -18,8 +22,8 @@ import type { RefLabels } from "./customs-field"
 
 type Row = Record<string, unknown> & { seq: number }
 
-// Tampilan baca dokumen BC (dokumen bukan Draft, atau user tanpa izin ubah): tab dan grup sama
-// dengan form hmx jenisnya, tanpa kontrol yang di-disable.
+// Tampilan baca dokumen BC (mode baca RecordModes, dokumen bukan Draft, atau user tanpa izin
+// ubah): tab, kartu, dan span field sama dengan form hmx jenisnya, tanpa kontrol yang di-disable.
 export function CustomsDocumentView({
   spec,
   draft,
@@ -66,56 +70,86 @@ export function CustomsDocumentView({
           )
         }
         if (column.kind === "product") {
-          const product = (row as { product?: { sku: string; name: string } | null }).product
-          return product ? `[${product.sku}] ${product.name}` : "—"
+          const product = (row as { product?: { id: string; sku: string; name: string } | null })
+            .product
+          return product ? (
+            <Link href={`/master/produk/${product.id}`} className="text-primary hover:underline">
+              [{product.sku}] {product.name}
+            </Link>
+          ) : (
+            "—"
+          )
         }
         return show(column, row[column.key] as string | undefined)
       },
     })),
   ]
 
-  return (
-    <div className="space-y-8">
-      {spec.tabs.map((tab) => (
-        <Section key={tab.key} title={tab.label}>
-          <div className="space-y-6">
-            {tab.blocks.map((block, index) => {
-              if (isListBlock(block)) {
-                return (
-                  <div key={index} className="space-y-2">
-                    {block.title !== tab.label && (
-                      <h3 className="text-control font-medium">{block.title}</h3>
-                    )}
-                    <DataTable
-                      columns={listColumns(block)}
-                      rows={listRows(block)}
-                      rowKey={(row) => String(row.seq)}
-                      empty={{ title: "Belum ada." }}
-                    />
-                  </div>
-                )
-              }
-              return (
-                <div key={index} className="space-y-2">
-                  {block.title && <h3 className="text-control font-medium">{block.title}</h3>}
-                  <InfoGrid
-                    items={block.fields.map((item) =>
-                      isFieldGroup(item)
-                        ? {
-                            label: item.group,
-                            value: item.fields
-                              .map((field) => show(field, customsFieldValue(draft, field)))
-                              .join(" "),
-                          }
-                        : { label: item.label, value: show(item, customsFieldValue(draft, item)) },
-                    )}
-                  />
-                </div>
-              )
-            })}
+  const blockContent = (block: CustomsBlock, key: string) => {
+    if (isListBlock(block)) {
+      return (
+        <ViewSection key={key} title={block.title}>
+          <div className="min-w-0">
+            <DataTable
+              columns={listColumns(block)}
+              rows={listRows(block)}
+              rowKey={(row) => String(row.seq)}
+              empty={{ title: "Belum ada." }}
+            />
           </div>
-        </Section>
+        </ViewSection>
+      )
+    }
+    return (
+      <ViewSection key={key} title={block.title ?? undefined}>
+        {block.fields.map((item, index) =>
+          isFieldGroup(item) ? (
+            <StaticField
+              key={index}
+              label={item.group}
+              value={item.fields
+                .map((field) => show(field, customsFieldValue(draft, field)))
+                .join(" ")}
+            />
+          ) : (
+            <StaticField
+              key={index}
+              label={item.label}
+              value={show(item, customsFieldValue(draft, item))}
+              span={item.span}
+            />
+          ),
+        )}
+      </ViewSection>
+    )
+  }
+
+  return (
+    <Tabs defaultValue={spec.tabs[0]?.key}>
+      <TabsList>
+        {spec.tabs.map((tab) => (
+          <TabsTrigger key={tab.key} value={tab.key}>
+            {tab.label}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+      {spec.tabs.map((tab) => (
+        <TabsContent key={tab.key} value={tab.key}>
+          <div className="flex flex-col gap-10">
+            {sideBySide(tab.blocks).map((group, index) =>
+              group.length > 1 ? (
+                <div key={index} className="grid items-start gap-10 lg:grid-cols-2">
+                  {group.map((block) =>
+                    blockContent(block, `${tab.key}-${tab.blocks.indexOf(block)}`),
+                  )}
+                </div>
+              ) : (
+                blockContent(group[0], `${tab.key}-${tab.blocks.indexOf(group[0])}`)
+              ),
+            )}
+          </div>
+        </TabsContent>
       ))}
-    </div>
+    </Tabs>
   )
 }

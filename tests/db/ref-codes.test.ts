@@ -102,6 +102,23 @@ describe("aturan tabel ref_codes", () => {
 })
 
 describe("searchRefCodes", () => {
+  test("halaman lanjutan mempertahankan urutan, active-only, dan cakupan induk", async () => {
+    const first = await searchRefCodes({ type: "customs_office", search: "ZQ0", limit: 1 })
+    const next = await searchRefCodes({
+      type: "customs_office",
+      search: "ZQ0",
+      limit: 1,
+      offset: 1,
+    })
+    expect([...first, ...next].map((row) => row.code)).toEqual(["ZQ0100", "ZQ0200"])
+    const beyond = await searchRefCodes({
+      type: "tps",
+      search: "ZQT1",
+      parentCode: "ZQ0200",
+      offset: 1,
+    })
+    expect(beyond).toEqual([])
+  })
   test("kode yang sama persis tampil paling atas, lalu awalan kode, lalu nama", async () => {
     const result = await searchRefCodes({ type: "customs_office", search: "zq0100" })
     // ZQ9 diarsipkan, jadi tidak muncul walaupun namanya mengandung ZQ0100.
@@ -111,13 +128,20 @@ describe("searchRefCodes", () => {
     expect(prefix.map((row) => row.code)).toEqual(["ZQ0100", "ZQ0200"])
 
     const byName = await searchRefCodes({ type: "customs_office", search: "uji dua" })
-    expect(byName).toEqual([{ code: "ZQ0200", name: "KPPBC Uji Dua", parentCode: null }])
+    expect(byName).toEqual([
+      { id: expect.any(String), code: "ZQ0200", name: "KPPBC Uji Dua", parentCode: null },
+    ])
   })
 
   test("pilihan bisa dibatasi ke satu induk", async () => {
     const result = await searchRefCodes({ type: "tps", search: "ZQT1", parentCode: "ZQ0200" })
     expect(result).toEqual([
-      { code: "ZQT1", name: "TPS Satu di kantor lain", parentCode: "ZQ0200" },
+      {
+        id: expect.any(String),
+        code: "ZQT1",
+        name: "TPS Satu di kantor lain",
+        parentCode: "ZQ0200",
+      },
     ])
   })
 })

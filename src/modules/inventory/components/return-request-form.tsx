@@ -5,6 +5,8 @@ import { useId, useState, useTransition } from "react"
 import { saveReturnRequest } from "@/modules/inventory/actions/returns"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection } from "@/components/form-field"
+import { RelationalTable } from "@/components/relational/relational-table"
+import { sumDecimals } from "@/components/relational/relational-utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import {
@@ -171,53 +173,77 @@ export function ReturnRequestForm({
         title="Barang yang diretur"
         description="Isi 0 untuk barang yang tidak diretur. Qty dalam satuan stok produk. Barang dengan pengganti dibuatkan transfer pengganti setelah retur Selesai."
       >
-        <div className="divide-y rounded-lg border">
-          {request.lines.map((line) => (
-            <div
-              key={line.id}
-              className="grid gap-x-4 gap-y-2 p-3 sm:grid-cols-[minmax(0,1fr)_auto_14rem] sm:items-center"
-            >
-              <div className="min-w-0">
-                <p className="font-mono text-sm text-foreground">{line.sku}</p>
-                <p className="text-sm text-muted-foreground">
-                  {line.name}
-                  {line.lot && <span className="font-mono"> · lot {line.lot}</span>}
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
+        <RelationalTable
+          id="return-lines"
+          label="Barang yang diretur"
+          rows={request.lines}
+          rowKey={(line) => line.id}
+          initialEdit
+          columns={[
+            {
+              id: "product",
+              label: "Produk",
+              width: 340,
+              value: (line) => `[${line.sku}] ${line.name}${line.lot ? ` · lot ${line.lot}` : ""}`,
+            },
+            {
+              id: "qty",
+              label: "Qty retur",
+              numeric: true,
+              width: 180,
+              value: (line) => lines[line.id]?.qty ?? "",
+              edit: (line) => (
                 <Input
                   aria-label={`Qty retur ${line.sku}${line.lot ? ` lot ${line.lot}` : ""}`}
                   inputMode="decimal"
                   value={lines[line.id]?.qty ?? ""}
                   onChange={(event) => update(line.id, { qty: event.target.value })}
-                  className={`w-28 text-right tabular-nums ${TOUCH}`}
+                  className={`text-right tabular-nums ${TOUCH}`}
                 />
-                <span className="text-sm whitespace-nowrap text-muted-foreground">
-                  {line.uom} · maks. {formatDecimal(line.max)}
-                </span>
-              </div>
-              <Select
-                items={ACTION_ITEMS}
-                value={lines[line.id]?.action}
-                onValueChange={(value) => value && update(line.id, { action: value })}
-              >
-                <SelectTrigger
-                  aria-label={`Tindakan ${line.sku}${line.lot ? ` lot ${line.lot}` : ""}`}
-                  className={`w-full ${TOUCH}`}
+              ),
+              footer: (items) =>
+                [...Map.groupBy(items, (line) => line.uom)].map(([uom, group]) => (
+                  <div key={uom}>
+                    {formatDecimal(sumDecimals(group.map((line) => lines[line.id]?.qty ?? "")))}{" "}
+                    {uom}
+                  </div>
+                )),
+            },
+            {
+              id: "max",
+              label: "Maksimum",
+              width: 180,
+              value: (line) => `${formatDecimal(line.max)} ${line.uom}`,
+            },
+            {
+              id: "action",
+              label: "Tindakan",
+              width: 280,
+              value: (line) => RETURN_LINE_ACTION_LABELS[lines[line.id]?.action ?? line.action],
+              edit: (line) => (
+                <Select
+                  items={ACTION_ITEMS}
+                  value={lines[line.id]?.action}
+                  onValueChange={(value) => value && update(line.id, { action: value })}
                 >
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {ACTION_ITEMS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          ))}
-        </div>
+                  <SelectTrigger
+                    aria-label={`Tindakan ${line.sku}${line.lot ? ` lot ${line.lot}` : ""}`}
+                    className={`w-full ${TOUCH}`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ACTION_ITEMS.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ),
+            },
+          ]}
+        />
       </FormSection>
     </form>
   )

@@ -154,6 +154,21 @@ export const OWNER_CODE = "7"
 export const isFieldGroup = (item: CustomsFieldItem): item is CustomsFieldGroup => "group" in item
 export const isListBlock = (block: CustomsBlock): block is CustomsListBlock => "list" in block
 
+// Blok tab dikelompokkan: kemasan dan peti kemas yang berurutan jadi satu kelompok berdampingan.
+export function sideBySide(blocks: CustomsBlock[]): CustomsBlock[][] {
+  const paired = (block: CustomsBlock | undefined) =>
+    block !== undefined &&
+    isListBlock(block) &&
+    (block.list === "packages" || block.list === "containers")
+  const groups: CustomsBlock[][] = []
+  for (const [index, block] of blocks.entries()) {
+    const previous = groups.at(-1)
+    if (previous?.length === 1 && paired(block) && paired(blocks[index - 1])) previous.push(block)
+    else groups.push([block])
+  }
+  return groups
+}
+
 export function flatFields(items: CustomsFieldItem[]): CustomsField[] {
   return items.flatMap((item) => (isFieldGroup(item) ? item.fields : [item]))
 }

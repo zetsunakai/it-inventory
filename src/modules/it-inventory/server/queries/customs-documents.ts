@@ -64,7 +64,11 @@ export type CustomsProductChoice = {
 }
 
 // Produk aktif yang siap dokumen BC (punya kode HS, PRD 5.3) untuk baris barang.
-export async function searchCustomsProducts(search: string): Promise<CustomsProductChoice[]> {
+export async function searchCustomsProducts(
+  search: string,
+  offset = 0,
+  limit = SEARCH_LIMIT,
+): Promise<CustomsProductChoice[]> {
   const pattern = containsPattern(search)
   const rows = await db
     .select({
@@ -84,7 +88,8 @@ export async function searchCustomsProducts(search: string): Promise<CustomsProd
       ),
     )
     .orderBy(asc(products.sku))
-    .limit(SEARCH_LIMIT)
+    .limit(limit)
+    .offset(offset)
   return rows.map((row) => ({ ...row, hsCode: row.hsCode ?? "" }))
 }
 

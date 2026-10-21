@@ -139,10 +139,10 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        bulkDelete={
+        selection={
           canEdit
             ? {
-                action: deleteWarehouse,
+                remove: deleteWarehouse,
                 noun: "gudang",
                 id: (row) => row.id,
                 label: (row) => row.code,

@@ -14,6 +14,7 @@ import { DocumentLayout } from "@/components/document/document-layout"
 import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 import { ListToolbar } from "@/components/layout/list-toolbar"
+import { RecordModes } from "@/components/layout/record-modes"
 import { PageHeader } from "@/components/page-header"
 import { StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
@@ -38,10 +39,14 @@ import {
   requiredCustomsSpec,
   type CustomsDocumentRow,
 } from "@/modules/it-inventory/server/queries/customs-documents"
+import {
+  deleteCustomsDocument,
+  duplicateCustomsDocument,
+} from "@/modules/it-inventory/actions/customs-documents"
 import { requirePermission } from "@/server/auth/session"
 import { recordActivity, statusDates } from "@/server/queries/activity"
 
-import { CustomsDocumentActions } from "./customs-document-actions"
+import { SubmitCustomsButton } from "./customs-document-actions"
 import { CustomsDocumentForm } from "./customs-document-form"
 import { CustomsDocumentView } from "./customs-document-view"
 import { DocumentTransfersSection } from "./document-transfers-section"
@@ -218,6 +223,20 @@ async function CustomsTable({
         rows={rows}
         rowKey={(row) => row.id}
         rowHref={(row) => `${spec.path}/${row.id}`}
+        selection={
+          canWrite
+            ? {
+                noun: "dokumen",
+                id: (row) => row.id,
+                label: (row) => row.number,
+                remove: deleteCustomsDocument,
+                removeNote:
+                  "Hanya dokumen Draft; dokumen Submitted ditolak. Dokumen beserta barang, lampiran, dan pilihan transfernya dihapus permanen.",
+                duplicate: duplicateCustomsDocument,
+                duplicatePath: spec.path,
+              }
+            : undefined
+        }
         empty={listEmptyState({
           searchParams: raw,
           noun: `dokumen ${spec.title}`,
@@ -308,17 +327,6 @@ async function CustomsDetail({
     <DocumentLayout
       title={`${spec.title} ${doc.number}`}
       hideTitle
-      actions={
-        !editable && (
-          <CustomsDocumentActions
-            id={doc.id}
-            path={spec.path}
-            number={doc.number}
-            status={doc.status}
-            canWrite={canWrite}
-          />
-        )
-      }
       crumbs={[{ label: doc.number }]}
       meta={
         [
@@ -332,26 +340,29 @@ async function CustomsDetail({
       activity={<ActivityLog entries={activity} noun="dokumen" />}
     >
       <div className="space-y-4">
-        {editable ? (
-          <CustomsDocumentForm
-            spec={formSpec}
-            documentId={doc.id}
-            initial={doc.draft}
-            initialLabels={doc.refLabels}
-            actions={
-              <CustomsDocumentActions
-                id={doc.id}
-                path={spec.path}
-                number={doc.number}
-                status={doc.status}
-                canWrite={canWrite}
-                includeDuplicate={false}
+        {/* Draft dibuka dalam mode baca seperti hmx; Edit membuka form, Simpan/Buang kembali. */}
+        <RecordModes
+          key={doc.id}
+          canEdit={editable}
+          createHref={`${spec.path}/baru`}
+          view={<CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />}
+          actions={
+            // Elemen dari server masuk ke daftar anak di klien; tanpa key React memperingatkan
+            // "unique key" karena elemen hasil RSC belum ditandai tervalidasi.
+            <SubmitCustomsButton key="submit" id={doc.id} number={doc.number} />
+          }
+          form={
+            editable && (
+              <CustomsDocumentForm
+                spec={formSpec}
+                documentId={doc.id}
+                initial={doc.draft}
+                initialLabels={doc.refLabels}
+                actions={<SubmitCustomsButton key="submit" id={doc.id} number={doc.number} />}
               />
-            }
-          />
-        ) : (
-          <CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />
-        )}
+            )
+          }
+        />
         <DocumentTransfersSection documentId={doc.id} />
       </div>
     </DocumentLayout>

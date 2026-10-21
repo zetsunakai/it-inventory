@@ -79,7 +79,7 @@ test.describe("Administrator", () => {
         .get(`/api/ref-codes?type=tps&parent=040300&q=${q}`)
         .then((response) => response.json())
     expect((await search(code)).items).toEqual([
-      { code, name: "TPS Uji E2E", parentCode: "040300" },
+      { id: expect.any(String), code, name: "TPS Uji E2E", parentCode: "040300" },
     ])
 
     // Kode yang sama di kantor yang sama ditolak.

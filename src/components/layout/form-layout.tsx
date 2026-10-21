@@ -21,9 +21,12 @@ export const FORM_CLASS = "form-page"
 
 export function FormActions({
   children,
+  after,
   danger,
 }: {
   children: ReactNode
+  // Aksi lain setelah Buang (mis. Submit dokumen), supaya Buang tetap di samping Simpan.
+  after?: ReactNode
   // Aksi berbahaya (Hapus, Batalkan), dipisah di kanan baris aksi.
   danger?: ReactNode
 }) {
@@ -31,6 +34,7 @@ export function FormActions({
     <div className="form-actions">
       {children}
       <DiscardButton />
+      {after}
       {danger && <div className="ml-auto flex flex-wrap gap-2">{danger}</div>}
     </div>
   )

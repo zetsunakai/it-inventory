@@ -50,10 +50,14 @@ export async function searchRefCodes({
   type,
   search,
   parentCode,
+  offset = 0,
+  limit = REF_CODE_SEARCH_LIMIT,
 }: {
   type: RefCodeType
   search: string
   parentCode?: string
+  offset?: number
+  limit?: number
 }): Promise<RefCodeOption[]> {
   const conditions: SQL[] = [eq(refCodes.type, type), eq(refCodes.active, true)]
   if (parentCode) conditions.push(eq(refCodes.parentCode, parentCode))
@@ -63,15 +67,22 @@ export async function searchRefCodes({
   }
 
   return db
-    .select({ code: refCodes.code, name: refCodes.name, parentCode: refCodes.parentCode })
+    .select({
+      id: refCodes.id,
+      code: refCodes.code,
+      name: refCodes.name,
+      parentCode: refCodes.parentCode,
+    })
     .from(refCodes)
     .where(and(...conditions))
     .orderBy(
       desc(sql`lower(${refCodes.code}) = lower(${search})`),
       desc(sql`${refCodes.code} ilike ${prefixPattern(search)}`),
       asc(refCodes.code),
+      asc(refCodes.id),
     )
-    .limit(REF_CODE_SEARCH_LIMIT)
+    .limit(limit)
+    .offset(offset)
 }
 
 export async function getRefCode(id: string) {

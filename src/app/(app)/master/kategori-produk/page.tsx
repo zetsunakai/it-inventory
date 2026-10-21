@@ -107,10 +107,10 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        bulkDelete={
+        selection={
           canEdit
             ? {
-                action: deleteProductCategory,
+                remove: deleteProductCategory,
                 noun: "kategori produk",
                 id: (row) => row.id,
                 label: (row) => row.path,

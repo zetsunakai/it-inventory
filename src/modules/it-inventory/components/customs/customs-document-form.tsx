@@ -1,12 +1,21 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react"
+import { memo, useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection } from "@/components/form-field"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
+import { useSaveFeedback } from "@/components/layout/record-modes"
+import { RelationalTable } from "@/components/relational/relational-table"
+import {
+  identifyRelations,
+  newRelation,
+  relationKey,
+  RELATION_KEY,
+  sumDecimals,
+} from "@/components/relational/relational-utils"
+import { formatDecimal } from "@/lib/decimal"
 import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -17,10 +26,12 @@ import {
   OWNER_CODE,
   customsFieldValue,
   emptyLine,
+  formatCustomsValue,
   emptyParty,
   emptyRow,
   isFieldGroup,
   isListBlock,
+  sideBySide,
   setCustomsFieldValue,
   type CustomsBlock,
   type CustomsDocumentDraft,
@@ -33,7 +44,6 @@ import {
   type CustomsRowDraft,
 } from "@/modules/it-inventory/lib/customs-form"
 
-import { DuplicateCustomsButton } from "./customs-document-actions"
 import { AttachmentsEditor } from "./attachments-editor"
 import {
   CustomsControl,
@@ -42,7 +52,6 @@ import {
   type FieldChange,
   type RefLabels,
 } from "./customs-field"
-import { RowCard } from "./row-card"
 
 type ProductChoice = { id: string; sku: string; name: string; hsCode: string; uomCode: string }
 type PartnerChoice = { id: string; name: string; identityNumber: string }
@@ -71,10 +80,12 @@ export function CustomsDocumentForm({
     saveCustomsDocument,
     null,
   )
-  const [draft, setDraft] = useState(initial)
+  const [draft, setDraft] = useState(() => identifyRelations(initial))
   const [labels, setLabels] = useState(initialLabels)
   const [activeTab, setActiveTab] = useState(spec.tabs[0]?.key)
   const invalidTarget = useRef<HTMLElement | null>(null)
+  // Dokumen tersimpan: kembali ke mode baca (RecordModes) dan pesannya di bawah header.
+  useSaveFeedback(documentId ? state : null)
 
   useEffect(() => {
     if (state?.ok && !documentId) router.push(`${spec.path}/${state.data.id}`)
@@ -87,7 +98,7 @@ export function CustomsDocumentForm({
     (field: CustomsField): FieldChange =>
     (value, label) => {
       rememberLabel(label)
-      setDraft((current) => setCustomsFieldValue(current, field, value))
+      setDraft((current) => identifyRelations(setCustomsFieldValue(current, field, value)))
     }
   const value = (field: CustomsField) => customsFieldValue(draft, field)
   const setRows = (list: RowList, rows: CustomsRowDraft[]) =>
@@ -124,7 +135,7 @@ export function CustomsDocumentForm({
                     ...current,
                     parties: [
                       ...current.parties.filter((entry) => entry.entityTypeCode !== role.code),
-                      party,
+                      newRelation(party),
                     ],
                   }))
                 }
@@ -248,19 +259,10 @@ export function CustomsDocumentForm({
         })
       }}
     >
-      <FormActions>
+      <FormActions after={actions}>
         <Button type="submit" disabled={pending}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
-        {documentId && (
-          <DuplicateCustomsButton id={documentId} path={spec.path} disabled={pending} />
-        )}
-        {actions}
-        {state?.ok && documentId && (
-          <p role="status" className="text-control text-success">
-            Perubahan disimpan.
-          </p>
-        )}
       </FormActions>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
       {documentId && <input type="hidden" name="id" value={documentId} />}
@@ -278,20 +280,24 @@ export function CustomsDocumentForm({
         {spec.tabs.map((tab) => (
           // Isi tab tetap terpasang supaya pilihan yang belum disimpan tidak hilang saat pindah tab.
           <TabsContent key={tab.key} value={tab.key} data-customs-tab={tab.key} keepMounted>
-            <div className="flex flex-col gap-10">
-              {sideBySide(tab.blocks).map((group, index) =>
-                group.length > 1 ? (
-                  // Kemasan dan peti kemas berdampingan (kiri–kanan) di layar lebar.
-                  <div key={index} className="grid items-start gap-10 lg:grid-cols-2">
-                    {group.map((block) =>
-                      blockContent(block, `${tab.key}-${tab.blocks.indexOf(block)}`),
-                    )}
-                  </div>
-                ) : (
-                  blockContent(group[0], `${tab.key}-${tab.blocks.indexOf(group[0])}`)
-                ),
+            <TabBody active={tab.key === activeTab}>
+              {() => (
+                <div className="flex flex-col gap-10">
+                  {sideBySide(tab.blocks).map((group, index) =>
+                    group.length > 1 ? (
+                      // Kemasan dan peti kemas berdampingan (kiri–kanan) di layar lebar.
+                      <div key={index} className="grid items-start gap-10 lg:grid-cols-2">
+                        {group.map((block) =>
+                          blockContent(block, `${tab.key}-${tab.blocks.indexOf(block)}`),
+                        )}
+                      </div>
+                    ) : (
+                      blockContent(group[0], `${tab.key}-${tab.blocks.indexOf(group[0])}`)
+                    ),
+                  )}
+                </div>
               )}
-            </div>
+            </TabBody>
           </TabsContent>
         ))}
       </Tabs>
@@ -299,26 +305,22 @@ export function CustomsDocumentForm({
   )
 }
 
-// Blok tab dikelompokkan: kemasan dan peti kemas yang berurutan jadi satu kelompok berdampingan.
-function sideBySide(blocks: CustomsBlock[]): CustomsBlock[][] {
-  const paired = (block: CustomsBlock | undefined) =>
-    block !== undefined &&
-    isListBlock(block) &&
-    (block.list === "packages" || block.list === "containers")
-  const groups: CustomsBlock[][] = []
-  for (const [index, block] of blocks.entries()) {
-    const previous = groups.at(-1)
-    if (previous?.length === 1 && paired(block) && paired(blocks[index - 1])) previous.push(block)
-    else groups.push([block])
-  }
-  return groups
-}
+// Isi tab hanya dirender ulang saat tabnya aktif: mengetik dan pindah tab tidak merender ulang
+// ratusan kontrol di tab lain. DOM tab lain tetap terpasang (keepMounted) dengan nilai terakhirnya;
+// isian hanya berubah lewat tab yang aktif, dan JSON yang dikirim selalu dari draft terbaru.
+const TabBody = memo(
+  function TabBody({ children }: { active: boolean; children: () => ReactNode }) {
+    return children()
+  },
+  (_, next) => !next.active,
+)
 
 type RowList = keyof typeof CUSTOMS_ROW_KEYS & keyof CustomsDocumentDraft
 
 // Daftar Pemilik Barang: setiap baris adalah entitas pemilik (kode 7) berseri.
 const OWNER_KEYS = ["code", "identityTypeCode", "identityNumber", "nitku", "name", "address"]
 const ownerRow = (party: CustomsPartyDraft): CustomsRowDraft => ({
+  [RELATION_KEY]: relationKey(party),
   code: party.details.code ?? "",
   identityTypeCode: party.identityTypeCode,
   identityNumber: party.identityNumber,
@@ -332,6 +334,7 @@ const ownerParty = (row: CustomsRowDraft): CustomsPartyDraft => {
   )
   return {
     ...emptyParty(OWNER_CODE),
+    ...{ [RELATION_KEY]: relationKey(row) },
     identityTypeCode: row.identityTypeCode ?? "",
     identityNumber: row.identityNumber ?? "",
     name: row.name ?? "",
@@ -422,88 +425,11 @@ type RowsProps = {
   onLabel: OnLabel
 }
 
-// Daftar dalam bentuk tabel (list editable hmx): judul kolom, satu baris isian per data, hapus per
-// baris, dan tombol Tambah di bawah. Di layar sempit setiap baris menjadi kartu dua kolom.
-function RowsTable({
-  title,
-  idPrefix,
-  rows,
-  onChange,
-  newRow,
-  columns,
-  refLabels,
-  onLabel,
-}: RowsProps) {
-  const template = `1.75rem repeat(${columns.length}, minmax(0, 1fr)) 2.25rem`
-  return (
-    <FormSection title={title}>
-      <div data-span={12} className="space-y-3">
-        <div
-          aria-hidden
-          style={{ gridTemplateColumns: template }}
-          className="hidden gap-2 text-caption font-medium text-muted-foreground md:grid"
-        >
-          <span>Seri</span>
-          {columns.map((column) => (
-            <span key={column.key}>
-              {column.label}
-              {column.required && <span className="text-destructive"> *</span>}
-            </span>
-          ))}
-        </div>
-        {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada.</p>}
-        {rows.map((row, index) => {
-          const label = `${title} seri ${index + 1}`
-          return (
-            <div
-              key={index}
-              style={{ "--rows-template": template } as React.CSSProperties}
-              className="grid grid-cols-2 items-center gap-2 rounded-lg border p-3 md:grid-cols-[var(--rows-template)] md:border-0 md:p-0"
-            >
-              <span className="text-control tabular-nums">{index + 1}</span>
-              {columns.map((column) => (
-                <div key={column.key} className="min-w-0">
-                  <CustomsControl
-                    field={column}
-                    id={`${idPrefix}-${index}-${column.key}`}
-                    value={row[column.key] ?? ""}
-                    ariaLabel={`${column.label} ${label}`}
-                    onChange={(value, refLabel) => {
-                      onLabel(refLabel)
-                      onChange(
-                        rows.map((entry, position) =>
-                          position === index ? { ...entry, [column.key]: value } : entry,
-                        ),
-                      )
-                    }}
-                    refLabels={refLabels}
-                  />
-                </div>
-              ))}
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                aria-label={`Hapus ${label}`}
-                onClick={() => onChange(rows.filter((_, position) => position !== index))}
-                className="justify-self-end"
-              >
-                <Trash2 />
-              </Button>
-            </div>
-          )
-        })}
-        <Button type="button" variant="outline" onClick={() => onChange([...rows, newRow()])}>
-          <Plus />
-          Tambah
-        </Button>
-      </div>
-    </FormSection>
-  )
+// Seluruh daftar sederhana memakai editor tabel yang sama; metadata baris tidak masuk JSON.
+function RowsTable(props: RowsProps) {
+  return <RowsEditor {...props} />
 }
 
-// Daftar baris sederhana (kemasan, peti kemas, sarana angkut, pungutan, jaminan, bank devisa,
-// pemilik barang): satu kartu per baris, kolom sesuai daftar hmx.
 function RowsEditor({
   title,
   idPrefix,
@@ -515,48 +441,63 @@ function RowsEditor({
   onLabel,
 }: RowsProps) {
   return (
-    <FormSection
-      title={title}
-      actions={
-        <Button type="button" variant="outline" onClick={() => onChange([...rows, newRow()])}>
-          <Plus />
-          Tambah
-        </Button>
-      }
-    >
-      {rows.length === 0 && <p className="text-control text-muted-foreground">Belum ada.</p>}
-      {rows.map((row, index) => (
-        <RowCard
-          key={index}
-          label={`${title} ${index + 1}`}
-          onRemove={() => onChange(rows.filter((_, position) => position !== index))}
-        >
-          {columns.map((column) => (
-            <CustomsFormField
-              key={column.key}
-              field={{ ...column, span: columns.length > 4 ? 4 : columns.length === 4 ? 3 : 6 }}
-              id={`${idPrefix}-${index}-${column.key}`}
+    <FormSection title={title}>
+      <RelationalTable<CustomsRowDraft>
+        id={`bc-${title}`}
+        label={title}
+        rows={rows}
+        rowKey={relationKey}
+        onReorder={onChange}
+        onRemove={(keys) => onChange(rows.filter((row) => !keys.includes(relationKey(row))))}
+        addLabel="Tambah"
+        onAdd={() => {
+          const row = newRelation(newRow())
+          onChange([...rows, row])
+          return relationKey(row)
+        }}
+        columns={columns.map((column) => ({
+          id: column.key,
+          label: column.label,
+          required: column.required,
+          optional: !column.required,
+          width: column.kind === "ref" ? 280 : 200,
+          numeric: column.kind === "qty" || column.kind === "money",
+          value: (row) =>
+            column.kind === "qty" || column.kind === "money"
+              ? (row[column.key] ?? "")
+              : formatCustomsValue(column, row[column.key], refLabels),
+          render: (row) => formatCustomsValue(column, row[column.key], refLabels),
+          edit: (row, index) => (
+            <CustomsControl
+              field={column}
+              id={`${idPrefix}-${relationKey(row)}-${column.key}`}
               value={row[column.key] ?? ""}
+              ariaLabel={`${column.label} ${title} seri ${index + 1}`}
+              refLabels={refLabels}
               onChange={(value, label) => {
                 onLabel(label)
                 onChange(
-                  rows.map((entry, position) =>
-                    position === index ? { ...entry, [column.key]: value } : entry,
+                  rows.map((entry) =>
+                    relationKey(entry) === relationKey(row)
+                      ? { ...entry, [column.key]: value }
+                      : entry,
                   ),
                 )
               }}
-              refLabels={refLabels}
             />
-          ))}
-        </RowCard>
-      ))}
+          ),
+          footer:
+            column.kind === "money"
+              ? (items) => formatDecimal(sumDecimals(items.map((row) => row[column.key] ?? "")))
+              : undefined,
+        }))}
+      />
     </FormSection>
   )
 }
 
-// Barang: satu kartu per seri berisi form Barang hmx jenis ini (produk siap BC; kode HS dan uraian
-// terisi dari produk), ditambah jumlah dalam satuan stok untuk mencocokkan transfer, Dokumen
-// Lartas, dan Voluntary Declaration bila ada di form hmx.
+// Barang ditampilkan ringkas. Detail tiap seri tetap satu form dengan dokumen agar validasi
+// required, Dokumen Lartas, dan Voluntary Declaration tetap bekerja saat detail ditutup.
 function LinesEditor({
   spec,
   title,
@@ -599,130 +540,169 @@ function LinesEditor({
     <FormSection
       title={title}
       description="Hanya produk yang sudah punya kode HS. Jumlah dalam satuan stok dicocokkan dengan transfer."
-      actions={
-        <Button type="button" variant="outline" onClick={() => onChange([...lines, emptyLine()])}>
-          <Plus />
-          Tambah Barang
-        </Button>
-      }
     >
-      {lines.length === 0 && (
-        <p className="text-control text-muted-foreground">Belum ada barang.</p>
-      )}
-      {lines.map((line, index) => {
-        const valueOf = lineValue(line)
-        const changeOf = lineChange(index, line)
-        const prefix = `${idPrefix}-${index}`
-        return (
-          <RowCard
-            key={index}
-            label={`Seri ${index + 1}`}
-            onRemove={() => onChange(lines.filter((_, position) => position !== index))}
-          >
-            {spec.line.blocks.map((block, blockIndex) => {
-              // Daftar (Voluntary Declaration) tampil setelah isian, lihat di bawah.
-              if (isListBlock(block)) return null
-              return block.fields.map((item, itemIndex) => {
-                if (isFieldGroup(item)) {
+      <RelationalTable<CustomsLineDraft>
+        id={`bc-${spec.code}-barang`}
+        label={title}
+        rows={lines}
+        rowKey={relationKey}
+        onReorder={onChange}
+        onRemove={(keys) => onChange(lines.filter((line) => !keys.includes(relationKey(line))))}
+        addLabel="Tambah Barang"
+        onAdd={() => {
+          const line = newRelation(emptyLine())
+          onChange([...lines, line])
+          return relationKey(line)
+        }}
+        columns={[
+          {
+            id: "product",
+            label: "Produk",
+            required: true,
+            width: 340,
+            value: (line) => (line.product ? `[${line.product.sku}] ${line.product.name}` : ""),
+            render: (line) =>
+              line.product ? (
+                <a
+                  href={`/master/produk/${line.product.id}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline"
+                >
+                  [{line.product.sku}] {line.product.name}
+                </a>
+              ) : (
+                "—"
+              ),
+          },
+          { id: "hsCode", label: "Kode HS", width: 180, value: (line) => line.hsCode },
+          {
+            id: "description",
+            label: "Uraian",
+            width: 280,
+            optional: true,
+            value: (line) => line.description,
+          },
+          {
+            id: "stockQty",
+            label: "Jumlah dalam Satuan Stok",
+            width: 240,
+            numeric: true,
+            required: true,
+            value: (line) => line.stockQty,
+          },
+        ]}
+        details={(line, index) => {
+          const valueOf = lineValue(line)
+          const changeOf = lineChange(index, line)
+          const prefix = `${idPrefix}-${relationKey(line)}`
+          return (
+            <>
+              {spec.line.blocks.map((block, blockIndex) => {
+                // Daftar (Voluntary Declaration) tampil setelah isian, lihat di bawah.
+                if (isListBlock(block)) return null
+                return block.fields.map((item, itemIndex) => {
+                  if (isFieldGroup(item)) {
+                    return (
+                      <CustomsGroupField
+                        key={`${blockIndex}-${itemIndex}`}
+                        group={item}
+                        id={`${prefix}-${item.group}`}
+                        value={valueOf}
+                        onChange={changeOf}
+                        refLabels={refLabels}
+                      />
+                    )
+                  }
+                  if (item.kind === "product") {
+                    return (
+                      <FormField
+                        key="product"
+                        label={item.label}
+                        htmlFor={`${prefix}-product`}
+                        span={12}
+                        required
+                      >
+                        <SearchSelect<ProductChoice>
+                          id={`${prefix}-product`}
+                          endpoint="/api/customs-products"
+                          required
+                          value={
+                            line.product
+                              ? { ...line.product, hsCode: line.hsCode, uomCode: "" }
+                              : null
+                          }
+                          onValueChange={(product) =>
+                            update(index, {
+                              productId: product?.id ?? "",
+                              product: product
+                                ? { id: product.id, sku: product.sku, name: product.name }
+                                : null,
+                              itemCode: product?.sku ?? line.itemCode,
+                              hsCode: product?.hsCode ?? line.hsCode,
+                              description: line.description || product?.name || "",
+                            })
+                          }
+                          getKey={(choice) => choice.id}
+                          getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
+                          placeholder="Cari product code atau nama produk"
+                        />
+                      </FormField>
+                    )
+                  }
                   return (
-                    <CustomsGroupField
+                    <CustomsFormField
                       key={`${blockIndex}-${itemIndex}`}
-                      group={item}
-                      id={`${prefix}-${item.group}`}
-                      value={valueOf}
-                      onChange={changeOf}
+                      field={item}
+                      id={`${prefix}-${item.key}`}
+                      value={valueOf(item)}
+                      onChange={changeOf(item)}
                       refLabels={refLabels}
                     />
                   )
-                }
-                if (item.kind === "product") {
-                  return (
-                    <FormField
-                      key="product"
-                      label={item.label}
-                      htmlFor={`${prefix}-product`}
-                      span={12}
-                      required
-                    >
-                      <SearchSelect<ProductChoice>
-                        id={`${prefix}-product`}
-                        endpoint="/api/customs-products"
-                        required
-                        value={
-                          line.product
-                            ? { ...line.product, hsCode: line.hsCode, uomCode: "" }
-                            : null
-                        }
-                        onValueChange={(product) =>
-                          update(index, {
-                            productId: product?.id ?? "",
-                            product: product
-                              ? { id: product.id, sku: product.sku, name: product.name }
-                              : null,
-                            itemCode: product?.sku ?? line.itemCode,
-                            hsCode: product?.hsCode ?? line.hsCode,
-                            description: line.description || product?.name || "",
-                          })
-                        }
-                        getKey={(choice) => choice.id}
-                        getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
-                        placeholder="Cari product code atau nama produk"
-                      />
-                    </FormField>
-                  )
-                }
-                return (
-                  <CustomsFormField
-                    key={`${blockIndex}-${itemIndex}`}
-                    field={item}
-                    id={`${prefix}-${item.key}`}
-                    value={valueOf(item)}
-                    onChange={changeOf(item)}
-                    refLabels={refLabels}
-                  />
-                )
-              })
-            })}
-            <CustomsFormField
-              field={STOCK_QTY}
-              id={`${prefix}-stockQty`}
-              value={line.stockQty}
-              onChange={changeOf(STOCK_QTY)}
-              refLabels={refLabels}
-            />
-            {spec.line.blocks.map((block, blockIndex) =>
-              isListBlock(block) && block.list === "vdEntries" ? (
-                <div key={blockIndex} data-span={12} className="form-field">
-                  <RowsEditor
-                    title={block.title || "Voluntary Declaration"}
-                    idPrefix={`${prefix}-vd`}
-                    columns={block.columns}
-                    rows={line.vdEntries}
-                    onChange={(rows) => update(index, { vdEntries: rows })}
-                    newRow={() => emptyRow(CUSTOMS_ROW_KEYS.vdEntries)}
+                })
+              })}
+              <CustomsFormField
+                field={STOCK_QTY}
+                id={`${prefix}-stockQty`}
+                value={line.stockQty}
+                onChange={changeOf(STOCK_QTY)}
+                refLabels={refLabels}
+              />
+              {spec.line.blocks.map((block, blockIndex) =>
+                isListBlock(block) && block.list === "vdEntries" ? (
+                  <div key={blockIndex} data-span={12} className="form-field">
+                    <RowsEditor
+                      title={block.title || "Voluntary Declaration"}
+                      idPrefix={`${prefix}-vd`}
+                      columns={block.columns}
+                      rows={line.vdEntries}
+                      onChange={(rows) => update(index, { vdEntries: rows })}
+                      newRow={() => emptyRow(CUSTOMS_ROW_KEYS.vdEntries)}
+                      refLabels={refLabels}
+                      onLabel={onLabel}
+                    />
+                  </div>
+                ) : null,
+              )}
+              {spec.line.lartas && (
+                <div data-span={12} className="form-field">
+                  <AttachmentsEditor
+                    title={spec.line.lartas.title}
+                    columns={spec.line.lartas.columns}
+                    documentId={documentId}
+                    idPrefix={`${prefix}-lartas`}
+                    rows={line.attachments}
+                    onChange={(rows) => update(index, { attachments: rows })}
                     refLabels={refLabels}
                     onLabel={onLabel}
                   />
                 </div>
-              ) : null,
-            )}
-            {spec.line.lartas && (
-              <div data-span={12} className="form-field">
-                <AttachmentsEditor
-                  title={spec.line.lartas.title}
-                  columns={spec.line.lartas.columns}
-                  documentId={documentId}
-                  idPrefix={`${prefix}-lartas`}
-                  rows={line.attachments}
-                  onChange={(rows) => update(index, { attachments: rows })}
-                  refLabels={refLabels}
-                  onLabel={onLabel}
-                />
-              </div>
-            )}
-          </RowCard>
-        )
-      })}
+              )}
+            </>
+          )
+        }}
+      />
     </FormSection>
   )
 }

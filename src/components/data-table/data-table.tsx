@@ -16,7 +16,7 @@ import {
   RowCheckbox,
   RowSelection,
   SelectAllCheckbox,
-  type BulkDeleteAction,
+  type BulkAction,
 } from "./data-table-selection"
 
 export type DataTableColumn<Row> = {
@@ -40,13 +40,16 @@ const columnId = (header: string) =>
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "")
 
-// Pilih baris lalu Hapus (data master, M1-08). id = id data untuk action, label = penandanya di
-// konfirmasi dan pesan tolak (kode/SKU/nama).
-export type DataTableBulkDelete<Row> = {
-  action: BulkDeleteAction
+// Pilih baris lalu Hapus/Duplikat (M1-08, pola hmx: aksi data ada di daftar, bukan di detail).
+// id = id data untuk action, label = penandanya di konfirmasi dan pesan tolak (kode/SKU/nama).
+export type DataTableSelection<Row> = {
   noun: string
   id: (row: Row) => string
   label: (row: Row) => string
+  remove?: BulkAction
+  removeNote?: string
+  duplicate?: BulkAction
+  duplicatePath?: string
 }
 
 export type DataTableEmpty = {
@@ -69,7 +72,7 @@ export function DataTable<Row>({
   rowHref,
   rowMuted,
   group,
-  bulkDelete,
+  selection,
   empty = { title: "Tidak ada data." },
 }: {
   // Wajib bila ada kolom opsional (kunci penyimpanan pilihan kolom).
@@ -82,12 +85,12 @@ export function DataTable<Row>({
   // Baris yang diredupkan, misalnya data yang diarsipkan.
   rowMuted?: (row: Row) => boolean
   group?: DataTableGroup<Row>
-  // Hanya untuk peran yang boleh menghapus.
-  bulkDelete?: DataTableBulkDelete<Row>
+  // Hanya untuk peran yang boleh menghapus/menduplikat.
+  selection?: DataTableSelection<Row>
   empty?: DataTableEmpty
 }) {
   const optional = id ? columns.filter((column) => column.optional) : []
-  const span = columns.length + (optional.length ? 1 : 0) + (bulkDelete ? 1 : 0)
+  const span = columns.length + (optional.length ? 1 : 0) + (selection ? 1 : 0)
   const groups = group ? [...Map.groupBy(rows, (row) => group.key(row)).values()] : [rows]
   const fillers = Math.max((empty.minRows ?? 0) - rows.length, 0)
   // Halaman daftar (listEmptyState): lebar kolom tetap seperti list view hmx, dibagi rata ke kolom
@@ -96,7 +99,7 @@ export function DataTable<Row>({
   const fixedCell = fixed && "w-auto min-w-0 truncate"
   // Daftar (I-08, seperti relational-table hmx): tabel di-scroll di dalam kotaknya sendiri, judul
   // kolom menempel di atas dan kolom pengenal (pertama, beserta kotak centang) menempel di kiri.
-  const stickyLeft = fixed && cn("sticky z-10", bulkDelete ? "left-10" : "left-0")
+  const stickyLeft = fixed && cn("sticky z-10", selection ? "left-10" : "left-0")
   const stickyBody = "bg-card group-hover/row:bg-[color-mix(in_oklch,var(--card),var(--muted)_50%)]"
   // Kolom sekunder (opsional) disembunyikan di layar kecil (I-08).
   const secondary = (column: DataTableColumn<Row>) => column.optional && "max-md:hidden"
@@ -117,14 +120,14 @@ export function DataTable<Row>({
           rowMuted?.(row) && "text-muted-foreground",
         )}
       >
-        {bulkDelete && (
+        {selection && (
           <TableCell
             className={cn(
               "relative z-10 w-10 py-3 pr-0 pl-4",
               fixed && cn("sticky left-0", stickyBody),
             )}
           >
-            <RowCheckbox id={bulkDelete.id(row)} label={bulkDelete.label(row)} />
+            <RowCheckbox id={selection.id(row)} label={selection.label(row)} />
           </TableCell>
         )}
         {columns.map((column, index) => (
@@ -196,7 +199,7 @@ export function DataTable<Row>({
       >
         <TableHeader className={cn(!fixed && "bg-muted/60")}>
           <TableRow className="hover:bg-transparent">
-            {bulkDelete && (
+            {selection && (
               <TableHead
                 className={cn("h-12 w-10 pr-0 pl-4", fixed && "sticky top-0 left-0 z-30 bg-muted")}
               >
@@ -279,12 +282,15 @@ export function DataTable<Row>({
     </div>
   )
 
-  if (!bulkDelete) return table
+  if (!selection) return table
   return (
     <RowSelection
-      rows={rows.map((row) => ({ id: bulkDelete.id(row), label: bulkDelete.label(row) }))}
-      action={bulkDelete.action}
-      noun={bulkDelete.noun}
+      rows={rows.map((row) => ({ id: selection.id(row), label: selection.label(row) }))}
+      noun={selection.noun}
+      remove={selection.remove}
+      removeNote={selection.removeNote}
+      duplicate={selection.duplicate}
+      duplicatePath={selection.duplicatePath}
     >
       {table}
     </RowSelection>

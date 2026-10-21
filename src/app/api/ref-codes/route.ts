@@ -1,5 +1,6 @@
 import type { NextRequest } from "next/server"
 
+import { lookupPage, lookupResponse } from "@/lib/lookup-page"
 import { pickFilter, SEARCH_PARAM } from "@/lib/list-params"
 import { REF_CODE_TYPES } from "@/lib/ref-codes"
 import { getApiUser } from "@/server/auth/session"
@@ -16,10 +17,13 @@ export async function GET(request: NextRequest) {
   const type = pickFilter(params, "type", REF_CODE_TYPES)
   if (!type) return Response.json({ error: "Jenis referensi tidak dikenal." }, { status: 400 })
 
+  const { offset, limit } = lookupPage(request.nextUrl.searchParams)
   const items = await searchRefCodes({
+    offset,
+    limit: limit + 1,
     type,
     search: (params[SEARCH_PARAM] ?? "").trim().slice(0, 100),
     parentCode: params.parent?.trim() || undefined,
   })
-  return Response.json({ items })
+  return Response.json(lookupResponse(items, limit))
 }

@@ -139,9 +139,9 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
         columns={COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
-        bulkDelete={
+        selection={
           canEdit
-            ? { action: deleteUom, noun: "satuan", id: (row) => row.id, label: (row) => row.code }
+            ? { remove: deleteUom, noun: "satuan", id: (row) => row.id, label: (row) => row.code }
             : undefined
         }
         rowHref={canEdit ? (row) => `/master/satuan/${row.id}` : undefined}

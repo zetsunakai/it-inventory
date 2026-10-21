@@ -53,6 +53,8 @@ export const REF_CODE_PARENT_TYPES: Partial<Record<RefCodeType, RefCodeType>> = 
 
 // Satu pilihan di komponen [kode] nama, juga bentuk respons /api/ref-codes.
 export type RefCodeOption = {
+  // Disertakan lookup untuk tautan detail; nilai yang disimpan form tetap code.
+  id?: string
   code: string
   name: string
   parentCode: string | null

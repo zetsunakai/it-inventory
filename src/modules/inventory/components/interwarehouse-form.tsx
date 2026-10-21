@@ -1,12 +1,13 @@
 "use client"
 
-import { Plus, Trash2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useActionState, useEffect, useId, useRef, useState } from "react"
 
 import { saveInterwarehouse } from "@/modules/inventory/actions/interwarehouse"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection } from "@/components/form-field"
+import { RelationalTable, type RelationColumn } from "@/components/relational/relational-table"
+import { sumDecimals } from "@/components/relational/relational-utils"
 import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { toDecimalInput } from "@/lib/decimal"
+import { formatDecimal, toDecimalInput } from "@/lib/decimal"
 import type { TransferLineDraft } from "@/modules/inventory/lib/transfer"
 import type {
   LocationOption,
@@ -215,93 +216,125 @@ export function InterwarehouseForm({
         title="Barang"
         description="Lot dipilih otomatis saat konfirmasi (lot terlama dulu)."
       >
-        <div className="space-y-3">
-          {lines.map((line, index) => {
-            const label = `baris ${index + 1}`
-            const uomItems = uoms
-              .filter(
-                (uom) =>
-                  uom.categoryId === line.product?.uomCategoryId &&
-                  (!uom.productId || uom.productId === line.product.id),
-              )
-              .map((uom) => ({ value: uom.id, label: uom.code }))
-            return (
-              <div
-                key={line.key}
-                className="grid grid-cols-2 gap-2 rounded-lg border p-3 md:grid-cols-[minmax(0,1fr)_7rem_8rem_2.25rem] md:border-0 md:p-0"
-              >
-                <div className="col-span-2 md:col-span-1">
-                  <SearchSelect<ProductChoice>
-                    id={fieldId(`product-${line.key}`)}
-                    endpoint="/api/products"
-                    value={line.product}
-                    onValueChange={(product) =>
-                      update(line.key, { product, uomId: product?.uomId ?? "" })
-                    }
-                    getKey={(choice) => choice.id}
-                    getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
-                    placeholder="Cari product code atau nama produk"
+        <RelationalTable<Line>
+          id="interwarehouse-lines"
+          label="Barang"
+          rows={lines}
+          rowKey={(line) => line.key}
+          initialEdit
+          minRows={1}
+          errors={fieldErrors?.lines}
+          canRemove={() => lines.length > 1}
+          onRemove={(keys) =>
+            setLines((current) => current.filter((line) => !keys.includes(line.key)))
+          }
+          onAdd={() => {
+            const key = `line-${nextKey.current++}`
+            setLines((current) => [...current, { key, product: null, inputQty: "", uomId: "" }])
+            return key
+          }}
+          columns={
+            [
+              {
+                id: "product",
+                label: "Produk",
+                required: true,
+                width: 340,
+                value: (line) => (line.product ? `[${line.product.sku}] ${line.product.name}` : ""),
+                edit: (line, index) => (
+                  <div>
+                    <SearchSelect<ProductChoice>
+                      id={fieldId(`product-${line.key}`)}
+                      endpoint="/api/products"
+                      value={line.product}
+                      required
+                      onValueChange={(product) =>
+                        update(line.key, { product, uomId: product?.uomId ?? "" })
+                      }
+                      getKey={(item) => item.id}
+                      getLabel={(item) => `[${item.sku}] ${item.name}`}
+                      placeholder="Cari product code atau nama produk"
+                    />
+                    <label htmlFor={fieldId(`product-${line.key}`)} className="sr-only">
+                      Produk baris {index + 1}
+                    </label>
+                  </div>
+                ),
+                error: (line) =>
+                  state?.ok === false && !line.product ? "Pilih produk." : undefined,
+              },
+              {
+                id: "qty",
+                label: "Qty",
+                required: true,
+                numeric: true,
+                width: 160,
+                value: (line) => line.inputQty,
+                edit: (line, index) => (
+                  <Input
+                    required
+                    aria-label={`Qty baris ${index + 1}`}
+                    inputMode="decimal"
+                    placeholder="Qty"
+                    value={line.inputQty}
+                    onChange={(event) => update(line.key, { inputQty: event.target.value })}
+                    className={`text-right tabular-nums ${TOUCH}`}
                   />
-                  <label htmlFor={fieldId(`product-${line.key}`)} className="sr-only">
-                    Produk {label}
-                  </label>
-                </div>
-                <Input
-                  aria-label={`Qty ${label}`}
-                  inputMode="decimal"
-                  placeholder="Qty"
-                  value={line.inputQty}
-                  onChange={(event) => update(line.key, { inputQty: event.target.value })}
-                  className={`text-right tabular-nums ${TOUCH}`}
-                />
-                <Select
-                  items={uomItems}
-                  value={line.uomId || null}
-                  onValueChange={(value) => update(line.key, { uomId: value ?? "" })}
-                  disabled={!line.product}
-                >
-                  <SelectTrigger aria-label={`Satuan ${label}`} className={`w-full ${TOUCH}`}>
-                    <SelectValue placeholder="Satuan" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {uomItems.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  aria-label={`Hapus ${label}`}
-                  disabled={lines.length === 1}
-                  onClick={() =>
-                    setLines((current) => current.filter((entry) => entry.key !== line.key))
-                  }
-                  className="justify-self-end pointer-coarse:size-11"
-                >
-                  <Trash2 />
-                </Button>
-              </div>
-            )
-          })}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() =>
-              setLines((current) => [
-                ...current,
-                { key: `line-${nextKey.current++}`, product: null, inputQty: "", uomId: "" },
-              ])
-            }
-            className={TOUCH}
-          >
-            <Plus />
-            Tambah baris
-          </Button>
-        </div>
+                ),
+                error: (line) =>
+                  state?.ok === false && !(Number(line.inputQty.replace(",", ".")) > 0)
+                    ? "Qty harus lebih dari nol."
+                    : undefined,
+                footer: (items) =>
+                  [...Map.groupBy(items, (line) => line.uomId)].map(([id, group]) => (
+                    <div key={id}>
+                      {formatDecimal(sumDecimals(group.map((line) => line.inputQty)))}{" "}
+                      {uoms.find((uom) => uom.id === id)?.code ?? ""}
+                    </div>
+                  )),
+              },
+              {
+                id: "uom",
+                label: "Satuan",
+                required: true,
+                width: 170,
+                value: (line) => uoms.find((uom) => uom.id === line.uomId)?.code ?? "",
+                edit: (line, index) => {
+                  const items = uoms
+                    .filter(
+                      (uom) =>
+                        uom.categoryId === line.product?.uomCategoryId &&
+                        (!uom.productId || uom.productId === line.product.id),
+                    )
+                    .map((uom) => ({ value: uom.id, label: uom.code }))
+                  return (
+                    <Select
+                      required
+                      items={items}
+                      value={line.uomId || null}
+                      onValueChange={(value) => update(line.key, { uomId: value ?? "" })}
+                      disabled={!line.product}
+                    >
+                      <SelectTrigger
+                        aria-label={`Satuan baris ${index + 1}`}
+                        className={`w-full ${TOUCH}`}
+                      >
+                        <SelectValue placeholder="Satuan" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {items.map((item) => (
+                          <SelectItem key={item.value} value={item.value}>
+                            {item.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )
+                },
+              },
+            ] satisfies RelationColumn<Line>[]
+          }
+        />
       </FormSection>
     </form>
   )

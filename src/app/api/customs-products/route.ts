@@ -1,5 +1,7 @@
 import type { NextRequest } from "next/server"
 
+import { lookupPage, lookupResponse } from "@/lib/lookup-page"
+
 import { SEARCH_PARAM } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import { getApiUser } from "@/server/auth/session"
@@ -13,5 +15,8 @@ export async function GET(request: NextRequest) {
     return Response.json({ error: "Tidak punya izin." }, { status: 403 })
   }
   const search = (request.nextUrl.searchParams.get(SEARCH_PARAM) ?? "").trim().slice(0, 100)
-  return Response.json({ items: await searchCustomsProducts(search) })
+  const { offset, limit } = lookupPage(request.nextUrl.searchParams)
+  return Response.json(
+    lookupResponse(await searchCustomsProducts(search, offset, limit + 1), limit),
+  )
 }

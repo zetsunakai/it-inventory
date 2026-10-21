@@ -449,7 +449,11 @@ export type ProductChoice = {
 export const PRODUCT_SEARCH_LIMIT = 20
 
 // Pencarian produk aktif untuk baris transfer (/api/products).
-export async function searchProducts(search: string): Promise<ProductChoice[]> {
+export async function searchProducts(
+  search: string,
+  offset = 0,
+  limit = PRODUCT_SEARCH_LIMIT,
+): Promise<ProductChoice[]> {
   const pattern = containsPattern(search)
   return db
     .select({
@@ -471,13 +475,18 @@ export async function searchProducts(search: string): Promise<ProductChoice[]> {
       ),
     )
     .orderBy(asc(products.sku))
-    .limit(PRODUCT_SEARCH_LIMIT)
+    .limit(limit)
+    .offset(offset)
 }
 
 export type PartnerChoice = { id: string; name: string; identityNumber: string }
 
 // Pencarian partner aktif (/api/partners). Semua partner bisa jadi vendor maupun customer (RM-03).
-export async function searchPartners(search: string): Promise<PartnerChoice[]> {
+export async function searchPartners(
+  search: string,
+  offset = 0,
+  limit = PRODUCT_SEARCH_LIMIT,
+): Promise<PartnerChoice[]> {
   const pattern = containsPattern(search)
   return db
     .select({ id: partners.id, name: partners.name, identityNumber: partners.identityNumber })
@@ -490,8 +499,9 @@ export async function searchPartners(search: string): Promise<PartnerChoice[]> {
           : undefined,
       ),
     )
-    .orderBy(asc(partners.name))
-    .limit(PRODUCT_SEARCH_LIMIT)
+    .orderBy(asc(partners.name), asc(partners.id))
+    .limit(limit)
+    .offset(offset)
 }
 
 export type StockAvailability = {

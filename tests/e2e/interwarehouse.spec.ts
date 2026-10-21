@@ -30,6 +30,9 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
   ).toBeVisible()
   const requestUrl = page.url()
 
+  // Setelah konfirmasi tab Barang tetap aktif; tautan transfer ada di tab Transfer.
+  await page.getByRole("tab", { name: "Transfer", exact: true }).click()
+
   // Transfer keluar: gudang asal → transit.
   await page.getByRole("row").filter({ hasText: "keluar" }).getByRole("link").click()
   await expect(
