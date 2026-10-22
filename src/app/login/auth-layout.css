@@ -1,0 +1,45 @@
+.auth-brand-panel {
+  background:
+    radial-gradient(
+      ellipse at 5% 5%,
+      color-mix(in srgb, var(--sidebar-primary) 24%, transparent),
+      transparent 48%
+    ),
+    radial-gradient(
+      ellipse at 85% 88%,
+      color-mix(in srgb, var(--primary) 35%, transparent),
+      transparent 42%
+    ),
+    var(--sidebar);
+}
+
+.auth-orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 70%;
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 12%, transparent);
+  border-radius: 50%;
+}
+
+.auth-orbit::before,
+.auth-orbit::after {
+  position: absolute;
+  inset: -24%;
+  content: "";
+  border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent);
+  border-radius: inherit;
+}
+
+.auth-orbit::after {
+  inset: -48%;
+  border-color: color-mix(in srgb, var(--sidebar-foreground) 5%, transparent);
+}
+
+.auth-wordmark {
+  background: linear-gradient(110deg, var(--sidebar-primary), var(--primary));
+  background-clip: text;
+  color: transparent;
+}

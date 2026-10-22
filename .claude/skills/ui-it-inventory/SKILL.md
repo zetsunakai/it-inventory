@@ -58,7 +58,10 @@ Pakai komponen ini; jangan kembali ke pola lama yang terasa slop.
 | Logo                                         | `public/brand/veltics-logo.png` di header sidebar (ganti logo dengan file bernama baru supaya cache gambar lama tidak terpakai); `public/brand` dikecualikan dari proxy login                                                                                                                                                                                                | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)                                                |
 
 Sejak I-08: halaman masuk dan verifikasi memakai `AuthLayout` (`src/app/login/auth-layout.tsx`,
-panel brand navy di kiri, form tanpa kartu di kanan); daftar (`listEmptyState`) di-scroll di dalam
+panel brand navy dengan logo Veltics di tengah dan lingkaran konsentris di kiri, form tanpa kartu
+di kanan, footer Veltics; HP memakai header brand ringkas). Style auth di `auth-layout.css`
+memakai token brand yang sudah ada; login menyediakan tombol tampil/sembunyikan password.
+Google, reset password mandiri, dan pilihan bahasa belum tersedia. Daftar (`listEmptyState`) di-scroll di dalam
 kotak tabelnya dengan judul kolom dan kolom pengenal yang menempel; kolom `optional` disembunyikan di
 bawah 768px. Layar scan ada untuk penerimaan, pengiriman (RU-03, I-01), opname
 (`/inventory/opname/<id>/scan`, I-04), dan pindah lokasi (`/inventory/transfer/scan`, I-05).
