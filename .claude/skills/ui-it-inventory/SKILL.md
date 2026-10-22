@@ -22,7 +22,7 @@ domain (dokumen BC, CEISA, laporan, rujukan sistem lama) ada di skill `it-invent
 
 Konsep domain yang harus terlihat jelas di UI (semua gudang berikat sejak RM-02, jadi tidak ada
 penanda berikat per gudang): **status dokumen
-BC** (Draft → Siap ajukan → Diajukan → Terdaftar / Ditolak / Batal), **siap/belum siap dokumen BC**,
+BC** (Draft → Submitted, seperti hmx), **siap/belum siap dokumen BC**,
 **selisih** (opname, qty dokumen vs transfer), **arsip**, dan **periode tertutup**.
 
 ## Pola yang sudah ditetapkan (redesign putaran 1)
@@ -148,7 +148,7 @@ mengubahnya di sana.
 | `many2one`, `hx-searchable-dropdown`                                | `SearchSelect`; kode resmi `[kode] nama` → `RefCodeSelect`; kategori → `ProductCategorySelect`                          |
 | `one2many` / `relational_v2` (tabel baris)                          | `DataTable` di tab `Barang` dokumen; form Draft: baris di `TransferForm`                                                |
 | `o2m-quick-view-drawer`, `modal-form-drawer`                        | `Sheet` sisi kanan, mis. `ReceiptLotEditor` (rincian satu baris)                                                        |
-| `many2many_tags`, `many2many_chips`                                 | Belum ada; daftar teks dipisah koma atau baris, chip hanya bila bisa dihapus                                            |
+| `many2many_tags`, `many2many_chips`                                 | Chip yang bisa dilepas + tombol pemilih (`TransfersField` di form dokumen BC, H-04); mode baca: tautan dipisah spasi    |
 | `boolean` / `boolean_toggle`                                        | `CheckboxField`                                                                                                         |
 | `selection_radio`, `radio_card_selection`                           | radio biasa ber-label (contoh: pilihan sisa qty di dialog Validasi)                                                     |
 | `float`, `monetary`                                                 | input `inputMode="decimal"` + `formatDecimal`/`parseDecimalInput` (`src/lib/decimal.ts`)                                |

@@ -3,8 +3,8 @@
 // Dipakai bersama oleh schema, server, dan UI.
 
 // Kode dokumen sama dengan kodeDokumen CEISA, supaya payload tidak perlu dipetakan lagi. Lima
-// jenis pertama MVP; sisanya (jadwal PRD fase 2 dan 3) sudah punya form tapi belum masuk gerbang
-// transfer dan alokasi asal. P3BET memakai kode CEISA 331.
+// jenis pertama MVP; sisanya jadwal PRD fase 2 dan 3. Semua jenis sudah punya form dan memilih
+// transfer sesuai DOCUMENT_SOURCE_MAP hmx. P3BET memakai kode CEISA 331.
 export const CUSTOMS_DOC_CODES = [
   "23",
   "40",
@@ -118,4 +118,49 @@ export const CUSTOMS_DOCUMENT_SOURCE_CODES: Record<CustomsDocCode, readonly stri
   "331": ["gi"],
   "40": ["itw_in", "itw_out", "gr"],
   "41": ["itw_in", "itw_out", "gi"],
+}
+
+// Jenis sumber di pemilih transfer (SOURCE_TRANSFER_CODES hmx, H-04), urut seperti sidebar
+// hx-it-inventory-transfer-selector.
+export const CUSTOMS_SOURCE_TYPES = {
+  gi: { label: "Pengiriman", description: "Good Issue, barang keluar", codes: ["gi"] },
+  gr: { label: "Penerimaan", description: "Good Receiving, barang masuk", codes: ["gr"] },
+  itw: {
+    label: "Transfer antar gudang",
+    description: "Kaki keluar dan masuk antar gudang",
+    codes: ["itw_in", "itw_out"],
+  },
+} as const satisfies Record<
+  string,
+  { label: string; description: string; codes: readonly string[] }
+>
+export type CustomsSourceType = keyof typeof CUSTOMS_SOURCE_TYPES
+
+export function customsSourceTypes(docCode: CustomsDocCode): CustomsSourceType[] {
+  return (Object.keys(CUSTOMS_SOURCE_TYPES) as CustomsSourceType[]).filter((source) =>
+    CUSTOMS_SOURCE_TYPES[source].codes.some((code) =>
+      CUSTOMS_DOCUMENT_SOURCE_CODES[docCode].includes(code),
+    ),
+  )
+}
+
+// Flow Dokumen (DOCUMENT_FLOW_IN/OUT/MAP hmx-002, H-06): pasangan dokumen masuk → keluar.
+export const CUSTOMS_FLOW_IN = [
+  { code: "16", name: "IN 1.6", description: "Pemasukan barang" },
+  { code: "40", name: "IN 4.0", description: "Barang asal dalam negeri" },
+  { code: "33", name: "IN 3.3", description: "Dokumen kawasan bebas" },
+  { code: "27", name: "IN 2.7", description: "Perpindahan kawasan" },
+] as const satisfies readonly { code: CustomsDocCode; name: string; description: string }[]
+export const CUSTOMS_FLOW_OUT = [
+  { code: "28", name: "OUT 2.8", description: "Pengeluaran dari PLB" },
+  { code: "27", name: "OUT 2.7", description: "Pengeluaran antar kawasan" },
+  { code: "331", name: "OUT P3BET", description: "Pemberitahuan terkait" },
+  { code: "41", name: "OUT 4.1", description: "Pengeluaran ke dalam negeri" },
+  { code: "33", name: "OUT 3.3", description: "Pengeluaran kawasan bebas" },
+] as const satisfies readonly { code: CustomsDocCode; name: string; description: string }[]
+export const CUSTOMS_FLOW_MAP: Partial<Record<CustomsDocCode, readonly CustomsDocCode[]>> = {
+  "16": ["28", "27", "331"],
+  "40": ["41", "33", "27"],
+  "33": ["331"],
+  "27": ["28", "41", "33"],
 }

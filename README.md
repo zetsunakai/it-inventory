@@ -450,7 +450,14 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 - Nomor dokumen (H-01, sequence `IT/23/` hmx): trigger mengisi `number` = `IT/<kode>/<5 digit>`
   urut per jenis (`next_number('customs_document:<kode>', 'all')`) saat dokumen dibuat; nomor dan
   jenis tidak bisa diubah. No. Aju, tanggal aju, No. Daftar, dan tanggal daftar diisi manual dari
-  portal CEISA (boleh kosong selama Draft).
+  portal CEISA di header form (boleh kosong selama Draft). No. Aju harus 26 angka/huruf besar
+  (constraint `customs_documents_aju_number_format`; form mengubah ke huruf besar dan membuang
+  spasi).
+- Header form di atas tab sama dengan grup sheet form hmx (H-03, `CustomsLayout.top`): IT Inventory
+  document sequence (baca), Inventory Transfer Documents (chip transfer + pemilih), No. Aju (BC 3.3
+  juga Tgl. Aju), No. Daftar, Tgl. Daftar, dan Perusahaan (baca, dari profil; Cabang hmx tidak
+  dipakai karena satu perusahaan). Isian `meta` tidak diketik: nomor dari dokumen, perusahaan dari
+  profil, transfer dari pemilih.
 - Dokumen baru selalu Draft dan pembuatnya diisi dari `app.user_id`.
 - Field wajib per jenis dokumen ada di tabel `doc_validation_rules` (M3-03): `target` header
   (kolom `customs_documents`), details (kunci jsonb, camelCase), party (kode entitas CEISA),
@@ -462,7 +469,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   dokumen lengkap per jenis ada di `tests/db/customs-fixtures.ts`.
 - Baris barang hanya untuk produk aktif yang siap dokumen BC (punya kode HS). Kategori IT Inventory
   selalu disalin dari produk; product code, kode HS, dan uraian diisi dari produk bila kosong.
-  `qty` dalam satuan CEISA, `stock_qty` dalam satuan stok produk untuk dicocokkan dengan transfer.
+  `qty` dalam satuan CEISA, `stock_qty` dalam satuan stok produk; keduanya terisi dari transfer
+  yang dipilih (H-04) dan bisa diubah.
 - Entitas disalin dari profil perusahaan atau partner, jadi dokumen tidak ikut berubah saat master
   berubah.
 - Form dokumen BC (M3-04) dirakit dari bagian bersama di
@@ -478,7 +486,9 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   diwajibkan `doc_validation_rules` bisa diisi di form jenisnya.
 - Seluruh isi form dikirim sebagai satu JSON (`document`) ke `saveCustomsDocument`: header
   diperbarui lalu semua bagian diganti dalam satu transaksi; hanya Draft yang bisa diubah. Draft
-  boleh belum lengkap; kelengkapan diperiksa `customs_document_errors()`. Dokumen baru: entitas
+  boleh belum lengkap; kelengkapan diperiksa `customs_document_errors()`. Transfer yang dipilih
+  ikut JSON (`transfers`, hanya id yang disimpan): tautan yang dilepas dihapus, yang baru ditambah.
+  Dokumen baru: entitas
   perusahaan (pengusaha, pemilik, atau eksportir) dari profil perusahaan, kantor pabean pengawas,
   dan penandatangan = user yang login. Entitas partner disalin dari `/api/customs-parties`, produk
   dicari lewat `/api/customs-products` (hanya yang punya kode HS).
@@ -494,19 +504,22 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Transfer Documents; semua kekurangan dilaporkan sekaligus. Status hanya berubah lewat fungsi itu
   (penanda transaksi `app.customs_status_write`, pesan "Gunakan tombol Submit untuk mengubah status
   dokumen."). Dokumen Submitted beserta semua bagian dan tautan transfernya dikunci trigger
-  (`customs_parts_guard`) dan tidak bisa dihapus. Draft boleh dihapus (tombol Hapus di detail).
+  (`customs_parts_guard`) dan tidak bisa dihapus; detailnya tanpa tombol Edit dan Submit. Draft
+  boleh dihapus (pilih baris di daftar, Hapus).
   Tidak ada status Siap ajukan, Terdaftar, Ditolak, Batal, maupun revisi bernomor versi.
 - Daftar per jenis (M3-13, kolom list hmx): Nomor, No. Aju, No. Daftar, Tgl. Daftar, Kantor Pabean
   Pengawasan, Status. Cari nomor, nomor aju, nomor daftar, atau nama partner; filter status, tanggal
   dibuat (bulan ini, bulan lalu, 3 bulan terakhir, tahun ini; WIB), dan kantor pabean (pilihannya
-  dari kantor yang dipakai dokumen jenis itu). Menu ⋯ di detail: Unduh PDF, Unduh Excel, Duplikat.
+  dari kantor yang dipakai dokumen jenis itu). Unduh PDF/Excel rekap daftar di kanan judul daftar;
+  Hapus dan Duplikat lewat pilih baris.
 - Duplikat: `duplicate_customs_document()` membuat Draft baru (nomor baru, tanpa No. Aju, nomor
   daftar, dan tautan transfer) dengan salinan header, entitas, barang beserta pungutan, kemasan,
   peti kemas, pengangkutan, dan baris lampiran tanpa file.
 - Export draft untuk input manual ke CEISA: `/api/customs-documents/<id>/export?format=pdf|xlsx`
   (izin `bc:read`), dibangun `customsExportSections()` di
   `src/modules/it-inventory/server/customs-export.ts`: Excel satu sheet per bagian (`exceljs`),
-  PDF A4 (`pdf-lib`, font standar Latin-1; karakter lain diganti "?").
+  PDF A4 (`pdf-lib`, font standar Latin-1; karakter lain diganti "?"). Bagian Dokumen berisi header
+  form (nomor urut, transfer yang dipilih, No. Aju, No. Daftar, Tgl. Daftar, Perusahaan) dan status.
 - Tes yang perlu menghapus dokumen Submitted memakai `purgeCustomsDocuments()` atau
   `forceCustomsStatus()`; `submitDocument()` memilih transfer sumber lalu Submit
   (`tests/db/customs-fixtures.ts`).
@@ -525,12 +538,29 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 - Tidak ada gerbang: validasi transfer tidak menunggu dokumen BC, dan tidak ada alokasi dokumen
   asal. Data lama dipindahkan migrasi `customs_hmx_flow` (Terdaftar → Submitted, Siap
   ajukan/Ditolak → Draft, Batal dihapus, tautan transfer lama → `customs_document_transfers`).
-- Layar: panel Dokumen BC di detail penerimaan/pengiriman hanya membaca dokumen yang memilih
-  transfer itu (disisipkan halaman `src/app` lewat prop `panel` `TransferDetailPage`, jadi modul
-  inventory tidak mengimpor modul IT Inventory). Detail dokumen punya bagian Transfer. Pemilih
-  transfer dan sinkron baris barang menyusul di H-03/H-04.
-- Data demo (M4-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat produk
-  `DEMO-KAIN`, penerimaan Selesai, BC 2.3 Submitted yang memilih penerimaan itu, dan BC 2.5 Draft.
+- Pemilih transfer (H-04, `hx-it-inventory-transfer-selector` hmx): tombol Pilih transfer di
+  header form membuka panel samping (`transfer-selector.tsx`) dengan jenis sumber di kiri
+  (Pengiriman, Penerimaan, Transfer antar gudang; hanya yang diizinkan jenis dokumennya) dan
+  transfer Siap/Selesai yang bisa dicentang lintas halaman (`/api/customs-documents/transfers`).
+  Juga bisa sebelum dokumen pertama kali disimpan. Setelah Terapkan, barang disinkronkan per produk
+  dari permintaan semua transfer terpilih (`/api/customs-documents/transfer-products`,
+  `syncTransferLines()` seperti `sync_inventory_transfer_product_lines` hmx): produk yang sudah ada
+  diperbarui jumlahnya, produk baru ditambah, barang produk lain dibiarkan, jadi memilih transfer
+  yang sama lagi tidak membuat baris ganda. Melepas chip transfer tidak mengubah barang.
+- Layar: panel Dokumen BC di detail penerimaan/pengiriman dan kaki antar gudang
+  (`/inventory/transfer/[id]` dengan kode `itw_out`/`itw_in`, H-02; pindah lokasi biasa tanpa
+  panel) hanya membaca dokumen yang memilih transfer itu (disisipkan halaman `src/app` lewat prop
+  `panel` `TransferDetailPage`, jadi modul inventory tidak mengimpor modul IT Inventory). Mode baca
+  detail dokumen punya bagian Transfer (status dan tanggal selesai tiap transfer).
+- Flow Dokumen (H-06, `/dokumen-bc/flow`, menu Alur dokumen): diagram pasangan dokumen masuk →
+  keluar dari `DOCUMENT_FLOW_MAP` hmx (`CUSTOMS_FLOW_IN`, `CUSTOMS_FLOW_OUT`, `CUSTOMS_FLOW_MAP` di
+  `customs.ts`); setiap kotak membuka daftar jenisnya, arahkan kursor/fokus untuk menyorot
+  pasangannya. Seri Barang Asal (`source_sequence` hmx) tetap isian manual di form Barang
+  (`details.sourceSequence`).
+- Data demo (M4-07, H-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat
+  produk `DEMO-KAIN`, penerimaan Selesai, BC 2.3 Submitted yang memilih penerimaan itu, pengiriman
+  Siap `SO-DEMO-001`, dan BC 2.5 Draft. Alur demo: buka BC 2.5, Edit, Pilih transfer
+  `SO-DEMO-001`, Simpan, lalu Submit.
 
 ## Penyimpanan file
 

@@ -10,6 +10,10 @@ Pemakaian (dari root repo):
   python3 -I scripts/import-customs-forms-from-hmx.py ~/hmx/hmx-002/hmx/module/basic/core_it_inventory
   npx prettier --write src/modules/it-inventory/lib/customs-layouts.generated.ts
 
+File hasil sekarang dibangkitkan dari hmx-002 revisi 6094a7843e (git archive modul itu ke folder
+sementara, lalu jalankan script ke folder tersebut). Revisi sesudahnya (mis. 647423ad336, bahan
+baku impor/lokal BC 2.7) punya daftar yang belum dipetakan dan belum diambil.
+
 Field hmx dipetakan ke penyimpanan repo ini (kolom header, details jsonb, entitas, sarana angkut,
 kolom atau details baris barang) lewat tabel di bawah. Field yang belum dikenal disimpan di details
 dengan kunci camelCase dari nama field hmx.
@@ -330,6 +334,21 @@ LABEL_FIXES = {
 }
 TAB_FIXES = {"Document": "Dokumen"}
 
+# Header form di atas tab (grup sheet hmx, backlog H-03). meta = dibaca dari dokumen (nomor urut,
+# profil perusahaan) atau diisi lewat pemilih transfer, bukan kolom yang diketik.
+TOP_FIELDS = {
+    "name": ("number", "meta", {"kind": "text", "mono": True}),
+    "inventory_transfers": ("transfers", "meta", {"kind": "transfers"}),
+    "no_aju": ("ajuNumber", "header", {"kind": "text", "mono": True}),
+    "aju_date": ("ajuDate", "header", {"kind": "date"}),
+    "no_register": ("registrationNumber", "header", {"kind": "text", "mono": True}),
+    "register_date": ("registrationDate", "header", {"kind": "date"}),
+    "company": ("company", "meta", {"kind": "text"}),
+}
+# Satu perusahaan per database, jadi Cabang (branch) hmx tidak dipakai.
+TOP_SKIPPED = {"branch"}
+TOP_LABELS = {"company": "Perusahaan"}
+
 
 def camel(name):
     head, *rest = name.split("_")
@@ -612,7 +631,27 @@ class Generator:
                     parties.append({"code": role, "label": b["title"], "source": "company" if company else "partner"})
                 elif role:
                     pass
-        return {"tabs": tabs, "parties": parties, "line": self.product_form(code)}
+        return {"top": self.top(code, form, fields), "tabs": tabs, "parties": parties, "line": self.product_form(code)}
+
+    def top(self, code, form, fields):
+        """Header di atas tab: grup sheet hmx sebelum notebook."""
+        items = []
+        for child in form.find("sheet"):
+            if child.tag != "group":
+                continue
+            for field_el in child.iter("field"):
+                name = field_el.get("name")
+                if field_el.get("invisible") == "1" or name in TOP_SKIPPED:
+                    continue
+                if name not in TOP_FIELDS:
+                    raise SystemExit(f"BC {code}: field header {name} belum dipetakan")
+                key, store, kind = TOP_FIELDS[name]
+                label = field_el.get("string") or TOP_LABELS.get(name) or fields[name]["label"]
+                item = {"key": key, "store": store, "label": label, **kind}
+                if field_el.get("required") == "1":
+                    item["required"] = True
+                items.append(item)
+        return items
 
     def product_form(self, code):
         fields, consts = parse_model(self.base / "models" / "document_product.py")

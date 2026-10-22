@@ -167,7 +167,16 @@ describe("export draft", () => {
         .getWorksheet(name)!
         .getSheetValues()
         .flatMap((row) => (Array.isArray(row) ? row.slice(1).map(String) : []))
-    expect(values("Dokumen")).toEqual(expect.arrayContaining(["Nomor", doc!.number]))
+    // Header seperti form hmx (H-03).
+    expect(values("Dokumen")).toEqual(
+      expect.arrayContaining([
+        "IT Inventory document sequence",
+        doc!.number,
+        "Inventory Transfer Documents",
+        "Perusahaan",
+        "PT Uji Berikat",
+      ]),
+    )
     expect(values("Barang")).toEqual(expect.arrayContaining(["ZBX1", "52081100"]))
     expect(values("Dokumen Lampiran")).toEqual(expect.arrayContaining(["Invoice.pdf"]))
 

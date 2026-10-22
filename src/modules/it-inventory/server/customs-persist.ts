@@ -1,6 +1,6 @@
 import "server-only"
 
-import { eq, inArray } from "drizzle-orm"
+import { and, eq, inArray } from "drizzle-orm"
 
 import type { CustomsDocCode } from "@/modules/it-inventory/lib/customs"
 import {
@@ -14,6 +14,7 @@ import {
   customsBankAccounts,
   customsContainers,
   customsDocumentLines,
+  customsDocumentTransfers,
   customsDocumentParties,
   customsDocumentTaxes,
   customsDocuments,
@@ -29,8 +30,7 @@ import {
 export const EDITABLE: string[] = ["draft"]
 export const NOT_EDITABLE = "Dokumen sudah Submitted dan tidak dapat diubah atau dihapus."
 
-// Simpan isi dokumen (baru atau Draft yang ada); dipakai form dan "Buat dokumen BC" dari transfer
-// (M4-04). Mengembalikan id dokumen.
+// Simpan isi dokumen (baru atau Draft yang ada) dari form. Mengembalikan id dokumen.
 export async function persistCustomsDocument(
   tx: Transaction,
   existingId: string | null,
@@ -59,6 +59,7 @@ export async function persistCustomsDocument(
     id = row.id
   }
   const documentId = id
+  await saveTransfers(tx, documentId, document.transferIds)
 
   if (document.parties.length) {
     await tx
@@ -92,6 +93,34 @@ export async function persistCustomsDocument(
   return documentId
 }
 
+// Inventory Transfer Documents (H-04): tautan yang tidak dipilih lagi dilepas, yang baru ditambah.
+// Jenis dan status transfer diperiksa trigger customs_document_transfers_check, pesannya menyebut
+// transfer yang ditolak.
+async function saveTransfers(tx: Transaction, documentId: string, transferIds: string[]) {
+  const current = await tx
+    .select({ transferId: customsDocumentTransfers.transferId })
+    .from(customsDocumentTransfers)
+    .where(eq(customsDocumentTransfers.documentId, documentId))
+  const linked = new Set(current.map((row) => row.transferId))
+  const removed = [...linked].filter((transferId) => !transferIds.includes(transferId))
+  if (removed.length) {
+    await tx
+      .delete(customsDocumentTransfers)
+      .where(
+        and(
+          eq(customsDocumentTransfers.documentId, documentId),
+          inArray(customsDocumentTransfers.transferId, removed),
+        ),
+      )
+  }
+  const added = transferIds.filter((transferId) => !linked.has(transferId))
+  if (added.length) {
+    await tx
+      .insert(customsDocumentTransfers)
+      .values(added.map((transferId) => ({ documentId, transferId })))
+  }
+}
+
 type AttachmentInput = CustomsDocumentInput["attachments"][number]
 
 // Lampiran dokumen (lineId null) atau Dokumen Lartas satu barang. File harus milik dokumen ini.
@@ -121,8 +150,7 @@ async function saveAttachments(
 }
 
 // Bagian dokumen selain barang diganti seluruhnya setiap simpan. Barang disimpan per seri
-// (saveLines) supaya id barisnya tetap: alokasi dokumen asal (M4-03) dan tautan baris stock move
-// (M4-01) merujuk ke id itu.
+// (saveLines) supaya id barisnya tetap.
 async function deleteParts(tx: Transaction, id: string) {
   await tx.delete(customsDocumentParties).where(eq(customsDocumentParties.documentId, id))
   await tx.delete(customsAttachments).where(eq(customsAttachments.documentId, id))

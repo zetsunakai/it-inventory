@@ -35,6 +35,7 @@ export type ExportDocument = {
   status: CustomsDocumentStatus
   registrationNumber: string | null
   registrationDate: string | null
+  companyName: string
   draft: CustomsDocumentDraft
   refLabels: Record<string, string>
 }
@@ -68,17 +69,27 @@ export function customsExportSections(spec: CustomsFormSpec, doc: ExportDocument
     rows: rows.map((row, index) => [String(index + 1), ...columns.map((c) => cell(c, row))]),
   })
 
+  // Header seperti form hmx (H-03): nomor urut, transfer yang dipilih, No. Aju, No. Daftar,
+  // Tgl. Daftar, Perusahaan.
+  const topValue = (field: CustomsField) => {
+    switch (field.key) {
+      case "number":
+        return doc.number
+      case "company":
+        return doc.companyName || "—"
+      case "transfers":
+        return draft.transfers.map((transfer) => transfer.number).join(", ") || "—"
+      default:
+        return show(field, customsFieldValue(draft, field))
+    }
+  }
   const sections: ExportSection[] = [
     {
       title: "Dokumen",
       fields: [
         ["Jenis dokumen", `${spec.title} (${spec.code})`],
-        ["Nomor", doc.number],
-        ["Nomor aju", doc.ajuNumber ?? "—"],
-        ["Tanggal aju", date(doc.ajuDate)],
+        ...spec.top.map((field): [string, string] => [field.label, topValue(field)]),
         ["Status", CUSTOMS_DOCUMENT_STATUS_LABELS[doc.status]],
-        ["Nomor daftar", doc.registrationNumber ?? "—"],
-        ["Tanggal daftar", date(doc.registrationDate)],
       ],
     },
   ]

@@ -264,7 +264,7 @@ export function NewCustomsDocumentPage({ spec }: { spec: CustomsFormSpec }) {
 
 async function NewCustomsForm({ spec }: { spec: CustomsFormSpec }) {
   const user = await requirePermission("bc:write")
-  const [formSpec, { draft, refLabels, companyReady }] = await Promise.all([
+  const [formSpec, { draft, refLabels, companyReady, companyName }] = await Promise.all([
     requiredCustomsSpec(spec),
     newCustomsDraft(spec, user.name),
   ])
@@ -278,7 +278,12 @@ async function NewCustomsForm({ spec }: { spec: CustomsFormSpec }) {
           </Link>
         </p>
       )}
-      <CustomsDocumentForm spec={formSpec} initial={draft} initialLabels={refLabels} />
+      <CustomsDocumentForm
+        spec={formSpec}
+        companyName={companyName}
+        initial={draft}
+        initialLabels={refLabels}
+      />
     </div>
   )
 }
@@ -345,7 +350,20 @@ async function CustomsDetail({
           key={doc.id}
           canEdit={editable}
           createHref={`${spec.path}/baru`}
-          view={<CustomsDocumentView spec={spec} draft={doc.draft} refLabels={doc.refLabels} />}
+          view={
+            // Tabel transfer (status, tanggal selesai) hanya di mode baca: saat Edit pilihan
+            // transfer ada di header form dan belum tersimpan.
+            <div className="flex flex-col gap-6">
+              <CustomsDocumentView
+                spec={spec}
+                number={doc.number}
+                companyName={doc.companyName}
+                draft={doc.draft}
+                refLabels={doc.refLabels}
+              />
+              <DocumentTransfersSection documentId={doc.id} />
+            </div>
+          }
           actions={
             // Elemen dari server masuk ke daftar anak di klien; tanpa key React memperingatkan
             // "unique key" karena elemen hasil RSC belum ditandai tervalidasi.
@@ -356,6 +374,8 @@ async function CustomsDetail({
               <CustomsDocumentForm
                 spec={formSpec}
                 documentId={doc.id}
+                number={doc.number}
+                companyName={doc.companyName}
                 initial={doc.draft}
                 initialLabels={doc.refLabels}
                 actions={<SubmitCustomsButton key="submit" id={doc.id} number={doc.number} />}
@@ -363,7 +383,6 @@ async function CustomsDetail({
             )
           }
         />
-        <DocumentTransfersSection documentId={doc.id} />
       </div>
     </DocumentLayout>
   )

@@ -1,10 +1,22 @@
 import { eq, like, sql } from "drizzle-orm"
-import { afterAll, beforeAll, describe, expect, test } from "vitest"
+import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
 
+import { saveCustomsDocument } from "@/modules/it-inventory/actions/customs-documents"
 import {
+  emptyDraft,
+  syncTransferLines,
+  type CustomsDocumentDraft,
+  type CustomsTransferChoice,
+} from "@/modules/it-inventory/lib/customs-form"
+import { BC23 } from "@/modules/it-inventory/lib/customs-specs"
+import { getCustomsDocument } from "@/modules/it-inventory/server/queries/customs-documents"
+import {
+  customsTransferProducts,
   getDocumentTransfers,
   getTransferCustoms,
+  searchCustomsTransfers,
 } from "@/modules/it-inventory/server/queries/customs-transfers"
+import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
 import {
   company,
@@ -30,6 +42,10 @@ import { inRollback, pgErrorInSavepoint } from "./helpers"
 // Inventory Transfer Documents mengikuti hmx (backlog H-01, PRD 8): dokumen memilih transfer Siap
 // atau Selesai yang kode pergerakannya diizinkan jenis dokumen (DOCUMENT_SOURCE_MAP), dan
 // validasi transfer tidak menunggu dokumen BC.
+
+const session = vi.hoisted(() => ({ user: null as CurrentUser | null }))
+vi.mock("@/server/auth/session", () => ({ requireUser: async () => session.user }))
+vi.mock("next/cache", () => ({ refresh: vi.fn() }))
 
 let product = ""
 
@@ -161,5 +177,115 @@ describe("tanpa gerbang", () => {
         .where(eq(transfers.id, delivery))
       expect(row.status).toBe("done")
     })
+  })
+})
+
+describe("form memilih transfer (H-04)", () => {
+  const choice = async (id: string): Promise<CustomsTransferChoice> => {
+    const [row] = await db
+      .select({ number: transfers.number, type: transfers.type, status: transfers.status })
+      .from(transfers)
+      .where(eq(transfers.id, id))
+    return { id, number: row.number, type: row.type, movementCode: "gr", status: row.status }
+  }
+  const save = (docCode: string, draft: CustomsDocumentDraft, id?: string) => {
+    const data = new FormData()
+    data.set("docCode", docCode)
+    data.set("document", JSON.stringify(draft))
+    if (id) data.set("id", id)
+    return saveCustomsDocument(null, data)
+  }
+  const linked = async (documentId: string) =>
+    (
+      await db
+        .select({ transferId: customsDocumentTransfers.transferId })
+        .from(customsDocumentTransfers)
+        .where(eq(customsDocumentTransfers.documentId, documentId))
+    ).map((row) => row.transferId)
+
+  test("pilihan transfer tersimpan, barang terisi per produk, dan bisa dilepas", async () => {
+    session.user = {
+      id: crypto.randomUUID(),
+      name: "Staf Exim",
+      email: "exim@it-inventory.local",
+      roles: ["staf_exim"],
+      twoFactorEnabled: true,
+    }
+    const receipt = await db.transaction((tx) => insertSourceTransfer(tx, "23", product))
+    const picked = await choice(receipt)
+
+    // Pemilih hanya menampilkan sumber yang diizinkan, Siap atau Selesai.
+    const found = await searchCustomsTransfers({
+      docCode: "23",
+      source: "gr",
+      search: picked.number,
+      offset: 0,
+      limit: 20,
+    })
+    expect(found.map((row) => row.id)).toEqual([receipt])
+    expect(found[0]).toMatchObject({
+      movementCode: "gr",
+      status: "ready",
+      partnerName: "Partner uji BC",
+    })
+    expect(
+      await searchCustomsTransfers({
+        docCode: "23",
+        source: "gi",
+        search: "",
+        offset: 0,
+        limit: 20,
+      }),
+    ).toEqual([])
+
+    // Transfer yang sama dua kali: satu tautan, satu baris barang.
+    const items = await customsTransferProducts([receipt, receipt])
+    expect(items).toEqual([
+      { productId: product, sku: "ZBT1", name: "Kain katun", hsCode: "52081100", qty: "100.0000" },
+    ])
+    const draft = emptyDraft()
+    draft.transfers = [picked, picked]
+    // No. Aju, No. Daftar, dan Tgl. Daftar diisi manual di header (H-03).
+    draft.header.ajuNumber = "000023zb0120261020 00000001"
+    draft.header.registrationNumber = "123456"
+    draft.header.registrationDate = "2026-10-20"
+    draft.lines = syncTransferLines(syncTransferLines(draft.lines, items), items)
+    const created = await save("23", draft)
+    if (!created.ok) throw new Error(created.errors.join("\n"))
+    const id = created.data.id
+    expect(await linked(id)).toEqual([receipt])
+    const saved = await getCustomsDocument(BC23, id)
+    expect(saved?.draft.transfers).toEqual([picked])
+    expect(saved).toMatchObject({
+      ajuNumber: "000023ZB012026102000000001",
+      registrationNumber: "123456",
+      registrationDate: "2026-10-20",
+      companyName: "PT Uji Berikat",
+    })
+    expect(saved?.draft.lines).toEqual([
+      expect.objectContaining({ productId: product, qty: "100", stockQty: "100" }),
+    ])
+
+    // Satu transfer boleh dipilih dokumen lain.
+    const other = await save("23", { ...emptyDraft(), lines: draft.lines, transfers: [picked] })
+    expect(other.ok).toBe(true)
+
+    // Transfer di luar sumber jenis dokumen ditolak database dengan nomor transfernya.
+    const delivery = await db.transaction((tx) => insertSourceTransfer(tx, "25", product))
+    const wrong = await choice(delivery)
+    const rejected = await save("23", { ...saved!.draft, transfers: [picked, wrong] }, id)
+    expect(rejected).toMatchObject({
+      ok: false,
+      errors: [
+        `Dokumen BC 2.3 hanya dapat dikaitkan dengan sumber inventory yang diizinkan. Transfer tidak valid: ${wrong.number} (gi, Siap).`,
+      ],
+    })
+    expect(await linked(id)).toEqual([receipt])
+
+    // Dilepas dari form: tautannya hilang, barang tetap.
+    const released = await save("23", { ...saved!.draft, transfers: [] }, id)
+    expect(released.ok).toBe(true)
+    expect(await linked(id)).toEqual([])
+    expect((await getCustomsDocument(BC23, id))?.draft.lines).toHaveLength(1)
   })
 })

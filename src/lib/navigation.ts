@@ -12,6 +12,7 @@ import {
   Library,
   Settings,
   SlidersHorizontal,
+  Workflow,
   type LucideIcon,
 } from "lucide-react"
 
@@ -87,6 +88,13 @@ export const NAVIGATION: NavGroup[] = [
       { title: "Penyesuaian", href: "/inventory/penyesuaian", permission: "inventory:read" },
       { title: "Tutup periode", href: "/inventory/periode", permission: "inventory:approve" },
     ],
+  },
+  // Flow Dokumen di atas menu dokumen seperti hmx (menu_it_inventory_document_flow, H-06).
+  {
+    label: "Alur dokumen",
+    module: "it-inventory",
+    icon: Workflow,
+    items: [{ title: "Flow dokumen", href: "/dokumen-bc/flow", permission: "bc:read" }],
   },
   // Dokumen BC dikelompokkan seperti menu hmx (Dokumen Impor, Ekspor, TPB), satu menu per jenis
   // (keputusan 17/10/2026). Semua jenis sudah punya form (backlog D-01–D-08).

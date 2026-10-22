@@ -983,6 +983,48 @@ export const HMX_OPTION_LISTS = {
 
 export const CUSTOMS_LAYOUTS = {
   "23": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -1762,6 +1804,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "40": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -2476,6 +2560,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "25": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -3180,6 +3306,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "30": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -4111,6 +4279,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "41": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -4800,6 +5010,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "20": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -5760,6 +6012,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "261": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -6483,6 +6777,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "262": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -7252,6 +7588,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "27": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -8040,6 +8418,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "16": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -8836,6 +9256,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "28": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -9664,6 +10126,54 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "33": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "ajuDate",
+        store: "header",
+        label: "Tgl. Aju",
+        kind: "date",
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",
@@ -10631,6 +11141,48 @@ export const CUSTOMS_LAYOUTS = {
     },
   },
   "331": {
+    top: [
+      {
+        key: "number",
+        store: "meta",
+        label: "IT Inventory document sequence",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "transfers",
+        store: "meta",
+        label: "Inventory Transfer Documents",
+        kind: "transfers",
+        required: true,
+      },
+      {
+        key: "ajuNumber",
+        store: "header",
+        label: "No. Aju",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationNumber",
+        store: "header",
+        label: "No. Daftar",
+        kind: "text",
+        mono: true,
+      },
+      {
+        key: "registrationDate",
+        store: "header",
+        label: "Tgl. Daftar",
+        kind: "date",
+      },
+      {
+        key: "company",
+        store: "meta",
+        label: "Perusahaan",
+        kind: "text",
+      },
+    ],
     tabs: [
       {
         key: "header",

@@ -82,6 +82,25 @@ describe.each(Object.values(CUSTOMS_SPECS))("form $title", (spec) => {
     expect(problems).toEqual([])
   })
 
+  test("header di atas tab sama dengan form hmx (H-03)", () => {
+    expect(spec.top.map((field) => [field.key, field.label])).toEqual([
+      ["number", "IT Inventory document sequence"],
+      ["transfers", "Inventory Transfer Documents"],
+      ["ajuNumber", "No. Aju"],
+      ...(spec.code === "33" ? [["ajuDate", "Tgl. Aju"]] : []),
+      ["registrationNumber", "No. Daftar"],
+      ["registrationDate", "Tgl. Daftar"],
+      ["company", "Perusahaan"],
+    ])
+    expect(spec.top.find((field) => field.key === "transfers")?.required).toBe(true)
+    // Nomor, No. Daftar, dan tanggalnya diketik di form dan ikut disimpan sebagai kolom header.
+    expect(
+      customsDocumentFields(spec)
+        .filter((field) => field.store === "header")
+        .map((field) => field.key),
+    ).toEqual(expect.arrayContaining(["ajuNumber", "registrationNumber", "registrationDate"]))
+  })
+
   test("kantor pabean dokumen ada di form", () => {
     expect(customsDocumentFields(spec).some((field) => field.key === "customsOfficeCode")).toBe(
       true,

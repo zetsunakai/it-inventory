@@ -3,6 +3,8 @@ import Link from "next/link"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { StaticField, ViewSection } from "@/components/form-field"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { transferHref } from "@/modules/inventory/lib/transfer"
+import type { TransferType } from "@/modules/inventory/lib/inventory"
 import {
   OWNER_CODE,
   customsFieldValue,
@@ -26,10 +28,14 @@ type Row = Record<string, unknown> & { seq: number }
 // ubah): tab, kartu, dan span field sama dengan form hmx jenisnya, tanpa kontrol yang di-disable.
 export function CustomsDocumentView({
   spec,
+  number,
+  companyName,
   draft,
   refLabels,
 }: {
   spec: CustomsFormSpec
+  number: string
+  companyName: string
   draft: CustomsDocumentDraft
   refLabels: RefLabels
 }) {
@@ -124,32 +130,77 @@ export function CustomsDocumentView({
     )
   }
 
+  // Header di atas tab seperti form hmx (H-03).
+  const topValue = (field: CustomsField) => {
+    switch (field.key) {
+      case "number":
+        return number
+      case "company":
+        return companyName || "—"
+      case "transfers":
+        return draft.transfers.length ? (
+          <span className="flex flex-wrap gap-x-3 gap-y-1">
+            {draft.transfers.map((transfer) => (
+              <Link
+                key={transfer.id}
+                href={transferHref(transfer.type as TransferType, transfer.id)}
+                className="font-mono text-primary underline-offset-4 hover:underline"
+              >
+                {transfer.number}
+              </Link>
+            ))}
+          </span>
+        ) : (
+          "—"
+        )
+      default:
+        return show(field, customsFieldValue(draft, field))
+    }
+  }
+
   return (
-    <Tabs defaultValue={spec.tabs[0]?.key}>
-      <TabsList>
-        {spec.tabs.map((tab) => (
-          <TabsTrigger key={tab.key} value={tab.key}>
-            {tab.label}
-          </TabsTrigger>
+    <div className="flex flex-col gap-6">
+      <ViewSection>
+        {spec.top.map((field) => (
+          <StaticField
+            key={field.key}
+            label={field.label}
+            value={topValue(field)}
+            // Tanda kosong "—" tidak memakai font kode.
+            mono={
+              field.kind === "text" &&
+              field.mono &&
+              (field.key === "number" || customsFieldValue(draft, field) !== "")
+            }
+          />
         ))}
-      </TabsList>
-      {spec.tabs.map((tab) => (
-        <TabsContent key={tab.key} value={tab.key}>
-          <div className="flex flex-col gap-10">
-            {sideBySide(tab.blocks).map((group, index) =>
-              group.length > 1 ? (
-                <div key={index} className="grid items-start gap-10 lg:grid-cols-2">
-                  {group.map((block) =>
-                    blockContent(block, `${tab.key}-${tab.blocks.indexOf(block)}`),
-                  )}
-                </div>
-              ) : (
-                blockContent(group[0], `${tab.key}-${tab.blocks.indexOf(group[0])}`)
-              ),
-            )}
-          </div>
-        </TabsContent>
-      ))}
-    </Tabs>
+      </ViewSection>
+      <Tabs defaultValue={spec.tabs[0]?.key}>
+        <TabsList>
+          {spec.tabs.map((tab) => (
+            <TabsTrigger key={tab.key} value={tab.key}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {spec.tabs.map((tab) => (
+          <TabsContent key={tab.key} value={tab.key}>
+            <div className="flex flex-col gap-10">
+              {sideBySide(tab.blocks).map((group, index) =>
+                group.length > 1 ? (
+                  <div key={index} className="grid items-start gap-10 lg:grid-cols-2">
+                    {group.map((block) =>
+                      blockContent(block, `${tab.key}-${tab.blocks.indexOf(block)}`),
+                    )}
+                  </div>
+                ) : (
+                  blockContent(group[0], `${tab.key}-${tab.blocks.indexOf(group[0])}`)
+                ),
+              )}
+            </div>
+          </TabsContent>
+        ))}
+      </Tabs>
+    </div>
   )
 }

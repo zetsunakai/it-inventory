@@ -1,10 +1,11 @@
 "use client"
 
+import { X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { memo, useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
 import { FormErrors } from "@/components/form-errors"
-import { FormField, FormSection } from "@/components/form-field"
+import { FormField, FormSection, StaticField } from "@/components/form-field"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 import { useSaveFeedback } from "@/components/layout/record-modes"
 import { RelationalTable } from "@/components/relational/relational-table"
@@ -20,6 +21,8 @@ import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import type { FormState } from "@/lib/action-result"
+import { transferHref } from "@/modules/inventory/lib/transfer"
+import type { TransferType } from "@/modules/inventory/lib/inventory"
 import { saveCustomsDocument } from "@/modules/it-inventory/actions/customs-documents"
 import {
   CUSTOMS_ROW_KEYS,
@@ -33,6 +36,7 @@ import {
   isListBlock,
   sideBySide,
   setCustomsFieldValue,
+  syncTransferLines,
   type CustomsBlock,
   type CustomsDocumentDraft,
   type CustomsField,
@@ -42,9 +46,12 @@ import {
   type CustomsListBlock,
   type CustomsPartyDraft,
   type CustomsRowDraft,
+  type CustomsTransferChoice,
+  type CustomsTransferProduct,
 } from "@/modules/it-inventory/lib/customs-form"
 
 import { AttachmentsEditor } from "./attachments-editor"
+import { TransferSelector } from "./transfer-selector"
 import {
   CustomsControl,
   CustomsFormField,
@@ -63,12 +70,17 @@ type OnLabel = (label?: { key: string; name: string }) => void
 export function CustomsDocumentForm({
   spec,
   documentId,
+  number,
+  companyName,
   initial,
   initialLabels,
   actions,
 }: {
   spec: CustomsFormSpec
   documentId?: string
+  // Nomor urut IT Inventory; dokumen baru mendapat nomor saat disimpan.
+  number?: string
+  companyName: string
   initial: CustomsDocumentDraft
   initialLabels: RefLabels
   actions?: ReactNode
@@ -101,6 +113,81 @@ export function CustomsDocumentForm({
       setDraft((current) => identifyRelations(setCustomsFieldValue(current, field, value)))
     }
   const value = (field: CustomsField) => customsFieldValue(draft, field)
+  const [sync, setSync] = useState<{ status: "loading" | "done" | "error"; message: string }>()
+
+  // Transfer dipilih (H-04): barang disinkronkan per produk dari permintaan semua transfer terpilih,
+  // juga sebelum dokumen pertama kali disimpan (deferred selection hmx).
+  async function applyTransfers(transfers: CustomsTransferChoice[]) {
+    setDraft((current) => ({ ...current, transfers }))
+    if (!transfers.length) {
+      setSync(undefined)
+      return
+    }
+    setSync({ status: "loading", message: "Mengisi barang dari transfer…" })
+    try {
+      const response = await fetch(
+        `/api/customs-documents/transfer-products?${new URLSearchParams({
+          ids: transfers.map((transfer) => transfer.id).join(","),
+        })}`,
+      )
+      if (!response.ok) throw new Error()
+      const { items }: { items: CustomsTransferProduct[] } = await response.json()
+      setDraft((current) =>
+        identifyRelations({ ...current, lines: syncTransferLines(current.lines, items) }),
+      )
+      setSync({
+        status: "done",
+        message: `Barang diisi dari transfer: ${items.length} produk. Periksa tab Barang.`,
+      })
+    } catch {
+      setSync({
+        status: "error",
+        message: "Barang dari transfer gagal dimuat. Pilih transfer lagi untuk mencoba ulang.",
+      })
+    }
+  }
+
+  const topField = (field: CustomsField) => {
+    switch (field.key) {
+      case "number":
+        return (
+          <StaticField
+            key={field.key}
+            label={field.label}
+            value={number ?? "Dibuat saat disimpan"}
+            mono={Boolean(number)}
+          />
+        )
+      case "company":
+        return <StaticField key={field.key} label={field.label} value={companyName || "—"} />
+      case "transfers":
+        return (
+          <TransfersField
+            key={field.key}
+            id={fieldId("transfers")}
+            label={field.label}
+            required={field.required}
+            docCode={spec.code}
+            transfers={draft.transfers}
+            onApply={applyTransfers}
+            // Seperti tag many2many hmx: melepas transfer tidak mengubah barang.
+            onRemove={(transfers) => setDraft((current) => ({ ...current, transfers }))}
+            sync={sync}
+          />
+        )
+      default:
+        return (
+          <CustomsFormField
+            key={field.key}
+            field={field}
+            id={fieldId(`top-${field.key}`)}
+            value={value(field)}
+            onChange={fieldChange(field)}
+            refLabels={labels}
+          />
+        )
+    }
+  }
   const setRows = (list: RowList, rows: CustomsRowDraft[]) =>
     setDraft((current) => ({ ...current, [list]: rows }))
 
@@ -269,6 +356,8 @@ export function CustomsDocumentForm({
       <input type="hidden" name="docCode" value={spec.code} />
       <input type="hidden" name="document" value={JSON.stringify(draft)} />
 
+      <FormSection>{spec.top.map(topField)}</FormSection>
+
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList>
           {spec.tabs.map((tab) => (
@@ -341,6 +430,96 @@ const ownerParty = (row: CustomsRowDraft): CustomsPartyDraft => {
     address: row.address ?? "",
     details,
   }
+}
+
+// Inventory Transfer Documents (many2many_tags hmx, H-04): chip transfer terpilih yang bisa
+// dilepas, dan tombol yang membuka pemilih transfer.
+function TransfersField({
+  id,
+  label,
+  required,
+  docCode,
+  transfers,
+  onApply,
+  onRemove,
+  sync,
+}: {
+  id: string
+  label: string
+  required?: boolean
+  docCode: CustomsFormSpec["code"]
+  transfers: CustomsTransferChoice[]
+  onApply: (transfers: CustomsTransferChoice[]) => void
+  onRemove: (transfers: CustomsTransferChoice[]) => void
+  sync?: { status: "loading" | "done" | "error"; message: string }
+}) {
+  const [open, setOpen] = useState(false)
+  return (
+    <FormField label={label} htmlFor={id} required={required}>
+      <div className="flex flex-wrap items-center gap-2">
+        {transfers.map((transfer) => (
+          <span
+            key={transfer.id}
+            className="inline-flex h-8 items-center gap-1 rounded-md border bg-muted pl-2.5 text-control"
+          >
+            <a
+              href={transferHref(transfer.type as TransferType, transfer.id)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-primary underline-offset-4 hover:underline"
+            >
+              {transfer.number}
+            </a>
+            <button
+              type="button"
+              aria-label={`Lepas ${transfer.number}`}
+              className="rounded p-1.5 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+              onClick={() => onRemove(transfers.filter((entry) => entry.id !== transfer.id))}
+            >
+              <X className="size-3.5" />
+            </button>
+          </span>
+        ))}
+        <Button
+          id={id}
+          type="button"
+          variant="outline"
+          disabled={sync?.status === "loading"}
+          // Tanpa ini nama tombol diambil dari label field, bukan aksinya.
+          aria-label={transfers.length ? "Ubah pilihan transfer" : "Pilih transfer"}
+          onClick={() => setOpen(true)}
+        >
+          {transfers.length ? "Ubah pilihan" : "Pilih transfer"}
+        </Button>
+      </div>
+      {sync && (
+        <p
+          role={sync.status === "error" ? "alert" : "status"}
+          className={
+            sync.status === "error"
+              ? "text-caption font-medium text-destructive"
+              : "text-caption text-muted-foreground"
+          }
+        >
+          {sync.message}
+        </p>
+      )}
+      {open && (
+        <TransferSelector
+          docCode={docCode}
+          selected={transfers}
+          onClose={() => setOpen(false)}
+          onApply={(selected) => {
+            setOpen(false)
+            const before = new Set(transfers.map((transfer) => transfer.id))
+            const changed =
+              selected.length !== before.size || selected.some((row) => !before.has(row.id))
+            if (changed) onApply(selected)
+          }}
+        />
+      )}
+    </FormField>
+  )
 }
 
 // Nama entitas peran partner: dipilih dari master partner lalu datanya disalin (bisa diubah tanpa
@@ -539,7 +718,7 @@ function LinesEditor({
   return (
     <FormSection
       title={title}
-      description="Hanya produk yang sudah punya kode HS. Jumlah dalam satuan stok dicocokkan dengan transfer."
+      description="Hanya produk yang sudah punya kode HS. Terisi dari permintaan transfer yang dipilih di header."
     >
       <RelationalTable<CustomsLineDraft>
         id={`bc-${spec.code}-barang`}
@@ -707,7 +886,7 @@ function LinesEditor({
   )
 }
 
-// Tidak ada di form hmx: qty dalam satuan stok produk dipakai gerbang transfer (M4-02).
+// Tidak ada di form hmx: qty dalam satuan stok produk, terisi dari transfer yang dipilih (H-04).
 const STOCK_QTY: CustomsField = {
   key: "stockQty",
   required: true,

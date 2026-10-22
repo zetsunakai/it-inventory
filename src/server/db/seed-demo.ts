@@ -20,9 +20,10 @@ import {
   warehouses,
 } from "./schema"
 
-// Data demo alur dokumen BC (backlog M4-07, H-01), hanya bila SEED_DEMO_DATA=true dan profil
-// perusahaan sudah diisi: penerimaan Selesai → BC 2.3 Submitted yang memilih penerimaan itu → BC 2.5
-// Draft. Idempoten: dilewati bila produk demo sudah ada.
+// Data demo alur dokumen BC (backlog M4-07, H-01, H-07), hanya bila SEED_DEMO_DATA=true dan profil
+// perusahaan sudah diisi: penerimaan Selesai → BC 2.3 Submitted yang memilih penerimaan itu, lalu
+// pengiriman Siap dan BC 2.5 Draft yang belum memilih transfer, untuk mendemokan pilih transfer →
+// Submit. Idempoten: dilewati bila produk demo sudah ada.
 
 const PRODUCT_SKU = "DEMO-KAIN"
 
@@ -204,8 +205,41 @@ export async function seedDemoCustoms(db: Db) {
       .values({ documentId: incoming.doc.id, transferId: receipt.id })
     await tx.execute(sql`select submit_customs_document(${incoming.doc.id})`)
 
-    // BC 2.5 Draft, belum memilih transfer.
+    // Pengiriman Siap (stok dari penerimaan di atas) yang bisa dipilih BC 2.5 di form.
+    const [customer] = await tx.select().from(locations).where(eq(locations.code, "CUSTOMER"))
+    const [buyer] = await tx
+      .insert(partners)
+      .values({
+        name: "Demo Pembeli Dalam Negeri",
+        address: profile.address,
+        countryCode: "ID",
+        identityType: "other",
+        identityNumber: "DEMO-ID-1",
+      })
+      .returning()
+    const [delivery] = await tx
+      .insert(transfers)
+      .values({
+        type: "delivery",
+        sourceLocationId: rack.id,
+        destinationLocationId: customer.id,
+        partnerId: buyer.id,
+        scheduledDate: sql`(now() at time zone 'Asia/Jakarta')::date`,
+        reference: "SO-DEMO-001",
+      })
+      .returning()
+    await tx.insert(transferLines).values({
+      transferId: delivery.id,
+      productId: product.id,
+      inputQty: "500",
+      inputUomId: unit.id,
+    })
+    await tx.execute(sql`select confirm_transfer(${delivery.id})`)
+
+    // BC 2.5 Draft, belum memilih transfer: pilih SO-DEMO-001 di form lalu Submit.
     await insertDocument("25", "8")
   })
-  console.log("Data demo dokumen BC dibuat (produk DEMO-KAIN, penerimaan, BC 2.3, BC 2.5).")
+  console.log(
+    "Data demo dokumen BC dibuat (produk DEMO-KAIN, penerimaan, BC 2.3, pengiriman Siap, BC 2.5).",
+  )
 }

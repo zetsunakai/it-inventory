@@ -31,6 +31,7 @@ import {
 } from "@/modules/it-inventory/lib/customs-form"
 import { companyAsCustomsParty } from "@/modules/it-inventory/lib/company"
 import { db } from "@/server/db"
+import { getDocumentTransfers } from "@/modules/it-inventory/server/queries/customs-transfers"
 import {
   company,
   docValidationRules,
@@ -135,7 +136,12 @@ export async function newCustomsDraft(spec: CustomsFormSpec, signerName: string)
       }))
   }
   draft.header.signerName = signerName
-  return { draft, refLabels: await refLabelsFor(spec, draft), companyReady: Boolean(profile) }
+  return {
+    draft,
+    refLabels: await refLabelsFor(spec, draft),
+    companyReady: Boolean(profile),
+    companyName: profile?.name ?? "",
+  }
 }
 
 export type CustomsDocumentDetail = NonNullable<Awaited<ReturnType<typeof getCustomsDocument>>>
@@ -158,6 +164,8 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     taxes,
     guarantees,
     bankAccounts,
+    transfers,
+    [profile],
   ] = await Promise.all([
     db.select().from(customsDocumentParties).where(eq(customsDocumentParties.documentId, id)),
     db
@@ -173,6 +181,8 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     db.select().from(customsDocumentTaxes).where(eq(customsDocumentTaxes.documentId, id)),
     db.select().from(customsGuarantees).where(eq(customsGuarantees.documentId, id)),
     db.select().from(customsBankAccounts).where(eq(customsBankAccounts.documentId, id)),
+    getDocumentTransfers(id),
+    db.select({ name: company.name }).from(company),
   ])
 
   const draft = buildDraft(spec, {
@@ -187,6 +197,13 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     guarantees: bySeq(guarantees),
     bankAccounts: bySeq(bankAccounts),
   })
+  draft.transfers = transfers.map((transfer) => ({
+    id: transfer.id,
+    number: transfer.number,
+    type: transfer.type,
+    movementCode: transfer.movementCode,
+    status: transfer.status,
+  }))
 
   return {
     id: doc.id,
@@ -201,6 +218,7 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     responseNumber: doc.responseNumber,
     responseDate: doc.responseDate,
     submittedAt: doc.submittedAt,
+    companyName: profile?.name ?? "",
     // Kekurangan menurut aturan validasi (M3-03), untuk Draft.
     missing:
       doc.status === "draft"
@@ -259,6 +277,8 @@ export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDo
     rows.attachments.filter((row) => row.lineId === lineId).map(attachmentDraft)
   return {
     header: pick(rows.document, CUSTOMS_HEADER_COLUMNS),
+    // Diisi getCustomsDocument dari customs_document_transfers.
+    transfers: [],
     details: stringRecord(rows.document.details),
     parties: [...rows.parties]
       .sort(
@@ -523,6 +543,7 @@ export async function requiredCustomsSpec(spec: CustomsFormSpec): Promise<Custom
     })
   return {
     ...spec,
+    top: spec.top.map((item) => field(item)),
     tabs: spec.tabs.map((tab) => ({ ...tab, blocks: blocks(tab.blocks) })),
     line: { ...spec.line, blocks: blocks(spec.line.blocks) },
   }

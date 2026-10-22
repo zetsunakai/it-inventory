@@ -70,11 +70,15 @@ PRD bagian 15.4.
    `CUSTOMS_DOCUMENT_SOURCE_CODES`): BC 1.6/2.0/2.6.2 `gr`; BC 2.3, 4.0 `itw_in`, `itw_out`, `gr`;
    BC 2.5/2.6.1/2.8/3.0/P3BET `gi`; BC 2.7 keempatnya; BC 3.3 `gr`, `gi`; BC 4.1 `itw_in`, `itw_out`,
    `gi`. Hanya transfer Siap atau Selesai (`SOURCE_TRANSFER_STATES`). Submit wajib minimal satu
-   transfer. Transfer hanya menampilkan dokumen yang memilihnya. Arah kode retur: `gr_rtn`
+   transfer. Transfer hanya menampilkan dokumen yang memilihnya. Di form, transfer dipilih di
+   header (pemilih seperti `hx-it-inventory-transfer-selector`, H-04), lalu barang disinkronkan per
+   produk dari permintaan transfer (`syncTransferLines()`, seperti
+   `sync_inventory_transfer_product_lines`); melepas transfer tidak mengubah barang. Arah kode retur: `gr_rtn`
    pemasukan, `gi_rtn` pengeluaran (return_request hmx); jangan ikuti arah terbalik di
    `stock_card_service.py`/`mutation_report.py` hmx.
-8. **Seri barang asal** mengikuti `source_sequence` hmx (dicatat per baris barang, menyusul H-04),
-   bukan alokasi saldo asal.
+8. **Seri barang asal** mengikuti `source_sequence` hmx: isian manual per baris barang
+   (`details.sourceSequence`, H-06), bukan alokasi saldo asal. Pasangan dokumen masuk → keluar
+   mengikuti `DOCUMENT_FLOW_MAP` hmx (`CUSTOMS_FLOW_MAP`, menu Flow dokumen).
 9. **Laporan mutasi** (M5) sama bentuknya dengan hmx-002 dan sudah disiapkan M2-10:
    `warehouse_movements()` (masuk/keluar per gudang, perpindahan di dalam gudang tidak dihitung,
    dari/ke lokasi penyesuaian = penyesuaian) dan `period_balances` untuk periode tertutup. Kategori

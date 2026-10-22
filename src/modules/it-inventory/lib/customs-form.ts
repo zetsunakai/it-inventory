@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 import type { FieldSpan } from "@/components/form-field"
-import { formatDecimal, parseDecimalInput } from "@/lib/decimal"
+import { formatDecimal, parseDecimalInput, toDecimalInput } from "@/lib/decimal"
 import { formatRefCode, type RefCodeType } from "@/lib/ref-codes"
 
 import type { CustomsDocCode } from "./customs"
@@ -22,8 +22,13 @@ export function customsOptionLabel(list: CustomsOptionList, code: string) {
   return items.find(([value]) => value === code)?.[1] ?? code
 }
 
-// Kolom header yang diisi di form (status, nomor daftar, dan respon diubah lewat alur status).
+// Kolom header yang diisi di form (status dan respon diubah lewat alur status). No. Aju, Tgl. Aju,
+// No. Daftar, dan Tgl. Daftar diisi manual dari portal CEISA seperti hmx (H-03).
 export const CUSTOMS_HEADER_COLUMNS = [
+  "ajuNumber",
+  "ajuDate",
+  "registrationNumber",
+  "registrationDate",
   "customsOfficeCode",
   "currencyCode",
   "ndpbm",
@@ -81,12 +86,14 @@ export type CustomsFieldKind =
   | { kind: "option"; list: CustomsOptionList }
   | { kind: "product" }
   | { kind: "file" }
+  | { kind: "transfers" }
 
 // Tempat nilai isian disimpan: kolom customs_documents (header) atau details-nya, kolom entitas
 // peran role atau details-nya, sarana angkut pertama (transport), kolom baris barang (line) atau
-// details-nya. Kolom sub-tabel (list) tidak memakai store.
+// details-nya. Kolom sub-tabel (list) tidak memakai store. meta = isian header hmx yang tidak
+// diketik: nomor urut, profil perusahaan, dan transfer yang dipilih (H-03, H-04).
 export type CustomsFieldStore =
-  "header" | "details" | "party" | "partyDetails" | "transport" | "line" | "lineDetails"
+  "header" | "details" | "party" | "partyDetails" | "transport" | "line" | "lineDetails" | "meta"
 
 export type CustomsField = CustomsFieldKind & {
   key: string
@@ -129,6 +136,9 @@ export type CustomsPartySpec = {
 }
 
 export type CustomsLayout = {
+  // Header di atas tab (grup sheet form hmx): nomor urut, Inventory Transfer Documents, No. Aju,
+  // No. Daftar, Tgl. Daftar, Perusahaan (H-03).
+  top: CustomsField[]
   tabs: CustomsTab[]
   parties: CustomsPartySpec[]
   // Form Barang per jenis (document_product_views hmx) dan daftar Dokumen Lartas per barang.
@@ -173,11 +183,15 @@ export function flatFields(items: CustomsFieldItem[]): CustomsField[] {
   return items.flatMap((item) => (isFieldGroup(item) ? item.fields : [item]))
 }
 
-// Semua isian dokumen (bukan baris barang dan bukan kolom sub-tabel), urut sesuai form.
+// Semua isian dokumen yang diketik (bukan baris barang, kolom sub-tabel, atau isian meta header),
+// urut sesuai form.
 export function customsDocumentFields(spec: CustomsLayout): CustomsField[] {
-  return spec.tabs.flatMap((tab) =>
-    tab.blocks.flatMap((block) => (isListBlock(block) ? [] : flatFields(block.fields))),
-  )
+  return [
+    ...spec.top.filter((field) => field.store === "header"),
+    ...spec.tabs.flatMap((tab) =>
+      tab.blocks.flatMap((block) => (isListBlock(block) ? [] : flatFields(block.fields))),
+    ),
+  ]
 }
 
 // Isian form Barang (tanpa pilihan produk), urut sesuai form.
@@ -249,8 +263,19 @@ export type CustomsLineDraft = Record<CustomsLineColumn, string> & {
 
 export type CustomsTaxDraft = { levyTypeCode: string; rate: string; amount: string; status: string }
 
+// Transfer yang dipilih (Inventory Transfer Documents hmx, H-04). Selain id hanya untuk tampilan
+// chip; yang disimpan hanya id-nya.
+export type CustomsTransferChoice = {
+  id: string
+  number: string
+  type: string
+  movementCode: string
+  status: string
+}
+
 export type CustomsDocumentDraft = {
   header: Record<CustomsHeaderColumn, string>
+  transfers: CustomsTransferChoice[]
   details: Record<string, string>
   parties: CustomsPartyDraft[]
   lines: CustomsLineDraft[]
@@ -328,12 +353,59 @@ export function emptyLine(): CustomsLineDraft {
   }
 }
 
+// Jumlah per produk dari permintaan transfer yang dipilih (qty satuan stok, string numeric).
+export type CustomsTransferProduct = {
+  productId: string
+  sku: string
+  name: string
+  hsCode: string
+  qty: string
+}
+
+// Barang dari transfer yang dipilih (sync_inventory_transfer_product_lines hmx, H-04): barang
+// produk yang sama diperbarui jumlahnya, produk baru ditambah, barang produk lain dibiarkan.
+// Memilih transfer yang sama lagi tidak membuat baris ganda. Baris kosong (belum ada produk)
+// dibuang supaya dokumen baru tidak tertinggal satu baris tanpa produk.
+export function syncTransferLines(
+  lines: CustomsLineDraft[],
+  products: CustomsTransferProduct[],
+): CustomsLineDraft[] {
+  if (!products.length) return lines
+  const qtyOf = new Map(products.map((product) => [product.productId, toDecimalInput(product.qty)]))
+  const seen = new Set<string>()
+  const kept = lines
+    .filter((line) => line.productId)
+    .map((line) => {
+      const qty = qtyOf.get(line.productId)
+      if (qty === undefined || seen.has(line.productId)) return line
+      seen.add(line.productId)
+      return { ...line, qty, stockQty: qty }
+    })
+  const added = products
+    .filter((product) => !seen.has(product.productId))
+    .map((product): CustomsLineDraft => {
+      const qty = toDecimalInput(product.qty)
+      return {
+        ...emptyLine(),
+        productId: product.productId,
+        product: { id: product.productId, sku: product.sku, name: product.name },
+        itemCode: product.sku,
+        hsCode: product.hsCode,
+        description: product.name,
+        qty,
+        stockQty: qty,
+      }
+    })
+  return [...kept, ...added]
+}
+
 export function emptyDraft(): CustomsDocumentDraft {
   return {
     header: Object.fromEntries(CUSTOMS_HEADER_COLUMNS.map((key) => [key, ""])) as Record<
       CustomsHeaderColumn,
       string
     >,
+    transfers: [],
     details: {},
     parties: [],
     lines: [emptyLine()],
@@ -459,7 +531,20 @@ const date = (label: string) =>
     .refine((value) => value === "" || /^\d{4}-\d{2}-\d{2}$/.test(value), `${label} tidak valid.`)
     .transform((value) => value || null)
 
+// Nomor aju CEISA: 26 angka/huruf besar (constraint customs_documents_aju_number_format).
+const ajuNumber = z
+  .string()
+  .transform((value) => value.replace(/\s/g, "").toUpperCase())
+  .refine((value) => value === "" || /^[0-9A-Z]{26}$/.test(value), {
+    message: "No. Aju harus 26 karakter angka atau huruf, seperti di portal CEISA.",
+  })
+  .transform((value) => value || null)
+
 const HEADER_KINDS: Record<CustomsHeaderColumn, z.ZodType<string | null, string>> = {
+  ajuNumber,
+  ajuDate: date("Tgl. Aju"),
+  registrationNumber: text("No. Daftar", 100),
+  registrationDate: date("Tgl. Daftar"),
   customsOfficeCode: code,
   currencyCode: code,
   ndpbm: amount("NDPBM", 4),
@@ -569,6 +654,11 @@ const lineSchema = z
 export const customsDocumentInputSchema = z
   .object({
     header: z.record(z.string(), z.string()),
+    // Hanya id yang disimpan; jenis dan status transfer diperiksa database (H-04).
+    transfers: z
+      .array(z.object({ id: z.uuid("Transfer tidak valid.") }))
+      .default([])
+      .transform((rows) => [...new Set(rows.map((row) => row.id))]),
     details,
     parties: z.array(partySchema),
     lines: z.array(lineSchema),
@@ -652,6 +742,7 @@ export const customsDocumentInputSchema = z
     }
     return {
       header,
+      transferIds: input.transfers,
       details: input.details,
       parties,
       lines,

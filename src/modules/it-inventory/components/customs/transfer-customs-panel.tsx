@@ -59,7 +59,8 @@ function columns(canRead: boolean): DataTableColumn<LinkedCustomsDocument>[] {
   ]
 }
 
-// Panel dokumen BC di detail penerimaan/pengiriman (backlog H-01): hanya baca, mengikuti hmx.
+// Panel dokumen BC di detail penerimaan/pengiriman dan kaki antar gudang (backlog H-01, H-02):
+// hanya baca, mengikuti hmx.
 // Transfer dipilih dari sisi dokumen; validasi transfer tidak menunggu dokumen BC. Disisipkan
 // halaman src/app ke TransferDetailPage, jadi modul inventory tidak bergantung pada modul IT
 // Inventory.
