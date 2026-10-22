@@ -182,18 +182,22 @@ const confirm = async (tx: Tx, id: string) =>
     .status
 
 async function movesOf(tx: Tx, id: string) {
-  return tx
-    .select({
-      location: locations.code,
-      lot: lots.name,
-      qty: stockMoves.qty,
-      reserved: stockMoves.reservedQty,
-    })
-    .from(stockMoves)
-    .innerJoin(locations, eq(locations.id, stockMoves.sourceLocationId))
-    .leftJoin(lots, eq(lots.id, stockMoves.lotId))
-    .where(eq(stockMoves.transferId, id))
-    .orderBy(stockMoves.createdAt)
+  return (
+    tx
+      .select({
+        location: locations.code,
+        lot: lots.name,
+        qty: stockMoves.qty,
+        reserved: stockMoves.reservedQty,
+      })
+      .from(stockMoves)
+      .innerJoin(locations, eq(locations.id, stockMoves.sourceLocationId))
+      .leftJoin(lots, eq(lots.id, stockMoves.lotId))
+      .where(eq(stockMoves.transferId, id))
+      // Dalam satu transaksi created_at sama (now()), jadi urutan kedua lot (tanpa lot terakhir)
+      // supaya hasilnya tidak acak.
+      .orderBy(stockMoves.createdAt, sql`${lots.name} nulls last`)
+  )
 }
 
 async function lineOf(tx: Tx, id: string) {

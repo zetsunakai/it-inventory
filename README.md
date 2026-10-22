@@ -401,6 +401,22 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   aktif terbaru. Tile Expired Lot/Serial dan Near Expiry hmx belum ada karena lot belum punya
   tanggal kedaluwarsa. Query di `src/modules/inventory/server/queries/dashboard.ts`, hanya gudang
   yang boleh dilihat user.
+- Data demo inventory (tombol Data demo di dashboard, Administrator; `createInventoryDemo`): mode
+  pure backend seperti generator demo hmx tanpa AI. Pilih satu dari 10 studi kasus kawasan berikat
+  (`src/modules/inventory/lib/demo-scenarios.ts`: garmen, sepatu, elektronik, furnitur, mainan,
+  tas, bulu mata/wig, sarung tangan karet, wire harness, kemasan plastik), masing-masing dengan
+  gudang `<awalan>-GBB`/`-GBJ`, produk berkode HS dari referensi kepabeanan, dan 7 partner. Mesin
+  di `src/modules/inventory/server/demo-data.ts` menjalankan alur 45 hari yang sama: bahan impor
+  dan lokal masuk, retur bahan cacat ke pemasok, pemakaian produksi, hasil produksi (penyesuaian
+  masuk), kemasan antar gudang, ekspor, jual lokal, retur customer, reject di-scrap, penjualan sisa
+  produksi, serta pekerjaan hari ini (kontainer Siap, order Draft, ekspor Sebagian tersedia, jual
+  lokal Siap, bahan rusak menunggu persetujuan, kemasan di perjalanan). Semuanya lewat fungsi
+  database yang sama dengan tombol aplikasi; riwayat divalidasi sebagai proses sistem supaya boleh
+  bertanggal mundur, scrap/penyesuaian disetujui Administrator. Bisa ditekan berulang: master
+  dibuat sekali, setiap klik menambah satu putaran dengan nomor dari
+  `next_number('inventory_demo:<studi kasus>', 'all')` di nomor batch dan referensi. Ditolak bila
+  tanggalnya masuk periode yang sudah ditutup; di server produksi hanya bila
+  `DEMO_DATA_ENABLED=true`. `demoScenarioProblems()` memeriksa qty setiap studi kasus (dites).
 - `npm run db:check` (`scripts/check-ledger.ts`, R-15) hanya membaca dan memeriksa: saldo
   `stock_balances` sama dengan ledger, qty dipesan sama dengan pergerakan transfer terbuka, dan
   transfer Selesai punya pergerakan Selesai berkode sama. Jalankan setelah migrasi data lama.

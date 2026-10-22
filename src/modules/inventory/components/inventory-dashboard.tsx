@@ -109,12 +109,12 @@ const RECENT_COLUMNS: DataTableColumn<ActiveTransfer>[] = [
     ),
   },
   {
-    header: "Jenis pergerakan",
+    header: "Jenis",
     className: "w-full whitespace-normal",
     cell: (row) => MOVEMENT_CODE_LABELS[row.movementCode] ?? row.movementCode,
   },
   {
-    header: "Tanggal rencana",
+    header: "Rencana",
     cell: (row) =>
       row.scheduledDate ? formatDate(new Date(`${row.scheduledDate}T00:00:00+07:00`)) : "—",
   },
@@ -164,7 +164,10 @@ export function InventoryDashboardView({ data }: { data: InventoryDashboard }) {
         value={formatNumber(active.waiting + active.partial + active.ready)}
         footer={`Menunggu ${formatNumber(active.waiting)} · Sebagian tersedia ${formatNumber(active.partial)} · Siap ${formatNumber(active.ready)}`}
       />
-      <Panel title="Distribusi stok per gudang" className="sm:col-span-2 xl:col-span-6">
+      <Panel
+        title="Distribusi stok per gudang"
+        className="sm:col-span-2 xl:col-span-12 2xl:col-span-6"
+      >
         {data.warehouses.length ? (
           <WarehouseStockChart rows={data.warehouses} />
         ) : (
@@ -176,7 +179,7 @@ export function InventoryDashboardView({ data }: { data: InventoryDashboard }) {
       <Panel
         title="Transfer aktif terbaru"
         count={`${formatNumber(data.recent.total)} transfer`}
-        className="sm:col-span-2 xl:col-span-6"
+        className="sm:col-span-2 xl:col-span-12 2xl:col-span-6"
       >
         <DataTable
           columns={RECENT_COLUMNS}
