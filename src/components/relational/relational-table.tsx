@@ -404,26 +404,31 @@ export function RelationalTable<Row>({
                         sort?.id !== column.id && "text-muted-foreground/40",
                       )}
                     />
-                    <button
+                    {/* Tombol ikon berkotak seperti semua tombol (standar Button ghost). */}
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-xs"
                       aria-label={`Cari ${column.label}`}
                       aria-pressed={searching === column.id}
                       onClick={() => setSearching(searching === column.id ? null : column.id)}
-                      className="rounded p-1 hover:bg-accent"
+                      className="aria-pressed:bg-muted"
                     >
                       <Search className="size-3.5" />
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="button"
+                      variant="ghost"
+                      size="icon-xs"
                       aria-label={`Pin kolom ${column.label}`}
                       aria-pressed={prefs.pinned === column.id}
                       onClick={() =>
                         save({ pinned: prefs.pinned === column.id ? null : column.id })
                       }
-                      className="rounded p-1 hover:bg-accent"
+                      className="aria-pressed:bg-muted"
                     >
                       <Pin className="size-3.5" />
-                    </button>
+                    </Button>
                   </div>
                   {searching === column.id && (
                     <Input

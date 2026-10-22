@@ -17,9 +17,10 @@ export function AppSidebar() {
   return (
     <Sidebar collapsible="icon">
       <SidebarHeader className="h-16 justify-center border-b border-sidebar-border px-3 group-data-[collapsible=icon]:px-1.5">
+        {/* Sidebar disembunyikan (mode ikon): logo tidak ikut tampil, bukan diciutkan jadi gepeng. */}
         <Link
           href="/"
-          className="flex items-center gap-3 rounded-md p-1 outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+          className="flex items-center gap-3 rounded-md p-1 outline-none group-data-[collapsible=icon]:hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
           {/* Logo di public/brand/veltics-logo.png (ganti filenya untuk mengganti logo). */}
           <Image

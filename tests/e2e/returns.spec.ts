@@ -30,6 +30,8 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
   await expect(page.getByRole("heading", { name: /^Retur PRT\// })).toBeVisible()
   const requestUrl = page.url()
 
+  // Detail Draft dibuka dalam mode baca; Edit membuka form.
+  await page.getByRole("button", { name: "Edit", exact: true }).click()
   const qty = page.getByLabel(`Qty retur ${sku}`)
   await fillInteractive(qty, "11")
   await page.getByRole("button", { name: "Simpan", exact: true }).click()

@@ -24,6 +24,7 @@ import {
   RETURN_LINE_ACTIONS,
   type ReturnLineAction,
 } from "@/modules/inventory/lib/inventory"
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 export type ReturnRequestFormValues = {
@@ -78,6 +79,8 @@ export function ReturnRequestForm({
   const [result, setResult] = useState<ActionResult<unknown> | null>(null)
   const [pending, startTransition] = useTransition()
   const fieldErrors = result?.ok === false ? result.fieldErrors : undefined
+  // Tersimpan → kembali ke mode baca (RecordModes) dengan pesannya.
+  useSaveFeedback(result)
 
   function update(id: string, change: Partial<{ qty: string; action: ReturnLineAction }>) {
     setLines((current) => ({ ...current, [id]: { ...current[id], ...change } }))
@@ -107,11 +110,6 @@ export function ReturnRequestForm({
         <Button type="submit" disabled={pending} className={TOUCH}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
-        {result?.ok && (
-          <p role="status" className="text-control text-success">
-            {result.message}
-          </p>
-        )}
       </FormActions>
       <FormErrors errors={result?.ok === false ? result.errors : undefined} />
 

@@ -1,4 +1,5 @@
 import { Plus, ScanLine } from "lucide-react"
+import { RecordModes } from "@/components/layout/record-modes"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
@@ -536,61 +537,71 @@ async function TransferDetail({
         />
       )}
       {panel?.({ id: transfer.id })}
-      {editable ? (
-        <TransferForm
-          kind={kind}
-          locations={locations}
-          uoms={uoms}
-          transfer={{
-            id: transfer.id,
-            partner: transfer.partner,
-            // Penyesuaian: lokasi gudang adalah sisi yang punya gudang; arahnya dari sisi itu.
-            locationId: kind.directional
-              ? transfer.sourceWarehouseId
-                ? transfer.sourceLocationId
-                : transfer.destinationLocationId
-              : kind.locationSide === "destination"
+      {/* Dibuka dalam mode baca seperti dokumen BC; Edit membuka form (Simpan · Buang). */}
+      <RecordModes
+        canEdit={editable}
+        createHref={kind.creatable === false ? undefined : `${kind.path}/baru`}
+        view={
+          <TransferView
+            kind={kind}
+            transfer={transfer}
+            lotEditor={
+              recording
+                ? (line) => (
+                    <LineLotEditor transferId={transfer.id} line={lotLine(transfer, line)} />
+                  )
+                : undefined
+            }
+          />
+        }
+        form={
+          <TransferForm
+            kind={kind}
+            locations={locations}
+            uoms={uoms}
+            transfer={{
+              id: transfer.id,
+              partner: transfer.partner,
+              // Penyesuaian: lokasi gudang adalah sisi yang punya gudang; arahnya dari sisi itu.
+              locationId: kind.directional
+                ? transfer.sourceWarehouseId
+                  ? transfer.sourceLocationId
+                  : transfer.destinationLocationId
+                : kind.locationSide === "destination"
+                  ? transfer.destinationLocationId
+                  : transfer.sourceLocationId,
+              direction: kind.directional
+                ? transfer.sourceWarehouseId
+                  ? "decrease"
+                  : "increase"
+                : undefined,
+              reason: transfer.reason,
+              usageType: transfer.usageType,
+              otherLocationId: kind.secondLocationLabel
                 ? transfer.destinationLocationId
-                : transfer.sourceLocationId,
-            direction: kind.directional
-              ? transfer.sourceWarehouseId
-                ? "decrease"
-                : "increase"
-              : undefined,
-            reason: transfer.reason,
-            usageType: transfer.usageType,
-            otherLocationId: kind.secondLocationLabel ? transfer.destinationLocationId : undefined,
-            scheduledDate: transfer.scheduledDate,
-            reference: transfer.reference,
-            notes: transfer.notes,
-            lines: transfer.lines.map((line) => ({
-              product: {
-                id: line.productId,
-                sku: line.sku,
-                name: line.productName,
-                uomId: line.stockUomId,
-                uomCode: line.stockUomCode,
-                uomCategoryId: line.uomCategoryId,
-                tracking: line.tracking,
-                lotAuto: line.lotAuto,
-              },
-              inputQty: line.inputQty,
-              uomId: line.inputUomId,
-              lotName: line.lotName,
-            })),
-          }}
-        />
-      ) : (
-        <TransferView
-          kind={kind}
-          transfer={transfer}
-          lotEditor={
-            recording
-              ? (line) => <LineLotEditor transferId={transfer.id} line={lotLine(transfer, line)} />
-              : undefined
-          }
-        />
-      )}
+                : undefined,
+              scheduledDate: transfer.scheduledDate,
+              reference: transfer.reference,
+              notes: transfer.notes,
+              lines: transfer.lines.map((line) => ({
+                product: {
+                  id: line.productId,
+                  sku: line.sku,
+                  name: line.productName,
+                  uomId: line.stockUomId,
+                  uomCode: line.stockUomCode,
+                  uomCategoryId: line.uomCategoryId,
+                  tracking: line.tracking,
+                  lotAuto: line.lotAuto,
+                },
+                inputQty: line.inputQty,
+                uomId: line.inputUomId,
+                lotName: line.lotName,
+              })),
+            }}
+          />
+        }
+      />
     </DocumentLayout>
   )
 }

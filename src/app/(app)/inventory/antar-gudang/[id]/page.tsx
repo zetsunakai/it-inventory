@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { RecordModes } from "@/components/layout/record-modes"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
@@ -199,67 +200,73 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
       }
       activity={<ActivityLog entries={activity} noun="permintaan" />}
     >
-      {editable ? (
-        <InterwarehouseForm
-          locations={locations}
-          uoms={uoms}
-          request={{
-            id: request.id,
-            sourceLocationId: request.sourceLocationId,
-            destinationLocationId: request.destinationLocationId,
-            scheduledDate: request.scheduledDate,
-            reference: request.reference,
-            notes: request.notes,
-            lines: request.lines.map((line) => ({
-              product: line.product,
-              inputQty: line.inputQty,
-              uomId: line.uomId,
-            })),
-          }}
-        />
-      ) : (
-        <div className="space-y-8">
-          <InfoGrid
-            items={rows.map(([label, value]) => ({
-              label,
-              value,
-              wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
-            }))}
-          />
-          <Tabs defaultValue="barang">
-            <TabsList>
-              <TabsTrigger value="barang">Barang</TabsTrigger>
+      {/* Dibuka dalam mode baca seperti dokumen BC; Edit membuka form (Simpan · Buang). */}
+      <RecordModes
+        canEdit={editable}
+        createHref="/inventory/antar-gudang/baru"
+        view={
+          <div className="space-y-8">
+            <InfoGrid
+              items={rows.map(([label, value]) => ({
+                label,
+                value,
+                wide: label === "Catatan" || label === "Alasan" || label === "Alasan retur",
+              }))}
+            />
+            <Tabs defaultValue="barang">
+              <TabsList>
+                <TabsTrigger value="barang">Barang</TabsTrigger>
+                {request.inTransit.length > 0 && (
+                  <TabsTrigger value="masih-di-perjalanan">Masih di perjalanan</TabsTrigger>
+                )}
+                <TabsTrigger value="transfer">Transfer</TabsTrigger>
+              </TabsList>
               {request.inTransit.length > 0 && (
-                <TabsTrigger value="masih-di-perjalanan">Masih di perjalanan</TabsTrigger>
+                <TabsContent value="masih-di-perjalanan">
+                  <DataTable
+                    columns={TRANSIT_COLUMNS}
+                    rows={request.inTransit}
+                    rowKey={(row) => `${row.sku}|${row.lot ?? ""}`}
+                  />
+                </TabsContent>
               )}
-              <TabsTrigger value="transfer">Transfer</TabsTrigger>
-            </TabsList>
-            {request.inTransit.length > 0 && (
-              <TabsContent value="masih-di-perjalanan">
+              <TabsContent value="transfer">
                 <DataTable
-                  columns={TRANSIT_COLUMNS}
-                  rows={request.inTransit}
-                  rowKey={(row) => `${row.sku}|${row.lot ?? ""}`}
+                  columns={TRANSFER_COLUMNS}
+                  rows={request.transfers}
+                  rowKey={(row) => row.id}
                 />
               </TabsContent>
-            )}
-            <TabsContent value="transfer">
-              <DataTable
-                columns={TRANSFER_COLUMNS}
-                rows={request.transfers}
-                rowKey={(row) => row.id}
-              />
-            </TabsContent>
-            <TabsContent value="barang">
-              <DataTable
-                columns={PROGRESS_COLUMNS}
-                rows={request.progress}
-                rowKey={(row) => row.sku}
-              />
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
+              <TabsContent value="barang">
+                <DataTable
+                  columns={PROGRESS_COLUMNS}
+                  rows={request.progress}
+                  rowKey={(row) => row.sku}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+        }
+        form={
+          <InterwarehouseForm
+            locations={locations}
+            uoms={uoms}
+            request={{
+              id: request.id,
+              sourceLocationId: request.sourceLocationId,
+              destinationLocationId: request.destinationLocationId,
+              scheduledDate: request.scheduledDate,
+              reference: request.reference,
+              notes: request.notes,
+              lines: request.lines.map((line) => ({
+                product: line.product,
+                inputQty: line.inputQty,
+                uomId: line.uomId,
+              })),
+            }}
+          />
+        }
+      />
     </DocumentLayout>
   )
 }

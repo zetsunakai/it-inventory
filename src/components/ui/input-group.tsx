@@ -80,7 +80,8 @@ const inputGroupButtonVariants = cva("flex items-center gap-2 text-control shado
 function InputGroupButton({
   className,
   type = "button",
-  variant = "ghost",
+  // Tombol di dalam kotak input: tanpa kotak sendiri (varian inline), tetap ada hover.
+  variant = "inline",
   size = "xs",
   ...props
 }: Omit<React.ComponentProps<typeof Button>, "size" | "type"> &

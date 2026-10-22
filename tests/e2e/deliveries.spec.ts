@@ -45,10 +45,12 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   )
 
   await page.getByRole("button", { name: "Kembali ke Draft" }).click()
+  // Detail Draft dibuka dalam mode baca; Edit membuka form.
+  await page.getByRole("button", { name: "Edit", exact: true }).click()
   // Halaman "buat" sebelumnya masih tersimpan tersembunyi oleh router; pakai yang terlihat.
   await page.getByLabel("Qty baris 1").filter({ visible: true }).fill("3")
   await page.getByRole("button", { name: "Simpan", exact: true }).click()
-  await expect(page.getByText("Perubahan disimpan.")).toBeVisible()
+  await expect(page.getByText("Transfer disimpan.")).toBeVisible()
   await page.getByRole("button", { name: "Konfirmasi" }).click()
   await expect(page.getByRole("status").filter({ hasText: "Siap divalidasi." })).toBeVisible()
   await page.getByRole("button", { name: "Validasi" }).click()

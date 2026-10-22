@@ -199,8 +199,8 @@ export function TransferActions({
                       {editable.length > 0 && (
                         <Button
                           type="button"
-                          variant="link"
-                          className="h-auto p-0"
+                          variant="outline"
+                          size="sm"
                           onClick={() => {
                             setEdited(
                               Object.fromEntries(

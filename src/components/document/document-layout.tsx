@@ -7,6 +7,7 @@ import { PageMessageSlot } from "@/components/layout/page-message"
 import { buttonVariants } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
+import { DocumentRail } from "./document-rail"
 import { DocumentAside, SidePanel } from "./side-panel"
 
 export type RecordNeighbors = {
@@ -66,31 +67,40 @@ export function DocumentLayout({
         <PageMessageSlot />
         <PageCrumbs crumbs={crumbs ?? [{ label: title }]} />
       </div>
-      <div
-        className={cn(
-          "grid items-start gap-6",
-          (status || activity) && "xl:grid-cols-[minmax(0,1fr)_auto]",
-        )}
-      >
-        <div className="min-w-0 space-y-4">
-          {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
-          {children}
-        </div>
-        {(status || activity) &&
-          (status ? (
-            <div className="flex min-w-0 flex-col gap-4 xl:w-80">
-              {status}
-              {activity && (
-                <SidePanel title="Aktivitas" wide>
-                  {activity}
-                </SidePanel>
+      {/* Lebar kolom kanan mengikuti area isi (container query), bukan lebar layar: saat area isi
+          sempit (zoom in, jendela kecil) status dan aktivitas ditutup jadi strip ikon supaya isi
+          form yang dipertahankan. */}
+      <div className="@container">
+        <div
+          className={cn(
+            "grid items-start gap-6",
+            (status || activity) && "grid-cols-[minmax(0,1fr)_auto]",
+          )}
+        >
+          <div className="min-w-0 space-y-4">
+            {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
+            {children}
+          </div>
+          {(status || activity) && (
+            <>
+              <DocumentRail className="@5xl:hidden" status={status} activity={activity} />
+              {status ? (
+                <div className="hidden min-w-0 flex-col gap-4 @5xl:flex @5xl:w-80">
+                  {status}
+                  {activity && (
+                    <SidePanel title="Aktivitas" wide>
+                      {activity}
+                    </SidePanel>
+                  )}
+                </div>
+              ) : (
+                <DocumentAside className="hidden @5xl:flex">
+                  {activity && <SidePanel title="Aktivitas">{activity}</SidePanel>}
+                </DocumentAside>
               )}
-            </div>
-          ) : (
-            <DocumentAside>
-              {activity && <SidePanel title="Aktivitas">{activity}</SidePanel>}
-            </DocumentAside>
-          ))}
+            </>
+          )}
+        </div>
       </div>
     </div>
   )

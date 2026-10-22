@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { RecordModes } from "@/components/layout/record-modes"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
@@ -207,50 +208,55 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
       }
       activity={<ActivityLog entries={activity} noun="permintaan retur" />}
     >
-      {editable ? (
-        <ReturnRequestForm
-          locations={locations}
-          locationLabel={locationLabel}
-          request={{
-            id: request.id,
-            locationId: request.locationId,
-            scheduledDate: request.scheduledDate,
-            reason: request.reason,
-            notes: request.notes,
-            lines: request.lines,
-          }}
-        />
-      ) : (
-        <div className="space-y-8">
-          <InfoGrid
-            items={rows.map(([label, value]) => ({
-              label,
-              value,
-              wide:
-                label === "Catatan" ||
-                label === "Alasan" ||
-                label === "Alasan retur" ||
-                label === "Ditutup tanpa pengganti",
-            }))}
+      {/* Dibuka dalam mode baca seperti dokumen BC; Edit membuka form (Simpan · Buang). */}
+      <RecordModes
+        canEdit={editable}
+        view={
+          <div className="space-y-8">
+            <InfoGrid
+              items={rows.map(([label, value]) => ({
+                label,
+                value,
+                wide:
+                  label === "Catatan" ||
+                  label === "Alasan" ||
+                  label === "Alasan retur" ||
+                  label === "Ditutup tanpa pengganti",
+              }))}
+            />
+            <Tabs defaultValue="transfer">
+              <TabsList>
+                <TabsTrigger value="transfer">Transfer</TabsTrigger>
+                <TabsTrigger value="barang">Barang</TabsTrigger>
+              </TabsList>
+              <TabsContent value="transfer">
+                <DataTable
+                  columns={TRANSFER_COLUMNS}
+                  rows={request.transfers}
+                  rowKey={(row) => row.id}
+                />
+              </TabsContent>
+              <TabsContent value="barang">
+                <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
+              </TabsContent>
+            </Tabs>
+          </div>
+        }
+        form={
+          <ReturnRequestForm
+            locations={locations}
+            locationLabel={locationLabel}
+            request={{
+              id: request.id,
+              locationId: request.locationId,
+              scheduledDate: request.scheduledDate,
+              reason: request.reason,
+              notes: request.notes,
+              lines: request.lines,
+            }}
           />
-          <Tabs defaultValue="transfer">
-            <TabsList>
-              <TabsTrigger value="transfer">Transfer</TabsTrigger>
-              <TabsTrigger value="barang">Barang</TabsTrigger>
-            </TabsList>
-            <TabsContent value="transfer">
-              <DataTable
-                columns={TRANSFER_COLUMNS}
-                rows={request.transfers}
-                rowKey={(row) => row.id}
-              />
-            </TabsContent>
-            <TabsContent value="barang">
-              <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
-            </TabsContent>
-          </Tabs>
-        </div>
-      )}
+        }
+      />
     </DocumentLayout>
   )
 }

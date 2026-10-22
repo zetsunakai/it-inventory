@@ -27,6 +27,7 @@ import type {
   ProductChoice,
   UomChoice,
 } from "@/modules/inventory/server/queries/transfers"
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FORM_CLASS, FormActions, FormColumn, FormColumns } from "@/components/layout/form-layout"
 
 export type InterwarehouseFormValues = {
@@ -81,6 +82,8 @@ export function InterwarehouseForm({
   useEffect(() => {
     if (state?.ok && !request) router.push(`/inventory/antar-gudang/${state.data.id}`)
   }, [state, request, router])
+  // Permintaan yang sudah ada: tersimpan → kembali ke mode baca (RecordModes) dengan pesannya.
+  useSaveFeedback(request ? state : null)
 
   const item = (location: LocationOption) => ({
     value: location.id,
@@ -109,11 +112,6 @@ export function InterwarehouseForm({
         <Button type="submit" disabled={pending} className={TOUCH}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
-        {state?.ok && request && (
-          <p role="status" className="text-control text-success">
-            Perubahan disimpan.
-          </p>
-        )}
       </FormActions>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
       {request && <input type="hidden" name="id" value={request.id} />}

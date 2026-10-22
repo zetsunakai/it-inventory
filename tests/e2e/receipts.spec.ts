@@ -70,6 +70,7 @@ test("penerimaan parsial: sisa qty menjadi penerimaan lanjutan", async ({ page }
 
   await link.click()
   await expect(page.getByText("Draft", { exact: true }).filter({ visible: true })).toBeVisible()
+  await page.getByRole("button", { name: "Edit", exact: true }).click()
   await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("4")
 })
 

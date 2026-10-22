@@ -6,6 +6,7 @@ import { useActionState, useEffect, useId, useRef, useState } from "react"
 import { saveTransfer } from "@/modules/inventory/actions/transfers"
 import { FormErrors } from "@/components/form-errors"
 import { FormField, FormSection } from "@/components/form-field"
+import { useSaveFeedback } from "@/components/layout/record-modes"
 import { FORM_CLASS, FormActions, FormColumn, FormColumns } from "@/components/layout/form-layout"
 import { RelationalTable, type RelationColumn } from "@/components/relational/relational-table"
 import { sumDecimals } from "@/components/relational/relational-utils"
@@ -103,6 +104,8 @@ export function TransferForm({
     null,
   )
   const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
+  // Transfer yang sudah ada: tersimpan → kembali ke mode baca (RecordModes) dengan pesannya.
+  useSaveFeedback(transfer ? state : null)
   const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
   const [partner, setPartner] = useState(transfer?.partner ?? null)
   const [locationId, setLocationId] = useState<string | null>(transfer?.locationId ?? null)
@@ -165,11 +168,6 @@ export function TransferForm({
         <Button type="submit" disabled={pending} className={TOUCH}>
           {pending ? "Menyimpan…" : "Simpan"}
         </Button>
-        {state?.ok && transfer && (
-          <p role="status" className="text-control text-success">
-            Perubahan disimpan.
-          </p>
-        )}
       </FormActions>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
       {transfer && <input type="hidden" name="id" value={transfer.id} />}
