@@ -9,6 +9,7 @@ import {
   Database,
   House,
   Landmark,
+  LayoutDashboard,
   Library,
   Settings,
   SlidersHorizontal,
@@ -60,6 +61,13 @@ export const NAVIGATION: NavGroup[] = [
   },
   // Inventory dipecah seperti Odoo (RU-01): dokumen yang memindahkan barang, lalu melihat dan
   // mengoreksi stok.
+  // Dashboard inventory seperti Inventory Dashboard hmx-002 (menu teratas modul inventory).
+  {
+    label: "Ringkasan",
+    module: "inventory",
+    icon: LayoutDashboard,
+    items: [{ title: "Dashboard", href: "/inventory/dashboard", permission: "inventory:read" }],
+  },
   {
     label: "Operasi gudang",
     module: "inventory",

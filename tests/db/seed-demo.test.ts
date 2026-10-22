@@ -74,6 +74,13 @@ test("BC 2.3 Submitted dengan penerimaan, BC 2.5 Draft bisa memilih pengiriman l
       .from(transfers)
       .where(eq(transfers.reference, "SO-DEMO-001"))
     expect(delivery.status).toBe("ready")
+    // Pengiriman benar-benar memesan stoknya (punya pergerakan), bukan hanya berstatus Siap.
+    const {
+      rows: [reserved],
+    } = await tx.execute<{ qty: string }>(
+      sql`select sum(reserved_qty)::text as qty from stock_moves where transfer_id = ${delivery.id}`,
+    )
+    expect(Number(reserved.qty)).toBe(500)
     const [bc25] = await tx
       .select({ id: customsDocuments.id })
       .from(customsDocuments)

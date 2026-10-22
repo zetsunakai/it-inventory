@@ -393,6 +393,14 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   kotaknya dengan judul kolom dan kolom pengenal menempel; kolom opsional disembunyikan di layar
   kecil; halaman masuk dan verifikasi memakai `AuthLayout` dengan panel brand; Pengaturan memakai
   kartu form seperti halaman lain.
+- Dashboard inventory (`/inventory/dashboard`, menu Ringkasan › Dashboard, izin `inventory:read`)
+  meniru Inventory Dashboard hmx-002 (`core_inventory/data/inventory_dashboard_data.xml`, tampilan
+  tile/kartu `webx_dashboard`): tile Qty on hand dan Qty tersedia (jumlah qty lintas produk dan
+  satuan, seperti hmx), Stok habis dan Stok minus (jumlah baris saldo), Dokumen aktif (Menunggu,
+  Sebagian tersedia, Siap), bar chart distribusi stok per gudang (10 teratas), dan 10 transfer
+  aktif terbaru. Tile Expired Lot/Serial dan Near Expiry hmx belum ada karena lot belum punya
+  tanggal kedaluwarsa. Query di `src/modules/inventory/server/queries/dashboard.ts`, hanya gudang
+  yang boleh dilihat user.
 - `npm run db:check` (`scripts/check-ledger.ts`, R-15) hanya membaca dan memeriksa: saldo
   `stock_balances` sama dengan ledger, qty dipesan sama dengan pergerakan transfer terbuka, dan
   transfer Selesai punya pergerakan Selesai berkode sama. Jalankan setelah migrasi data lama.
@@ -559,7 +567,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   (`details.sourceSequence`).
 - Data demo (M4-07, H-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat
   produk `DEMO-KAIN`, penerimaan Selesai, BC 2.3 Submitted yang memilih penerimaan itu, pengiriman
-  Siap `SO-DEMO-001`, dan BC 2.5 Draft. Alur demo: buka BC 2.5, Edit, Pilih transfer
+  Siap `SO-DEMO-001` (memesan 500 dari stok), dan BC 2.5 Draft. Alur demo: buka BC 2.5, Edit, Pilih transfer
   `SO-DEMO-001`, Simpan, lalu Submit.
 
 ## Penyimpanan file

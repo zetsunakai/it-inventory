@@ -228,11 +228,24 @@ export async function seedDemoCustoms(db: Db) {
         reference: "SO-DEMO-001",
       })
       .returning()
-    await tx.insert(transferLines).values({
+    const [deliveryLine] = await tx
+      .insert(transferLines)
+      .values({
+        transferId: delivery.id,
+        productId: product.id,
+        inputQty: "500",
+        inputUomId: unit.id,
+      })
+      .returning()
+    // Pergerakannya ikut dibuat (seperti penerimaan di atas) supaya Konfirmasi memesan stoknya.
+    await tx.insert(stockMoves).values({
       transferId: delivery.id,
+      lineId: deliveryLine.id,
       productId: product.id,
       inputQty: "500",
       inputUomId: unit.id,
+      sourceLocationId: rack.id,
+      destinationLocationId: customer.id,
     })
     await tx.execute(sql`select confirm_transfer(${delivery.id})`)
 
