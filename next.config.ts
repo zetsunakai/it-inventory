@@ -4,6 +4,7 @@ const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,
   experimental: {
+    agentUpgrade: "security",
     // Mengaktifkan forbidden() untuk halaman 403 saat peran tidak punya izin.
     authInterrupts: true,
     serverActions: {
