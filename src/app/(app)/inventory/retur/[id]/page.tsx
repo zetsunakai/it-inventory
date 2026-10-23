@@ -5,6 +5,11 @@ import { notFound } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
 import { z } from "zod"
 
+import { RelationalView } from "@/components/relational/relational-view"
+import {
+  RETURN_LINE_FIELDS,
+  lineTableColumns,
+} from "@/modules/inventory/components/line-table-columns"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { ReturnRequestActions } from "@/modules/inventory/components/return-request-actions"
 import { ReturnRequestForm } from "@/modules/inventory/components/return-request-form"
@@ -71,32 +76,21 @@ const TRANSFER_COLUMNS: DataTableColumn<LinkedTransfer>[] = [
   { header: "Status", cell: (row) => <TransferStatusBadge status={row.status} /> },
 ]
 
-const LINE_COLUMNS: DataTableColumn<RequestLine>[] = [
+const LINE_COLUMNS = lineTableColumns<RequestLine>(RETURN_LINE_FIELDS, [
   {
-    header: "Produk",
-    className: "w-full whitespace-normal",
-    cell: (line) => (
-      <span className="flex flex-col">
-        <span className="font-mono text-foreground">{line.sku}</span>
-        <span className="text-muted-foreground">
-          {line.name}
-          {line.lot && <span className="font-mono"> · lot {line.lot}</span>}
-        </span>
-      </span>
-    ),
-  },
-  { header: "Tindakan", cell: (line) => RETURN_LINE_ACTION_LABELS[line.action] },
-  {
-    header: "Qty diminta",
-    align: "right",
-    cell: (line) => `${formatDecimal(line.qty)} ${line.uom}`,
+    id: "product",
+    label: "Produk",
+    value: (line) => `[${line.sku}] ${line.name}${line.lot ? ` · lot ${line.lot}` : ""}`,
   },
   {
-    header: "Qty diretur",
-    align: "right",
-    cell: (line) => `${formatDecimal(line.returned)} ${line.uom}`,
+    id: "qty",
+    label: "Qty retur",
+    value: (line) => line.qty,
+    render: (line) => formatDecimal(line.qty),
   },
-]
+  { id: "max", label: "Maksimum", value: (line) => `${formatDecimal(line.max)} ${line.uom}` },
+  { id: "action", label: "Tindakan", value: (line) => RETURN_LINE_ACTION_LABELS[line.action] },
+])
 
 export default function ReturnRequestPage({ params }: PageProps<"/inventory/retur/[id]">) {
   return (
@@ -237,7 +231,27 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                 />
               </TabsContent>
               <TabsContent value="barang">
-                <DataTable columns={LINE_COLUMNS} rows={request.lines} rowKey={(line) => line.id} />
+                <RelationalView
+                  id="return-lines"
+                  label="Barang yang diretur"
+                  columns={LINE_COLUMNS}
+                  rows={request.lines}
+                  rowKey={(line) => line.id}
+                />
+                {request.status !== "draft" && (
+                  <DataTable
+                    columns={[
+                      { header: "Produk", cell: (line: RequestLine) => line.sku },
+                      {
+                        header: "Qty diretur",
+                        align: "right",
+                        cell: (line: RequestLine) => `${formatDecimal(line.returned)} ${line.uom}`,
+                      },
+                    ]}
+                    rows={request.lines}
+                    rowKey={(line) => line.id}
+                  />
+                )}
               </TabsContent>
             </Tabs>
           </div>

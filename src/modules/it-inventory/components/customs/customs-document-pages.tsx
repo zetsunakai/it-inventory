@@ -354,7 +354,7 @@ async function CustomsDetail({
             // transfer ada di header form dan belum tersimpan.
             <div className="flex flex-col gap-6">
               <CustomsDocumentView
-                spec={spec}
+                spec={formSpec}
                 number={doc.number}
                 companyName={doc.companyName}
                 draft={doc.draft}

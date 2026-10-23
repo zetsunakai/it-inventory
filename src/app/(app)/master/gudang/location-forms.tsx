@@ -16,15 +16,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { LOCATION_TYPE_LABELS, WAREHOUSE_LOCATION_TYPES } from "@/modules/inventory/lib/inventory"
 
-import { createLocation, updateLocation } from "./actions"
+import { updateLocation } from "./actions"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
-
-const TYPE_ITEMS = WAREHOUSE_LOCATION_TYPES.map((type) => ({
-  value: type,
-  label: LOCATION_TYPE_LABELS[type],
-}))
 
 // Nilai khusus untuk "tanpa induk", karena Select tidak bisa memilih nilai kosong.
 const NO_PARENT = ""
@@ -55,78 +49,6 @@ function ParentSelect({
         ))}
       </SelectContent>
     </Select>
-  )
-}
-
-export function LocationCreateForm({
-  warehouseId,
-  parents,
-}: {
-  warehouseId: string
-  parents: ParentOption[]
-}) {
-  const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
-    createLocation,
-    null,
-  )
-  const fieldErrors = state?.ok === false ? state.fieldErrors : undefined
-
-  return (
-    <form action={formAction} className={FORM_CLASS}>
-      <FormActions>
-        <Button type="submit" disabled={pending}>
-          {pending ? "Menyimpan…" : "Tambah lokasi"}
-        </Button>
-        {state?.ok && (
-          <p role="status" className="text-control text-muted-foreground">
-            {state.message}
-          </p>
-        )}
-      </FormActions>
-      {state?.ok === false && <FormErrors errors={state.errors} />}
-      <input type="hidden" name="warehouseId" value={warehouseId} />
-      <FormSection title="Tambah lokasi">
-        <FormField label="Kode lokasi" htmlFor="location-code" errors={fieldErrors?.code} span={6}>
-          <Input
-            id="location-code"
-            name="code"
-            defaultValue={fieldValue(state, "code")}
-            maxLength={30}
-            autoComplete="off"
-          />
-        </FormField>
-        <FormField label="Nama lokasi" htmlFor="location-name" errors={fieldErrors?.name} span={6}>
-          <Input
-            id="location-name"
-            name="name"
-            defaultValue={fieldValue(state, "name")}
-            maxLength={200}
-          />
-        </FormField>
-        <FormField label="Tipe" htmlFor="location-type" errors={fieldErrors?.type} span={6}>
-          <Select name="type" items={TYPE_ITEMS} defaultValue="internal">
-            <SelectTrigger id="location-type" className="w-full">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {TYPE_ITEMS.map((item) => (
-                <SelectItem key={item.value} value={item.value}>
-                  {item.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FormField>
-        <FormField
-          label="Lokasi induk"
-          htmlFor="location-parentId"
-          errors={fieldErrors?.parentId}
-          span={6}
-        >
-          <ParentSelect options={parents} defaultValue={fieldValue(state, "parentId")} />
-        </FormField>
-      </FormSection>
-    </form>
   )
 }
 

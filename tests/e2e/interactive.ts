@@ -1,4 +1,4 @@
-import { expect, type Locator } from "@playwright/test"
+import { expect, type Locator, type Page } from "@playwright/test"
 
 // Isi input setelah React selesai hidrasi. Input hasil SSR sudah terlihat sebelum event handler
 // terpasang; bila langsung diketik (terutama saat server sedang sibuk), ketikan tidak memicu
@@ -17,4 +17,21 @@ export async function waitInteractive(locator: Locator) {
 export async function fillInteractive(locator: Locator, value: string) {
   await waitInteractive(locator)
   await locator.fill(value)
+}
+
+// Status berpindah ke panel pada area dokumen sempit; tetap periksa state aktif yang terlihat.
+export async function expectDocumentStatus(page: Page, label: string) {
+  const toggle = page.getByRole("button", { name: "Tampilkan status", exact: true })
+  const region = page.getByRole("region", { name: "Status", exact: true })
+  await expect(region.or(toggle).first()).toBeVisible()
+  const compact = await toggle.isVisible()
+  if (compact) {
+    await waitInteractive(toggle)
+    await toggle.click()
+  }
+  await expect(
+    page.getByRole("region", { name: "Status", exact: true }).locator('[aria-current="step"]'),
+  ).toHaveText(label)
+  if (compact)
+    await page.getByRole("dialog").getByRole("button", { name: "Tutup", exact: true }).click()
 }

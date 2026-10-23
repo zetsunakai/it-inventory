@@ -25,3 +25,18 @@ Gunakan komponen bersama berikut untuk halaman baru maupun pembaruan halaman lam
 - Halaman impor menyediakan breadcrumb kembali ke daftar atau record induk; input file mengikuti `FormSection` dan `FormField`.
 
 Dashboard, visualisasi flow dokumen, dan layar scan menggunakan layout yang sesuai tugasnya. Ketiganya tetap memakai komponen UI bersama, tanpa dipaksakan menjadi halaman daftar atau form record.
+
+## Editable bottom
+
+- Gunakan `RelationalTable` untuk menambah baris di bawah tabel. Baris baru langsung masuk mode edit dan field pertamanya menerima fokus.
+- Detail gudang memakai tabel lokasi di dalam `WarehouseForm`, baik saat membuat gudang maupun mengeditnya. Kode dan tipe lokasi yang sudah tersimpan tetap terkunci.
+- Tambah, ubah, dan hapus lokasi hanya mengubah draft di browser. Tombol Simpan gudang menyimpan induk beserta semua perubahan lokasi dalam satu transaksi. Buang menghapus draft yang belum disimpan.
+- Lokasi induk dapat dipilih dari baris baru yang belum tersimpan. Server memvalidasi kepemilikan gudang, hierarki, status induk, dan penggunaan lokasi sebelum menyimpan.
+- Popup wizard tidak termasuk perubahan ini.
+
+## Tabel baca dan edit
+
+- Tabel relasi mode baca menggunakan `RelationalView`, yang memakai renderer `RelationalTable` yang sama dengan mode edit. Kolom, urutan, serta preferensi tampil/sembunyi dan resize menggunakan ID tabel serta kolom yang sama.
+- Lebar ruang yang tersedia dibagi rata ke kolom otomatis. Ukuran hasil resize pengguna tetap dipertahankan; layar kecil memakai scroll di dalam tabel.
+- Kolom Barang transfer, antar gudang, retur, lokasi gudang, dan ringkasan barang BC mengikuti metadata bersama. Qty dan satuan tetap terpisah pada mode baca maupun edit.
+- Informasi operasional tambahan (stok tersedia, reservasi, hasil perpindahan) tetap mengikuti status dokumen. Detail barang BC dapat dibuka pada mode baca dengan field yang sama seperti detail edit.

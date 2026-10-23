@@ -2,6 +2,9 @@ import Link from "next/link"
 import type { ReactNode } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
+import { RelationalView } from "@/components/relational/relational-view"
+import type { RelationColumn } from "@/components/relational/relational-table"
+import { TRANSFER_LINE_FIELDS, lineTableColumns } from "./line-table-columns"
 import { InfoGrid } from "@/components/layout/info-grid"
 import { TabCount, Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { formatDecimal } from "@/lib/decimal"
@@ -17,32 +20,35 @@ import type { TransferDetail, TransferLine } from "@/modules/inventory/server/qu
 // Baris permintaan (R-05, RU-02): qty diminta, dipesan, selesai, dan lot/nomor seri pergerakannya.
 // Satu baris bisa punya beberapa lot/nomor seri: masing-masing satu baris, dengan qty-nya bila
 // lebih dari satu.
-const BASE_COLUMNS: DataTableColumn<TransferLine>[] = [
+const BASE_COLUMNS = lineTableColumns<TransferLine>(TRANSFER_LINE_FIELDS, [
   {
-    header: "Produk",
-    className: "w-full whitespace-normal",
-    cell: (line) => (
-      <span className="flex flex-col">
-        <Link
-          href={`/master/produk/${line.productId}`}
-          className="font-mono whitespace-nowrap text-primary hover:underline"
-        >
-          {line.sku}
-        </Link>
-        <span className="text-muted-foreground">{line.productName}</span>
-      </span>
+    id: "product",
+    label: "Produk",
+    value: (line) => `[${line.sku}] ${line.productName}`,
+    render: (line) => (
+      <Link href={`/master/produk/${line.productId}`} className="text-primary hover:underline">
+        [{line.sku}] {line.productName}
+      </Link>
     ),
   },
   {
-    header: "Lot/seri",
-    cell: (line) => <LotList line={line} />,
+    id: "qty",
+    label: "Qty",
+    value: (line) => line.inputQty,
+    render: (line) => formatDecimal(line.inputQty),
   },
+  { id: "uom", label: "Satuan", value: (line) => line.inputUomCode },
   {
-    header: "Qty diminta",
-    align: "right",
-    cell: (line) => `${formatDecimal(line.inputQty)} ${line.inputUomCode}`,
+    id: "lot",
+    label: "Nomor lot",
+    value: (line) =>
+      line.moves
+        .map((move) => move.lotName)
+        .filter(Boolean)
+        .join(", "),
+    render: (line) => <LotList line={line} />,
   },
-]
+])
 
 function LotList({ line }: { line: TransferLine }) {
   const lots = line.moves.filter((move) => move.lotName)
@@ -68,15 +74,15 @@ function LotList({ line }: { line: TransferLine }) {
 // Tombol rincian lot di sel Lot/seri (RU-03, I-01), supaya tidak jadi kolom tambahan yang terdorong
 // keluar layar.
 function withLotEditor(
-  columns: DataTableColumn<TransferLine>[],
+  columns: RelationColumn<TransferLine>[],
   lotEditor?: (line: TransferLine) => ReactNode,
 ) {
   if (!lotEditor) return columns
   return columns.map((column) =>
-    column.header === "Lot/seri"
+    column.id === "lot"
       ? {
           ...column,
-          cell: (line: TransferLine) => (
+          render: (line: TransferLine) => (
             <span className="flex flex-col items-start gap-1.5">
               <LotList line={line} />
               {lotEditor(line)}
@@ -116,17 +122,40 @@ function lineColumns(
   { status, sourceWarehouseId }: TransferDetail,
   lotEditor?: (line: TransferLine) => ReactNode,
 ) {
-  if (status === "done") return [...BASE_COLUMNS, DONE_COLUMN]
+  if (status === "done") return [...BASE_COLUMNS, operationalColumn(DONE_COLUMN)]
   const base = withLotEditor(BASE_COLUMNS, lotEditor)
   // Transfer yang mengambil stok gudang: stok tersedia per baris sebelum Validasi (I-01), lalu qty
   // yang dipesan setelah dikonfirmasi (R-07).
   if (sourceWarehouseId && status !== "cancelled") {
     const confirmed = status === "waiting" || status === "partially_available" || status === "ready"
-    return [...base, AVAILABLE_COLUMN, ...(confirmed ? [RESERVED_COLUMN] : [])]
+    return [
+      ...base,
+      operationalColumn(AVAILABLE_COLUMN),
+      ...(confirmed ? [operationalColumn(RESERVED_COLUMN)] : []),
+    ]
   }
   // Penerimaan Siap: rincian lot dan qty diterima per baris (RU-03).
-  if (lotEditor) return [...base, RECEIVED_COLUMN]
+  if (lotEditor) return [...base, operationalColumn(RECEIVED_COLUMN)]
   return BASE_COLUMNS
+}
+
+function operationalColumn(column: DataTableColumn<TransferLine>): RelationColumn<TransferLine> {
+  return {
+    id: column.header,
+    label: column.header,
+    numeric: column.align === "right",
+    render: column.cell,
+    value: (line) => {
+      if (column === DONE_COLUMN) return line.doneQty ?? ""
+      if (column === AVAILABLE_COLUMN) return line.stock?.available ?? ""
+      return String(
+        line.moves.reduce(
+          (sum, move) => sum + Number(column === RESERVED_COLUMN ? move.reservedQty : move.qty),
+          0,
+        ),
+      )
+    },
+  }
 }
 
 // Stok tersedia di lokasi asal dan sub-lokasinya untuk baris ini (I-01). Kurang dari qty diminta
@@ -346,7 +375,9 @@ export function TransferView({
           <TabsTrigger value="catatan">Catatan</TabsTrigger>
         </TabsList>
         <TabsContent value="barang">
-          <DataTable
+          <RelationalView
+            id="transfer-lines"
+            label="Barang"
             columns={lineColumns(transfer, lotEditor)}
             rows={transfer.lines}
             rowKey={(line) => line.id}

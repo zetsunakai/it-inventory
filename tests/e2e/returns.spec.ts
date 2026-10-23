@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { fillInteractive } from "./interactive"
+import { expectDocumentStatus, fillInteractive } from "./interactive"
 
 // Retur sebagai dokumen permintaan (backlog R-11): dibuat dari penerimaan Selesai, qty tidak
 // melebihi sisa, retur dengan pengganti membuat penerimaan pengganti setelah retur Selesai.
@@ -60,7 +60,7 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
 
   // Setelah retur Selesai, penerimaan pengganti dibuat sebesar qty yang diretur.
   await page.goto(requestUrl)
-  await expect(page.getByText("Diproses", { exact: true }).first()).toBeVisible()
+  await expectDocumentStatus(page, "Diproses")
   await page.getByRole("row").filter({ hasText: "Pengganti" }).getByRole("link").click()
   await expect(page.getByRole("heading", { name: /^Pengganti dari vendor PNR\// })).toBeVisible()
   await page.getByRole("button", { name: "Konfirmasi" }).click()
@@ -68,7 +68,7 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
   expect(await stockAt(fixture.product.id, fixture.rack.id)).toBe(10)
 
   await page.goto(requestUrl)
-  await expect(page.getByText("Selesai", { exact: true }).first()).toBeVisible()
+  await expectDocumentStatus(page, "Selesai")
   await page.goto(`/inventory/penerimaan/${receiptId}`)
   await expect(page.getByRole("link", { name: /^PRT\// })).toBeVisible()
 })
@@ -85,5 +85,5 @@ test("batalkan permintaan retur lewat dialog konfirmasi", async ({ page }) => {
   await expect(
     page.getByRole("status").filter({ hasText: "Permintaan retur dibatalkan." }),
   ).toBeVisible()
-  await expect(page.getByText("Batal", { exact: true }).first()).toBeVisible()
+  await expectDocumentStatus(page, "Batal")
 })

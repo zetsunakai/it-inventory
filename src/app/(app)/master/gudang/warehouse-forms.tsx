@@ -17,6 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import type { WarehouseLocationDraft } from "@/modules/inventory/lib/warehouse-locations"
+import { Section } from "@/components/layout/section"
+import { WarehouseLocationTable } from "./warehouse-location-table"
 import { fieldValue, type FormState } from "@/lib/action-result"
 
 import { createWarehouse, updateWarehouse } from "./actions"
@@ -35,17 +38,21 @@ type Warehouse = {
 // aktif gudang itu (I-07), jadi hanya ada saat mengubah gudang.
 export function WarehouseForm({
   warehouse,
-  stockLocations = [],
+  initialLocations = [],
 }: {
   warehouse?: Warehouse
-  stockLocations?: { id: string; path: string }[]
+  initialLocations?: WarehouseLocationDraft[]
 }) {
   const [stockLocationId, setStockLocationId] = useState<string | null>(
     warehouse?.stockLocationId ?? "",
   )
+  const [locationRows, setLocationRows] = useState(initialLocations)
+  const [deletedIds, setDeletedIds] = useState<string[]>([])
   const stockItems = [
     { value: "", label: "Belum dipilih" },
-    ...stockLocations.map((location) => ({ value: location.id, label: location.path })),
+    ...locationRows
+      .filter((row) => row.type === "internal" && (row.active || row.id === stockLocationId))
+      .map((row) => ({ value: row.id, label: `${row.code} · ${row.name}` })),
   ]
   const router = useRouter()
   const [state, formAction, pending] = useActionState<FormState<{ id: string }>, FormData>(
@@ -72,6 +79,11 @@ export function WarehouseForm({
       </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       {warehouse && <input type="hidden" name="id" value={warehouse.id} />}
+      <input
+        type="hidden"
+        name="locationRows"
+        value={JSON.stringify({ rows: locationRows, deletedIds })}
+      />
       <FormSection title="Data gudang">
         {warehouse ? (
           <StaticField
@@ -144,6 +156,36 @@ export function WarehouseForm({
           />
         )}
       </FormSection>
+      <Section
+        title="Lokasi"
+        description="Tambah dan ubah baris di tabel. Perubahan disimpan bersama data gudang."
+      >
+        <fieldset disabled={pending} className="min-w-0">
+          <WarehouseLocationTable
+            rows={locationRows}
+            onChange={setLocationRows}
+            canAdd={!warehouse || warehouse.active}
+            errors={fieldErrors?.locationRows}
+            onRemove={(ids) => {
+              setDeletedIds((current) => [
+                ...new Set([
+                  ...current,
+                  ...locationRows
+                    .filter((row) => ids.includes(row.id) && !row.isNew)
+                    .map((row) => row.id),
+                ]),
+              ])
+              setLocationRows((current) => current.filter((row) => !ids.includes(row.id)))
+              if (stockLocationId && ids.includes(stockLocationId)) setStockLocationId("")
+            }}
+          />
+        </fieldset>
+        {warehouse && !warehouse.active && (
+          <p className="text-control text-muted-foreground">
+            Aktifkan gudang dan simpan sebelum menambahkan lokasi.
+          </p>
+        )}
+      </Section>
     </form>
   )
 }

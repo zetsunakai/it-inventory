@@ -7,6 +7,7 @@ import {
   Check,
   Columns3,
   GripVertical,
+  Eye,
   Pencil,
   Pin,
   Plus,
@@ -14,7 +15,15 @@ import {
   Trash2,
   X,
 } from "lucide-react"
-import { Fragment, useId, useRef, useState, type CSSProperties, type ReactNode } from "react"
+import {
+  Fragment,
+  useEffect,
+  useId,
+  useRef,
+  useState,
+  type CSSProperties,
+  type ReactNode,
+} from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -34,6 +43,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
+import { relationColumnWidths } from "./relational-utils"
 import { useStoredValue } from "@/lib/use-stored-value"
 import { cn } from "@/lib/utils"
 
@@ -72,6 +82,7 @@ export function RelationalTable<Row>({
   onReorder,
   details,
   initialEdit = false,
+  readOnly = false,
   addLabel = "Tambah baris",
   errors,
   minRows = 0,
@@ -87,12 +98,53 @@ export function RelationalTable<Row>({
   onReorder?: (rows: Row[]) => void
   details?: (row: Row, index: number) => ReactNode
   initialEdit?: boolean
+  readOnly?: boolean
   addLabel?: string
   errors?: string[]
   minRows?: number
 }) {
   const uid = useId()
   const root = useRef<HTMLDivElement>(null)
+  const [containerWidth, setContainerWidth] = useState(0)
+  useEffect(() => {
+    const element = root.current
+    if (!element) return
+    const observer = new ResizeObserver(() => setContainerWidth(element.clientWidth))
+    observer.observe(element)
+    return () => observer.disconnect()
+  }, [])
+  const pendingFocus = useRef<{ key: string; column?: string } | null>(null)
+  useEffect(() => {
+    if (!pendingFocus.current) return
+    const frame = requestAnimationFrame(() => {
+      const pending = pendingFocus.current
+      if (!pending) return
+      const row = Array.from(
+        root.current?.querySelectorAll<HTMLElement>("[data-relation-row]") ?? [],
+      ).find((element) => element.dataset.relationRow === pending.key)
+      const cell = pending.column
+        ? Array.from(row?.querySelectorAll<HTMLElement>("[data-relation-column]") ?? []).find(
+            (element) => element.dataset.relationColumn === pending.column,
+          )
+        : row
+      const control = Array.from(
+        (cell ?? row)?.querySelectorAll<HTMLElement>(
+          'input:not([type="hidden"]):not([type="checkbox"]), textarea, select, button[role="combobox"]',
+        ) ?? [],
+      ).find(
+        (element) =>
+          !element.closest("[hidden]") &&
+          !element.hasAttribute("disabled") &&
+          element.getClientRects().length > 0,
+      )
+      if (control) {
+        control.focus()
+        control.scrollIntoView({ block: "nearest", inline: "nearest" })
+        pendingFocus.current = null
+      }
+    })
+    return () => cancelAnimationFrame(frame)
+  })
   const invalidTarget = useRef<EventTarget | null>(null)
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
   const [stored, store] = useStoredValue<Preferences>(`relasi:${id}`, {})
@@ -164,7 +216,13 @@ export function RelationalTable<Row>({
     ...entries.filter((entry) => !displayed.has(entry.key)),
   ]
   const pinnedIndex = visible.findIndex((column) => column.id === prefs.pinned)
-  const width = (column: RelationColumn<Row>) => prefs.widths?.[column.id] ?? column.width ?? 200
+  const widths = relationColumnWidths(
+    visible.map((column) => column.id),
+    containerWidth,
+    prefs.widths,
+  )
+  const width = (column: RelationColumn<Row>) => widths[column.id]
+
   const sticky = (index: number): CSSProperties | undefined =>
     index <= pinnedIndex
       ? ({
@@ -195,7 +253,8 @@ export function RelationalTable<Row>({
       })
   }
 
-  function openRow(key: string) {
+  function openRow(key: string, column?: string) {
+    pendingFocus.current = readOnly ? null : { key, column }
     setEditing(key)
     resetDetailScroll()
   }
@@ -603,7 +662,7 @@ export function RelationalTable<Row>({
                                   "block min-h-9 w-full truncate outline-none focus-visible:ring-2 focus-visible:ring-ring",
                                   column.numeric ? "text-right" : "text-left",
                                 )}
-                                onClick={() => openRow(key)}
+                                onClick={() => openRow(key, column.id)}
                               >
                                 {column.render?.(row, index) ?? (column.value(row, index) || "—")}
                               </button>
@@ -668,11 +727,11 @@ export function RelationalTable<Row>({
                             type="button"
                             size="icon-sm"
                             variant="ghost"
-                            aria-label={`${isEditing ? "Selesai" : "Edit"} baris ${index + 1}`}
+                            aria-label={`${isEditing ? (readOnly ? "Tutup detail" : "Selesai") : readOnly ? "Lihat detail" : "Edit"} baris ${index + 1}`}
                             aria-expanded={isEditing}
                             onClick={() => (isEditing ? setEditing(null) : openRow(key))}
                           >
-                            {isEditing ? <Check /> : <Pencil />}
+                            {isEditing ? <Check /> : readOnly ? <Eye /> : <Pencil />}
                           </Button>
                         )}
                         {onRemove && (
@@ -741,6 +800,7 @@ export function RelationalTable<Row>({
                 setSort(null)
                 setPinnedRows([])
                 setPage(Math.floor(rows.length / pageSize) + 1)
+                pendingFocus.current = key ? { key } : null
                 setEditing(key ?? null)
                 resetDetailScroll()
               }}

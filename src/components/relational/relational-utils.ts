@@ -47,3 +47,17 @@ export function sumDecimals(values: string[]): string {
   const result = scale ? `${digits.slice(0, -scale)}.${digits.slice(-scale)}` : digits
   return `${sum < BigInt(0) ? "-" : ""}${result}`
 }
+
+// Bagi sisa lebar tabel rata ke kolom otomatis; ukuran hasil resize pengguna tetap dipertahankan.
+export function relationColumnWidths(
+  ids: string[],
+  available: number,
+  custom: Record<string, number> = {},
+  chrome = 232,
+  minimum = 200,
+): Record<string, number> {
+  const reserved = ids.reduce((sum, id) => sum + (custom[id] ?? 0), 0)
+  const automatic = ids.filter((id) => custom[id] === undefined).length
+  const width = Math.max(minimum, (available - chrome - reserved) / Math.max(1, automatic))
+  return Object.fromEntries(ids.map((id) => [id, custom[id] ?? width]))
+}

@@ -1,3 +1,4 @@
+import { Section } from "@/components/layout/section"
 import type { Metadata } from "next"
 import { RecordModes } from "@/components/layout/record-modes"
 import Link from "next/link"
@@ -5,6 +6,11 @@ import { notFound } from "next/navigation"
 import { Suspense, type ReactNode } from "react"
 import { z } from "zod"
 
+import { RelationalView } from "@/components/relational/relational-view"
+import {
+  INTERWAREHOUSE_LINE_FIELDS,
+  lineTableColumns,
+} from "@/modules/inventory/components/line-table-columns"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { InterwarehouseActions } from "@/modules/inventory/components/interwarehouse-actions"
 import { InterwarehouseForm } from "@/modules/inventory/components/interwarehouse-form"
@@ -238,11 +244,38 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
                 />
               </TabsContent>
               <TabsContent value="barang">
-                <DataTable
-                  columns={PROGRESS_COLUMNS}
-                  rows={request.progress}
-                  rowKey={(row) => row.sku}
+                <RelationalView
+                  id="interwarehouse-lines"
+                  label="Barang"
+                  rows={request.lines}
+                  rowKey={(line) => line.id}
+                  columns={lineTableColumns<(typeof request.lines)[number]>(
+                    INTERWAREHOUSE_LINE_FIELDS,
+                    [
+                      {
+                        id: "product",
+                        label: "Produk",
+                        value: (line) => `[${line.product.sku}] ${line.product.name}`,
+                      },
+                      {
+                        id: "qty",
+                        label: "Qty",
+                        value: (line) => line.inputQty,
+                        render: (line) => formatDecimal(line.inputQty),
+                      },
+                      { id: "uom", label: "Satuan", value: (line) => line.uomCode },
+                    ],
+                  )}
                 />
+                {request.status !== "draft" && (
+                  <Section title="Progres perpindahan">
+                    <DataTable
+                      columns={PROGRESS_COLUMNS}
+                      rows={request.progress}
+                      rowKey={(row) => row.sku}
+                    />
+                  </Section>
+                )}
               </TabsContent>
             </Tabs>
           </div>

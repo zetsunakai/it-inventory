@@ -1,5 +1,8 @@
 "use client"
 
+import { CUSTOMS_LINE_FIELDS } from "./customs-line-columns"
+import { lineTableColumns } from "@/modules/inventory/components/line-table-columns"
+
 import { X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { memo, useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react"
@@ -733,7 +736,7 @@ function LinesEditor({
           onChange([...lines, line])
           return relationKey(line)
         }}
-        columns={[
+        columns={lineTableColumns<CustomsLineDraft>(CUSTOMS_LINE_FIELDS, [
           {
             id: "product",
             label: "Produk",
@@ -770,7 +773,7 @@ function LinesEditor({
             required: true,
             value: (line) => line.stockQty,
           },
-        ]}
+        ])}
         details={(line, index) => {
           const valueOf = lineValue(line)
           const changeOf = lineChange(index, line)

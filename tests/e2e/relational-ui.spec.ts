@@ -91,7 +91,7 @@ test("foreign key menjangkau hasil halaman kedua dan membuka detail record", asy
     await pool.end()
   }
   await page.goto("/inventory/penerimaan/baru")
-  await fillInteractive(page.getByLabel("Produk baris 1"), prefix)
+  await fillInteractive(page.getByLabel("Produk baris 1").filter({ visible: true }), prefix)
   await page.getByRole("button", { name: "Cari lebih lanjut", exact: true }).click()
   const dialog = page.getByRole("dialog", { name: "Cari lebih lanjut" })
   await expect(dialog.getByRole("button", { name: "Hasil berikutnya" })).toBeEnabled()
@@ -100,7 +100,9 @@ test("foreign key menjangkau hasil halaman kedua dan membuka detail record", asy
   const choice = choices![24]
   await dialog.getByRole("button", { name: new RegExp(`Pilih.*${choice.sku}`) }).click()
   await expect(dialog).toHaveCount(0)
-  await expect(page.getByLabel("Produk baris 1")).toHaveValue(new RegExp(choice.sku))
+  await expect(page.getByLabel("Produk baris 1").filter({ visible: true })).toHaveValue(
+    new RegExp(choice.sku),
+  )
   await expect(
     table(page).getByRole("link", { name: new RegExp(`Buka detail.*${choice.sku}`) }),
   ).toHaveAttribute("href", `/master/produk/${choice.id}`)

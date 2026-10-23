@@ -94,16 +94,19 @@ test("kolom form satuan dan master sejajar antarbaris di desktop, tablet, dan mo
   }
 })
 
-test("field tambah lokasi sejajar dengan selector lokasi induk", async ({ page }) => {
+test("lokasi baru diedit di tabel dan Buang membatalkan seluruh baris draft", async ({ page }) => {
   const fixture = await createInventoryFixture("ALIGN")
   await page.goto(`/master/gudang/${fixture.warehouse.id}`)
   await page.getByRole("button", { name: "Edit", exact: true }).click()
-  await expectAlignedPairs(
-    page,
-    [
-      ["Kode lokasi", "Nama lokasi"],
-      ["Tipe", "Lokasi induk"],
-    ],
-    false,
-  )
+  const table = page.locator('[data-relational-table="warehouse-locations"]')
+  await table.getByRole("button", { name: "Tambah lokasi", exact: true }).click()
+  const code = table.getByLabel("Kode lokasi baris 3", { exact: true })
+  await expect(code).toBeFocused()
+  await code.fill("BELUM-DISIMPAN")
+  await table.getByLabel("Nama lokasi baris 3", { exact: true }).fill("Lokasi draft")
+  await page.getByRole("button", { name: "Buang", exact: true }).click()
+  await expect(page.getByText("BELUM-DISIMPAN", { exact: true })).toHaveCount(0)
+  await page.getByRole("button", { name: "Edit", exact: true }).click()
+  await expect(page.getByText("BELUM-DISIMPAN", { exact: true })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Simpan", exact: true })).toHaveCount(1)
 })

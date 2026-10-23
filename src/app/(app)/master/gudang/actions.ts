@@ -4,6 +4,8 @@ import { and, eq, isNull } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox, requiredText } from "@/lib/form-fields"
+import { warehouseLocationFormSchema } from "@/modules/inventory/lib/warehouse-locations"
+import { saveWarehouseLocations } from "@/modules/inventory/server/warehouse-locations"
 import { WAREHOUSE_LOCATION_TYPES } from "@/modules/inventory/lib/inventory"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
 import type { Transaction } from "@/server/db/audit"
@@ -27,9 +29,13 @@ const warehouseFields = {
 export const createWarehouse = defineFormAction({
   name: "createWarehouse",
   permission: "master:write",
-  schema: z.object({ code: requiredText("Kode gudang", 30), ...warehouseFields }),
+  schema: z.object({
+    code: requiredText("Kode gudang", 30),
+    ...warehouseFields,
+    locationRows: warehouseLocationFormSchema,
+  }),
   successMessage: "Gudang ditambahkan.",
-  handler: async ({ input, tx }) => {
+  handler: async ({ input: { locationRows, ...input }, tx }) => {
     const [existing] = await tx
       .select({ id: warehouses.id })
       .from(warehouses)
@@ -37,6 +43,7 @@ export const createWarehouse = defineFormAction({
     if (existing) throw new AppError(`Kode gudang ${input.code} sudah dipakai.`)
 
     const [row] = await tx.insert(warehouses).values(input).returning({ id: warehouses.id })
+    if (locationRows) await saveWarehouseLocations(tx, row.id, locationRows)
     return row
   },
 })
@@ -53,15 +60,17 @@ export const updateWarehouse = defineFormAction({
       .optional()
       .transform((value) => value || null),
     active: checkbox,
+    locationRows: warehouseLocationFormSchema,
   }),
   successMessage: "Perubahan disimpan.",
-  handler: async ({ input: { id, ...values }, tx }) => {
+  handler: async ({ input: { id, locationRows, stockLocationId, ...values }, tx }) => {
     const [row] = await tx
       .update(warehouses)
-      .set(values)
+      .set({ ...values, ...(locationRows ? {} : { stockLocationId }) })
       .where(eq(warehouses.id, id))
       .returning({ id: warehouses.id })
     if (!row) throw new AppError("Gudang tidak ditemukan.")
+    if (locationRows) await saveWarehouseLocations(tx, id, locationRows, stockLocationId)
     return row
   },
 })

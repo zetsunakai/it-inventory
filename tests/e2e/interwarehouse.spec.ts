@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { fillInteractive, waitInteractive } from "./interactive"
+import { expectDocumentStatus, fillInteractive, waitInteractive } from "./interactive"
 
 // Transfer antar gudang lewat lokasi transit (backlog R-10).
 test.use({ storageState: ADMIN_STATE_FILE })
@@ -48,7 +48,7 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
   expect(await stockAt(origin.product.id, origin.rack.id)).toBe(4)
 
   await page.goto(requestUrl)
-  await expect(page.getByText("Di perjalanan", { exact: true }).first()).toBeVisible()
+  await expectDocumentStatus(page, "Di perjalanan")
   // Tab Barang (I-05) terbuka lebih dulu dengan qty per produk; transfernya di tab Transfer.
   await expect(page.getByRole("tab", { name: "Barang", exact: true })).toHaveAttribute(
     "aria-selected",
@@ -69,5 +69,5 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
   expect(await stockAt(origin.product.id, target.rack.id)).toBe(6)
 
   await page.goto(requestUrl)
-  await expect(page.getByText("Selesai", { exact: true }).first()).toBeVisible()
+  await expectDocumentStatus(page, "Selesai")
 })

@@ -3,7 +3,10 @@ import { notFound } from "next/navigation"
 import { Suspense } from "react"
 import { z } from "zod"
 
-import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
+import { RelationalView } from "@/components/relational/relational-view"
+import { relationColumns } from "@/components/relational/columns"
+import { WAREHOUSE_LOCATION_FIELDS } from "../warehouse-location-columns"
+import Link from "next/link"
 import { StaticField, ViewSection } from "@/components/form-field"
 import { RecordModes } from "@/components/layout/record-modes"
 import { ArchivedBadge, NameCell } from "@/components/status-badge"
@@ -21,8 +24,6 @@ import {
   type LocationRow,
 } from "@/modules/inventory/server/queries/warehouses"
 
-import { deleteLocation } from "../actions"
-import { LocationCreateForm } from "../location-forms"
 import { WarehouseForm } from "../warehouse-forms"
 import { Section } from "@/components/layout/section"
 import { FrozenWarehouseBanner } from "@/modules/inventory/components/frozen-warehouse-banner"
@@ -37,23 +38,37 @@ export default function WarehousePage({ params }: PageProps<"/master/gudang/[id]
   )
 }
 
-const LOCATION_COLUMNS: DataTableColumn<LocationRow>[] = [
+const LOCATION_COLUMNS = relationColumns<LocationRow>(WAREHOUSE_LOCATION_FIELDS, [
   {
-    header: "Kode",
-    cell: (row) => (
-      <span className="font-mono text-foreground" style={{ paddingLeft: `${row.depth * 1.25}rem` }}>
+    id: "code",
+    label: "Kode",
+    required: true,
+    value: (row) => row.code,
+    render: (row) => (
+      <Link
+        href={`/master/gudang/${row.warehouseId}/lokasi/${row.id}`}
+        className="font-mono text-primary hover:underline"
+      >
         {row.code}
-      </span>
+      </Link>
     ),
   },
   {
-    header: "Nama",
-    cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
-    className: "w-full whitespace-normal",
+    id: "name",
+    label: "Nama",
+    required: true,
+    value: (row) => row.name,
+    render: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
   },
-  { header: "Jalur", cell: (row) => <span className="font-mono text-caption">{row.path}</span> },
-  { header: "Tipe", cell: (row) => LOCATION_TYPE_LABELS[row.type] },
-]
+  { id: "type", label: "Tipe", value: (row) => LOCATION_TYPE_LABELS[row.type] },
+  {
+    id: "parent",
+    label: "Lokasi induk",
+    value: (row) => row.path.split("/").at(-2) || "Tanpa induk",
+  },
+  { id: "path", label: "Jalur", value: (row) => row.path },
+  { id: "active", label: "Aktif", value: (row) => (row.active ? "Ya" : "Tidak") },
+])
 
 async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) {
   const user = await requirePermission("master:read")
@@ -69,47 +84,17 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
     warehouseNeighbors(user.id, warehouse.code),
     recordActivity("warehouses", warehouse.id, WAREHOUSE_ACTIVITY_LABELS),
   ])
-  const parentOptions = locations
-    .filter((location) => location.active)
-    .map((location) => ({ id: location.id, path: location.path }))
-
-  // Lokasi mengikuti mode record induk; navigasi detail tetap tersedia saat mode baca.
-  const renderLocations = (editing: boolean) => (
+  const locationsView = (
     <Section title="Lokasi">
-      <DataTable
-        columns={LOCATION_COLUMNS}
+      <RelationalView
+        id="warehouse-locations"
+        label="Lokasi"
+        columns={LOCATION_COLUMNS.map((column) =>
+          column.id === "code" && !canEdit ? { ...column, render: undefined } : column,
+        )}
         rows={locations}
         rowKey={(row) => row.id}
-        rowHref={canEdit ? (row) => `/master/gudang/${warehouse.id}/lokasi/${row.id}` : undefined}
-        rowMuted={(row) => !row.active}
-        selection={
-          canEdit && editing
-            ? {
-                remove: deleteLocation,
-                noun: "lokasi",
-                id: (row) => row.id,
-                label: (row) => row.code,
-              }
-            : undefined
-        }
-        empty={{
-          title: "Belum ada lokasi di gudang ini.",
-          description: canEdit
-            ? editing
-              ? "Tambahkan lokasi di bawah supaya barang bisa diterima ke gudang ini."
-              : "Klik Edit untuk menambahkan lokasi agar barang bisa diterima ke gudang ini."
-            : "Barang belum bisa diterima ke gudang ini.",
-        }}
       />
-      {canEdit &&
-        editing &&
-        (warehouse.active ? (
-          <LocationCreateForm warehouseId={warehouse.id} parents={parentOptions} />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            Gudang ini diarsipkan. Aktifkan lagi di Data gudang untuk menambah lokasi.
-          </p>
-        ))}
     </Section>
   )
 
@@ -147,24 +132,23 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
               />
               <StaticField label="Status" value={warehouse.active ? "Aktif" : "Diarsipkan"} />
             </ViewSection>
-            {renderLocations(false)}
+            {locationsView}
           </>
         }
         form={
           canEdit && (
-            <>
-              <WarehouseForm
-                warehouse={warehouse}
-                stockLocations={locations
-                  .filter(
-                    (location) =>
-                      location.type === "internal" &&
-                      (location.active || location.id === warehouse.stockLocationId),
-                  )
-                  .map((location) => ({ id: location.id, path: location.path }))}
-              />
-              {renderLocations(true)}
-            </>
+            <WarehouseForm
+              warehouse={warehouse}
+              initialLocations={locations.map((row) => ({
+                id: row.id,
+                isNew: false,
+                code: row.code,
+                name: row.name,
+                type: row.type,
+                parentId: row.parentId,
+                active: row.active,
+              }))}
+            />
           )
         }
       />

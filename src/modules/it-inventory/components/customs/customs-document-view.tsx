@@ -1,6 +1,10 @@
 import Link from "next/link"
+import { formatDecimal } from "@/lib/decimal"
 
-import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
+import { RelationalView } from "@/components/relational/relational-view"
+import type { RelationColumn } from "@/components/relational/relational-table"
+import { CUSTOMS_LINE_FIELDS } from "./customs-line-columns"
+import { lineTableColumns } from "@/modules/inventory/components/line-table-columns"
 import { StaticField, ViewSection } from "@/components/form-field"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { transferHref } from "@/modules/inventory/lib/transfer"
@@ -15,6 +19,7 @@ import {
   type CustomsAttachmentDraft,
   type CustomsBlock,
   type CustomsDocumentDraft,
+  type CustomsLineDraft,
   type CustomsField,
   type CustomsFormSpec,
   type CustomsListBlock,
@@ -42,7 +47,7 @@ export function CustomsDocumentView({
   const show = (field: CustomsField, value: string | undefined) =>
     formatCustomsValue(field, value, refLabels)
 
-  const listRows = (block: CustomsListBlock): Row[] => {
+  const listRows = (block: CustomsListBlock, line?: CustomsLineDraft): Row[] => {
     const rows: Record<string, unknown>[] =
       block.list === "owners"
         ? draft.parties
@@ -51,17 +56,29 @@ export function CustomsDocumentView({
         : block.list === "lines"
           ? draft.lines
           : block.list === "vdEntries"
-            ? []
+            ? (line?.vdEntries ?? [])
             : draft[block.list]
     return rows.map((row, index) => ({ ...row, seq: index + 1 }))
   }
 
-  const listColumns = (block: CustomsListBlock): DataTableColumn<Row>[] => [
-    { header: "Seri", align: "right", cell: (row) => row.seq },
-    ...block.columns.map((column): DataTableColumn<Row> => ({
-      header: column.label,
-      className: "whitespace-normal",
-      cell: (row) => {
+  const listColumns = (block: CustomsListBlock): RelationColumn<Row>[] => [
+    ...block.columns.map((column): RelationColumn<Row> => ({
+      id: column.key,
+      label: column.label,
+      required: column.required,
+      optional: !column.required,
+      numeric: column.kind === "qty" || column.kind === "money",
+      value: (row) => {
+        if (column.kind === "file")
+          return (row as unknown as CustomsAttachmentDraft).file?.fileName ?? ""
+        if (column.kind === "product") {
+          const product = row.product as CustomsLineDraft["product"]
+          return product ? `[${product.sku}] ${product.name}` : ""
+        }
+        if (column.kind === "qty" || column.kind === "money") return String(row[column.key] ?? "")
+        return show(column, row[column.key] as string | undefined)
+      },
+      render: (row) => {
         if (column.kind === "file") {
           const file = (row as unknown as CustomsAttachmentDraft).file
           return file ? (
@@ -96,16 +113,73 @@ export function CustomsDocumentView({
     })),
   ]
 
-  const blockContent = (block: CustomsBlock, key: string) => {
+  const blockContent = (block: CustomsBlock, key: string, line?: CustomsLineDraft) => {
+    if (isListBlock(block) && block.list === "lines") {
+      return (
+        <ViewSection key={key} title={block.title}>
+          <RelationalView
+            id={`bc-${spec.code}-barang`}
+            label={block.title}
+            rows={draft.lines}
+            rowKey={(_, index: number) => String(index)}
+            columns={lineTableColumns<CustomsLineDraft>(CUSTOMS_LINE_FIELDS, [
+              {
+                id: "product",
+                label: "Produk",
+                value: (row) => (row.product ? `[${row.product.sku}] ${row.product.name}` : ""),
+                render: (row) =>
+                  row.product ? (
+                    <Link
+                      href={`/master/produk/${row.product.id}`}
+                      className="text-primary hover:underline"
+                    >
+                      [{row.product.sku}] {row.product.name}
+                    </Link>
+                  ) : (
+                    "—"
+                  ),
+              },
+              { id: "hsCode", label: "Kode HS", value: (row) => row.hsCode },
+              { id: "description", label: "Uraian", value: (row) => row.description },
+              {
+                id: "stockQty",
+                label: "Jumlah dalam Satuan Stok",
+                value: (row) => row.stockQty,
+                render: (row) => (row.stockQty ? formatDecimal(row.stockQty) : "—"),
+              },
+            ])}
+            details={(row) => (
+              <>
+                {spec.line.blocks.map((item, index) =>
+                  blockContent(item, `${key}-detail-${index}`, row),
+                )}
+                {spec.line.lartas && (
+                  <ViewSection title={spec.line.lartas.title}>
+                    <RelationalView
+                      id={`bc-${spec.line.lartas.title}`}
+                      label={spec.line.lartas.title}
+                      rows={row.attachments.map((entry, index) => ({ ...entry, seq: index + 1 }))}
+                      rowKey={(_, index: number) => String(index)}
+                      columns={listColumns({ ...spec.line.lartas, list: "attachments" })}
+                    />
+                  </ViewSection>
+                )}
+              </>
+            )}
+          />
+        </ViewSection>
+      )
+    }
     if (isListBlock(block)) {
       return (
         <ViewSection key={key} title={block.title}>
           <div className="min-w-0">
-            <DataTable
+            <RelationalView
+              id={`bc-${block.title}`}
+              label={block.title}
               columns={listColumns(block)}
-              rows={listRows(block)}
+              rows={listRows(block, line)}
               rowKey={(row) => String(row.seq)}
-              empty={{ title: "Belum ada." }}
             />
           </div>
         </ViewSection>
@@ -119,7 +193,7 @@ export function CustomsDocumentView({
               key={index}
               label={item.group}
               value={item.fields
-                .map((field) => show(field, customsFieldValue(draft, field)))
+                .map((field) => show(field, customsFieldValue(draft, field, line)))
                 .join(" ")}
             />
           ) : (
@@ -127,8 +201,14 @@ export function CustomsDocumentView({
               key={index}
               label={item.label}
               multiline={item.kind === "text" && (item.long || item.key === "address")}
-              value={show(item, customsFieldValue(draft, item))}
-              span={item.key === "address" ? 6 : item.span}
+              value={
+                item.kind === "product"
+                  ? line?.product
+                    ? `[${line.product.sku}] ${line.product.name}`
+                    : "—"
+                  : show(item, customsFieldValue(draft, item, line))
+              }
+              span={item.kind === "product" ? 12 : item.key === "address" ? 6 : item.span}
             />
           ),
         )}

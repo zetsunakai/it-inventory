@@ -1,5 +1,7 @@
 "use client"
 
+import { lineTableColumns, RETURN_LINE_FIELDS } from "./line-table-columns"
+
 import { useId, useState, useTransition } from "react"
 
 import { saveReturnRequest } from "@/modules/inventory/actions/returns"
@@ -177,7 +179,7 @@ export function ReturnRequestForm({
           rows={request.lines}
           rowKey={(line) => line.id}
           initialEdit
-          columns={[
+          columns={lineTableColumns<(typeof request.lines)[number]>(RETURN_LINE_FIELDS, [
             {
               id: "product",
               label: "Produk",
@@ -240,7 +242,7 @@ export function ReturnRequestForm({
                 </Select>
               ),
             },
-          ]}
+          ])}
         />
       </FormSection>
     </form>
