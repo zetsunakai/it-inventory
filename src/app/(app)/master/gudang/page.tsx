@@ -47,7 +47,7 @@ const COLUMNS: DataTableColumn<
     cell: (row) => <NameCell archived={!row.active}>{row.name}</NameCell>,
     className: "w-full whitespace-normal",
   },
-  { header: "Alamat", cell: (row) => row.address, className: "min-w-64 whitespace-normal" },
+  { header: "Alamat", cell: (row) => row.address, className: "min-w-64 whitespace-pre-wrap" },
   { header: "Lokasi", cell: (row) => formatNumber(row.locationCount), align: "right" },
   {
     // Gudang yang sedang dibekukan stock opname (I-07); keadaan normal tidak ditandai.

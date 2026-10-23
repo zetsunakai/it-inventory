@@ -17,7 +17,9 @@ Gunakan komponen bersama berikut untuk halaman baru maupun pembaruan halaman lam
 - `NewRecordLayout` menjadi kerangka form record baru; komponen ini menggunakan `DocumentLayout` dan aktivitas record yang belum disimpan.
 - `RecordModes` mengatur mode baca/edit pada record yang dapat diubah.
 - Gunakan `FORM_CLASS`, `FormActions`, `FormSection`, dan `FormField` untuk form. Aksi ada di atas isi; field wajib dan kesalahan ditampilkan pada field terkait.
+- Field alamat memakai `Textarea` selebar satu kolom (`span={6}`), tinggi awal dua baris (`rows={2}`), pembungkusan teks, dan resize vertikal. Pada mode baca, gunakan `StaticField multiline` agar baris baru tetap terlihat.
 - Gunakan `ViewSection` dan `StaticField` untuk informasi mode baca. Gunakan span yang sama dengan form edit.
+- Pada form master, gunakan pasangan field 6:6 agar batas kolom konsisten antarbaris. Kode dan nama memakai lebar yang sama; hindari campuran 4:8, 8:4, atau 3:6:3 di section yang juga memakai dua kolom. Field panjang boleh memakai span 12. Terapkan susunan yang sama pada mode baca dan edit.
 - Gunakan `FormColumns`/`FormColumn` atau span pada `FormField` untuk lebar field, dengan aturan ukuran dan spacing di `src/app/globals.css`.
 - Status dan aktivitas diberikan ke slot `DocumentLayout` bila datanya tersedia. Detail lot/kartu stok tidak perlu aktivitas audit atau tombol edit yang tidak sesuai fungsinya.
 - Halaman impor menyediakan breadcrumb kembali ke daftar atau record induk; input file mengikuti `FormSection` dan `FormField`.

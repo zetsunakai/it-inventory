@@ -4,8 +4,9 @@ import { Label } from "@/components/ui/label"
 import { cn } from "@/lib/utils"
 
 // Lebar field dalam grid 12 kolom kartu form (.form-grid, UF-04), berlaku mulai 768px; di HP
-// semua field selebar kartu. 6 = setengah (bawaan), 12 = penuh (deskripsi, alamat, catatan),
-// 3/4/8/9 untuk pasangan field pendek–panjang (kode + nama, nama + kode singkat).
+// semua field selebar kartu. 6 = setengah (bawaan), 12 = penuh (deskripsi, catatan),
+// Form master memakai 6/6 secara konsisten antarbaris; 12 untuk isi panjang.
+// Span lain untuk kelompok khusus yang memang memiliki jumlah kolom berbeda (mis. ringkasan saldo).
 export type FieldSpan = 3 | 4 | 6 | 8 | 9 | 12
 
 // Satu field form: label, kontrol, petunjuk, dan pesan error dari validasi server.
@@ -56,18 +57,24 @@ export function StaticField({
   value,
   reason,
   mono,
+  multiline,
   span = 6,
 }: {
   label: string
   value: ReactNode
   reason?: string
   mono?: boolean
+  multiline?: boolean
   span?: FieldSpan
 }) {
   return (
     <div className="form-field" data-span={span}>
       <p className="form-field-label">{label}</p>
-      <p className={cn("form-field-static", mono && "font-mono")}>{value}</p>
+      <p
+        className={cn("form-field-static", mono && "font-mono", multiline && "whitespace-pre-wrap")}
+      >
+        {value}
+      </p>
       {reason && <p className="text-caption text-muted-foreground">{reason}</p>}
     </div>
   )

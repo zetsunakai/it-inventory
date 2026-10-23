@@ -37,7 +37,7 @@ export function CustomsControl({
   refLabels,
   ariaLabel,
 }: {
-  field: CustomsFieldKind & { label: string; required?: boolean }
+  field: CustomsFieldKind & { key?: string; label: string; required?: boolean }
   id: string
   value: string
   onChange: FieldChange
@@ -131,7 +131,7 @@ export function CustomsControl({
       // Dirender khusus oleh pemanggil (pilihan produk, unggah file).
       return null
     case "text":
-      return field.long ? (
+      return field.long || field.key === "address" ? (
         <Textarea
           id={id}
           rows={2}
@@ -168,7 +168,12 @@ export function CustomsFormField({
   refLabels: RefLabels
 }) {
   return (
-    <FormField label={field.label} htmlFor={id} span={field.span} required={field.required}>
+    <FormField
+      label={field.label}
+      htmlFor={id}
+      span={field.key === "address" ? 6 : field.span}
+      required={field.required}
+    >
       <CustomsControl
         field={field}
         id={id}

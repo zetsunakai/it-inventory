@@ -86,7 +86,12 @@ export function CustomsDocumentView({
             "—"
           )
         }
-        return show(column, row[column.key] as string | undefined)
+        const value = show(column, row[column.key] as string | undefined)
+        return column.key === "address" ? (
+          <span className="whitespace-pre-wrap">{value}</span>
+        ) : (
+          value
+        )
       },
     })),
   ]
@@ -121,8 +126,9 @@ export function CustomsDocumentView({
             <StaticField
               key={index}
               label={item.label}
+              multiline={item.kind === "text" && (item.long || item.key === "address")}
               value={show(item, customsFieldValue(draft, item))}
-              span={item.span}
+              span={item.key === "address" ? 6 : item.span}
             />
           ),
         )}

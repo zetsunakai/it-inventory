@@ -69,8 +69,8 @@ async function EditCategory({ params }: { params: Promise<{ id: string }> }) {
                   : "Tanpa induk (kategori teratas)"
               }
             />
-            <StaticField label="Prefix kode" value={category.codePrefix ?? "—"} mono span={8} />
-            <StaticField label="Jumlah digit" value={category.codeDigits} span={4} />
+            <StaticField label="Prefix kode" value={category.codePrefix ?? "—"} mono span={6} />
+            <StaticField label="Jumlah digit" value={category.codeDigits} span={6} />
             <StaticField label="Status" value={category.active ? "Aktif" : "Diarsipkan"} />
           </ViewSection>
         }

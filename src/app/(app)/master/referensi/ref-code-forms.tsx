@@ -56,11 +56,12 @@ export function RefCodeCreateForm({ type }: { type: RefCodeType }) {
             label={REF_CODE_TYPE_LABELS[parentType]}
             htmlFor="parentCode"
             errors={fieldErrors?.parentCode}
+            span={12}
           >
             <RefCodeSelect id="parentCode" type={parentType} name="parentCode" />
           </FormField>
         )}
-        <FormField label="Kode" htmlFor="code" errors={fieldErrors?.code} span={4}>
+        <FormField label="Kode" htmlFor="code" errors={fieldErrors?.code} span={6}>
           <Input
             id="code"
             name="code"
@@ -69,7 +70,7 @@ export function RefCodeCreateForm({ type }: { type: RefCodeType }) {
             autoComplete="off"
           />
         </FormField>
-        <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name} span={8}>
+        <FormField label="Nama" htmlFor="name" errors={fieldErrors?.name} span={6}>
           <Input
             id="name"
             name="name"

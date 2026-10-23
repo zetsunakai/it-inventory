@@ -66,10 +66,11 @@ async function EditRefCode({ params }: { params: Promise<{ jenis: string; id: st
               <StaticField
                 label={REF_CODE_TYPE_LABELS[parentType]}
                 value={parent ? formatRefCode(parent) : row.parentCode}
+                span={12}
               />
             )}
-            <StaticField label="Kode" value={row.code} mono span={4} />
-            <StaticField label="Nama" value={row.name} span={8} />
+            <StaticField label="Kode" value={row.code} mono span={6} />
+            <StaticField label="Nama" value={row.name} span={6} />
             <StaticField label="Status" value={row.active ? "Aktif" : "Diarsipkan"} />
           </ViewSection>
         }

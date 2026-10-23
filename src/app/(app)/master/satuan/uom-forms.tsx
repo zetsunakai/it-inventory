@@ -96,7 +96,7 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
             </SelectContent>
           </Select>
         </FormField>
-        <FormField label="Kode satuan" htmlFor="code" errors={fieldErrors?.code} span={4}>
+        <FormField label="Kode satuan" htmlFor="code" errors={fieldErrors?.code} span={6}>
           <Input
             id="code"
             name="code"
@@ -106,7 +106,7 @@ export function UomCreateForm({ categories }: { categories: CategoryOption[] }) 
             autoComplete="off"
           />
         </FormField>
-        <FormField label="Nama satuan" htmlFor="name" errors={fieldErrors?.name} span={8}>
+        <FormField label="Nama satuan" htmlFor="name" errors={fieldErrors?.name} span={6}>
           <Input id="name" name="name" defaultValue={fieldValue(state, "name")} maxLength={100} />
         </FormField>
         <FactorField

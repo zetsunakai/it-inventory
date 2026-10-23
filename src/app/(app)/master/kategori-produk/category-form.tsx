@@ -88,7 +88,7 @@ export function ProductCategoryForm({
           label="Prefix kode"
           htmlFor="codePrefix"
           errors={fieldErrors?.codePrefix}
-          span={8}
+          span={6}
           hint={
             example
               ? `Product code produk baru yang dikosongkan dibuat otomatis, mis. ${example}.`
@@ -109,7 +109,7 @@ export function ProductCategoryForm({
           label="Jumlah digit"
           htmlFor="codeDigits"
           errors={fieldErrors?.codeDigits}
-          span={4}
+          span={6}
         >
           <Input
             id="codeDigits"

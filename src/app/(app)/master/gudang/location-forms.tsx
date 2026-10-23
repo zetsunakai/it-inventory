@@ -86,7 +86,7 @@ export function LocationCreateForm({
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <input type="hidden" name="warehouseId" value={warehouseId} />
       <FormSection title="Tambah lokasi">
-        <FormField label="Kode lokasi" htmlFor="location-code" errors={fieldErrors?.code} span={3}>
+        <FormField label="Kode lokasi" htmlFor="location-code" errors={fieldErrors?.code} span={6}>
           <Input
             id="location-code"
             name="code"
@@ -103,7 +103,7 @@ export function LocationCreateForm({
             maxLength={200}
           />
         </FormField>
-        <FormField label="Tipe" htmlFor="location-type" errors={fieldErrors?.type} span={3}>
+        <FormField label="Tipe" htmlFor="location-type" errors={fieldErrors?.type} span={6}>
           <Select name="type" items={TYPE_ITEMS} defaultValue="internal">
             <SelectTrigger id="location-type" className="w-full">
               <SelectValue />
@@ -121,7 +121,7 @@ export function LocationCreateForm({
           label="Lokasi induk"
           htmlFor="location-parentId"
           errors={fieldErrors?.parentId}
-          span={12}
+          span={6}
         >
           <ParentSelect options={parents} defaultValue={fieldValue(state, "parentId")} />
         </FormField>

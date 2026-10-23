@@ -10,6 +10,7 @@ import { FormField, FormSection } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -94,15 +95,16 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
             maxLength={200}
           />
         </FormField>
-        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={8}>
-          <Input
+        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={6}>
+          <Textarea
+            rows={2}
             id="address"
             name="address"
             defaultValue={fieldValue(state, "address", partner?.address)}
             maxLength={500}
           />
         </FormField>
-        <FormField label="Negara" htmlFor="countryCode" errors={fieldErrors?.countryCode} span={4}>
+        <FormField label="Negara" htmlFor="countryCode" errors={fieldErrors?.countryCode} span={6}>
           <RefCodeSelect
             id="countryCode"
             type="country"
@@ -125,7 +127,7 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
           label="Jenis identitas"
           htmlFor="identityType"
           errors={fieldErrors?.identityType}
-          span={4}
+          span={6}
         >
           <Select
             name="identityType"
@@ -150,7 +152,7 @@ export function PartnerForm({ partner }: { partner?: PartnerFormValues }) {
           label="NPWP"
           htmlFor="identityNumber"
           errors={fieldErrors?.identityNumber}
-          span={8}
+          span={6}
         >
           <Input
             id="identityNumber"

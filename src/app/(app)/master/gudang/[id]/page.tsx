@@ -73,6 +73,46 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
     .filter((location) => location.active)
     .map((location) => ({ id: location.id, path: location.path }))
 
+  // Lokasi mengikuti mode record induk; navigasi detail tetap tersedia saat mode baca.
+  const renderLocations = (editing: boolean) => (
+    <Section title="Lokasi">
+      <DataTable
+        columns={LOCATION_COLUMNS}
+        rows={locations}
+        rowKey={(row) => row.id}
+        rowHref={canEdit ? (row) => `/master/gudang/${warehouse.id}/lokasi/${row.id}` : undefined}
+        rowMuted={(row) => !row.active}
+        selection={
+          canEdit && editing
+            ? {
+                remove: deleteLocation,
+                noun: "lokasi",
+                id: (row) => row.id,
+                label: (row) => row.code,
+              }
+            : undefined
+        }
+        empty={{
+          title: "Belum ada lokasi di gudang ini.",
+          description: canEdit
+            ? editing
+              ? "Tambahkan lokasi di bawah supaya barang bisa diterima ke gudang ini."
+              : "Klik Edit untuk menambahkan lokasi agar barang bisa diterima ke gudang ini."
+            : "Barang belum bisa diterima ke gudang ini.",
+        }}
+      />
+      {canEdit &&
+        editing &&
+        (warehouse.active ? (
+          <LocationCreateForm warehouseId={warehouse.id} parents={parentOptions} />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Gudang ini diarsipkan. Aktifkan lagi di Data gudang untuk menambah lokasi.
+          </p>
+        ))}
+    </Section>
+  )
+
   return (
     <DocumentLayout
       title={`${warehouse.code} · ${warehouse.name}`}
@@ -81,7 +121,7 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
       activity={<ActivityLog entries={activity} noun="gudang" />}
       meta={
         <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
-          <span>{warehouse.address}</span>
+          <span className="whitespace-pre-wrap">{warehouse.address}</span>
           {!warehouse.active && <ArchivedBadge />}
         </span>
       }
@@ -92,70 +132,42 @@ async function WarehouseDetail({ params }: { params: Promise<{ id: string }> }) 
         canEdit={canEdit}
         createHref="/master/gudang/baru"
         view={
-          <ViewSection title="Data gudang">
-            <StaticField label="Kode gudang" value={warehouse.code} mono span={4} />
-            <StaticField label="Nama gudang" value={warehouse.name} span={8} />
-            <StaticField label="Alamat" value={warehouse.address} span={12} />
-            <StaticField
-              label="Lokasi stok utama"
-              value={
-                locations.find((location) => location.id === warehouse.stockLocationId)?.path ??
-                "Belum dipilih"
-              }
-              mono={Boolean(warehouse.stockLocationId)}
-            />
-            <StaticField label="Status" value={warehouse.active ? "Aktif" : "Diarsipkan"} />
-          </ViewSection>
+          <>
+            <ViewSection title="Data gudang">
+              <StaticField label="Kode gudang" value={warehouse.code} mono span={6} />
+              <StaticField label="Nama gudang" value={warehouse.name} span={6} />
+              <StaticField multiline label="Alamat" value={warehouse.address} span={6} />
+              <StaticField
+                label="Lokasi stok utama"
+                value={
+                  locations.find((location) => location.id === warehouse.stockLocationId)?.path ??
+                  "Belum dipilih"
+                }
+                mono={Boolean(warehouse.stockLocationId)}
+              />
+              <StaticField label="Status" value={warehouse.active ? "Aktif" : "Diarsipkan"} />
+            </ViewSection>
+            {renderLocations(false)}
+          </>
         }
         form={
           canEdit && (
-            <WarehouseForm
-              warehouse={warehouse}
-              stockLocations={locations
-                .filter(
-                  (location) =>
-                    location.type === "internal" &&
-                    (location.active || location.id === warehouse.stockLocationId),
-                )
-                .map((location) => ({ id: location.id, path: location.path }))}
-            />
+            <>
+              <WarehouseForm
+                warehouse={warehouse}
+                stockLocations={locations
+                  .filter(
+                    (location) =>
+                      location.type === "internal" &&
+                      (location.active || location.id === warehouse.stockLocationId),
+                  )
+                  .map((location) => ({ id: location.id, path: location.path }))}
+              />
+              {renderLocations(true)}
+            </>
           )
         }
       />
-
-      <Section title="Lokasi">
-        <DataTable
-          columns={LOCATION_COLUMNS}
-          rows={locations}
-          rowKey={(row) => row.id}
-          rowHref={canEdit ? (row) => `/master/gudang/${warehouse.id}/lokasi/${row.id}` : undefined}
-          rowMuted={(row) => !row.active}
-          selection={
-            canEdit
-              ? {
-                  remove: deleteLocation,
-                  noun: "lokasi",
-                  id: (row) => row.id,
-                  label: (row) => row.code,
-                }
-              : undefined
-          }
-          empty={{
-            title: "Belum ada lokasi di gudang ini.",
-            description: canEdit
-              ? "Tambahkan lokasi di bawah supaya barang bisa diterima ke gudang ini."
-              : "Barang belum bisa diterima ke gudang ini.",
-          }}
-        />
-        {canEdit &&
-          (warehouse.active ? (
-            <LocationCreateForm warehouseId={warehouse.id} parents={parentOptions} />
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              Gudang ini diarsipkan. Aktifkan lagi di Data gudang untuk menambah lokasi.
-            </p>
-          ))}
-      </Section>
     </DocumentLayout>
   )
 }

@@ -30,6 +30,11 @@ test.describe("Administrator", () => {
       page.getByRole("heading", { name: `${GRANTED} · Gudang Bahan Baku E2E` }),
     ).toBeVisible()
 
+    // Mode baca hanya menampilkan daftar lokasi; membuat/menghapus lokasi perlu Edit.
+    await expect(page.getByLabel("Kode lokasi", { exact: true })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Tambah lokasi", exact: true })).toHaveCount(0)
+    await page.getByRole("button", { name: "Edit", exact: true }).click()
+
     const addLocation = page.locator("form").filter({ hasText: "Tambah lokasi" })
     await addLocation.getByLabel("Kode lokasi").fill(`${GRANTED}-RAK`)
     await addLocation.getByLabel("Nama lokasi").fill("Rak A")
@@ -41,6 +46,11 @@ test.describe("Administrator", () => {
     await addLocation.getByLabel("Lokasi induk").click()
     await page.getByRole("option", { name: `${GRANTED}-RAK`, exact: true }).click()
     await addLocation.getByRole("button", { name: "Tambah lokasi" }).click()
+    await expect(page.getByRole("cell", { name: `${GRANTED}-RAK/${GRANTED}-BIN` })).toBeVisible()
+
+    await page.getByRole("button", { name: "Buang", exact: true }).first().click()
+    await expect(page.getByLabel("Kode lokasi", { exact: true })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Tambah lokasi", exact: true })).toHaveCount(0)
     await expect(page.getByRole("cell", { name: `${GRANTED}-RAK/${GRANTED}-BIN` })).toBeVisible()
 
     await page.goto("/admin/users")

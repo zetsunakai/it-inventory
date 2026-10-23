@@ -200,21 +200,21 @@ export function ProductForm({
             </Select>
           </FormField>
         )}
-        <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand} span={4}>
+        <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand} span={6}>
           <Input
             id="brand"
             name="brand"
             defaultValue={fieldValue(state, "brand", product?.brand)}
           />
         </FormField>
-        <FormField label="Tipe" htmlFor="model" errors={fieldErrors?.model} span={4}>
+        <FormField label="Tipe" htmlFor="model" errors={fieldErrors?.model} span={6}>
           <Input
             id="model"
             name="model"
             defaultValue={fieldValue(state, "model", product?.model)}
           />
         </FormField>
-        <FormField label="Ukuran" htmlFor="size" errors={fieldErrors?.size} span={4}>
+        <FormField label="Ukuran" htmlFor="size" errors={fieldErrors?.size} span={6}>
           <Input id="size" name="size" defaultValue={fieldValue(state, "size", product?.size)} />
         </FormField>
         {product && (

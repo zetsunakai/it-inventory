@@ -44,11 +44,11 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
     <>
       <ViewSection title="Data partner">
         <StaticField label="Nama partner" value={partner.name} span={12} />
-        <StaticField label="Alamat" value={partner.address} span={8} />
+        <StaticField multiline label="Alamat" value={partner.address} span={6} />
         <StaticField
           label="Negara"
           value={partner.country ? formatRefCode(partner.country) : partner.countryCode}
-          span={4}
+          span={6}
         />
         <StaticField label="Status" value={partner.active ? "Aktif" : "Diarsipkan"} />
       </ViewSection>
@@ -56,9 +56,9 @@ async function PartnerDetail({ params }: { params: Promise<{ id: string }> }) {
         <StaticField
           label="Jenis identitas"
           value={IDENTITY_TYPE_LABELS[partner.identityType]}
-          span={4}
+          span={6}
         />
-        <StaticField label="NPWP" value={partner.identityNumber} mono span={8} />
+        <StaticField label="NPWP" value={partner.identityNumber} mono span={6} />
         <StaticField label="NITKU" value={partner.nitku ?? "—"} mono />
       </ViewSection>
     </>

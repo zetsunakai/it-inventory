@@ -71,10 +71,10 @@ async function CompanyProfile({ canEdit }: { canEdit: boolean }) {
         <>
           <ViewSection title="Identitas perusahaan">
             <StaticField label="Nama perusahaan" value={profile.name} span={12} />
-            <StaticField label="Alamat" value={profile.address} span={12} />
-            <StaticField label="NPWP" value={profile.npwp} mono span={4} />
-            <StaticField label="NIB" value={profile.nib} mono span={4} />
-            <StaticField label="NITKU" value={profile.nitku} mono span={4} />
+            <StaticField multiline label="Alamat" value={profile.address} span={6} />
+            <StaticField label="NPWP" value={profile.npwp} mono span={6} />
+            <StaticField label="NIB" value={profile.nib} mono span={6} />
+            <StaticField label="NITKU" value={profile.nitku} mono span={6} />
           </ViewSection>
           <ViewSection title="Fasilitas kawasan berikat">
             <StaticField

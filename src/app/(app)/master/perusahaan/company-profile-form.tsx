@@ -8,6 +8,7 @@ import { FormField, FormSection } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -63,8 +64,9 @@ export function CompanyProfileForm({
             maxLength={200}
           />
         </FormField>
-        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={12}>
-          <Input
+        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={6}>
+          <Textarea
+            rows={2}
             id="address"
             name="address"
             defaultValue={fieldValue(state, "address", profile?.address)}
@@ -75,7 +77,7 @@ export function CompanyProfileForm({
           label="NPWP"
           htmlFor="npwp"
           errors={fieldErrors?.npwp}
-          span={4}
+          span={6}
           hint="15 atau 16 digit, boleh dengan titik dan strip."
         >
           <Input
@@ -85,7 +87,7 @@ export function CompanyProfileForm({
             inputMode="numeric"
           />
         </FormField>
-        <FormField label="NIB" htmlFor="nib" errors={fieldErrors?.nib} hint="13 digit." span={4}>
+        <FormField label="NIB" htmlFor="nib" errors={fieldErrors?.nib} hint="13 digit." span={6}>
           <Input
             id="nib"
             name="nib"
@@ -97,7 +99,7 @@ export function CompanyProfileForm({
           label="NITKU"
           htmlFor="nitku"
           errors={fieldErrors?.nitku}
-          span={4}
+          span={6}
           hint="22 digit. Kosongkan untuk kantor pusat: otomatis NPWP 16 digit + 000000."
         >
           <Input

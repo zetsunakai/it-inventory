@@ -67,9 +67,9 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
           value={INVENTORY_CATEGORY_LABELS[product.category]}
         />
         <StaticField label="Satuan stok" value={`[${product.uom.code}] ${product.uom.name}`} />
-        <StaticField label="Merk" value={product.brand ?? "—"} span={4} />
-        <StaticField label="Tipe" value={product.model ?? "—"} span={4} />
-        <StaticField label="Ukuran" value={product.size ?? "—"} span={4} />
+        <StaticField label="Merk" value={product.brand ?? "—"} span={6} />
+        <StaticField label="Tipe" value={product.model ?? "—"} span={6} />
+        <StaticField label="Ukuran" value={product.size ?? "—"} span={6} />
         <StaticField label="Status" value={product.active ? "Aktif" : "Diarsipkan"} />
       </ViewSection>
       <ViewSection title="Lot dan nomor seri">

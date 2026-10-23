@@ -9,6 +9,7 @@ import { CheckboxField } from "@/components/checkbox-field"
 import { FormField, FormSection, StaticField } from "@/components/form-field"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Select,
   SelectContent,
@@ -74,14 +75,14 @@ export function WarehouseForm({
       <FormSection title="Data gudang">
         {warehouse ? (
           <StaticField
-            span={4}
+            span={6}
             label="Kode gudang"
             value={warehouse.code}
             mono
             reason="Tidak bisa diubah."
           />
         ) : (
-          <FormField label="Kode gudang" htmlFor="code" errors={fieldErrors?.code} span={4}>
+          <FormField label="Kode gudang" htmlFor="code" errors={fieldErrors?.code} span={6}>
             <Input
               id="code"
               name="code"
@@ -91,7 +92,7 @@ export function WarehouseForm({
             />
           </FormField>
         )}
-        <FormField label="Nama gudang" htmlFor="name" errors={fieldErrors?.name} span={8}>
+        <FormField label="Nama gudang" htmlFor="name" errors={fieldErrors?.name} span={6}>
           <Input
             id="name"
             name="name"
@@ -99,8 +100,9 @@ export function WarehouseForm({
             maxLength={200}
           />
         </FormField>
-        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={12}>
-          <Input
+        <FormField label="Alamat" htmlFor="address" errors={fieldErrors?.address} span={6}>
+          <Textarea
+            rows={2}
             id="address"
             name="address"
             defaultValue={fieldValue(state, "address", warehouse?.address)}
