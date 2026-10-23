@@ -6,7 +6,8 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { Section } from "@/components/layout/section"
+import { ListLayout } from "@/components/layout/list-layout"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -67,26 +68,22 @@ const COLUMNS: DataTableColumn<UomRow>[] = [
 
 export default function UomsPage({ searchParams }: PageProps<"/master/satuan">) {
   return (
-    <>
-      <PageHeader
-        title="Satuan"
-        description="Konversi hanya berlaku antar satuan dalam kategori yang sama."
-      />
+    <ListLayout
+      title="Satuan"
+      description="Konversi hanya berlaku antar satuan dalam kategori yang sama."
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <UomTable searchParams={searchParams} />
       </Suspense>
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Kategori satuan</h2>
-          <p className="text-sm text-muted-foreground">
-            Setiap kategori punya satu satuan acuan dengan faktor 1.
-          </p>
-        </div>
+      <Section
+        title="Kategori satuan"
+        description="Setiap kategori punya satu satuan acuan dengan faktor 1."
+      >
         <Suspense fallback={<Skeleton className="h-40 w-full" />}>
           <Categories />
         </Suspense>
-      </section>
-    </>
+      </Section>
+    </ListLayout>
   )
 }
 

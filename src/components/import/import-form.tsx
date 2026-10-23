@@ -6,7 +6,7 @@ import { useActionState, useEffect, useRef } from "react"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { FormErrors } from "@/components/form-errors"
-import { FormField } from "@/components/form-field"
+import { FormField, FormSection } from "@/components/form-field"
 import { Button, buttonVariants } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import type { ActionResult, FormState } from "@/lib/action-result"
@@ -64,19 +64,23 @@ export function ImportForm({
         {Object.entries(fields ?? {}).map(([name, value]) => (
           <input key={name} type="hidden" name={name} value={value} />
         ))}
-        <FormField
-          label="File Excel atau CSV"
-          htmlFor="import-file"
-          hint="Maksimal 5 MB atau 20.000 baris. CSV boleh memakai koma atau titik koma."
-        >
-          <Input
-            id="import-file"
-            name="file"
-            type="file"
+        <FormSection title="File import">
+          <FormField
+            label="File Excel atau CSV"
+            htmlFor="import-file"
+            hint="Maksimal 5 MB atau 20.000 baris. CSV boleh memakai koma atau titik koma."
             required
-            accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
-          />
-        </FormField>
+            span={12}
+          >
+            <Input
+              id="import-file"
+              name="file"
+              type="file"
+              required
+              accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv"
+            />
+          </FormField>
+        </FormSection>
       </form>
       {state?.ok && (
         <ImportResultView

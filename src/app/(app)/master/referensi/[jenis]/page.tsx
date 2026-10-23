@@ -5,7 +5,7 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { NameCell } from "@/components/status-badge"
 import {
   parseListParams,
@@ -76,10 +76,9 @@ async function RefCodeList({
   const type = refCodeTypeFromSlug((await params).jenis)
   if (!type) notFound()
   return (
-    <>
-      <PageHeader title={refCodeMenuTitle(type)} description="Kode resmi untuk dokumen BC." />
+    <ListLayout title={refCodeMenuTitle(type)} description="Kode resmi untuk dokumen BC.">
       <RefCodeTable type={type} searchParams={searchParams} />
-    </>
+    </ListLayout>
   )
 }
 

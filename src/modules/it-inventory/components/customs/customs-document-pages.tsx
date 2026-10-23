@@ -15,7 +15,7 @@ import { NewRecordLayout } from "@/components/document/new-record-layout"
 import { StatusSteps } from "@/components/document/status-steps"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { RecordModes } from "@/components/layout/record-modes"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -99,20 +99,19 @@ export function CustomsListPage({
   searchParams: Promise<RawSearchParams>
 }) {
   return (
-    <>
-      <PageHeader
-        title={spec.title}
-        description={spec.description}
-        actions={
-          <Suspense fallback={null}>
-            <CustomsListDownloads spec={spec} searchParams={searchParams} />
-          </Suspense>
-        }
-      />
+    <ListLayout
+      title={spec.title}
+      description={spec.description}
+      actions={
+        <Suspense fallback={null}>
+          <CustomsListDownloads spec={spec} searchParams={searchParams} />
+        </Suspense>
+      }
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <CustomsTable spec={spec} searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

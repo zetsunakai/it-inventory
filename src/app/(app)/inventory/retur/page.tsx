@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { StatusBadge } from "@/components/status-badge"
 import { formatDate, formatNumber } from "@/lib/format"
 import {
@@ -64,15 +64,14 @@ const COLUMNS: DataTableColumn<ReturnRequestRow>[] = [
 
 export default function ReturnRequestsPage({ searchParams }: PageProps<"/inventory/retur">) {
   return (
-    <>
-      <PageHeader
-        title="Retur"
-        description="Retur ke vendor dari penerimaan, atau dari customer dari pengiriman, yang sudah Selesai. Buat retur dari halaman transfer asalnya."
-      />
+    <ListLayout
+      title="Retur"
+      description="Retur ke vendor dari penerimaan, atau dari customer dari pengiriman, yang sudah Selesai. Buat retur dari halaman transfer asalnya."
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <ReturnRequestTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

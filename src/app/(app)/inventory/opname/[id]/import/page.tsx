@@ -5,7 +5,7 @@ import { z } from "zod"
 
 import { ImportColumnGuide } from "@/components/import/import-column-guide"
 import { ImportForm } from "@/components/import/import-form"
-import { PageHeader } from "@/components/page-header"
+import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { importStockCount } from "@/modules/inventory/actions/stock-counts"
 import { getStockCount } from "@/modules/inventory/server/queries/stock-counts"
@@ -34,12 +34,11 @@ async function Guarded({ params }: { params: Promise<{ id: string }> }) {
   const detailHref = `/inventory/opname/${count.id}`
   if (count.status !== "counting") redirect(detailHref)
   return (
-    <>
-      <PageHeader
-        title={`Import hasil hitung ${count.number}`}
-        crumbs={[{ label: count.number, href: detailHref }, { label: "Import" }]}
-        description="Baris dicocokkan lewat lokasi, product code, dan lot. Kombinasi baru di lingkup sesi menjadi barang temuan. Qty kosong tidak mengubah baris. Bila ada satu baris yang salah, tidak ada yang disimpan."
-      />
+    <DocumentLayout
+      title={`Import hasil hitung ${count.number}`}
+      crumbs={[{ label: count.number, href: detailHref }, { label: "Import" }]}
+      meta="Baris dicocokkan lewat lokasi, product code, dan lot. Kombinasi baru di lingkup sesi menjadi barang temuan. Qty kosong tidak mengubah baris. Bila ada satu baris yang salah, tidak ada yang disimpan."
+    >
       <ImportForm
         action={importStockCount}
         noun="baris hitung"
@@ -50,6 +49,6 @@ async function Guarded({ params }: { params: Promise<{ id: string }> }) {
         resultLabel="Kembali ke sesi opname"
       />
       <ImportColumnGuide columns={COUNT_COLUMNS} />
-    </>
+    </DocumentLayout>
   )
 }

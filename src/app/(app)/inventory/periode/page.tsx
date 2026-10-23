@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { ClosePeriodButton } from "@/modules/inventory/components/close-period-button"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { StatusBadge } from "@/components/status-badge"
 import { formatDate, formatNumber } from "@/lib/format"
 import { requirePermission } from "@/server/auth/session"
@@ -20,15 +20,14 @@ function periodLabel(row: PeriodRow) {
 
 export default function PeriodsPage() {
   return (
-    <>
-      <PageHeader
-        title="Tutup periode"
-        description="Periode ditutup berurutan setelah bulannya berakhir. Saldo akhir disimpan untuk laporan dan transaksi bertanggal di periode itu ditolak."
-      />
+    <ListLayout
+      title="Tutup periode"
+      description="Periode ditutup berurutan setelah bulannya berakhir. Saldo akhir disimpan untuk laporan dan transaksi bertanggal di periode itu ditolak."
+    >
       <Suspense fallback={<DataTableSkeleton rows={6} />}>
         <PeriodTable />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

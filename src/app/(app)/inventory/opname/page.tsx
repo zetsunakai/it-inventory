@@ -7,7 +7,7 @@ import { DataTable, type DataTableColumn } from "@/components/data-table/data-ta
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { CountStatusBadge } from "@/modules/inventory/components/count-status"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { buttonVariants } from "@/components/ui/button"
 import { formatDateTime, formatNumber } from "@/lib/format"
 import { STOCK_COUNT_STATUS_LABELS, STOCK_COUNT_STATUSES } from "@/modules/inventory/lib/inventory"
@@ -59,15 +59,14 @@ const COLUMNS: DataTableColumn<StockCountRow>[] = [
 
 export default function StockCountsPage({ searchParams }: PageProps<"/inventory/opname">) {
   return (
-    <>
-      <PageHeader
-        title="Stock opname"
-        description="Hitung fisik per gudang atau lokasi. Selama opname berjalan gudangnya dibekukan; selisih yang disetujui Manajer menjadi penyesuaian stok."
-      />
+    <ListLayout
+      title="Stock opname"
+      description="Hitung fisik per gudang atau lokasi. Selama opname berjalan gudangnya dibekukan; selisih yang disetujui Manajer menjadi penyesuaian stok."
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <StockCountTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

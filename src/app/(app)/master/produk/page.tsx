@@ -7,7 +7,7 @@ import { DataTable, type DataTableColumn } from "@/components/data-table/data-ta
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ImportExportActions } from "@/components/import/import-export-actions"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS } from "@/modules/inventory/lib/inventory"
@@ -60,21 +60,20 @@ const COLUMNS: DataTableColumn<ProductRow>[] = [
 
 export default function ProductsPage({ searchParams }: PageProps<"/master/produk">) {
   return (
-    <>
-      <PageHeader
-        title="Produk"
-        description="Produk tanpa kode HS atau satuan CEISA belum bisa dipakai di dokumen BC."
-        actions={
-          <ImportExportActions
-            exportHref="/master/produk/export"
-            importHref="/master/produk/import"
-          />
-        }
-      />
+    <ListLayout
+      title="Produk"
+      description="Produk tanpa kode HS atau satuan CEISA belum bisa dipakai di dokumen BC."
+      actions={
+        <ImportExportActions
+          exportHref="/master/produk/export"
+          importHref="/master/produk/import"
+        />
+      }
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <ProductTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

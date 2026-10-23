@@ -7,7 +7,8 @@ import { z } from "zod"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableDate } from "@/components/data-table/data-table-date"
 import { DataTableFilter } from "@/components/data-table/data-table-filter"
-import { PageHeader } from "@/components/page-header"
+import { DocumentLayout } from "@/components/document/document-layout"
+import { StaticField, ViewSection } from "@/components/form-field"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDateTime } from "@/lib/format"
@@ -123,12 +124,11 @@ async function StockCard({
   ]
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`Kartu stok ${product.sku}`}
-        crumbs={[{ label: `Kartu stok ${product.sku}` }]}
-        description={`${product.name}. Qty dalam ${unit}; pindah lokasi di dalam gudang yang sama tampil masuk dan keluar sekaligus.`}
-      />
+    <DocumentLayout
+      title={`Kartu stok ${product.sku}`}
+      crumbs={[{ label: `Kartu stok ${product.sku}` }]}
+      meta={`${product.name}. Qty dalam ${unit}; pindah lokasi di dalam gudang yang sama tampil masuk dan keluar sekaligus.`}
+    >
       <ListToolbar>
         <DataTableFilter
           name="gudang"
@@ -143,21 +143,21 @@ async function StockCard({
       </ListToolbar>
       {card ? (
         <>
-          <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <ViewSection title="Ringkasan saldo">
             {[
               ["Saldo awal", card.opening],
               ["Masuk", card.inQty.toFixed(4)],
               ["Keluar", card.outQty.toFixed(4)],
               ["Saldo akhir", card.closing],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-lg border bg-card px-3 py-2">
-                <dt className="text-caption text-muted-foreground">{label}</dt>
-                <dd className="text-lg font-semibold tabular-nums">
-                  {formatDecimal(value)} <span className="text-sm font-normal">{unit}</span>
-                </dd>
-              </div>
+              <StaticField
+                key={label}
+                label={label}
+                value={`${formatDecimal(value)} ${unit}`}
+                span={3}
+              />
             ))}
-          </dl>
+          </ViewSection>
           <DataTable
             columns={columns}
             rows={card.lines}
@@ -168,6 +168,6 @@ async function StockCard({
       ) : (
         <p className="text-sm text-muted-foreground">Anda belum diberi akses ke gudang mana pun.</p>
       )}
-    </div>
+    </DocumentLayout>
   )
 }

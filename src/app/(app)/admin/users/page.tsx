@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { NameCell, StatusBadge } from "@/components/status-badge"
 import { formatDate } from "@/lib/format"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
@@ -49,12 +49,11 @@ const COLUMNS: DataTableColumn<UserListRow>[] = [
 
 export default function UsersPage({ searchParams }: PageProps<"/admin/users">) {
   return (
-    <>
-      <PageHeader title="Pengguna" />
+    <ListLayout title="Pengguna">
       <Suspense fallback={<DataTableSkeleton />}>
         <UserTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

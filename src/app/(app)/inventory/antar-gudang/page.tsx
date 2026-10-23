@@ -6,7 +6,7 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { formatDecimal } from "@/lib/decimal"
@@ -75,15 +75,14 @@ const COLUMNS: DataTableColumn<InterwarehouseRow>[] = [
 
 export default function InterwarehousePage({ searchParams }: PageProps<"/inventory/antar-gudang">) {
   return (
-    <>
-      <PageHeader
-        title="Transfer antar gudang"
-        description="Barang keluar dari gudang asal ke lokasi transit, lalu masuk ke gudang tujuan. Selama di jalan, barang tidak tercatat di stok gudang mana pun."
-      />
+    <ListLayout
+      title="Transfer antar gudang"
+      description="Barang keluar dari gudang asal ke lokasi transit, lalu masuk ke gudang tujuan. Selama di jalan, barang tidak tercatat di stok gudang mana pun."
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <InterwarehouseTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

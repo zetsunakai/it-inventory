@@ -5,7 +5,7 @@ import { DataTable, type DataTableColumn } from "@/components/data-table/data-ta
 import { DataTableDate } from "@/components/data-table/data-table-date"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDate } from "@/lib/format"
 import { INVENTORY_CATEGORY_LABELS } from "@/modules/inventory/lib/inventory"
@@ -87,15 +87,14 @@ const today = () =>
 
 export default function StockPage({ searchParams }: PageProps<"/inventory/stok">) {
   return (
-    <>
-      <PageHeader
-        title="Stok"
-        description="Saldo, qty dipesan transfer yang sudah dikonfirmasi, dan qty tersedia per produk, lokasi, dan lot di gudang yang boleh Anda lihat. Pilih tanggal untuk melihat saldo per akhir hari itu."
-      />
+    <ListLayout
+      title="Stok"
+      description="Saldo, qty dipesan transfer yang sudah dikonfirmasi, dan qty tersedia per produk, lokasi, dan lot di gudang yang boleh Anda lihat. Pilih tanggal untuk melihat saldo per akhir hari itu."
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <StockTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

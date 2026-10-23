@@ -7,7 +7,8 @@ import { DataTable, type DataTableColumn } from "@/components/data-table/data-ta
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ImportExportActions } from "@/components/import/import-export-actions"
-import { PageHeader } from "@/components/page-header"
+import { Section } from "@/components/layout/section"
+import { ListLayout } from "@/components/layout/list-layout"
 import { NameCell, StatusBadge } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -68,34 +69,29 @@ const VIRTUAL_COLUMNS: DataTableColumn<LocationRow>[] = [
 
 export default function WarehousesPage({ searchParams }: PageProps<"/master/gudang">) {
   return (
-    <>
-      <PageHeader
-        title="Gudang & lokasi"
-        description="Semua gudang adalah gudang berikat: stok tidak boleh minus di gudang mana pun."
-        actions={
-          <ImportExportActions
-            exportHref="/master/gudang/lokasi/export"
-            importHref="/master/gudang/lokasi/import"
-            noun="lokasi"
-          />
-        }
-      />
+    <ListLayout
+      title="Gudang & lokasi"
+      description="Semua gudang adalah gudang berikat: stok tidak boleh minus di gudang mana pun."
+      actions={
+        <ImportExportActions
+          exportHref="/master/gudang/lokasi/export"
+          importHref="/master/gudang/lokasi/import"
+          noun="lokasi"
+        />
+      }
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <WarehouseTable searchParams={searchParams} />
       </Suspense>
-      <section className="space-y-3">
-        <div>
-          <h2 className="text-lg font-semibold tracking-tight">Lokasi virtual</h2>
-          <p className="text-sm text-muted-foreground">
-            Asal dan tujuan pergerakan di luar gudang: dari vendor, ke customer, scrap, dan transit
-            antar gudang.
-          </p>
-        </div>
+      <Section
+        title="Lokasi virtual"
+        description="Asal dan tujuan pergerakan di luar gudang: dari vendor, ke customer, scrap, dan transit antar gudang."
+      >
         <Suspense fallback={<Skeleton className="h-40 w-full" />}>
           <VirtualLocations />
         </Suspense>
-      </section>
-    </>
+      </Section>
+    </ListLayout>
   )
 }
 

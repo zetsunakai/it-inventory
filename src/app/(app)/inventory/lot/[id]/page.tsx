@@ -5,7 +5,7 @@ import { Suspense } from "react"
 import { z } from "zod"
 
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
-import { PageHeader } from "@/components/page-header"
+import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDateTime } from "@/lib/format"
@@ -110,22 +110,21 @@ async function Trace({ params }: { params: Promise<{ id: string }> }) {
   ]
 
   return (
-    <div className="space-y-6">
-      <PageHeader
-        title={`${serial ? "Nomor seri" : "Lot"} ${lot.name}`}
-        crumbs={[{ label: lot.name }]}
-        description={
-          <span>
-            <Link
-              href={`/inventory/stok/${lot.productId}`}
-              className="font-mono text-primary underline-offset-4 hover:underline"
-            >
-              {lot.sku}
-            </Link>{" "}
-            {lot.productName}
-          </span>
-        }
-      />
+    <DocumentLayout
+      title={`${serial ? "Nomor seri" : "Lot"} ${lot.name}`}
+      crumbs={[{ label: lot.name }]}
+      meta={
+        <span>
+          <Link
+            href={`/inventory/stok/${lot.productId}`}
+            className="font-mono text-primary underline-offset-4 hover:underline"
+          >
+            {lot.sku}
+          </Link>{" "}
+          {lot.productName}
+        </span>
+      }
+    >
       <Section title="Stok sekarang">
         <DataTable
           columns={balanceColumns}
@@ -142,6 +141,6 @@ async function Trace({ params }: { params: Promise<{ id: string }> }) {
           empty={{ title: "Belum ada pergerakan." }}
         />
       </Section>
-    </div>
+    </DocumentLayout>
   )
 }

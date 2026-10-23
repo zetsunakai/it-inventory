@@ -3,7 +3,7 @@ import { Suspense } from "react"
 
 import { ImportColumnGuide } from "@/components/import/import-column-guide"
 import { ImportForm } from "@/components/import/import-form"
-import { PageHeader } from "@/components/page-header"
+import { DocumentLayout } from "@/components/document/document-layout"
 import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { PARTNER_COLUMNS } from "@/modules/inventory/server/master-io/partners"
@@ -14,16 +14,16 @@ export const metadata: Metadata = { title: "Import partner · IT Inventory" }
 
 export default function ImportPartnersPage() {
   return (
-    <>
-      <PageHeader
-        title="Import partner"
-        description="NPWP baru ditambahkan, NPWP yang sudah ada diperbarui (cabang dipilih lewat NITKU). Bila ada satu baris yang salah, tidak ada yang disimpan."
-      />
+    <DocumentLayout
+      crumbs={[{ label: "Partner", href: "/master/partner" }, { label: "Import" }]}
+      title="Import partner"
+      meta="NPWP baru ditambahkan, NPWP yang sudah ada diperbarui (cabang dipilih lewat NITKU). Bila ada satu baris yang salah, tidak ada yang disimpan."
+    >
       <Suspense fallback={<Skeleton className="h-40 w-full" />}>
         <Guarded />
       </Suspense>
       <ImportColumnGuide columns={PARTNER_COLUMNS} />
-    </>
+    </DocumentLayout>
   )
 }
 

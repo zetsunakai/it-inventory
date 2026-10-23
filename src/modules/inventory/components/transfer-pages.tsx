@@ -8,7 +8,7 @@ import { z } from "zod"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { buttonVariants } from "@/components/ui/button"
 import { Skeleton } from "@/components/ui/skeleton"
 import { toDecimalInput } from "@/lib/decimal"
@@ -92,12 +92,11 @@ export function TransferListPage({
   searchParams: Promise<RawSearchParams>
 }) {
   return (
-    <>
-      <PageHeader title={title} description={description} />
+    <ListLayout title={title} description={description}>
       <Suspense fallback={<DataTableSkeleton />}>
         <TransferTable kind={kind} effect={effect} searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

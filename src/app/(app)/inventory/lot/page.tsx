@@ -4,7 +4,7 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { formatDecimal } from "@/lib/decimal"
 import { formatDateTime } from "@/lib/format"
 import { PRODUCT_TRACKING_LABELS } from "@/modules/inventory/lib/inventory"
@@ -49,15 +49,14 @@ const COLUMNS: DataTableColumn<LotRow>[] = [
 
 export default function LotsPage({ searchParams }: PageProps<"/inventory/lot">) {
   return (
-    <>
-      <PageHeader
-        title="Lot & nomor seri"
-        description="Telusuri dari mana sebuah lot atau nomor seri masuk, ke mana keluar, dan di mana sisanya sekarang."
-      />
+    <ListLayout
+      title="Lot & nomor seri"
+      description="Telusuri dari mana sebuah lot atau nomor seri masuk, ke mana keluar, dan di mana sisanya sekarang."
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <LotTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

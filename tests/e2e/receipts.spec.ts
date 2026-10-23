@@ -11,6 +11,17 @@ test.use({ storageState: ADMIN_STATE_FILE })
 
 type Fixture = Awaited<ReturnType<typeof createInventoryFixture>>
 
+// Status masuk panel samping saat area dokumen sempit, termasuk viewport default tes.
+async function expectDocumentStatus(page: Page, label: string) {
+  const toggle = page.getByRole("button", { name: "Tampilkan status", exact: true })
+  const inPanel = await toggle.isVisible()
+  if (inPanel) await toggle.click()
+  await expect(
+    page.getByRole("region", { name: "Status", exact: true }).locator('[aria-current="step"]'),
+  ).toHaveText(label)
+  if (inPanel) await page.getByRole("dialog").getByRole("button", { name: "Tutup" }).click()
+}
+
 async function createReadyReceipt(page: Page, fixture: Fixture, qty: string) {
   await page.goto("/inventory/penerimaan")
   await page.getByRole("link", { name: "Buat", exact: true }).first().click()
@@ -40,9 +51,7 @@ test("penerimaan dari vendor divalidasi dan menambah stok", async ({ page }) => 
   await expect(
     page.getByRole("status").filter({ hasText: "Transfer divalidasi. Stok sudah diperbarui." }),
   ).toBeVisible()
-  // Kartu status (timeline langkah); teks yang sama juga ada di panel Aktivitas.
-  const currentStep = page.getByRole("region", { name: "Status" }).locator('[aria-current="step"]')
-  await expect(currentStep).toContainText("Selesai")
+  await expectDocumentStatus(page, "Selesai")
   await expect(page.getByRole("button", { name: "Batalkan penerimaan" })).toHaveCount(0)
 
   expect(await stockAt(fixture.product.id, fixture.rack.id)).toBe(12.5)
@@ -69,7 +78,8 @@ test("penerimaan parsial: sisa qty menjadi penerimaan lanjutan", async ({ page }
   expect(await stockAt(fixture.product.id, fixture.rack.id)).toBe(6)
 
   await link.click()
-  await expect(page.getByText("Draft", { exact: true }).filter({ visible: true })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible()
+  await expectDocumentStatus(page, "Draft")
   await page.getByRole("button", { name: "Edit", exact: true }).click()
   await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("4")
 })

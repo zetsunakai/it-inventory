@@ -6,7 +6,7 @@ import { Suspense } from "react"
 import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
-import { PageHeader } from "@/components/page-header"
+import { ListLayout } from "@/components/layout/list-layout"
 import { NameCell } from "@/components/status-badge"
 import { buttonVariants } from "@/components/ui/button"
 import { formatNumber } from "@/lib/format"
@@ -59,15 +59,14 @@ export default function ProductCategoriesPage({
   searchParams,
 }: PageProps<"/master/kategori-produk">) {
   return (
-    <>
-      <PageHeader
-        title="Kategori produk"
-        description="Kategori dengan prefix kode membuat product code otomatis untuk produk baru yang product code-nya dikosongkan."
-      />
+    <ListLayout
+      title="Kategori produk"
+      description="Kategori dengan prefix kode membuat product code otomatis untuk produk baru yang product code-nya dikosongkan."
+    >
       <Suspense fallback={<DataTableSkeleton />}>
         <CategoryTable searchParams={searchParams} />
       </Suspense>
-    </>
+    </ListLayout>
   )
 }
 

@@ -82,45 +82,49 @@ export function ListSearchBar({
 
   return (
     <div
-      className="flex h-10 w-full min-w-0 items-center gap-1.5 rounded-lg border border-input bg-card pl-3 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 lg:max-w-xl"
+      className="flex min-h-10 w-full min-w-0 items-center gap-1.5 rounded-lg border border-input bg-card pl-3 focus-within:border-ring focus-within:ring-3 focus-within:ring-ring/50 lg:max-w-xl"
       aria-busy={pending}
     >
       <SearchIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-      {chips.map((chip) => (
-        <span
-          key={chip.name}
-          className="flex h-6 shrink-0 items-center gap-1 rounded-md bg-info-soft pr-1 pl-2 text-caption font-medium text-primary"
-        >
-          {chip.label}
-          <button
-            type="button"
-            onClick={() => setParam(chip.name, null)}
-            aria-label={`Hapus ${chip.label}`}
-            className="flex size-4 items-center justify-center rounded hover:bg-primary/10"
+      <div className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 py-1.5">
+        {chips.map((chip) => (
+          <span
+            key={chip.name}
+            className="flex h-6 max-w-full items-center gap-1 rounded-md bg-info-soft pr-1 pl-2 text-caption font-medium text-primary"
           >
-            <X className="size-3" aria-hidden />
-          </button>
-        </span>
-      ))}
-      <input
-        type="search"
-        aria-label={placeholder}
-        placeholder={chips.length ? "" : placeholder}
-        value={text}
-        onChange={(event) => onText(event.target.value)}
-        onKeyDown={(event) => {
-          // Backspace di kotak kosong menghapus chip terakhir, seperti hmx.
-          if (event.key === "Backspace" && !text && chips.length) {
-            setParam(chips[chips.length - 1].name, null)
-          }
-        }}
-        className="h-full min-w-16 flex-1 bg-transparent text-control outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
-      />
+            <span className="truncate" title={chip.label}>
+              {chip.label}
+            </span>
+            <button
+              type="button"
+              onClick={() => setParam(chip.name, null)}
+              aria-label={`Hapus ${chip.label}`}
+              className="flex size-4 shrink-0 items-center justify-center rounded hover:bg-primary/10"
+            >
+              <X className="size-3" aria-hidden />
+            </button>
+          </span>
+        ))}
+        <input
+          type="search"
+          aria-label={placeholder}
+          placeholder={chips.length ? "" : placeholder}
+          value={text}
+          onChange={(event) => onText(event.target.value)}
+          onKeyDown={(event) => {
+            // Backspace di kotak kosong menghapus chip terakhir, seperti hmx.
+            if (event.key === "Backspace" && !text && chips.length) {
+              setParam(chips[chips.length - 1].name, null)
+            }
+          }}
+          className="h-6 min-w-16 flex-1 bg-transparent text-control outline-none placeholder:text-muted-foreground [&::-webkit-search-cancel-button]:hidden"
+        />
+      </div>
       {(filters.length > 0 || groupBy.length > 0) && (
         <Popover.Root>
           <Popover.Trigger
             aria-label="Filter, kelompokkan, dan favorit"
-            className="flex h-full shrink-0 items-center gap-1.5 rounded-r-lg border-l border-input px-3 text-control font-medium text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:bg-accent"
+            className="flex min-h-10 shrink-0 items-center gap-1.5 self-stretch rounded-r-lg border-l border-input px-3 text-control font-medium text-muted-foreground outline-none hover:bg-accent hover:text-foreground focus-visible:bg-accent"
           >
             <Filter className="size-4" aria-hidden />
             <span className="hidden sm:inline">Filter</span>
