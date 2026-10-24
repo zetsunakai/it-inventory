@@ -349,6 +349,7 @@ export function TransferView({
   ]
   // Catatan dan alasan pindah ke tab Catatan (notebook hmx, RU-23).
   const notes = new Set(["Catatan", "Alasan"])
+  const showMovements = transfer.type !== "receipt"
   const moves = transfer.lines.flatMap((line) =>
     line.moves.map((move) => ({
       ...move,
@@ -369,9 +370,11 @@ export function TransferView({
           <TabsTrigger value="barang">
             Barang <TabCount>{transfer.lines.length}</TabCount>
           </TabsTrigger>
-          <TabsTrigger value="pergerakan">
-            Detail pergerakan <TabCount>{moves.length}</TabCount>
-          </TabsTrigger>
+          {showMovements && (
+            <TabsTrigger value="pergerakan">
+              Detail pergerakan <TabCount>{moves.length}</TabCount>
+            </TabsTrigger>
+          )}
           <TabsTrigger value="catatan">Catatan</TabsTrigger>
         </TabsList>
         <TabsContent value="barang">
@@ -383,14 +386,16 @@ export function TransferView({
             rowKey={(line) => line.id}
           />
         </TabsContent>
-        <TabsContent value="pergerakan">
-          <DataTable
-            columns={MOVE_COLUMNS}
-            rows={moves}
-            rowKey={(move) => move.id}
-            empty={{ title: "Belum ada pergerakan." }}
-          />
-        </TabsContent>
+        {showMovements && (
+          <TabsContent value="pergerakan">
+            <DataTable
+              columns={MOVE_COLUMNS}
+              rows={moves}
+              rowKey={(move) => move.id}
+              empty={{ title: "Belum ada pergerakan." }}
+            />
+          </TabsContent>
+        )}
         <TabsContent value="catatan">
           <InfoGrid
             items={rows

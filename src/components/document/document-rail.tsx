@@ -1,6 +1,7 @@
 "use client"
 
-import { History, ListChecks } from "lucide-react"
+import { History } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { useState, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
@@ -12,34 +13,22 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet"
 
-// Kolom kanan dokumen yang ditutup otomatis saat area isi sempit (zoom in, jendela kecil): isi
-// form yang dipertahankan, status dan aktivitas jadi strip ikon. Klik ikon membuka keduanya di
-// panel samping (isinya baru dirender saat dibuka).
-export function DocumentRail({
-  status,
-  activity,
-  className,
-}: {
-  status?: ReactNode
+// Saat area form sempit, Aktivitas dibuka lewat ikon ke panel di sisi kanan.
+type DocumentRailProps = {
   activity?: ReactNode
   className?: string
-}) {
+}
+
+export function DocumentRail(props: DocumentRailProps) {
+  const pathname = usePathname()
+  return <CollapsibleDocumentRail key={pathname} {...props} />
+}
+
+function CollapsibleDocumentRail({ activity, className }: DocumentRailProps) {
   const [open, setOpen] = useState(false)
   return (
     <div className={className}>
       <div className="flex flex-col gap-2">
-        {status && (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label="Tampilkan status"
-            title="Status"
-            onClick={() => setOpen(true)}
-          >
-            <ListChecks />
-          </Button>
-        )}
         {activity && (
           <Button
             type="button"
@@ -54,17 +43,12 @@ export function DocumentRail({
         )}
       </div>
       <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent className="w-full! gap-0 sm:max-w-md!">
+        <SheetContent className="w-full! gap-0 duration-300 ease-out motion-reduce:transition-none sm:max-w-md!">
           <SheetHeader className="border-b pr-14">
-            <SheetTitle>{status ? "Status dan aktivitas" : "Aktivitas"}</SheetTitle>
-            <SheetDescription className="sr-only">
-              Status dokumen dan log aktivitasnya.
-            </SheetDescription>
+            <SheetTitle>Aktivitas</SheetTitle>
+            <SheetDescription className="sr-only">Log aktivitas dokumen.</SheetDescription>
           </SheetHeader>
-          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">
-            {status}
-            {activity}
-          </div>
+          <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto p-4">{activity}</div>
         </SheetContent>
       </Sheet>
     </div>

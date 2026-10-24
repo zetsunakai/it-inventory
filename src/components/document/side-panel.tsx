@@ -1,41 +1,43 @@
 "use client"
 
 import { PanelRightClose, PanelRightOpen } from "lucide-react"
+import { usePathname } from "next/navigation"
 import { useLayoutEffect, useRef, useState, type ReactNode } from "react"
 
-import { useStoredValue } from "@/lib/use-stored-value"
 import { cn } from "@/lib/utils"
 
-// Panel samping dokumen (RU-23, seperti hmx): log aktivitas, bisa diciutkan; pilihannya diingat
-// per browser. Bawaannya diciutkan (rail 48px) supaya isi dokumen selebar form lain; dibuka lewat
-// tombolnya. Tanpa scroll sendiri: panjangnya mengikuti isi dan ikut halaman. Hanya tampil saat area
-// isi lebar (@5xl DocumentLayout); saat sempit diganti strip ikon DocumentRail. wide = kolom kanan
-// selalu 320px (dokumen dengan kartu status di atasnya): diciutkan hanya menyembunyikan isinya.
-export function SidePanel({
-  title,
-  wide,
-  children,
-}: {
-  title: string
-  wide?: boolean
-  children: ReactNode
-}) {
-  const [collapsed, setCollapsed] = useStoredValue("panel-samping-ciut", true)
-  const rail = collapsed && !wide
+// Panel selalu mulai tertutup saat berpindah form, tanpa preferensi browser.
+// Saat ditutup lebarnya menjadi strip ikon dan ruang sisanya kembali ke form.
+export function SidePanel(props: { title: string; children: ReactNode }) {
+  const pathname = usePathname()
+  return <CollapsibleSidePanel key={pathname} {...props} />
+}
+
+function CollapsibleSidePanel({ title, children }: { title: string; children: ReactNode }) {
+  const [collapsed, setCollapsed] = useState(true)
   return (
     <aside
       aria-label={title}
-      className={cn("min-w-0 rounded-2xl border bg-card", rail ? "w-12" : "w-80")}
+      className={cn(
+        "min-w-0 overflow-hidden rounded-2xl border bg-card transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+        collapsed ? "w-12" : "w-80",
+      )}
     >
       <div
         className={cn(
-          "flex items-center justify-between gap-2 border-b px-4 py-3",
-          rail && "px-2",
-          // Diciutkan di kolom lebar: hanya judul, tanpa garis ke isi yang tersembunyi.
-          collapsed && wide && "border-b-0",
+          "relative flex h-14 items-center justify-end border-b px-2 transition-colors duration-300 motion-reduce:transition-none",
+          collapsed ? "border-transparent" : "border-border",
         )}
       >
-        <h2 className={cn("text-control font-semibold", rail && "sr-only")}>{title}</h2>
+        <h2
+          aria-hidden={collapsed}
+          className={cn(
+            "absolute right-12 left-4 truncate text-control font-semibold transition-opacity duration-200 motion-reduce:transition-none",
+            collapsed ? "pointer-events-none opacity-0" : "opacity-100",
+          )}
+        >
+          {title}
+        </h2>
         <button
           type="button"
           onClick={() => setCollapsed(!collapsed)}
@@ -43,7 +45,7 @@ export function SidePanel({
             collapsed ? `Tampilkan ${title.toLowerCase()}` : `Sembunyikan ${title.toLowerCase()}`
           }
           aria-expanded={!collapsed}
-          className="flex size-8 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md border bg-background text-muted-foreground shadow-sm hover:bg-muted hover:text-foreground"
         >
           {collapsed ? (
             <PanelRightOpen className="size-4" />
@@ -52,20 +54,31 @@ export function SidePanel({
           )}
         </button>
       </div>
-      <div className={cn("p-4", collapsed && "hidden")}>{children}</div>
+      <div
+        inert={collapsed}
+        aria-hidden={collapsed}
+        className={cn(
+          "grid transition-[grid-template-rows,opacity,transform] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none",
+          collapsed
+            ? "translate-x-2 grid-rows-[0fr] opacity-0"
+            : "translate-x-0 grid-rows-[1fr] opacity-100",
+        )}
+      >
+        <div className="min-h-0 overflow-hidden">
+          <div className="w-[calc(20rem-2px)] p-4">{children}</div>
+        </div>
+      </div>
     </aside>
   )
 }
 
-// Kolom kanan dokumen (kartu status, panel samping). Saat tampil di samping isi, bagian atasnya
+// Kolom Aktivitas. Saat tampil di samping isi, bagian atasnya
 // sejajar dengan kartu form pertama di kolom isi (bukan baris tombol Simpan atau pesan di atasnya),
 // seperti chatter di samping sheet hmx; dihitung ulang bila tinggi isi berubah.
 export function DocumentAside({
-  wide,
   className,
   children,
 }: {
-  wide?: boolean
   className?: string
   children: ReactNode
 }) {
@@ -75,7 +88,10 @@ export function DocumentAside({
     <div
       ref={ref}
       style={offset ? { marginTop: offset } : undefined}
-      className={cn("flex min-w-0 flex-col gap-4", wide && "w-80", className)}
+      className={cn(
+        "flex min-w-0 flex-col gap-4 transition-[margin-top] duration-300 ease-out motion-reduce:transition-none",
+        className,
+      )}
     >
       {children}
     </div>

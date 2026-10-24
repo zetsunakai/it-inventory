@@ -122,7 +122,7 @@ export function ProductForm({
       {product && <input type="hidden" name="id" value={product.id} />}
 
       <FormSection title="Data produk">
-        <FormField label="Nama produk" htmlFor="name" errors={fieldErrors?.name} span={12}>
+        <FormField label="Nama produk" htmlFor="name" errors={fieldErrors?.name}>
           <Input
             id="name"
             name="name"
@@ -130,6 +130,28 @@ export function ProductForm({
             maxLength={200}
           />
         </FormField>
+        {product ? (
+          <StaticField
+            label="Satuan stok"
+            value={`[${product.uom.code}] ${product.uom.name}`}
+            reason="Tidak bisa diubah: qty di ledger tersimpan dalam satuan ini."
+          />
+        ) : (
+          <FormField label="Satuan stok" htmlFor="uomId" errors={fieldErrors?.uomId}>
+            <Select name="uomId" items={uomItems} value={uomId} onValueChange={setUomId}>
+              <SelectTrigger id="uomId" className="w-full">
+                <SelectValue placeholder="Pilih satuan stok" />
+              </SelectTrigger>
+              <SelectContent>
+                {uomItems.map((item) => (
+                  <SelectItem key={item.value} value={item.value}>
+                    {item.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FormField>
+        )}
         {product ? (
           <StaticField label="Product code" value={product.sku} mono reason="Tidak bisa diubah." />
         ) : (
@@ -160,63 +182,17 @@ export function ProductForm({
             emptyLabel="Tanpa kategori produk"
           />
         </FormField>
-        <FormField
-          label="Deskripsi"
-          htmlFor="description"
-          errors={fieldErrors?.description}
-          span={12}
-        >
-          <Textarea
-            id="description"
-            name="description"
-            defaultValue={fieldValue(state, "description", product?.description)}
-            maxLength={2000}
-            rows={3}
-          />
-        </FormField>
-        <CustomsCategoryField
-          defaultValue={product?.category ?? null}
-          errors={fieldErrors?.category}
-        />
-        {product ? (
-          <StaticField
-            label="Satuan stok"
-            value={`[${product.uom.code}] ${product.uom.name}`}
-            reason="Tidak bisa diubah: qty di ledger tersimpan dalam satuan ini."
-          />
-        ) : (
-          <FormField label="Satuan stok" htmlFor="uomId" errors={fieldErrors?.uomId}>
-            <Select name="uomId" items={uomItems} value={uomId} onValueChange={setUomId}>
-              <SelectTrigger id="uomId" className="w-full">
-                <SelectValue placeholder="Pilih satuan stok" />
-              </SelectTrigger>
-              <SelectContent>
-                {uomItems.map((item) => (
-                  <SelectItem key={item.value} value={item.value}>
-                    {item.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        <div className="form-grid">
+          <FormField label="Deskripsi" htmlFor="description" errors={fieldErrors?.description}>
+            <Textarea
+              id="description"
+              name="description"
+              defaultValue={fieldValue(state, "description", product?.description)}
+              maxLength={2000}
+              rows={3}
+            />
           </FormField>
-        )}
-        <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand} span={6}>
-          <Input
-            id="brand"
-            name="brand"
-            defaultValue={fieldValue(state, "brand", product?.brand)}
-          />
-        </FormField>
-        <FormField label="Tipe" htmlFor="model" errors={fieldErrors?.model} span={6}>
-          <Input
-            id="model"
-            name="model"
-            defaultValue={fieldValue(state, "model", product?.model)}
-          />
-        </FormField>
-        <FormField label="Ukuran" htmlFor="size" errors={fieldErrors?.size} span={6}>
-          <Input id="size" name="size" defaultValue={fieldValue(state, "size", product?.size)} />
-        </FormField>
+        </div>
         {product && (
           <CheckboxField
             name="active"
@@ -286,7 +262,29 @@ export function ProductForm({
         )}
       </FormSection>
 
-      <ProductCustomsSection hs={product?.hs ?? null} errors={fieldErrors?.hsCode} />
+      <ProductCustomsSection hs={product?.hs ?? null} errors={fieldErrors?.hsCode}>
+        <CustomsCategoryField
+          defaultValue={product?.category ?? null}
+          errors={fieldErrors?.category}
+        />
+        <FormField label="Merk" htmlFor="brand" errors={fieldErrors?.brand} span={6}>
+          <Input
+            id="brand"
+            name="brand"
+            defaultValue={fieldValue(state, "brand", product?.brand)}
+          />
+        </FormField>
+        <FormField label="Tipe" htmlFor="model" errors={fieldErrors?.model} span={6}>
+          <Input
+            id="model"
+            name="model"
+            defaultValue={fieldValue(state, "model", product?.model)}
+          />
+        </FormField>
+        <FormField label="Ukuran" htmlFor="size" errors={fieldErrors?.size} span={6}>
+          <Input id="size" name="size" defaultValue={fieldValue(state, "size", product?.size)} />
+        </FormField>
+      </ProductCustomsSection>
     </form>
   )
 }

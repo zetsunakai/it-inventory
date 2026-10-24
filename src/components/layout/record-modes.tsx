@@ -4,6 +4,7 @@ import { Pencil, Plus } from "lucide-react"
 import Link from "next/link"
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react"
 
+import { DocumentStatusSlot } from "@/components/document/document-status"
 import { usePageMessage } from "@/components/layout/page-message"
 import { Button, buttonVariants } from "@/components/ui/button"
 import type { ActionResult } from "@/lib/action-result"
@@ -72,6 +73,7 @@ export function RecordModes({
             </Link>
           )}
           {actions}
+          <DocumentStatusSlot />
         </div>
       )}
       {view}

@@ -1,5 +1,7 @@
 "use client"
 
+import type { ReactNode } from "react"
+
 import { FormField, FormSection } from "@/components/form-field"
 import { RefCodeSelect } from "@/components/ref-code-select"
 import {
@@ -24,7 +26,7 @@ const CATEGORY_ITEMS = INVENTORY_CATEGORIES.map((category) => ({
   label: INVENTORY_CATEGORY_LABELS[category],
 }))
 
-// Kategori laporan IT Inventory (PRD 9.2), di kelompok Data produk.
+// Kategori laporan IT Inventory (PRD 9.2), di kelompok Data kepabeanan.
 export function CustomsCategoryField({
   defaultValue,
   errors,
@@ -50,19 +52,22 @@ export function CustomsCategoryField({
   )
 }
 
-// Kelompok Data kepabeanan: kode HS (syarat siap dokumen BC).
+// Kelompok Data kepabeanan: atribut produk dan kode HS (syarat siap dokumen BC).
 export function ProductCustomsSection({
   hs,
   errors,
+  children,
 }: {
   hs: RefCodeOption | null
   errors?: string[]
+  children?: ReactNode
 }) {
   return (
     <FormSection
       title="Data kepabeanan"
       description="Kode HS wajib diisi sebelum produk bisa dipakai di dokumen BC. Satuan CEISA diisi per barang di dokumen BC."
     >
+      {children}
       <FormField label="Kode HS" htmlFor="hsCode" errors={errors} span={12}>
         <RefCodeSelect
           id="hsCode"

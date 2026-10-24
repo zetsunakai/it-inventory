@@ -65,9 +65,10 @@ test("kolom form satuan dan master sejajar antarbaris di desktop, tablet, dan mo
       name: "produk",
       path: "/master/produk/baru",
       pairs: [
+        ["Nama produk", "Satuan stok"],
         ["Product code", "Kategori produk"],
-        ["Kategori IT Inventory", "Satuan stok"],
-        ["Merk", "Tipe"],
+        ["Kategori IT Inventory", "Merk"],
+        ["Tipe", "Ukuran"],
       ],
     },
     {

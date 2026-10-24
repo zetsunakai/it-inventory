@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 
 import { DiscardButton } from "./record-modes"
+import { DocumentStatusSlot } from "@/components/document/document-status"
 
 // Template form standar ala hmx-002 (UF-03 urutan field, UF-04 ukuran; ukuran ada di globals.css):
 //   <form className={FORM_CLASS}>           halaman: satu lebar, kartu berjarak 16px
@@ -36,6 +37,7 @@ export function FormActions({
       <DiscardButton />
       {after}
       {danger && <div className="ml-auto flex flex-wrap gap-2">{danger}</div>}
+      <DocumentStatusSlot />
     </div>
   )
 }

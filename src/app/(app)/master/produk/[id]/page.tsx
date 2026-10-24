@@ -58,18 +58,13 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
   const view = (
     <>
       <ViewSection title="Data produk">
-        <StaticField label="Nama produk" value={product.name} span={12} />
+        <StaticField label="Nama produk" value={product.name} />
+        <StaticField label="Satuan stok" value={`[${product.uom.code}] ${product.uom.name}`} />
         <StaticField label="Product code" value={product.sku} mono />
         <StaticField label="Kategori produk" value={product.categoryPath ?? "—"} />
-        <StaticField label="Deskripsi" value={product.description ?? "—"} span={12} />
-        <StaticField
-          label="Kategori IT Inventory"
-          value={INVENTORY_CATEGORY_LABELS[product.category]}
-        />
-        <StaticField label="Satuan stok" value={`[${product.uom.code}] ${product.uom.name}`} />
-        <StaticField label="Merk" value={product.brand ?? "—"} span={6} />
-        <StaticField label="Tipe" value={product.model ?? "—"} span={6} />
-        <StaticField label="Ukuran" value={product.size ?? "—"} span={6} />
+        <div className="form-grid">
+          <StaticField label="Deskripsi" value={product.description ?? "—"} />
+        </div>
         <StaticField label="Status" value={product.active ? "Aktif" : "Diarsipkan"} />
       </ViewSection>
       <ViewSection title="Lot dan nomor seri">
@@ -79,6 +74,14 @@ async function ProductDetail({ params }: { params: Promise<{ id: string }> }) {
         />
       </ViewSection>
       <ViewSection title="Data kepabeanan">
+        <StaticField
+          label="Kategori IT Inventory"
+          value={INVENTORY_CATEGORY_LABELS[product.category]}
+        />
+        <StaticField label="Merk" value={product.brand ?? "—"} span={6} />
+        <StaticField label="Tipe" value={product.model ?? "—"} span={6} />
+        <StaticField label="Ukuran" value={product.size ?? "—"} span={6} />
+
         <StaticField
           label="Kode HS"
           value={product.hs ? formatRefCode(product.hs) : (product.hsCode ?? "—")}

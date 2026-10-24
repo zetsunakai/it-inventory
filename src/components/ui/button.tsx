@@ -10,13 +10,13 @@ const variants = cva(
         default:
           "bg-primary text-primary-foreground hover:bg-primary-dark aria-expanded:bg-primary-dark",
         outline:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-background shadow-sm hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         secondary:
-          "bg-secondary text-secondary-foreground hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
+          "bg-secondary text-secondary-foreground shadow-sm hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)] aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
         // Standar tombol (keputusan user 22/10/2026): setiap tombol berdiri sendiri punya kotak
         // (border) dan hover. ghost = tombol sekunder ringan, berkotak seperti outline.
         ghost:
-          "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
+          "border-border bg-background shadow-sm hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
         // Pengecualian: tombol yang menempel di dalam kontrol lain (panah/hapus isi di dalam
         // input pilihan, buka-tutup sidebar). Kontrolnya sudah berkotak; tetap ada hover.
         inline:

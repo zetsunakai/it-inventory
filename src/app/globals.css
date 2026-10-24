@@ -229,7 +229,7 @@
   }
 
   .form-sheet {
-    @apply min-w-0 rounded-2xl border bg-card px-6 pt-4 pb-8 text-card-foreground;
+    @apply min-w-0 rounded-2xl border bg-card px-6 pt-4 pb-8 text-card-foreground shadow-sm;
   }
   .form-sheet-header {
     @apply -mx-6 mb-5 flex flex-wrap items-end justify-between gap-x-4 gap-y-2 border-b px-6 pb-3;
@@ -277,10 +277,10 @@
   }
 
   .form-notebook {
-    @apply min-w-0 rounded-2xl border bg-card text-card-foreground;
+    @apply min-w-0 rounded-2xl border bg-card text-card-foreground shadow-sm;
   }
   .form-notebook .form-sheet {
-    @apply rounded-none border-0 bg-transparent p-0;
+    @apply rounded-none border-0 bg-transparent p-0 shadow-none;
   }
 }
 
@@ -290,4 +290,16 @@
  */
 .form-field :is([data-slot="select-trigger"], [data-slot="input"], [data-slot="textarea"]) {
   width: 100%;
+}
+
+/* Di luar layer agar aturan hide menang atas utilitas flex pada slot cadangan. */
+/* Status mengikuti baris Edit atau Simpan/Buang bila tersedia, lalu aksi dokumen. */
+.document-status-scope:has([data-document-status-slot="form"])
+  [data-document-status-slot="header"] {
+  display: none;
+}
+
+/* Tanpa baris aksi (mis. hanya baca), status tetap tampil di atas isi. */
+.document-status-scope:has([data-document-status-slot]) > [data-document-status-fallback] {
+  display: none;
 }
