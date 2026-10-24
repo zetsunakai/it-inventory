@@ -221,7 +221,6 @@ export function InterwarehouseForm({
           label="Barang"
           rows={lines}
           rowKey={(line) => line.key}
-          initialEdit
           minRows={1}
           errors={fieldErrors?.lines}
           canRemove={() => lines.length > 1}

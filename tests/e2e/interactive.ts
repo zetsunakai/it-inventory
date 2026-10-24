@@ -35,3 +35,13 @@ export async function expectDocumentStatus(page: Page, label: string) {
   if (compact)
     await page.getByRole("dialog").getByRole("button", { name: "Tutup", exact: true }).click()
 }
+
+export async function openEditableRow(page: Page, id = "transfer-lines", index = 1) {
+  const table = page.locator(`[data-relational-table="${id}"]`).filter({ visible: true })
+  const row = table
+    .locator("tbody > tr:has(> [data-relation-column])")
+    .filter({ visible: true })
+    .nth(index - 1)
+  await waitInteractive(row)
+  await row.locator("td").nth(1).click()
+}

@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, stockAt } from "./fixtures"
-import { fillInteractive } from "./interactive"
+import { fillInteractive, openEditableRow } from "./interactive"
 
 // Penerimaan (backlog M2-03, M2-05): Draft → Siap → Selesai menambah saldo di lokasi tujuan;
 // qty yang belum datang menjadi penerimaan lanjutan.
@@ -30,6 +30,7 @@ async function createReadyReceipt(page: Page, fixture: Fixture, qty: string) {
   await page.getByLabel("Lokasi tujuan").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
   await page.getByLabel("Referensi PO/SO").fill("PO-E2E-1")
+  await openEditableRow(page)
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill(qty)
@@ -81,6 +82,7 @@ test("penerimaan parsial: sisa qty menjadi penerimaan lanjutan", async ({ page }
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible()
   await expectDocumentStatus(page, "Draft")
   await page.getByRole("button", { name: "Edit", exact: true }).click()
+  await openEditableRow(page)
   await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("4")
 })
 

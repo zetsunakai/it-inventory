@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture } from "./fixtures"
-import { fillInteractive } from "./interactive"
+import { fillInteractive, openEditableRow } from "./interactive"
 
 // Pelacakan per nomor seri dengan nomor otomatis (backlog R-02).
 test.use({ storageState: ADMIN_STATE_FILE })
@@ -34,6 +34,7 @@ test("barang masuk berpelacakan nomor seri diberi nomor otomatis per unit", asyn
   await page.getByRole("option", { name: new RegExp(fixture.partner.code) }).click()
   await page.getByLabel("Lokasi tujuan").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
+  await openEditableRow(page)
   await fillInteractive(page.getByLabel("Produk baris 1"), sku)
   await page.getByRole("option", { name: new RegExp(sku) }).click()
   await page.getByLabel("Qty baris 1").fill("2")

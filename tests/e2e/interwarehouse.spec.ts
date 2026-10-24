@@ -2,7 +2,12 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { expectDocumentStatus, fillInteractive, waitInteractive } from "./interactive"
+import {
+  expectDocumentStatus,
+  fillInteractive,
+  waitInteractive,
+  openEditableRow,
+} from "./interactive"
 
 // Transfer antar gudang lewat lokasi transit (backlog R-10).
 test.use({ storageState: ADMIN_STATE_FILE })
@@ -18,6 +23,7 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
   await page.getByRole("option", { name: new RegExp(origin.rack.code) }).click()
   await page.getByLabel("Lokasi tujuan").click()
   await page.getByRole("option", { name: new RegExp(target.rack.code) }).click()
+  await openEditableRow(page, "interwarehouse-lines")
   await fillInteractive(page.getByLabel("Produk baris 1"), origin.product.sku)
   await page.getByRole("option", { name: new RegExp(origin.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("6")

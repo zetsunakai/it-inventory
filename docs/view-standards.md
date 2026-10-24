@@ -32,11 +32,13 @@ Dashboard, visualisasi flow dokumen, dan layar scan menggunakan layout yang sesu
 - Detail gudang memakai tabel lokasi di dalam `WarehouseForm`, baik saat membuat gudang maupun mengeditnya. Kode dan tipe lokasi yang sudah tersimpan tetap terkunci.
 - Tambah, ubah, dan hapus lokasi hanya mengubah draft di browser. Tombol Simpan gudang menyimpan induk beserta semua perubahan lokasi dalam satu transaksi. Buang menghapus draft yang belum disimpan.
 - Lokasi induk dapat dipilih dari baris baru yang belum tersimpan. Server memvalidasi kepemilikan gudang, hierarki, status induk, dan penggunaan lokasi sebelum menyimpan.
+- Saat form dibuka dalam mode edit, baris yang sudah ada tetap tampil sebagai teks tanpa tombol pensil atau ceklis. Klik area baris langsung membuka editor baris dan memfokuskan field yang diklik atau field pertama. Kontrol seleksi, tautan, dan tombol aksi tetap menjalankan aksinya sendiri. Klik di luar tabel menutup editor tanpa membuang draft. Dropdown dan dialog pemilihan milik tabel tetap dianggap bagian dari tabel. Mode baca tidak membuka editor.
+- Header kolom hanya menampilkan label dan penanda wajib, tanpa pencarian atau pengurutan per kolom.
 - Popup wizard tidak termasuk perubahan ini.
 
 ## Tabel baca dan edit
 
-- Tabel relasi mode baca menggunakan `RelationalView`, yang memakai renderer `RelationalTable` yang sama dengan mode edit. Kolom, urutan, serta preferensi tampil/sembunyi dan resize menggunakan ID tabel serta kolom yang sama.
-- Lebar ruang yang tersedia dibagi rata ke kolom otomatis. Ukuran hasil resize pengguna tetap dipertahankan; layar kecil memakai scroll di dalam tabel.
+- Tabel relasi mode baca menggunakan `RelationalView`, yang memakai renderer `RelationalTable` yang sama dengan mode edit. Kolom serta preferensi tampil/sembunyi menggunakan ID tabel serta kolom yang sama. Urutan kolom mengikuti definisi form; fitur geser kolom dan preferensi urutan lama tidak digunakan.
+- Lebar kolom data dibagi rata dalam lebar tabel yang mengikuti kontainer, tanpa scroll horizontal. Ukurannya tetap saat beralih baca/edit. Resize dan pin kolom tidak tersedia; preferensi lebar dan pin lama diabaikan. Kolom Seri, seleksi, dan Aksi juga tidak dikunci secara horizontal.
 - Kolom Barang transfer, antar gudang, retur, lokasi gudang, dan ringkasan barang BC mengikuti metadata bersama. Qty dan satuan tetap terpisah pada mode baca maupun edit.
 - Informasi operasional tambahan (stok tersedia, reservasi, hasil perpindahan) tetap mengikuti status dokumen. Detail barang BC dapat dibuka pada mode baca dengan field yang sama seperti detail edit.

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { fillInteractive, waitInteractive } from "./interactive"
+import { fillInteractive, waitInteractive, openEditableRow } from "./interactive"
 
 // Penyesuaian (backlog M2-08): alasan wajib, stok berubah setelah disetujui.
 
@@ -18,6 +18,7 @@ test("penyesuaian kurangi stok tercatat setelah disetujui", async ({ page }) => 
   await page.getByRole("option", { name: /^Kurangi stok/ }).click()
   await page.getByLabel("Lokasi gudang").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
+  await openEditableRow(page)
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("2")

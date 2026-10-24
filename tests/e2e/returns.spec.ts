@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { expectDocumentStatus, fillInteractive } from "./interactive"
+import { expectDocumentStatus, fillInteractive, openEditableRow } from "./interactive"
 
 // Retur sebagai dokumen permintaan (backlog R-11): dibuat dari penerimaan Selesai, qty tidak
 // melebihi sisa, retur dengan pengganti membuat penerimaan pengganti setelah retur Selesai.
@@ -32,6 +32,7 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
 
   // Detail Draft dibuka dalam mode baca; Edit membuka form.
   await page.getByRole("button", { name: "Edit", exact: true }).click()
+  await openEditableRow(page, "return-lines")
   const qty = page.getByLabel(`Qty retur ${sku}`)
   await fillInteractive(qty, "11")
   await page.getByRole("button", { name: "Simpan", exact: true }).click()
@@ -39,6 +40,7 @@ test("retur ke vendor dengan pengganti", async ({ page }) => {
     `Qty retur ${sku} melebihi sisa yang bisa diretur: 10.`,
   )
 
+  await openEditableRow(page, "return-lines")
   await qty.fill("4")
   await page.getByLabel(`Tindakan ${sku}`).click()
   await page.getByRole("option", { name: "Retur dengan pengganti" }).click()

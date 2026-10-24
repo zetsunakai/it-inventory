@@ -1,29 +1,7 @@
 "use client"
 
-import {
-  ArrowDown,
-  ArrowUp,
-  ArrowUpDown,
-  Check,
-  Columns3,
-  GripVertical,
-  Eye,
-  Pencil,
-  Pin,
-  Plus,
-  Search,
-  Trash2,
-  X,
-} from "lucide-react"
-import {
-  Fragment,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-  type CSSProperties,
-  type ReactNode,
-} from "react"
+import { ArrowDown, ArrowUp, Columns3, GripVertical, Eye, Pin, Plus, Trash2 } from "lucide-react"
+import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -34,7 +12,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { Input } from "@/components/ui/input"
 import {
   Table,
   TableBody,
@@ -43,7 +20,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { relationColumnWidths } from "./relational-utils"
 import { useStoredValue } from "@/lib/use-stored-value"
 import { cn } from "@/lib/utils"
 
@@ -64,12 +40,9 @@ export type RelationColumn<Row> = {
 
 type Preferences = {
   hidden?: string[]
-  widths?: Record<string, number>
-  order?: string[]
-  pinned?: string | null
 }
 
-// Sort, filter, pin, dan pagination hanya mengubah tampilan. Semua callback memakai indeks sumber.
+// Pin baris dan pagination hanya mengubah tampilan. Semua callback memakai indeks sumber.
 export function RelationalTable<Row>({
   id,
   label,
@@ -81,7 +54,6 @@ export function RelationalTable<Row>({
   canRemove = () => true,
   onReorder,
   details,
-  initialEdit = false,
   readOnly = false,
   addLabel = "Tambah baris",
   errors,
@@ -97,7 +69,6 @@ export function RelationalTable<Row>({
   canRemove?: (row: Row) => boolean
   onReorder?: (rows: Row[]) => void
   details?: (row: Row, index: number) => ReactNode
-  initialEdit?: boolean
   readOnly?: boolean
   addLabel?: string
   errors?: string[]
@@ -105,33 +76,31 @@ export function RelationalTable<Row>({
 }) {
   const uid = useId()
   const root = useRef<HTMLDivElement>(null)
-  const [containerWidth, setContainerWidth] = useState(0)
-  useEffect(() => {
-    const element = root.current
-    if (!element) return
-    const observer = new ResizeObserver(() => setContainerWidth(element.clientWidth))
-    observer.observe(element)
-    return () => observer.disconnect()
-  }, [])
+  const insidePointers = useRef(new WeakSet<Event>())
   const pendingFocus = useRef<{ key: string; column?: string } | null>(null)
   useEffect(() => {
     if (!pendingFocus.current) return
     const frame = requestAnimationFrame(() => {
       const pending = pendingFocus.current
       if (!pending) return
-      const row = Array.from(
+      const matchingRows = Array.from(
         root.current?.querySelectorAll<HTMLElement>("[data-relation-row]") ?? [],
-      ).find((element) => element.dataset.relationRow === pending.key)
+      ).filter((element) => element.dataset.relationRow === pending.key)
+      const row = matchingRows[0]
       const cell = pending.column
         ? Array.from(row?.querySelectorAll<HTMLElement>("[data-relation-column]") ?? []).find(
             (element) => element.dataset.relationColumn === pending.column,
           )
         : row
-      const control = Array.from(
-        (cell ?? row)?.querySelectorAll<HTMLElement>(
-          'input:not([type="hidden"]):not([type="checkbox"]), textarea, select, button[role="combobox"]',
-        ) ?? [],
-      ).find(
+      const selector =
+        'input:not([type="hidden"]):not([type="checkbox"]), textarea, select, button[role="combobox"]'
+      const candidates = [
+        ...Array.from(cell?.querySelectorAll<HTMLElement>(selector) ?? []),
+        ...matchingRows.flatMap((element) =>
+          Array.from(element.querySelectorAll<HTMLElement>(selector)),
+        ),
+      ]
+      const control = candidates.find(
         (element) =>
           !element.closest("[hidden]") &&
           !element.hasAttribute("disabled") &&
@@ -157,51 +126,29 @@ export function RelationalTable<Row>({
   }
   const hidden =
     prefs.hidden ?? columns.filter((column) => column.hidden).map((column) => column.id)
-  const ordered = [...columns].sort((a, b) => {
-    const order = prefs.order ?? columns.map((column) => column.id)
-    const rank = (key: string) => {
-      const index = order.indexOf(key)
-      return index < 0 ? order.length : index
-    }
-    return rank(a.id) - rank(b.id)
-  })
-  const visible = ordered.filter((column) => !hidden.includes(column.id))
-  const [sort, setSort] = useState<{ id: string; direction: number } | null>(null)
-  const [filters, setFilters] = useState<Record<string, string>>({})
-  const [searching, setSearching] = useState<string | null>(null)
+  const visible = columns.filter((column) => !hidden.includes(column.id))
   const [selected, setSelected] = useState<string[]>([])
   const [pinnedRows, setPinnedRows] = useState<string[]>([])
-  const [editing, setEditing] = useState<string | null>(() =>
-    initialEdit && rows[0] ? rowKey(rows[0]) : null,
-  )
+  const [editing, setEditing] = useState<string | null>(null)
+  useEffect(() => {
+    if (readOnly || !editing) return
+    const closeOutside = (event: PointerEvent) => {
+      // React capture also includes dropdowns and dialogs rendered through portals.
+      if (insidePointers.current.has(event) || root.current?.contains(event.target as Node)) return
+      pendingFocus.current = null
+      setEditing(null)
+    }
+    document.addEventListener("pointerdown", closeOutside)
+    return () => document.removeEventListener("pointerdown", closeOutside)
+  }, [editing, readOnly])
   const [page, setPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
   const [dragging, setDragging] = useState<string | null>(null)
   const entries = rows.map((row, index) => ({ row, index, key: rowKey(row) }))
-  const filtered = entries.filter(({ row, index }) =>
-    columns.every(
-      (column) =>
-        !filters[column.id] ||
-        column
-          .value(row, index)
-          .toLocaleLowerCase()
-          .includes(filters[column.id].toLocaleLowerCase()),
-    ),
+  const sorted = [...entries].sort(
+    (a, b) =>
+      Number(pinnedRows.includes(b.key)) - Number(pinnedRows.includes(a.key)) || a.index - b.index,
   )
-  const sorted = [...filtered].sort((a, b) => {
-    const pinned = Number(pinnedRows.includes(b.key)) - Number(pinnedRows.includes(a.key))
-    if (pinned) return pinned
-    const column = columns.find((item) => item.id === sort?.id)
-    if (!column || !sort) return a.index - b.index
-    const av = column.value(a.row, a.index),
-      bv = column.value(b.row, b.index)
-    return (
-      sort.direction *
-      (column.numeric
-        ? (Number(av.replace(",", ".")) || 0) - (Number(bv.replace(",", ".")) || 0)
-        : av.localeCompare(bv, "id", { numeric: true }))
-    )
-  })
   const pages = Math.max(1, Math.ceil(sorted.length / pageSize))
   const currentPage = Math.min(page, pages)
   const displayed = new Set(
@@ -215,20 +162,6 @@ export function RelationalTable<Row>({
     ...sorted.filter((entry) => displayed.has(entry.key)),
     ...entries.filter((entry) => !displayed.has(entry.key)),
   ]
-  const pinnedIndex = visible.findIndex((column) => column.id === prefs.pinned)
-  const widths = relationColumnWidths(
-    visible.map((column) => column.id),
-    containerWidth,
-    prefs.widths,
-  )
-  const width = (column: RelationColumn<Row>) => widths[column.id]
-
-  const sticky = (index: number): CSSProperties | undefined =>
-    index <= pinnedIndex
-      ? ({
-          "--relation-left": `${112 + visible.slice(0, index).reduce((total, column) => total + width(column), 0)}px`,
-        } as CSSProperties)
-      : undefined
   const hasEditors = columns.some((column) => column.edit) || Boolean(details)
 
   function reorder(key: string, target: string) {
@@ -240,8 +173,6 @@ export function RelationalTable<Row>({
     const [row] = next.splice(from, 1)
     next.splice(to, 0, row)
     onReorder(next)
-    setSort(null)
-    setFilters({})
     setPinnedRows([])
   }
 
@@ -265,6 +196,7 @@ export function RelationalTable<Row>({
       data-span={12}
       className="@container min-w-0 space-y-2"
       data-relational-table={id}
+      onPointerDownCapture={(event) => insidePointers.current.add(event.nativeEvent)}
       onInputCapture={(event) => {
         if (event.target instanceof HTMLElement) event.target.removeAttribute("aria-invalid")
         setValidationMessage(null)
@@ -286,8 +218,6 @@ export function RelationalTable<Row>({
           `Periksa ${label}, baris ${entries.findIndex((entry) => entry.key === key) + 1}: ${target instanceof HTMLInputElement || target instanceof HTMLSelectElement || target instanceof HTMLTextAreaElement ? target.validationMessage : "Lengkapi isian wajib."}`,
         )
         const column = target.closest<HTMLElement>("[data-relation-column]")?.dataset.relationColumn
-        setFilters({})
-        setSort(null)
         setPinnedRows([])
         setEditing(key)
         setPage(Math.floor(entries.findIndex((entry) => entry.key === key) / pageSize) + 1)
@@ -302,16 +232,10 @@ export function RelationalTable<Row>({
     >
       <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 text-control">
         <span className="text-muted-foreground">
-          {filtered.length} / {rows.length} baris
+          {rows.length} baris
           {chosen.length ? ` · ${chosen.length} dipilih` : ""}
         </span>
         <div className="flex items-center gap-2">
-          {Object.values(filters).some(Boolean) && (
-            <Button type="button" variant="ghost" size="sm" onClick={() => setFilters({})}>
-              <X />
-              Reset pencarian
-            </Button>
-          )}
           {chosen.length > 0 && onRemove && (
             <Button
               type="button"
@@ -339,34 +263,21 @@ export function RelationalTable<Row>({
               Kolom
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-64">
-              {ordered.map((column, index) => (
-                <Fragment key={column.id}>
-                  <DropdownMenuCheckboxItem
-                    checked={!hidden.includes(column.id)}
-                    disabled={!column.optional}
-                    onCheckedChange={(show) =>
-                      save({
-                        hidden: show
-                          ? hidden.filter((key) => key !== column.id)
-                          : [...hidden, column.id],
-                      })
-                    }
-                  >
-                    {column.label}
-                  </DropdownMenuCheckboxItem>
-                  {index > 0 && (
-                    <DropdownMenuItem
-                      onClick={() => {
-                        const order = ordered.map((item) => item.id)
-                        ;[order[index - 1], order[index]] = [order[index], order[index - 1]]
-                        save({ order })
-                      }}
-                    >
-                      <ArrowUp />
-                      Geser {column.label} ke kiri
-                    </DropdownMenuItem>
-                  )}
-                </Fragment>
+              {columns.map((column) => (
+                <DropdownMenuCheckboxItem
+                  key={column.id}
+                  checked={!hidden.includes(column.id)}
+                  disabled={!column.optional}
+                  onCheckedChange={(show) =>
+                    save({
+                      hidden: show
+                        ? hidden.filter((key) => key !== column.id)
+                        : [...hidden, column.id],
+                    })
+                  }
+                >
+                  {column.label}
+                </DropdownMenuCheckboxItem>
               ))}
               <DropdownMenuItem
                 onClick={() => {
@@ -392,17 +303,13 @@ export function RelationalTable<Row>({
       ))}
       <div className="overflow-hidden rounded-2xl border bg-card">
         <Table
-          containerClassName="max-h-[min(65dvh,700px)] overflow-auto [scrollbar-width:none] hover:[scrollbar-width:thin] focus-within:[scrollbar-width:thin]"
-          className="table-fixed text-control"
-          style={{
-            width: 112 + visible.reduce((total, column) => total + width(column), 0) + 120,
-            minWidth: "100%",
-          }}
+          containerClassName="max-h-[min(65dvh,700px)] overflow-x-hidden overflow-y-auto"
+          className="w-full table-fixed text-control"
           aria-label={label}
         >
           <TableHeader>
             <TableRow className="hover:bg-transparent">
-              <TableHead className="sticky top-0 z-30 h-12 w-16 bg-muted px-2 md:left-0">
+              <TableHead className="sticky top-0 z-30 h-12 w-10 bg-muted px-1 md:w-16 md:px-2">
                 {onRemove && (
                   <Checkbox
                     aria-label={`Pilih semua ${label}`}
@@ -421,140 +328,21 @@ export function RelationalTable<Row>({
                   />
                 )}
               </TableHead>
-              <TableHead className="sticky top-0 z-30 w-12 bg-muted px-2 md:left-16">
+              <TableHead className="sticky top-0 z-30 w-9 bg-muted px-1 md:w-12 md:px-2">
                 Seri
               </TableHead>
-              {visible.map((column, index) => (
+              {visible.map((column) => (
                 <TableHead
                   key={column.id}
-                  className={cn(
-                    "group relative sticky top-0 z-20 bg-muted px-2",
-                    index <= pinnedIndex && "md:left-(--relation-left) md:z-30",
-                  )}
-                  style={{ width: width(column), ...sticky(index) }}
-                  aria-sort={
-                    sort?.id === column.id
-                      ? sort.direction === 1
-                        ? "ascending"
-                        : "descending"
-                      : "none"
-                  }
+                  className="sticky top-0 z-20 bg-muted px-2 whitespace-normal"
                 >
-                  <div className="flex items-center gap-1">
-                    <button
-                      type="button"
-                      className="min-w-0 flex-1 truncate text-left font-semibold"
-                      onClick={() => {
-                        setSort(
-                          sort?.id === column.id && sort.direction === -1
-                            ? null
-                            : { id: column.id, direction: sort?.id === column.id ? -1 : 1 },
-                        )
-                        setPage(1)
-                      }}
-                      title={`Urutkan ${column.label}`}
-                    >
-                      {column.label}
-                      {column.required && <span className="text-destructive"> *</span>}
-                    </button>
-                    <ArrowUpDown
-                      className={cn(
-                        "size-3 shrink-0",
-                        sort?.id !== column.id && "text-muted-foreground/40",
-                      )}
-                    />
-                    {/* Tombol ikon berkotak seperti semua tombol (standar Button ghost). */}
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label={`Cari ${column.label}`}
-                      aria-pressed={searching === column.id}
-                      onClick={() => setSearching(searching === column.id ? null : column.id)}
-                      className="aria-pressed:bg-muted"
-                    >
-                      <Search className="size-3.5" />
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon-xs"
-                      aria-label={`Pin kolom ${column.label}`}
-                      aria-pressed={prefs.pinned === column.id}
-                      onClick={() =>
-                        save({ pinned: prefs.pinned === column.id ? null : column.id })
-                      }
-                      className="aria-pressed:bg-muted"
-                    >
-                      <Pin className="size-3.5" />
-                    </Button>
-                  </div>
-                  {searching === column.id && (
-                    <Input
-                      autoFocus
-                      aria-label={`Pencarian ${column.label}`}
-                      placeholder={`Cari ${column.label}`}
-                      className="my-1 h-8"
-                      value={filters[column.id] ?? ""}
-                      onChange={(event) => {
-                        setFilters({ ...filters, [column.id]: event.target.value })
-                        setPage(1)
-                      }}
-                      onKeyDown={(event) => {
-                        if (event.key === "Enter") event.preventDefault()
-                        if (event.key === "Escape") {
-                          setFilters({ ...filters, [column.id]: "" })
-                          setSearching(null)
-                        }
-                      }}
-                    />
-                  )}
-                  <span
-                    role="separator"
-                    aria-label={`Lebar kolom ${column.label}`}
-                    aria-orientation="vertical"
-                    tabIndex={0}
-                    className="absolute inset-y-0 right-0 w-1.5 cursor-col-resize touch-none border-r border-border hover:bg-primary/30 focus-visible:bg-primary/30"
-                    onPointerDown={(event) => {
-                      event.preventDefault()
-                      const start = event.clientX,
-                        original = width(column),
-                        handle = event.currentTarget
-                      handle.setPointerCapture(event.pointerId)
-                      handle.onpointermove = (move) =>
-                        handle.parentElement?.style.setProperty(
-                          "width",
-                          `${Math.max(140, original + move.clientX - start)}px`,
-                        )
-                      handle.onpointerup = (up) => {
-                        save({
-                          widths: {
-                            ...prefs.widths,
-                            [column.id]: Math.max(140, original + up.clientX - start),
-                          },
-                        })
-                        handle.onpointermove = null
-                        handle.onpointerup = null
-                      }
-                    }}
-                    onKeyDown={(event) => {
-                      if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
-                        event.preventDefault()
-                        save({
-                          widths: {
-                            ...prefs.widths,
-                            [column.id]: Math.max(
-                              140,
-                              width(column) + (event.key === "ArrowRight" ? 20 : -20),
-                            ),
-                          },
-                        })
-                      }
-                    }}
-                  />
+                  <span className="font-semibold wrap-anywhere">
+                    {column.label}
+                    {column.required && <span className="text-destructive"> *</span>}
+                  </span>
                 </TableHead>
               ))}
-              <TableHead className="sticky top-0 z-30 w-[120px] bg-muted px-2 text-right md:right-0">
+              <TableHead className="sticky top-0 z-30 w-10 bg-muted px-1 text-right md:w-[120px] md:px-2">
                 Aksi
               </TableHead>
             </TableRow>
@@ -563,7 +351,7 @@ export function RelationalTable<Row>({
             {sorted.length === 0 && (
               <TableRow>
                 <TableCell colSpan={colspan} className="h-24 text-center text-muted-foreground">
-                  {rows.length ? "Tidak ada baris yang cocok." : "Belum ada baris."}
+                  Belum ada baris.
                 </TableCell>
               </TableRow>
             )}
@@ -577,7 +365,40 @@ export function RelationalTable<Row>({
                     data-relation-row={key}
                     hidden={!shown}
                     data-state={selected.includes(key) ? "selected" : undefined}
-                    className={cn("group/row", isEditing && "bg-primary/5")}
+                    className={cn(
+                      "group/row",
+                      !readOnly && hasEditors && "cursor-pointer",
+                      isEditing && "bg-primary/5",
+                    )}
+                    tabIndex={!readOnly && hasEditors && !isEditing ? 0 : undefined}
+                    onKeyDown={(event) => {
+                      if (
+                        event.target !== event.currentTarget ||
+                        readOnly ||
+                        !hasEditors ||
+                        isEditing
+                      )
+                        return
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault()
+                        openRow(key)
+                      }
+                    }}
+                    onClick={(event) => {
+                      if (readOnly || !hasEditors || isEditing || event.defaultPrevented) return
+                      const target = event.target as HTMLElement
+                      if (
+                        target.closest(
+                          'button, a, input, textarea, select, label, [role="button"], [role="checkbox"], [role="combobox"], fieldset:disabled',
+                        )
+                      )
+                        return
+                      const columnId =
+                        target.closest<HTMLElement>("[data-relation-column]")?.dataset
+                          .relationColumn
+                      const column = columns.find((column) => column.id === columnId)
+                      openRow(key, !details && column?.edit ? columnId : undefined)
+                    }}
                     onDragOver={onReorder ? (event) => event.preventDefault() : undefined}
                     onDrop={
                       onReorder
@@ -589,8 +410,8 @@ export function RelationalTable<Row>({
                         : undefined
                     }
                   >
-                    <TableCell className="bg-card px-2 md:sticky md:left-0 md:z-10">
-                      <div className="flex items-center gap-1">
+                    <TableCell className="bg-card px-1 md:px-2">
+                      <div className="flex flex-wrap items-center gap-1">
                         {onReorder && (
                           <button
                             type="button"
@@ -630,11 +451,10 @@ export function RelationalTable<Row>({
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className="bg-card px-2 text-muted-foreground tabular-nums md:sticky md:left-16 md:z-10">
+                    <TableCell className="bg-card px-1 text-muted-foreground tabular-nums md:px-2">
                       {index + 1}
                     </TableCell>
-                    {ordered.map((column) => {
-                      const visibleIndex = visible.findIndex((entry) => entry.id === column.id)
+                    {columns.map((column) => {
                       const error = column.error?.(row, index)
                       return (
                         <TableCell
@@ -642,13 +462,9 @@ export function RelationalTable<Row>({
                           hidden={hidden.includes(column.id)}
                           data-relation-column={column.id}
                           className={cn(
-                            "px-2 py-2 whitespace-normal",
-                            visibleIndex >= 0 &&
-                              visibleIndex <= pinnedIndex &&
-                              "bg-card md:sticky md:left-(--relation-left) md:z-10",
+                            "min-w-0 px-2 py-2 wrap-anywhere whitespace-normal",
                             column.numeric && "text-right tabular-nums",
                           )}
-                          style={visibleIndex >= 0 ? sticky(visibleIndex) : undefined}
                         >
                           <div
                             hidden={Boolean(!details && isEditing && column.edit)}
@@ -674,7 +490,7 @@ export function RelationalTable<Row>({
                             <div
                               hidden={Boolean(details || !isEditing)}
                               className={cn(
-                                "min-w-0",
+                                "max-w-full min-w-0 [&_[data-slot=select-value]]:min-w-0 [&_button]:max-w-full [&_button]:min-w-0 [&_input]:max-w-full",
                                 error && "rounded-lg ring-2 ring-destructive",
                               )}
                               onKeyDown={(event) => {
@@ -704,8 +520,8 @@ export function RelationalTable<Row>({
                         </TableCell>
                       )
                     })}
-                    <TableCell className="bg-card px-1 md:sticky md:right-0 md:z-10">
-                      <div className="flex justify-end">
+                    <TableCell className="bg-card px-1">
+                      <div className="flex flex-wrap justify-end">
                         <Button
                           type="button"
                           size="icon-sm"
@@ -722,16 +538,16 @@ export function RelationalTable<Row>({
                         >
                           <Pin className="size-3.5" />
                         </Button>
-                        {hasEditors && (
+                        {hasEditors && readOnly && (
                           <Button
                             type="button"
                             size="icon-sm"
                             variant="ghost"
-                            aria-label={`${isEditing ? (readOnly ? "Tutup detail" : "Selesai") : readOnly ? "Lihat detail" : "Edit"} baris ${index + 1}`}
+                            aria-label={`${isEditing ? "Tutup detail" : "Lihat detail"} baris ${index + 1}`}
                             aria-expanded={isEditing}
                             onClick={() => (isEditing ? setEditing(null) : openRow(key))}
                           >
-                            {isEditing ? <Check /> : readOnly ? <Eye /> : <Pencil />}
+                            <Eye />
                           </Button>
                         )}
                         {onRemove && (
@@ -756,9 +572,7 @@ export function RelationalTable<Row>({
                       className="hover:bg-transparent"
                     >
                       <TableCell colSpan={colspan} className="p-4 whitespace-normal">
-                        <div className="form-grid w-[calc(100cqw-2rem)] min-w-0">
-                          {details(row, index)}
-                        </div>
+                        <div className="form-grid w-full min-w-0">{details(row, index)}</div>
                       </TableCell>
                     </TableRow>
                   )}
@@ -780,7 +594,7 @@ export function RelationalTable<Row>({
                       column.numeric && "text-right tabular-nums",
                     )}
                   >
-                    {column.footer?.(filtered.map((entry) => entry.row))}
+                    {column.footer?.(rows)}
                   </td>
                 ))}
                 <td />
@@ -796,8 +610,6 @@ export function RelationalTable<Row>({
               size="sm"
               onClick={() => {
                 const key = onAdd()
-                setFilters({})
-                setSort(null)
                 setPinnedRows([])
                 setPage(Math.floor(rows.length / pageSize) + 1)
                 pendingFocus.current = key ? { key } : null

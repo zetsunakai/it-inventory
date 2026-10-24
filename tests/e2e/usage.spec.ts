@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { fillInteractive, waitInteractive } from "./interactive"
+import { fillInteractive, waitInteractive, openEditableRow } from "./interactive"
 
 // Pemakaian & scrap (backlog R-12): jenis pemakaian dipilih, alasan wajib, stok berkurang setelah
 // disetujui.
@@ -20,6 +20,7 @@ test("pemakaian tercatat dengan jenisnya setelah disetujui", async ({ page }) =>
   await page.getByRole("option", { name: "Pemakaian", exact: true }).click()
   await page.getByLabel("Lokasi asal").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
+  await openEditableRow(page)
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("3")

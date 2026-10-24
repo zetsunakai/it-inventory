@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { fillInteractive } from "./interactive"
+import { fillInteractive, openEditableRow } from "./interactive"
 
 // Pengiriman (backlog M2-04): stok gudang berikat tidak boleh minus, pesan per produk.
 
@@ -19,6 +19,7 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   await page.getByRole("option", { name: new RegExp(fixture.partner.code) }).click()
   await page.getByLabel("Lokasi asal").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
+  await openEditableRow(page)
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await expect(page.getByText("Tersedia 5 PCS")).toBeVisible()
@@ -47,6 +48,7 @@ test("pengiriman melebihi stok ditolak per produk, lalu qty yang cukup divalidas
   await page.getByRole("button", { name: "Kembali ke Draft" }).click()
   // Detail Draft dibuka dalam mode baca; Edit membuka form.
   await page.getByRole("button", { name: "Edit", exact: true }).click()
+  await openEditableRow(page)
   // Halaman "buat" sebelumnya masih tersimpan tersembunyi oleh router; pakai yang terlihat.
   await page.getByLabel("Qty baris 1").filter({ visible: true }).fill("3")
   await page.getByRole("button", { name: "Simpan", exact: true }).click()

@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
-import { fillInteractive, waitInteractive } from "./interactive"
+import { fillInteractive, waitInteractive, openEditableRow } from "./interactive"
 
 // Pindah lokasi (backlog M2-06, R-09): saldo pindah di dalam satu gudang, divalidasi langsung dari
 // Draft.
@@ -17,8 +17,14 @@ test("pindah lokasi memindah saldo di dalam gudang tanpa konfirmasi terpisah", a
   await waitInteractive(page.getByLabel("Produk baris 1"))
   await page.getByLabel("Lokasi asal").click()
   await page.getByRole("option", { name: new RegExp(fixture.rack.code) }).click()
-  await page.getByLabel("Lokasi tujuan").click()
-  await page.getByRole("option", { name: new RegExp(fixture.rack2.code) }).click()
+  const destination = page.getByLabel("Lokasi tujuan")
+  await destination.click()
+  const destinationList = await destination.getAttribute("aria-controls")
+  await page
+    .locator(`[id="${destinationList}"]`)
+    .getByRole("option", { name: new RegExp(fixture.rack2.code) })
+    .click()
+  await openEditableRow(page)
   await fillInteractive(page.getByLabel("Produk baris 1"), fixture.product.sku)
   await page.getByRole("option", { name: new RegExp(fixture.product.sku) }).click()
   await page.getByLabel("Qty baris 1").fill("4")

@@ -178,7 +178,6 @@ export function ReturnRequestForm({
           label="Barang yang diretur"
           rows={request.lines}
           rowKey={(line) => line.id}
-          initialEdit
           columns={lineTableColumns<(typeof request.lines)[number]>(RETURN_LINE_FIELDS, [
             {
               id: "product",
