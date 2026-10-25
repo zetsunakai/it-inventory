@@ -310,6 +310,11 @@ export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDo
       vdEntries: Array.isArray(line.vdEntries)
         ? (line.vdEntries as Row[]).map((row) => pick(row, CUSTOMS_ROW_KEYS.vdEntries))
         : [],
+      rawMaterials: Array.isArray(line.rawMaterials)
+        ? (line.rawMaterials as CustomsLineDraft["rawMaterials"])
+        : [],
+      entities: Array.isArray(line.entities) ? (line.entities as CustomsLineDraft["entities"]) : [],
+      duties: Array.isArray(line.duties) ? (line.duties as CustomsLineDraft["duties"]) : [],
     })),
     attachments: lineAttachments(null),
     packages: rows.packages.map((row) => pick(row, CUSTOMS_ROW_KEYS.packages)),

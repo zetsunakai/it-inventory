@@ -3,8 +3,7 @@ import { formatDecimal } from "@/lib/decimal"
 
 import { RelationalView } from "@/components/relational/relational-view"
 import type { RelationColumn } from "@/components/relational/relational-table"
-import { CUSTOMS_LINE_FIELDS } from "./customs-line-columns"
-import { lineTableColumns } from "@/modules/inventory/components/line-table-columns"
+import { CustomsLinesTable } from "./customs-lines-table"
 import { StaticField, ViewSection } from "@/components/form-field"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { transferHref } from "@/modules/inventory/lib/transfer"
@@ -117,55 +116,114 @@ export function CustomsDocumentView({
     if (isListBlock(block) && block.list === "lines") {
       return (
         <ViewSection key={key} title={block.title}>
-          <RelationalView
+          <CustomsLinesTable
             id={`bc-${spec.code}-barang`}
-            label={block.title}
-            rows={draft.lines}
-            rowKey={(_, index: number) => String(index)}
-            columns={lineTableColumns<CustomsLineDraft>(CUSTOMS_LINE_FIELDS, [
-              {
-                id: "product",
-                label: "Produk",
-                value: (row) => (row.product ? `[${row.product.sku}] ${row.product.name}` : ""),
-                render: (row) =>
-                  row.product ? (
-                    <Link
-                      href={`/master/produk/${row.product.id}`}
-                      className="text-primary hover:underline"
-                    >
-                      [{row.product.sku}] {row.product.name}
-                    </Link>
-                  ) : (
-                    "—"
-                  ),
-              },
-              { id: "hsCode", label: "Kode HS", value: (row) => row.hsCode },
-              { id: "description", label: "Uraian", value: (row) => row.description },
-              {
-                id: "stockQty",
-                label: "Jumlah dalam Satuan Stok",
-                value: (row) => row.stockQty,
-                render: (row) => (row.stockQty ? formatDecimal(row.stockQty) : "—"),
-              },
-            ])}
-            details={(row) => (
-              <>
-                {spec.line.blocks.map((item, index) =>
-                  blockContent(item, `${key}-detail-${index}`, row),
-                )}
-                {spec.line.lartas && (
-                  <ViewSection title={spec.line.lartas.title}>
-                    <RelationalView
-                      id={`bc-${spec.line.lartas.title}`}
-                      label={spec.line.lartas.title}
-                      rows={row.attachments.map((entry, index) => ({ ...entry, seq: index + 1 }))}
-                      rowKey={(_, index: number) => String(index)}
-                      columns={listColumns({ ...spec.line.lartas, list: "attachments" })}
-                    />
-                  </ViewSection>
-                )}
-              </>
-            )}
+            title={block.title}
+            rows={draft.lines.map((row, index) => ({
+              key: String(index),
+              product: row.product ? `[${row.product.sku}] ${row.product.name}` : "—",
+              hsCode: row.hsCode,
+              description: row.description,
+              stockQty: row.stockQty,
+              details: (
+                <>
+                  {spec.line.blocks.map((item, index) =>
+                    blockContent(item, `${key}-detail-${index}`, row),
+                  )}
+                  <StaticField
+                    label="Jumlah dalam Satuan Stok"
+                    value={row.stockQty ? formatDecimal(row.stockQty) : "—"}
+                  />
+                  {(["25", "27", "41"] as const).includes(spec.code as "25" | "27" | "41") && (
+                    <ViewSection title="Bahan baku impor/lokal">
+                      <RelationalView
+                        id={`bc-${spec.code}-raw-materials-${index}`}
+                        label="Bahan baku impor/lokal"
+                        rows={row.rawMaterials.map((child, childIndex) => ({
+                          ...child,
+                          seq: childIndex + 1,
+                        }))}
+                        rowKey={(_, childIndex: number) => String(childIndex)}
+                        columns={(
+                          [
+                            "originCode",
+                            "productSerial",
+                            "productCode",
+                            "hsCode",
+                            "description",
+                            "quantity",
+                            "unitCode",
+                          ] as const
+                        ).map((key) => ({
+                          id: key,
+                          label: key,
+                          value: (child: Row) => String(child[key] ?? ""),
+                        }))}
+                      />
+                    </ViewSection>
+                  )}
+                  {(["33", "331"] as const).includes(spec.code as "33" | "331") && (
+                    <ViewSection title="Entitas barang">
+                      <RelationalView
+                        id={`bc-${spec.code}-line-entities-${index}`}
+                        label="Entitas barang"
+                        rows={row.entities.map((child, childIndex) => ({
+                          ...child,
+                          seq: childIndex + 1,
+                        }))}
+                        rowKey={(_, childIndex: number) => String(childIndex)}
+                        columns={(
+                          ["entityTypeCode", "name", "address", "identityNumber"] as const
+                        ).map((key) => ({
+                          id: key,
+                          label: key,
+                          value: (child: Row) => String(child[key] ?? ""),
+                        }))}
+                      />
+                    </ViewSection>
+                  )}
+                  {(["16", "28"] as const).includes(spec.code as "16" | "28") && (
+                    <ViewSection title="Pungutan barang">
+                      <RelationalView
+                        id={`bc-${spec.code}-line-duties-${index}`}
+                        label="Pungutan barang"
+                        rows={row.duties.map((child, childIndex) => ({
+                          ...child,
+                          seq: childIndex + 1,
+                        }))}
+                        rowKey={(_, childIndex: number) => String(childIndex)}
+                        columns={(
+                          [
+                            "levyCode",
+                            "taxTypeCode",
+                            "rateTypeCode",
+                            "rate",
+                            "exemptAmount",
+                            "facilityCode",
+                            "paidAmount",
+                          ] as const
+                        ).map((key) => ({
+                          id: key,
+                          label: key,
+                          value: (child: Row) => String(child[key] ?? ""),
+                        }))}
+                      />
+                    </ViewSection>
+                  )}
+                  {spec.line.lartas && (
+                    <ViewSection title={spec.line.lartas.title}>
+                      <RelationalView
+                        id={`bc-${spec.line.lartas.title}`}
+                        label={spec.line.lartas.title}
+                        rows={row.attachments.map((entry, index) => ({ ...entry, seq: index + 1 }))}
+                        rowKey={(_, index: number) => String(index)}
+                        columns={listColumns({ ...spec.line.lartas, list: "attachments" })}
+                      />
+                    </ViewSection>
+                  )}
+                </>
+              ),
+            }))}
           />
         </ViewSection>
       )

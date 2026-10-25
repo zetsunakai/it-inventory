@@ -1,9 +1,6 @@
 "use client"
 
-import { CUSTOMS_LINE_FIELDS } from "./customs-line-columns"
-import { lineTableColumns } from "@/modules/inventory/components/line-table-columns"
-
-import { X } from "lucide-react"
+import { Plus, X } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { memo, useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
@@ -19,7 +16,7 @@ import {
   RELATION_KEY,
   sumDecimals,
 } from "@/components/relational/relational-utils"
-import { formatDecimal } from "@/lib/decimal"
+import { formatDecimal, parseDecimalInput } from "@/lib/decimal"
 import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -46,6 +43,9 @@ import {
   type CustomsFieldBlock,
   type CustomsFormSpec,
   type CustomsLineDraft,
+  type CustomsRawMaterialDraft,
+  type CustomsLineEntityDraft,
+  type CustomsLineDutyDraft,
   type CustomsListBlock,
   type CustomsPartyDraft,
   type CustomsRowDraft,
@@ -54,6 +54,7 @@ import {
 } from "@/modules/it-inventory/lib/customs-form"
 
 import { AttachmentsEditor } from "./attachments-editor"
+import { CustomsLineDialog, CustomsLinesTable } from "./customs-lines-table"
 import { TransferSelector } from "./transfer-selector"
 import {
   CustomsControl,
@@ -95,7 +96,19 @@ export function CustomsDocumentForm({
     saveCustomsDocument,
     null,
   )
-  const [draft, setDraft] = useState(() => identifyRelations(initial))
+  const [draft, setDraft] = useState(() =>
+    identifyRelations({
+      ...initial,
+      // Baris kosong bawaan diganti tombol Tambah barang; draft yang berisi data tetap dipertahankan.
+      lines: initial.lines.filter((line) =>
+        Object.values(line).some((value) =>
+          typeof value === "string"
+            ? value.trim().length > 0
+            : value !== null && typeof value === "object" && Object.keys(value).length > 0,
+        ),
+      ),
+    }),
+  )
   const [labels, setLabels] = useState(initialLabels)
   const [activeTab, setActiveTab] = useState(spec.tabs[0]?.key)
   const invalidTarget = useRef<HTMLElement | null>(null)
@@ -333,6 +346,12 @@ export function CustomsDocumentForm({
       action={formAction}
       className={FORM_CLASS}
       onInvalidCapture={(event) => {
+        // Form popup berada di portal dan memvalidasi isian barangnya sendiri.
+        if (
+          event.target instanceof HTMLElement &&
+          event.target.closest("form") !== event.currentTarget
+        )
+          return
         if (invalidTarget.current === event.target) return
         event.preventDefault()
         if (invalidTarget.current || !(event.target instanceof HTMLElement)) return
@@ -678,8 +697,7 @@ function RowsEditor({
   )
 }
 
-// Barang ditampilkan ringkas. Detail tiap seri tetap satu form dengan dokumen agar validasi
-// required, Dokumen Lartas, dan Voluntary Declaration tetap bekerja saat detail ditutup.
+// Popup mengedit salinan baris. Terapkan mengubah draft dokumen; Batal tidak mengubah daftar.
 function LinesEditor({
   spec,
   title,
@@ -699,8 +717,12 @@ function LinesEditor({
   refLabels: RefLabels
   onLabel: OnLabel
 }) {
-  const update = (index: number, patch: Partial<CustomsLineDraft>) =>
-    onChange(lines.map((line, position) => (position === index ? { ...line, ...patch } : line)))
+  const [editing, setEditing] = useState<{ key: string | null; line: CustomsLineDraft } | null>(
+    null,
+  )
+  const [lineError, setLineError] = useState("")
+  const update = (_index: number, patch: Partial<CustomsLineDraft>) =>
+    setEditing((current) => (current ? { ...current, line: { ...current.line, ...patch } } : null))
   const lineValue = (line: CustomsLineDraft) => (field: CustomsField) =>
     field.store === "lineDetails"
       ? (line.details[field.key] ?? "")
@@ -718,174 +740,360 @@ function LinesEditor({
       )
     }
 
+  const renderFields = (line: CustomsLineDraft, index: number) => {
+    const valueOf = lineValue(line)
+    const changeOf = lineChange(index, line)
+    const prefix = `${idPrefix}-${relationKey(line)}`
+    return (
+      <>
+        {lineError && (
+          <p role="alert" data-span={12} className="text-sm text-destructive">
+            {lineError}
+          </p>
+        )}
+        {spec.line.blocks.map((block, blockIndex) => {
+          // Daftar (Voluntary Declaration) tampil setelah isian, lihat di bawah.
+          if (isListBlock(block)) return null
+          return block.fields.map((item, itemIndex) => {
+            if (isFieldGroup(item)) {
+              return (
+                <CustomsGroupField
+                  key={`${blockIndex}-${itemIndex}`}
+                  group={item}
+                  id={`${prefix}-${item.group}`}
+                  value={valueOf}
+                  onChange={changeOf}
+                  refLabels={refLabels}
+                />
+              )
+            }
+            if (item.kind === "product") {
+              return (
+                <FormField
+                  key="product"
+                  label={item.label}
+                  htmlFor={`${prefix}-product`}
+                  span={12}
+                  required
+                >
+                  <SearchSelect<ProductChoice>
+                    id={`${prefix}-product`}
+                    endpoint="/api/customs-products"
+                    required
+                    value={
+                      line.product ? { ...line.product, hsCode: line.hsCode, uomCode: "" } : null
+                    }
+                    onValueChange={(product) =>
+                      update(index, {
+                        productId: product?.id ?? "",
+                        product: product
+                          ? { id: product.id, sku: product.sku, name: product.name }
+                          : null,
+                        itemCode: product?.sku ?? line.itemCode,
+                        hsCode: product?.hsCode ?? line.hsCode,
+                        description: line.description || product?.name || "",
+                      })
+                    }
+                    getKey={(choice) => choice.id}
+                    getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
+                    placeholder="Cari product code atau nama produk"
+                  />
+                </FormField>
+              )
+            }
+            return (
+              <CustomsFormField
+                key={`${blockIndex}-${itemIndex}`}
+                field={item}
+                id={`${prefix}-${item.key}`}
+                value={valueOf(item)}
+                onChange={changeOf(item)}
+                refLabels={refLabels}
+              />
+            )
+          })
+        })}
+        <CustomsFormField
+          field={STOCK_QTY}
+          id={`${prefix}-stockQty`}
+          value={line.stockQty}
+          onChange={changeOf(STOCK_QTY)}
+          refLabels={refLabels}
+        />
+        {spec.line.blocks.map((block, blockIndex) =>
+          isListBlock(block) && block.list === "vdEntries" ? (
+            <div key={blockIndex} data-span={12} className="form-field">
+              <RowsEditor
+                title={block.title || "Voluntary Declaration"}
+                idPrefix={`${prefix}-vd`}
+                columns={block.columns}
+                rows={line.vdEntries}
+                onChange={(rows) => update(index, { vdEntries: rows })}
+                newRow={() => emptyRow(CUSTOMS_ROW_KEYS.vdEntries)}
+                refLabels={refLabels}
+                onLabel={onLabel}
+              />
+            </div>
+          ) : null,
+        )}
+        {spec.line.lartas && (
+          <div data-span={12} className="form-field">
+            <AttachmentsEditor
+              title={spec.line.lartas.title}
+              columns={spec.line.lartas.columns}
+              documentId={documentId}
+              idPrefix={`${prefix}-lartas`}
+              rows={line.attachments}
+              onChange={(rows) => update(index, { attachments: rows })}
+              refLabels={refLabels}
+              onLabel={onLabel}
+            />
+          </div>
+        )}
+        {(["25", "27", "41"] as const).includes(spec.code as "25" | "27" | "41") && (
+          <LineChildList<CustomsRawMaterialDraft>
+            title="Bahan baku impor/lokal"
+            rows={line.rawMaterials}
+            fields={[
+              "originCode",
+              "productSerial",
+              "productCode",
+              "hsCode",
+              "description",
+              "quantity",
+              "unitCode",
+            ]}
+            create={() => ({
+              originCode: "",
+              productSerial: "",
+              productCode: "",
+              hsCode: "",
+              description: "",
+              quantity: "",
+              unitCode: "",
+              attachments: [],
+              details: {},
+            })}
+            onChange={(rawMaterials) => update(index, { rawMaterials })}
+          />
+        )}
+        {(["33", "331"] as const).includes(spec.code as "33" | "331") && (
+          <LineChildList<CustomsLineEntityDraft>
+            title="Entitas barang"
+            rows={line.entities}
+            fields={["entityTypeCode", "name", "address", "identityNumber"]}
+            create={() => ({
+              entityTypeCode: "",
+              partnerId: null,
+              name: "",
+              address: "",
+              identityNumber: "",
+              details: {},
+            })}
+            onChange={(entities) => update(index, { entities })}
+          />
+        )}
+        {(["16", "28"] as const).includes(spec.code as "16" | "28") && (
+          <LineChildList<CustomsLineDutyDraft>
+            title="Pungutan barang"
+            rows={line.duties}
+            fields={[
+              "levyCode",
+              "taxTypeCode",
+              "rateTypeCode",
+              "rate",
+              "exemptAmount",
+              "facilityCode",
+              "paidAmount",
+              "bmt",
+            ]}
+            create={() => ({
+              levyCode: "other",
+              taxTypeCode: "",
+              rateTypeCode: "",
+              rate: "",
+              exemptAmount: "",
+              facilityCode: "",
+              paidAmount: "",
+              bmt: false,
+              details: {},
+            })}
+            onChange={(duties) => update(index, { duties })}
+          />
+        )}
+      </>
+    )
+  }
+
   return (
     <FormSection
       title={title}
       description="Hanya produk yang sudah punya kode HS. Terisi dari permintaan transfer yang dipilih di header."
+      actions={
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setLineError("")
+            setEditing({ key: null, line: newRelation(emptyLine()) })
+          }}
+        >
+          <Plus />
+          Tambah barang
+        </Button>
+      }
     >
-      <RelationalTable<CustomsLineDraft>
+      <CustomsLinesTable
         id={`bc-${spec.code}-barang`}
-        label={title}
-        rows={lines}
-        rowKey={relationKey}
-        onReorder={onChange}
-        onRemove={(keys) => onChange(lines.filter((line) => !keys.includes(relationKey(line))))}
-        addLabel="Tambah Barang"
-        onAdd={() => {
-          const line = newRelation(emptyLine())
-          onChange([...lines, line])
-          return relationKey(line)
-        }}
-        columns={lineTableColumns<CustomsLineDraft>(CUSTOMS_LINE_FIELDS, [
-          {
-            id: "product",
-            label: "Produk",
-            required: true,
-            width: 340,
-            value: (line) => (line.product ? `[${line.product.sku}] ${line.product.name}` : ""),
-            render: (line) =>
-              line.product ? (
-                <a
-                  href={`/master/produk/${line.product.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-primary hover:underline"
-                >
-                  [{line.product.sku}] {line.product.name}
-                </a>
-              ) : (
-                "—"
-              ),
-          },
-          { id: "hsCode", label: "Kode HS", width: 180, value: (line) => line.hsCode },
-          {
-            id: "description",
-            label: "Uraian",
-            width: 280,
-            optional: true,
-            value: (line) => line.description,
-          },
-          {
-            id: "stockQty",
-            label: "Jumlah dalam Satuan Stok",
-            width: 240,
-            numeric: true,
-            required: true,
-            value: (line) => line.stockQty,
-          },
-        ])}
-        details={(line, index) => {
-          const valueOf = lineValue(line)
-          const changeOf = lineChange(index, line)
-          const prefix = `${idPrefix}-${relationKey(line)}`
-          return (
-            <>
-              {spec.line.blocks.map((block, blockIndex) => {
-                // Daftar (Voluntary Declaration) tampil setelah isian, lihat di bawah.
-                if (isListBlock(block)) return null
-                return block.fields.map((item, itemIndex) => {
-                  if (isFieldGroup(item)) {
-                    return (
-                      <CustomsGroupField
-                        key={`${blockIndex}-${itemIndex}`}
-                        group={item}
-                        id={`${prefix}-${item.group}`}
-                        value={valueOf}
-                        onChange={changeOf}
-                        refLabels={refLabels}
-                      />
-                    )
-                  }
-                  if (item.kind === "product") {
-                    return (
-                      <FormField
-                        key="product"
-                        label={item.label}
-                        htmlFor={`${prefix}-product`}
-                        span={12}
-                        required
-                      >
-                        <SearchSelect<ProductChoice>
-                          id={`${prefix}-product`}
-                          endpoint="/api/customs-products"
-                          required
-                          value={
-                            line.product
-                              ? { ...line.product, hsCode: line.hsCode, uomCode: "" }
-                              : null
-                          }
-                          onValueChange={(product) =>
-                            update(index, {
-                              productId: product?.id ?? "",
-                              product: product
-                                ? { id: product.id, sku: product.sku, name: product.name }
-                                : null,
-                              itemCode: product?.sku ?? line.itemCode,
-                              hsCode: product?.hsCode ?? line.hsCode,
-                              description: line.description || product?.name || "",
-                            })
-                          }
-                          getKey={(choice) => choice.id}
-                          getLabel={(choice) => `[${choice.sku}] ${choice.name}`}
-                          placeholder="Cari product code atau nama produk"
-                        />
-                      </FormField>
-                    )
-                  }
-                  return (
-                    <CustomsFormField
-                      key={`${blockIndex}-${itemIndex}`}
-                      field={item}
-                      id={`${prefix}-${item.key}`}
-                      value={valueOf(item)}
-                      onChange={changeOf(item)}
-                      refLabels={refLabels}
-                    />
-                  )
-                })
-              })}
-              <CustomsFormField
-                field={STOCK_QTY}
-                id={`${prefix}-stockQty`}
-                value={line.stockQty}
-                onChange={changeOf(STOCK_QTY)}
-                refLabels={refLabels}
-              />
-              {spec.line.blocks.map((block, blockIndex) =>
-                isListBlock(block) && block.list === "vdEntries" ? (
-                  <div key={blockIndex} data-span={12} className="form-field">
-                    <RowsEditor
-                      title={block.title || "Voluntary Declaration"}
-                      idPrefix={`${prefix}-vd`}
-                      columns={block.columns}
-                      rows={line.vdEntries}
-                      onChange={(rows) => update(index, { vdEntries: rows })}
-                      newRow={() => emptyRow(CUSTOMS_ROW_KEYS.vdEntries)}
-                      refLabels={refLabels}
-                      onLabel={onLabel}
-                    />
-                  </div>
-                ) : null,
-              )}
-              {spec.line.lartas && (
-                <div data-span={12} className="form-field">
-                  <AttachmentsEditor
-                    title={spec.line.lartas.title}
-                    columns={spec.line.lartas.columns}
-                    documentId={documentId}
-                    idPrefix={`${prefix}-lartas`}
-                    rows={line.attachments}
-                    onChange={(rows) => update(index, { attachments: rows })}
-                    refLabels={refLabels}
-                    onLabel={onLabel}
-                  />
-                </div>
-              )}
-            </>
-          )
+        title={title}
+        rows={lines.map((line) => ({
+          key: relationKey(line),
+          product: line.product ? `[${line.product.sku}] ${line.product.name}` : "—",
+          hsCode: line.hsCode,
+          description: line.description,
+          stockQty: line.stockQty,
+        }))}
+        onOpen={(key) => {
+          const line = lines.find((line) => relationKey(line) === key)
+          if (line) {
+            setLineError("")
+            setEditing({ key, line: { ...line, details: { ...line.details } } })
+          }
         }}
       />
+      {editing && (
+        <CustomsLineDialog
+          title={editing.key ? "Edit barang" : "Tambah barang"}
+          onClose={() => setEditing(null)}
+          onApply={() => {
+            const qty = parseDecimalInput(editing.line.qty, 4)
+            const stockQty = parseDecimalInput(editing.line.stockQty, 4)
+            if (
+              !editing.line.productId ||
+              !qty ||
+              Number(qty) <= 0 ||
+              !stockQty ||
+              Number(stockQty) <= 0
+            ) {
+              setLineError(
+                "Pilih produk serta isi jumlah CEISA dan jumlah satuan stok lebih dari nol.",
+              )
+              return
+            }
+            onChange(
+              editing.key
+                ? lines.map((line) => (relationKey(line) === editing.key ? editing.line : line))
+                : [...lines, editing.line],
+            )
+            setEditing(null)
+          }}
+          onRemove={
+            editing.key
+              ? () => {
+                  onChange(lines.filter((line) => relationKey(line) !== editing.key))
+                  setEditing(null)
+                }
+              : undefined
+          }
+        >
+          {renderFields(editing.line, 0)}
+        </CustomsLineDialog>
+      )}
     </FormSection>
+  )
+}
+
+function LineChildList<T extends object>({
+  title,
+  rows,
+  fields,
+  create,
+  onChange,
+}: {
+  title: string
+  rows: T[]
+  fields: (keyof T)[]
+  create: () => T
+  onChange: (rows: T[]) => void
+}) {
+  const label = (key: keyof T) =>
+    String(key).replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)
+  return (
+    <section data-span={12} className="rounded-lg border p-3">
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h3 className="text-sm font-semibold">{title}</h3>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={() => onChange([...rows, create()])}
+        >
+          <Plus /> Tambah
+        </Button>
+      </div>
+      {rows.length === 0 ? (
+        <p className="text-control text-muted-foreground">Belum ada data.</p>
+      ) : (
+        <div className="space-y-3">
+          {rows.map((row, rowIndex) => (
+            <div key={rowIndex} className="grid gap-3 rounded-md bg-muted/30 p-3 sm:grid-cols-2">
+              {fields.map((field) => {
+                const values = row as Record<string, unknown>
+                const id = `${title}-${rowIndex}-${String(field)}`
+                return (
+                  <FormField key={String(field)} label={label(field)} htmlFor={id}>
+                    {typeof values[String(field)] === "boolean" ? (
+                      <input
+                        id={id}
+                        type="checkbox"
+                        checked={values[String(field)] as boolean}
+                        onChange={(event) =>
+                          onChange(
+                            rows.map((item, index) =>
+                              index === rowIndex
+                                ? { ...item, [field]: event.target.checked }
+                                : item,
+                            ),
+                          )
+                        }
+                      />
+                    ) : (
+                      <input
+                        id={id}
+                        className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                        value={
+                          typeof values[String(field)] === "string"
+                            ? (values[String(field)] as string)
+                            : ""
+                        }
+                        onChange={(event) =>
+                          onChange(
+                            rows.map((item, index) =>
+                              index === rowIndex ? { ...item, [field]: event.target.value } : item,
+                            ),
+                          )
+                        }
+                      />
+                    )}
+                  </FormField>
+                )
+              })}
+              <div className="sm:col-span-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="text-destructive"
+                  onClick={() => onChange(rows.filter((_, index) => index !== rowIndex))}
+                >
+                  Hapus baris
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
   )
 }
 

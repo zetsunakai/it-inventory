@@ -105,9 +105,7 @@ test("foreign key menjangkau hasil halaman kedua dan membuka detail record", asy
   expect((await payload(page))[0].productId).toBe(choice.id)
 })
 
-test("pagination, preferensi kolom, dan seleksi mempertahankan seluruh payload", async ({
-  page,
-}) => {
+test("pagination dan seleksi mempertahankan seluruh payload", async ({ page }) => {
   await page.goto("/inventory/penerimaan/baru")
   for (let index = 0; index < 10; index++)
     await table(page).getByRole("button", { name: "Tambah baris", exact: true }).click()
@@ -118,17 +116,12 @@ test("pagination, preferensi kolom, dan seleksi mempertahankan seluruh payload",
   expect((await payload(page))[10].inputQty).toBe("7")
   await table(page).getByRole("button", { name: "Halaman berikutnya Barang" }).click()
   await expect(page.getByLabel("Qty baris 11")).toHaveValue("7")
-  await table(page).getByRole("button", { name: "Atur kolom Barang" }).click()
-  await page.getByRole("menuitemcheckbox", { name: "Nomor lot", exact: true }).click()
-  await page.keyboard.press("Escape")
-  await expect(table(page).getByRole("columnheader").filter({ hasText: "Nomor lot" })).toHaveCount(
-    0,
-  )
+  await expect(table(page).getByRole("button", { name: "Atur kolom Barang" })).toHaveCount(0)
   await table(page).getByRole("checkbox", { name: "Pilih semua Barang" }).check()
   await expect(table(page).getByRole("button", { name: "Hapus terpilih" })).toBeDisabled()
   await page.reload()
   await expect(table(page).getByRole("columnheader").filter({ hasText: "Nomor lot" })).toHaveCount(
-    0,
+    1,
   )
 })
 
@@ -163,41 +156,60 @@ test("tabel relasi dan selector terkandung di viewport desktop dan mobile", asyn
   await page.screenshot({ path: testInfo.outputPath("selector-mobile.png"), fullPage: true })
 })
 
-test("daftar BC mendukung edit detail, reorder, dan hapus tanpa menukar nilai", async ({
+test("daftar Barang BC membuka popup, membatalkan draft, dan menerapkan perubahan", async ({
   page,
 }, testInfo) => {
-  await page.goto("/dokumen-bc/bc23/baru")
+  const fixture = await createInventoryFixture("BCWIZ")
+  const { db, pool } = createDb(TEST_DATABASE_URL)
+  let documentId: string
+  try {
+    await db.update(products).set({ hsCode: "52081100" }).where(eq(products.id, fixture.product.id))
+    documentId = await db.transaction(
+      async (tx) => (await insertCompleteDocument(tx, "23", fixture.product.id)).id,
+    )
+  } finally {
+    await pool.end()
+  }
+  await page.goto(`/dokumen-bc/bc23/${documentId!}`)
+  await page.getByRole("button", { name: "Edit", exact: true }).click()
   await page.getByRole("tab", { name: "Barang", exact: true }).click()
   const items = page.locator('[data-relational-table="bc-23-barang"]')
-  await items.locator("tbody > tr").first().locator("td").nth(1).click()
-  await expect(items.locator("tbody > tr").nth(1).locator(":focus")).toHaveCount(1)
-  await page.getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true }).fill("11")
-  await items.getByRole("button", { name: "Tambah Barang", exact: true }).click()
-  await page
-    .getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true })
-    .filter({ visible: true })
-    .fill("22")
-  const handle = items.getByRole("button", { name: "Urutkan baris 2", exact: true })
-  await handle.focus()
-  await page.keyboard.press("ArrowUp")
   const docValue = () =>
     page
       .locator('input[name="document"]')
       .inputValue()
       .then((value) => JSON.parse(value) as { lines: { stockQty: string }[] })
-  expect((await docValue()).lines.map((line) => line.stockQty)).toEqual(["22", "11"])
-  await items.getByRole("button", { name: "Hapus baris 2", exact: true }).click()
-  expect((await docValue()).lines.map((line) => line.stockQty)).toEqual(["22"])
-  await expect(
-    page
-      .getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true })
-      .filter({ visible: true }),
-  ).toHaveValue("22")
+  const before = await docValue()
+  await expect(items.locator("input:not([type=hidden]), textarea")).toHaveCount(0)
+  await expect(items.getByRole("button", { name: "Tambah Barang", exact: true })).toHaveCount(0)
+  await items.locator("tbody > tr").first().locator("td").nth(1).click()
+  let dialog = page.getByRole("dialog", { name: "Edit barang", exact: true })
+  await dialog.getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true }).fill("11")
+  expect(await docValue()).toEqual(before)
+  await dialog.getByRole("button", { name: "Batal", exact: true }).click()
+  expect(await docValue()).toEqual(before)
+  await items.locator("tbody > tr").first().locator("td").nth(1).click()
+  dialog = page.getByRole("dialog", { name: "Edit barang", exact: true })
+  await dialog.getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true }).fill("11")
+  await dialog.getByRole("button", { name: "Terapkan", exact: true }).click()
+  await expect(dialog).toBeHidden()
+  expect((await docValue()).lines[0].stockQty).toBe("11")
+  await page.getByRole("button", { name: "Tambah barang", exact: true }).click()
+  const adding = page.getByRole("dialog", { name: "Tambah barang", exact: true })
+  await adding.getByRole("button", { name: "Terapkan", exact: true }).click()
+  await expect(adding).toBeVisible()
+  expect((await docValue()).lines).toHaveLength(1)
   await page.setViewportSize({ width: 390, height: 844 })
-  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
-    true,
-  )
-  await page.screenshot({ path: testInfo.outputPath("bc-mobile.png"), fullPage: true })
+  expect((await adding.boundingBox())!.width).toBeLessThanOrEqual(390)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath("bc-wizard-mobile.png"), fullPage: true })
+  await adding.getByRole("button", { name: "Batal", exact: true }).click()
+  await items.locator("tbody > tr").first().locator("td").nth(1).click()
+  await page
+    .getByRole("dialog", { name: "Edit barang", exact: true })
+    .getByRole("button", { name: "Hapus barang", exact: true })
+    .click()
+  expect((await docValue()).lines).toHaveLength(0)
 })
 
 test("validasi membuka editor baris wajib yang ditutup", async ({ page }) => {
@@ -214,7 +226,7 @@ test("validasi membuka editor baris wajib yang ditutup", async ({ page }) => {
   expect(await payload(page)).toHaveLength(2)
 })
 
-test("barang BC tetap tersimpan saat detail ditutup", async ({ page }) => {
+test("barang BC diterapkan lewat popup dan tersimpan bersama dokumen", async ({ page }) => {
   const fixture = await createInventoryFixture("BCSAVE")
   const { db, pool } = createDb(TEST_DATABASE_URL)
   let documentId: string
@@ -231,12 +243,11 @@ test("barang BC tetap tersimpan saat detail ditutup", async ({ page }) => {
   await page.getByRole("tab", { name: "Barang", exact: true }).click()
   const items = page.locator('[data-relational-table="bc-23-barang"]')
   await items.locator("tbody > tr").first().locator("td").nth(1).click()
-  await expect(items.locator("tbody > tr").nth(1).locator(":focus")).toHaveCount(1)
-  await page.getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true }).fill("77")
-  await page.getByRole("tab", { name: "Barang", exact: true }).click()
-  await expect(
-    page.getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true }),
-  ).toBeHidden()
+  const dialog = page.getByRole("dialog", { name: "Edit barang", exact: true })
+  await dialog.getByRole("textbox", { name: "Jumlah dalam Satuan Stok", exact: true }).fill("77")
+  await dialog.getByRole("button", { name: "Terapkan", exact: true }).click()
+  await expect(dialog).toBeHidden()
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0)
   await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByText("Dokumen disimpan.")).toBeVisible()
   await expect(page.getByRole("button", { name: "Edit", exact: true })).toBeVisible()

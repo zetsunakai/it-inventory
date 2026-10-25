@@ -1,17 +1,10 @@
 "use client"
 
-import { ArrowDown, ArrowUp, Columns3, GripVertical, Eye, Pin, Plus, Trash2 } from "lucide-react"
+import { ArrowDown, ArrowUp, GripVertical, Eye, Pin, Plus, Trash2 } from "lucide-react"
 import { Fragment, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Checkbox } from "@/components/ui/checkbox"
-import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import {
   Table,
   TableBody,
@@ -20,7 +13,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useStoredValue } from "@/lib/use-stored-value"
 import { cn } from "@/lib/utils"
 
 export type RelationColumn<Row> = {
@@ -36,10 +28,6 @@ export type RelationColumn<Row> = {
   optional?: boolean
   hidden?: boolean
   footer?: (rows: Row[]) => ReactNode
-}
-
-type Preferences = {
-  hidden?: string[]
 }
 
 // Pin baris dan pagination hanya mengubah tampilan. Semua callback memakai indeks sumber.
@@ -116,16 +104,9 @@ export function RelationalTable<Row>({
   })
   const invalidTarget = useRef<EventTarget | null>(null)
   const [validationMessage, setValidationMessage] = useState<string | null>(null)
-  const [stored, store] = useStoredValue<Preferences>(`relasi:${id}`, {})
-  const [local, setLocal] = useState<Preferences>({})
-  const prefs = { ...stored, ...local }
-  const save = (next: Preferences) => {
-    const value = { ...prefs, ...next }
-    setLocal(value)
-    store(value)
-  }
-  const hidden =
-    prefs.hidden ?? columns.filter((column) => column.hidden).map((column) => column.id)
+  const [hidden, setHidden] = useState(() =>
+    columns.filter((column) => column.hidden).map((column) => column.id),
+  )
   const visible = columns.filter((column) => !hidden.includes(column.id))
   const [selected, setSelected] = useState<string[]>([])
   const [pinnedRows, setPinnedRows] = useState<string[]>([])
@@ -222,7 +203,7 @@ export function RelationalTable<Row>({
         setEditing(key)
         setPage(Math.floor(entries.findIndex((entry) => entry.key === key) / pageSize) + 1)
         if (column && hidden.includes(column))
-          save({ hidden: hidden.filter((entry) => entry !== column) })
+          setHidden((current) => current.filter((entry) => entry !== column))
         target.setAttribute("aria-invalid", "true")
         requestAnimationFrame(() => {
           target.focus()
@@ -230,67 +211,26 @@ export function RelationalTable<Row>({
         })
       }}
     >
-      <div className="flex min-h-9 flex-wrap items-center justify-between gap-2 text-control">
-        <span className="text-muted-foreground">
-          {rows.length} baris
-          {chosen.length ? ` · ${chosen.length} dipilih` : ""}
-        </span>
-        <div className="flex items-center gap-2">
-          {chosen.length > 0 && onRemove && (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-destructive"
-              disabled={rows.length - chosen.length < minRows}
-              onClick={() => {
-                if (window.confirm(`Hapus ${chosen.length} baris terpilih dari ${label}?`)) {
-                  onRemove(chosen.map((entry) => entry.key))
-                  setSelected([])
-                }
-              }}
-            >
-              <Trash2 />
-              Hapus terpilih
-            </Button>
-          )}
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={<Button type="button" variant="outline" size="sm" />}
-              aria-label={`Atur kolom ${label}`}
-            >
-              <Columns3 />
-              Kolom
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              {columns.map((column) => (
-                <DropdownMenuCheckboxItem
-                  key={column.id}
-                  checked={!hidden.includes(column.id)}
-                  disabled={!column.optional}
-                  onCheckedChange={(show) =>
-                    save({
-                      hidden: show
-                        ? hidden.filter((key) => key !== column.id)
-                        : [...hidden, column.id],
-                    })
-                  }
-                >
-                  {column.label}
-                </DropdownMenuCheckboxItem>
-              ))}
-              <DropdownMenuItem
-                onClick={() => {
-                  setLocal({})
-                  store({})
-                }}
-              >
-                Reset kolom
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+      {chosen.length > 0 && onRemove && (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive"
+            disabled={rows.length - chosen.length < minRows}
+            onClick={() => {
+              if (window.confirm(`Hapus ${chosen.length} baris terpilih dari ${label}?`)) {
+                onRemove(chosen.map((entry) => entry.key))
+                setSelected([])
+              }
+            }}
+          >
+            <Trash2 />
+            Hapus terpilih
+          </Button>
         </div>
-      </div>
+      )}
       {validationMessage && (
         <p role="alert" className="text-control text-destructive">
           {validationMessage}

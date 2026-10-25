@@ -1,5 +1,5 @@
 import type { CustomsDocCode } from "./customs"
-import type { CustomsFormSpec } from "./customs-form"
+import type { CustomsField, CustomsFormSpec, CustomsLayout, CustomsListBlock } from "./customs-form"
 import { CUSTOMS_LAYOUTS } from "./customs-layouts.generated"
 
 // Form per jenis dokumen BC (backlog M3-05–M3-09, D-01–D-08, D-09): tab, grup, field, dan label
@@ -11,7 +11,138 @@ const spec = (
   title: string,
   description: string,
   path: string,
-): CustomsFormSpec => ({ code, title, description, path, ...CUSTOMS_LAYOUTS[code] })
+): CustomsFormSpec => {
+  const layout = CUSTOMS_LAYOUTS[code] as CustomsLayout
+
+  // Equip3's P3BET line form does not bind product_id, but the IT Inventory line
+  // contract requires productId. Make product selection explicit in this BC's
+  // add/edit wizard instead of relying on a transfer to fill it implicitly.
+  const importedLine =
+    code === "331"
+      ? {
+          ...layout.line,
+          blocks: layout.line.blocks.map((block, index) =>
+            index === 0 && "fields" in block && Array.isArray(block.fields)
+              ? {
+                  ...block,
+                  fields: [
+                    {
+                      key: "product",
+                      label: "Produk",
+                      kind: "product" as const,
+                      required: true,
+                      span: 12 as const,
+                    },
+                    ...block.fields,
+                  ],
+                }
+              : block,
+          ),
+        }
+      : layout.line
+  const line =
+    code === "28"
+      ? {
+          ...importedLine,
+          blocks: [
+            ...importedLine.blocks,
+            {
+              title: "Voluntary Declaration",
+              list: "vdEntries",
+              columns: [
+                {
+                  key: "valuationTypeCode",
+                  label: "Jenis Nilai VD",
+                  kind: "option",
+                  list: "valuationType",
+                },
+                { key: "dueDate", label: "Tanggal Jatuh Tempo", kind: "date" },
+                { key: "amount", label: "Nilai VD", kind: "money" },
+              ],
+            } satisfies CustomsListBlock,
+          ],
+        }
+      : importedLine
+
+  // Equip3 O2M catalog gaps (PRD 24 Oct 2026): these values are scalar line
+  // bindings in the source forms but were absent from the imported HMX fieldset.
+  const equip3Fields: Partial<Record<CustomsDocCode, CustomsField[]>> = {
+    "33": [
+      {
+        key: "productCategoryCode",
+        store: "lineDetails",
+        label: "Kategori Barang",
+        kind: "option",
+        list: "productCategory",
+      },
+      { key: "volume", store: "lineDetails", label: "Volume", kind: "qty" },
+    ],
+    "331": [
+      {
+        key: "originCountryCode",
+        store: "line",
+        label: "Negara Asal Barang",
+        kind: "ref",
+        refType: "country",
+      },
+    ],
+    "20": [{ key: "unitPrice", store: "line", label: "Harga Satuan", kind: "qty" }],
+    "261": [
+      { key: "fobValue", store: "line", label: "Harga FOB", kind: "money" },
+      { key: "volume", store: "lineDetails", label: "Volume", kind: "qty" },
+      { key: "unitPrice", store: "line", label: "Harga Satuan FOB", kind: "qty" },
+    ],
+    "262": [
+      { key: "fobValue", store: "line", label: "Harga FOB", kind: "money" },
+      { key: "volume", store: "lineDetails", label: "Volume", kind: "qty" },
+      { key: "unitPrice", store: "line", label: "Harga Satuan FOB", kind: "qty" },
+    ],
+    "28": [
+      {
+        key: "specification",
+        store: "line",
+        label: "Spesifikasi Lain",
+        kind: "text",
+        long: true,
+      },
+      { key: "netWeight", store: "line", label: "Berat Bersih (Kg)", kind: "qty" },
+    ],
+  }
+  const additions = equip3Fields[code] ?? []
+  const completedLine =
+    additions.length === 0
+      ? line
+      : {
+          ...line,
+          blocks: line.blocks.map((block, index) =>
+            index === line.blocks.length - 1 && "fields" in block
+              ? { ...block, fields: [...block.fields, ...additions] }
+              : block,
+          ),
+        }
+  let volumeSeen = false
+  const normalizedLine =
+    code === "27"
+      ? {
+          ...completedLine,
+          blocks: completedLine.blocks.map((block) => {
+            if (!("fields" in block)) return block
+            return {
+              ...block,
+              fields: block.fields.filter((item) => {
+                if ("group" in item || item.key !== "volume") return true
+                if (volumeSeen) return false
+                volumeSeen = true
+                item.label = "Volume (m³)"
+                return true
+              }),
+            }
+          }),
+        }
+      : completedLine
+
+  return { code, title, description, path, ...layout, line: normalizedLine }
+}
 
 export const BC23 = spec(
   "23",

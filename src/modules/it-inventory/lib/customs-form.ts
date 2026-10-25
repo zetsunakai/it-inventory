@@ -259,6 +259,42 @@ export type CustomsLineDraft = Record<CustomsLineColumn, string> & {
   // Dokumen Lartas barang ini dan Voluntary Declaration (BC 2.0).
   attachments: CustomsAttachmentDraft[]
   vdEntries: CustomsRowDraft[]
+  rawMaterials: CustomsRawMaterialDraft[]
+  entities: CustomsLineEntityDraft[]
+  duties: CustomsLineDutyDraft[]
+}
+
+// Structures anak pada rincian Equip3. Scalar khusus varian disimpan di details,
+// sementara identitas relasi dan nilai operasional punya binding eksplisit.
+export type CustomsRawMaterialDraft = {
+  originCode: string
+  productSerial: string
+  productCode: string
+  hsCode: string
+  description: string
+  quantity: string
+  unitCode: string
+  attachments: CustomsAttachmentDraft[]
+  details: Record<string, string>
+}
+export type CustomsLineEntityDraft = {
+  entityTypeCode: string
+  partnerId: string | null
+  name: string
+  address: string
+  identityNumber: string
+  details: Record<string, string>
+}
+export type CustomsLineDutyDraft = {
+  levyCode: "bm" | "ppn" | "ppnbm" | "pph" | "cukai" | "other"
+  taxTypeCode: string
+  rateTypeCode: string
+  rate: string
+  exemptAmount: string
+  facilityCode: string
+  paidAmount: string
+  bmt: boolean
+  details: Record<string, string>
 }
 
 export type CustomsTaxDraft = { levyTypeCode: string; rate: string; amount: string; status: string }
@@ -350,6 +386,9 @@ export function emptyLine(): CustomsLineDraft {
     details: {},
     attachments: [],
     vdEntries: [],
+    rawMaterials: [],
+    entities: [],
+    duties: [],
   }
 }
 
@@ -640,6 +679,37 @@ const attachmentSchema = z.object({
     .nullable(),
 })
 
+const rawMaterialSchema = z.object({
+  originCode: code,
+  productSerial: text("Seri barang asal", 30),
+  productCode: text("Kode barang bahan baku", 100),
+  hsCode: code,
+  description: text("Uraian bahan baku", 500),
+  quantity: text("Jumlah bahan baku", 40),
+  unitCode: code,
+  attachments: z.array(attachmentSchema).default([]),
+  details,
+})
+const lineEntitySchema = z.object({
+  entityTypeCode: code,
+  partnerId: z.uuid().nullable(),
+  name: text("Nama entitas barang", 200),
+  address: text("Alamat entitas barang", 500),
+  identityNumber: text("Nomor identitas entitas barang", 50),
+  details,
+})
+const lineDutySchema = z.object({
+  levyCode: z.enum(["bm", "ppn", "ppnbm", "pph", "cukai", "other"]),
+  taxTypeCode: code,
+  rateTypeCode: code,
+  rate: text("Tarif pungutan barang", 40),
+  exemptAmount: text("Nilai dibebaskan", 40),
+  facilityCode: code,
+  paidAmount: text("Nilai sudah dilunasi", 40),
+  bmt: z.boolean().default(false),
+  details,
+})
+
 const lineSchema = z
   .object({
     productId: z.uuid("Produk barang wajib dipilih."),
@@ -648,6 +718,9 @@ const lineSchema = z
     details,
     attachments: z.array(attachmentSchema),
     vdEntries: jsonRows,
+    rawMaterials: z.array(rawMaterialSchema).default([]),
+    entities: z.array(lineEntitySchema).default([]),
+    duties: z.array(lineDutySchema).default([]),
   })
   .catchall(z.string())
 
@@ -716,6 +789,9 @@ export const customsDocumentInputSchema = z
       details: line.details,
       attachments: line.attachments,
       vdEntries: line.vdEntries,
+      rawMaterials: line.rawMaterials,
+      entities: line.entities,
+      duties: line.duties,
       ...parseRecord(lineKinds(index + 1), line as unknown as Record<string, string>, ctx),
     }))
     // Entitas tanpa nama dibuang; peran yang boleh berulang (pemilik barang di daftar) diberi seri.

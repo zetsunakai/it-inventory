@@ -10,9 +10,7 @@ async function headers(table: Locator) {
   )
 }
 
-test("tabel Barang memiliki kolom dan preferensi yang sama pada mode baca dan edit", async ({
-  page,
-}) => {
+test("tabel Barang memiliki kolom yang sama pada mode baca dan edit", async ({ page }) => {
   await page.setViewportSize({ width: 1920, height: 1080 })
   const fixture = await createInventoryFixture("MIRROR")
   const id = await receiveStock(fixture, "7", undefined, false)
@@ -33,14 +31,10 @@ test("tabel Barang memiliki kolom dan preferensi yang sama pada mode baca dan ed
   await table.locator("tbody > tr").first().locator("td").nth(1).click()
   await expect(table.getByLabel("Qty baris 1", { exact: true })).toHaveValue("7")
   expect(await headers(table)).toEqual(before)
-  await table.getByRole("button", { name: "Atur kolom Barang", exact: true }).click()
-  await expect(page.getByRole("menuitem", { name: /^Geser / })).toHaveCount(0)
-  await page.getByRole("menuitemcheckbox", { name: "Nomor lot", exact: true }).click()
-  await page.keyboard.press("Escape")
-  const edited = await headers(table)
+  await expect(table.getByRole("button", { name: "Atur kolom Barang", exact: true })).toHaveCount(0)
   await page.getByRole("button", { name: "Buang", exact: true }).click()
   await expect(table.getByLabel("Qty baris 1", { exact: true })).toHaveCount(0)
-  expect(await headers(table)).toEqual(edited)
+  expect(await headers(table)).toEqual(before)
 })
 
 test("editable bottom membagi kolom rata tanpa overflow dan pin, termasuk preferensi lama", async ({
@@ -51,6 +45,7 @@ test("editable bottom membagi kolom rata tanpa overflow dan pin, termasuk prefer
       "relasi:transfer-lines",
       JSON.stringify({
         widths: { product: 900, qty: 500 },
+        hidden: ["lot"],
         pinned: "product",
         order: ["qty", "product", "lot", "uom"],
       }),

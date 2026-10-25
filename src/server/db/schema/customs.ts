@@ -209,6 +209,10 @@ export const customsDocumentLines = pgTable(
     details: details(),
     // Voluntary Declaration per barang (BC 2.0): [{ valuationTypeCode, dueDate, amount }].
     vdEntries: jsonb().notNull().default([]),
+    // Typed line children; each array is validated by customsDocumentInputSchema before save.
+    rawMaterials: jsonb().notNull().default([]),
+    entities: jsonb().notNull().default([]),
+    duties: jsonb().notNull().default([]),
     ...timestamps,
   },
   (table) => [
@@ -216,6 +220,12 @@ export const customsDocumentLines = pgTable(
       "customs_document_lines_vd_entries_array",
       sql`jsonb_typeof(${table.vdEntries}) = 'array'`,
     ),
+    check(
+      "customs_document_lines_raw_materials_array",
+      sql`jsonb_typeof(${table.rawMaterials}) = 'array'`,
+    ),
+    check("customs_document_lines_entities_array", sql`jsonb_typeof(${table.entities}) = 'array'`),
+    check("customs_document_lines_duties_array", sql`jsonb_typeof(${table.duties}) = 'array'`),
     unique("customs_document_lines_seq_unique").on(table.documentId, table.seq),
     index("customs_document_lines_product_idx").on(table.productId),
     check("customs_document_lines_seq_positive", sql`${table.seq} >= 1`),
