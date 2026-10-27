@@ -3,12 +3,11 @@ import "server-only"
 import { and, eq, inArray } from "drizzle-orm"
 
 import type { CustomsDocCode } from "@/modules/it-inventory/lib/customs"
-import { CUSTOMS_SPECS, CUSTOMS_SOURCE_DOC_CODES } from "@/modules/it-inventory/lib/customs-specs"
+import { CUSTOMS_SOURCE_DOC_CODES } from "@/modules/it-inventory/lib/customs-specs"
 import {
   attachmentKeyPrefix,
   CUSTOMS_FACILITY_DOMAINS,
   CUSTOMS_PRODUCT_CATEGORY_DOMAINS,
-  customsLineFields,
   type CustomsDocumentInput,
 } from "@/modules/it-inventory/lib/customs-form"
 import { AppError } from "@/server/actions/app-error"
@@ -44,20 +43,6 @@ export async function persistCustomsDocument(
   docCode: CustomsDocCode,
   document: CustomsDocumentInput,
 ) {
-  const requiredLineFields = customsLineFields(CUSTOMS_SPECS[docCode]).filter(
-    (field) => field.required,
-  )
-  for (const [lineIndex, line] of document.lines.entries()) {
-    for (const field of requiredLineFields) {
-      const values = line as unknown as Record<string, string>
-      const value = field.store === "lineDetails" ? line.details[field.key] : values[field.key]
-      if (!value?.trim()) {
-        throw new AppError(
-          `${CUSTOMS_SPECS[docCode].title}, barang seri ${lineIndex + 1}: ${field.label} wajib diisi.`,
-        )
-      }
-    }
-  }
   if (docCode === "16") {
     for (const [lineIndex, line] of document.lines.entries()) {
       if (!line.duties.length) {
