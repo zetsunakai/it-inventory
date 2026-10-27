@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { formatDecimal, toDecimalInput } from "@/lib/decimal"
+import { DEFAULT_DECIMAL_INPUT, formatDecimal, toDecimalInput } from "@/lib/decimal"
 import {
   MANUAL_USAGE_TYPES,
   USAGE_TYPE_LABELS,
@@ -66,7 +66,7 @@ type Line = {
 const newLine = (key: string): Line => ({
   key,
   product: null,
-  inputQty: "",
+  inputQty: DEFAULT_DECIMAL_INPUT,
   uomId: "",
   lotName: "",
 })

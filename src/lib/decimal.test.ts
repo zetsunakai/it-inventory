@@ -29,6 +29,8 @@ describe("tampilan", () => {
       expect(Number(reparsed)).toBe(Number(stored))
     }
     expect(toDecimalInput("1000.0000000000")).toBe("1000")
+    expect(toDecimalInput("0.0000")).toBe("0.0")
+    expect(toDecimalInput("0.0010000000")).toBe("0.001")
   })
 })
 

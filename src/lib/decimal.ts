@@ -1,6 +1,8 @@
 // Angka desimal sebagai string, tanpa float (PRD bagian 13.1): disimpan di kolom numeric
 // dan dihitung di database. Dipakai untuk faktor konversi, nanti juga qty dan nilai uang.
 
+export const DEFAULT_DECIMAL_INPUT = "0.0"
+
 // Input user: koma atau titik sebagai pemisah desimal, tanpa pemisah ribuan.
 // "0,001" → "0.001". null bila bukan angka positif dengan maksimal `scale` desimal.
 export function parseDecimalInput(input: string, scale: number): string | null {
@@ -21,11 +23,12 @@ export function formatDecimal(value: string) {
 }
 
 // Nilai awal field input: tanpa pemisah ribuan supaya terbaca ulang oleh parseDecimalInput.
-// "1000.0000000000" → "1000", "0.0010000000" → "0,001".
+// "1000.0000000000" → "1000", "0.0000" → "0.0", "0.0010000000" → "0.001".
 export function toDecimalInput(value: string) {
+  if (/^0+(?:\.0+)?$/.test(value)) return DEFAULT_DECIMAL_INPUT
   const [integer, fraction = ""] = value.split(".")
   const trimmed = fraction.replace(/0+$/, "")
-  return trimmed ? `${integer},${trimmed}` : integer
+  return trimmed ? `${integer}.${trimmed}` : integer
 }
 
 // Dua angka desimal bernilai sama walau beda jumlah nol di belakang: "1.5000000000" = "1.5".

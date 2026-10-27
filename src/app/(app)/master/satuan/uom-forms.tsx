@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { toDecimalInput } from "@/lib/decimal"
+import { DEFAULT_DECIMAL_INPUT, toDecimalInput } from "@/lib/decimal"
 import type { ProductChoice } from "@/modules/inventory/server/queries/transfers"
 
 import { createUom, createUomCategory, updateUom } from "./actions"
@@ -211,7 +211,7 @@ function FactorField({
       <Input
         id="factor"
         name="factor"
-        defaultValue={defaultValue}
+        defaultValue={defaultValue ?? DEFAULT_DECIMAL_INPUT}
         inputMode="decimal"
         autoComplete="off"
       />

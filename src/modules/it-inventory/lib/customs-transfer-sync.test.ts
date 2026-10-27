@@ -32,7 +32,7 @@ describe("syncTransferLines", () => {
       qty: "100",
       stockQty: "100",
     })
-    expect(lines[1]).toMatchObject({ productId: "p-benang", qty: "12,5", stockQty: "12,5" })
+    expect(lines[1]).toMatchObject({ productId: "p-benang", qty: "12.5", stockQty: "12.5" })
   })
 
   test("memilih ulang tidak membuat baris ganda; isian lain dan produk lain tetap", () => {

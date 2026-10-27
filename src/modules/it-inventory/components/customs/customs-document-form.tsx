@@ -16,7 +16,7 @@ import {
   RELATION_KEY,
   sumDecimals,
 } from "@/components/relational/relational-utils"
-import { formatDecimal, parseDecimalInput } from "@/lib/decimal"
+import { DEFAULT_DECIMAL_INPUT, formatDecimal, parseDecimalInput } from "@/lib/decimal"
 import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -27,7 +27,9 @@ import { saveCustomsDocument } from "@/modules/it-inventory/actions/customs-docu
 import {
   CUSTOMS_ROW_KEYS,
   OWNER_CODE,
+  customsDocumentFields,
   customsFieldValue,
+  customsLineFields,
   customsLineInputSchema,
   emptyLine,
   formatCustomsValue,
@@ -85,6 +87,30 @@ type SourceLineChoice = {
   hsCode: string
   itemCode: string
   description: string
+}
+
+const isEditableDecimal = (field: CustomsField) =>
+  !field.readOnly && (field.kind === "qty" || field.kind === "money")
+
+function numericRowDefaults<Row extends object>(row: Row, fields: CustomsField[]): Row {
+  const values = { ...row } as Record<string, unknown>
+  for (const field of fields) {
+    if (isEditableDecimal(field) && values[field.key] === "") {
+      values[field.key] = DEFAULT_DECIMAL_INPUT
+    }
+  }
+  return values as Row
+}
+
+function newLineWithNumericDefaults(spec: CustomsFormSpec): CustomsLineDraft {
+  const line = emptyLine()
+  line.stockQty = DEFAULT_DECIMAL_INPUT
+  for (const field of customsLineFields(spec)) {
+    if (!isEditableDecimal(field)) continue
+    if (field.store === "lineDetails") line.details[field.key] = DEFAULT_DECIMAL_INPUT
+    else (line as unknown as Record<string, string>)[field.key] = DEFAULT_DECIMAL_INPUT
+  }
+  return line
 }
 
 const RAW_MATERIAL_DETAIL_FIELDS: CustomsField[] = [
@@ -177,8 +203,8 @@ export function CustomsDocumentForm({
     saveCustomsDocument,
     null,
   )
-  const [draft, setDraft] = useState(() =>
-    identifyRelations({
+  const [draft, setDraft] = useState(() => {
+    let seeded = {
       ...initial,
       // Baris kosong bawaan diganti tombol Tambah barang; draft yang berisi data tetap dipertahankan.
       lines: initial.lines.filter((line) =>
@@ -188,8 +214,20 @@ export function CustomsDocumentForm({
             : value !== null && typeof value === "object" && Object.keys(value).length > 0,
         ),
       ),
-    }),
-  )
+    }
+    if (!documentId) {
+      for (const field of customsDocumentFields(spec)) {
+        if (
+          isEditableDecimal(field) &&
+          (field.store === "header" || field.store === "details") &&
+          !customsFieldValue(seeded, field)
+        ) {
+          seeded = setCustomsFieldValue(seeded, field, DEFAULT_DECIMAL_INPUT)
+        }
+      }
+    }
+    return identifyRelations(seeded)
+  })
   const [labels, setLabels] = useState(initialLabels)
   const [activeTab, setActiveTab] = useState(spec.tabs[0]?.key)
   const invalidTarget = useRef<HTMLElement | null>(null)
@@ -754,7 +792,7 @@ function RowsEditor<Row extends object>({
         onRemove={(keys) => onChange(rows.filter((row) => !keys.includes(relationKey(row))))}
         addLabel="Tambah"
         onAdd={() => {
-          const row = newRelation(newRow())
+          const row = newRelation(numericRowDefaults(newRow(), columns))
           onChange([...rows, row])
           return relationKey(row)
         }}
@@ -1072,7 +1110,7 @@ function LinesEditor({
                   productCode: "",
                   hsCode: "",
                   description: "",
-                  quantity: "",
+                  quantity: DEFAULT_DECIMAL_INPUT,
                   unitCode: "",
                   attachments: [],
                   details: {},
@@ -1086,7 +1124,7 @@ function LinesEditor({
                   productCode: "",
                   hsCode: "",
                   description: "",
-                  quantity: "",
+                  quantity: DEFAULT_DECIMAL_INPUT,
                   unitCode: "",
                   attachments: [],
                   details: {},
@@ -1107,7 +1145,7 @@ function LinesEditor({
               productCode: "",
               hsCode: "",
               description: "",
-              quantity: "",
+              quantity: DEFAULT_DECIMAL_INPUT,
               unitCode: "",
               attachments: [],
               details: {},
@@ -1286,10 +1324,10 @@ function LinesEditor({
               levyCode: spec.code === "16" ? "bm" : "other",
               taxTypeCode: spec.code === "16" ? "BM" : "",
               rateTypeCode: "",
-              rate: "",
-              exemptAmount: "",
+              rate: DEFAULT_DECIMAL_INPUT,
+              exemptAmount: DEFAULT_DECIMAL_INPUT,
               facilityCode: "",
-              paidAmount: "",
+              paidAmount: DEFAULT_DECIMAL_INPUT,
               bmt: false,
               excise: false,
               details: {},
@@ -1346,7 +1384,7 @@ function LinesEditor({
           variant="outline"
           onClick={() => {
             setLineError("")
-            setEditing({ key: null, line: newRelation(emptyLine()) })
+            setEditing({ key: null, line: newRelation(newLineWithNumericDefaults(spec)) })
           }}
         >
           <Plus />

@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { fieldValue, type FormState } from "@/lib/action-result"
-import { formatDecimal, toDecimalInput } from "@/lib/decimal"
+import { DEFAULT_DECIMAL_INPUT, formatDecimal, toDecimalInput } from "@/lib/decimal"
 import type { TransferLineDraft } from "@/modules/inventory/lib/transfer"
 import type {
   LocationOption,
@@ -78,7 +78,7 @@ export function InterwarehouseForm({
           inputQty: toDecimalInput(line.inputQty),
           uomId: line.uomId,
         }))
-      : [{ key: "line-0", product: null, inputQty: "", uomId: "" }],
+      : [{ key: "line-0", product: null, inputQty: DEFAULT_DECIMAL_INPUT, uomId: "" }],
   )
 
   useEffect(() => {
@@ -229,7 +229,10 @@ export function InterwarehouseForm({
           }
           onAdd={() => {
             const key = `line-${nextKey.current++}`
-            setLines((current) => [...current, { key, product: null, inputQty: "", uomId: "" }])
+            setLines((current) => [
+              ...current,
+              { key, product: null, inputQty: DEFAULT_DECIMAL_INPUT, uomId: "" },
+            ])
             return key
           }}
           columns={lineTableColumns(INTERWAREHOUSE_LINE_FIELDS, [

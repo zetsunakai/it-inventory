@@ -61,11 +61,11 @@ test("edit, hapus, dan simpan menjaga identitas baris", async ({ page }) => {
   // Detail Draft dibuka dalam mode baca; Edit membuka form.
   await page.getByRole("button", { name: "Edit", exact: true }).click()
   await openEditableRow(page)
-  await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("0,4")
+  await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("0.4")
   await page.reload()
   await page.getByRole("button", { name: "Edit", exact: true }).click()
   await openEditableRow(page)
-  await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("0,4")
+  await expect(page.getByLabel("Qty baris 1").filter({ visible: true })).toHaveValue("0.4")
 })
 
 test("foreign key menjangkau hasil halaman kedua dan membuka detail record", async ({ page }) => {

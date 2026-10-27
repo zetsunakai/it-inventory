@@ -153,12 +153,12 @@ describe("saveCustomsDocument", () => {
     expect(saved?.number).toMatch(/^IT\/23\/\d{5}$/)
     expect(saved?.ajuNumber).toBeNull()
     expect(saved?.draft.details).toEqual({ loadingPortCode: "CNSHA" })
-    expect(saved?.draft.header.ndpbm).toBe("15750,5")
+    expect(saved?.draft.header.ndpbm).toBe("15750.5")
     expect(saved?.draft.parties.map((party) => party.entityTypeCode)).toEqual(["3", "7"])
     expect(saved?.draft.lines[0]).toMatchObject({
       hsCode: "52081100",
       description: "Kain katun",
-      cifValue: "1200,5",
+      cifValue: "1200.5",
     })
     expect(saved?.draft.lines[0].details).toEqual({ originLocationCode: "3201" })
     expect(saved?.draft.lines[0].attachments).toEqual([
