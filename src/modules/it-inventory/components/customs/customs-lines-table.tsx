@@ -120,7 +120,25 @@ export function CustomsLineDialog({
         <Button type="button" variant="outline" onClick={onClose}>
           {onApply ? "Batal" : "Tutup"}
         </Button>
-        {onApply && <Button type="submit">Terapkan</Button>}
+        {onApply && (
+          <Button
+            type="button"
+            onClick={() => {
+              const controls = popup.current?.querySelectorAll<
+                HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+              >("input, select, textarea")
+              for (const control of controls ?? []) {
+                if (!control.checkValidity()) {
+                  requestAnimationFrame(() => control.reportValidity())
+                  return
+                }
+              }
+              onApply()
+            }}
+          >
+            Terapkan
+          </Button>
+        )}
       </div>
     </>
   )
@@ -143,7 +161,7 @@ export function CustomsLineDialog({
                   )
               : undefined
           }
-          className="fixed top-1/2 left-1/2 z-50 flex max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-5xl -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-lg transition-[opacity,scale] duration-200 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none"
+          className="fixed top-1/2 left-1/2 z-50 flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] w-[calc(100%-2rem)] max-w-[1600px] -translate-x-1/2 -translate-y-1/2 flex-col overflow-hidden rounded-2xl border bg-card text-card-foreground shadow-lg transition-[opacity,scale] duration-200 outline-none data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0 motion-reduce:transition-none"
         >
           <div className="relative shrink-0 border-b px-6 py-4 pr-16">
             <Dialog.Title className="text-lg font-semibold">{title}</Dialog.Title>
@@ -166,20 +184,7 @@ export function CustomsLineDialog({
               <X />
             </Dialog.Close>
           </div>
-          {onApply ? (
-            <form
-              className="flex min-h-0 flex-1 flex-col"
-              onSubmit={(event) => {
-                event.preventDefault()
-                event.stopPropagation()
-                onApply()
-              }}
-            >
-              {content}
-            </form>
-          ) : (
-            content
-          )}
+          <div className="flex min-h-0 flex-1 flex-col">{content}</div>
         </Dialog.Popup>
       </Dialog.Portal>
     </Dialog.Root>

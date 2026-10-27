@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, eq, ilike, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm"
 
 import { toDecimalInput } from "@/lib/decimal"
 import type { ListParams } from "@/lib/list-params"
@@ -39,6 +39,9 @@ import {
   customsBankAccounts,
   customsContainers,
   customsDocumentLines,
+  customsLineDuties,
+  customsLineEntities,
+  customsLineRawMaterials,
   customsDocumentParties,
   customsDocumentTaxes,
   customsDocuments,
@@ -92,6 +95,69 @@ export async function searchCustomsProducts(
     .limit(limit)
     .offset(offset)
   return rows.map((row) => ({ ...row, hsCode: row.hsCode ?? "" }))
+}
+
+export async function searchCustomsSourceLines(
+  sourceDocCodes: CustomsDocCode[],
+  search: string,
+  offset = 0,
+  limit = SEARCH_LIMIT,
+) {
+  if (!sourceDocCodes.length) return []
+  const pattern = containsPattern(search)
+  const rows = await db
+    .select({
+      id: customsDocumentLines.id,
+      documentId: customsDocuments.id,
+      docCode: customsDocuments.docCode,
+      documentNumber: customsDocuments.registrationNumber,
+      internalNumber: customsDocuments.number,
+      ajuNumber: customsDocuments.ajuNumber,
+      registrationDate: customsDocuments.registrationDate,
+      officeCode: customsDocuments.customsOfficeCode,
+      officeName: refCodes.name,
+      sourceSequence: customsDocumentLines.seq,
+      productId: products.id,
+      sku: products.sku,
+      name: products.name,
+      hsCode: customsDocumentLines.hsCode,
+      itemCode: customsDocumentLines.itemCode,
+    })
+    .from(customsDocumentLines)
+    .innerJoin(customsDocuments, eq(customsDocuments.id, customsDocumentLines.documentId))
+    .innerJoin(products, eq(products.id, customsDocumentLines.productId))
+    .leftJoin(
+      refCodes,
+      and(
+        eq(refCodes.type, "customs_office"),
+        eq(refCodes.code, customsDocuments.customsOfficeCode),
+      ),
+    )
+    .where(
+      and(
+        inArray(customsDocuments.docCode, sourceDocCodes),
+        search
+          ? or(
+              ilike(customsDocuments.number, pattern),
+              ilike(customsDocuments.registrationNumber, pattern),
+              ilike(customsDocuments.ajuNumber, pattern),
+              ilike(products.sku, pattern),
+              ilike(products.name, pattern),
+              ilike(customsDocumentLines.description, pattern),
+            )
+          : undefined,
+      ),
+    )
+    .orderBy(asc(customsDocuments.registrationDate), asc(customsDocumentLines.seq))
+    .limit(limit)
+    .offset(offset)
+  return rows.map((row) => ({
+    ...row,
+    documentNumber: row.documentNumber ?? row.internalNumber,
+    hsCode: row.hsCode ?? "",
+    itemCode: row.itemCode ?? row.sku,
+    description: row.name,
+  }))
 }
 
 // Data partner sebagai entitas dokumen (disalin ke dokumen, bisa diubah di form). Nomor identitas
@@ -185,11 +251,26 @@ export async function getCustomsDocument(spec: CustomsFormSpec, id: string) {
     db.select({ name: company.name }).from(company),
   ])
 
+  const lineIds = lines.map(({ line }) => line.id)
+  const [rawMaterials, lineEntities, lineDuties] = lineIds.length
+    ? await Promise.all([
+        db
+          .select()
+          .from(customsLineRawMaterials)
+          .where(inArray(customsLineRawMaterials.lineId, lineIds)),
+        db.select().from(customsLineEntities).where(inArray(customsLineEntities.lineId, lineIds)),
+        db.select().from(customsLineDuties).where(inArray(customsLineDuties.lineId, lineIds)),
+      ])
+    : [[], [], []]
+
   const draft = buildDraft(spec, {
     document: doc,
     parties: bySeq(parties),
     lines: lines.map(({ line, sku, productName }) => ({ ...line, sku, productName })),
     attachments: bySeq(attachments),
+    rawMaterials,
+    lineEntities,
+    lineDuties,
     packages: bySeq(packages),
     containers: bySeq(containers),
     transports: bySeq(transports),
@@ -244,6 +325,9 @@ export type DocumentRows = {
   parties: Row[]
   lines: (Row & { sku: string; productName: string })[]
   attachments: Row[]
+  rawMaterials: Row[]
+  lineEntities: Row[]
+  lineDuties: Row[]
   packages: Row[]
   containers: Row[]
   transports: Row[]
@@ -274,7 +358,9 @@ function attachmentDraft(row: Row): CustomsAttachmentDraft {
 export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDocumentDraft {
   const order = new Map(spec.parties.map((role, index) => [role.code, index]))
   const lineAttachments = (lineId: unknown) =>
-    rows.attachments.filter((row) => row.lineId === lineId).map(attachmentDraft)
+    rows.attachments
+      .filter((row) => row.lineId === lineId && row.materialId == null)
+      .map(attachmentDraft)
   return {
     header: pick(rows.document, CUSTOMS_HEADER_COLUMNS),
     // Diisi getCustomsDocument dari customs_document_transfers.
@@ -310,11 +396,73 @@ export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDo
       vdEntries: Array.isArray(line.vdEntries)
         ? (line.vdEntries as Row[]).map((row) => pick(row, CUSTOMS_ROW_KEYS.vdEntries))
         : [],
-      rawMaterials: Array.isArray(line.rawMaterials)
-        ? (line.rawMaterials as CustomsLineDraft["rawMaterials"])
-        : [],
-      entities: Array.isArray(line.entities) ? (line.entities as CustomsLineDraft["entities"]) : [],
-      duties: Array.isArray(line.duties) ? (line.duties as CustomsLineDraft["duties"]) : [],
+      rawMaterials: rows.rawMaterials.some((material) => material.lineId === line.id)
+        ? rows.rawMaterials
+            .filter((material) => material.lineId === line.id)
+            .sort((a, b) => Number(a.seq) - Number(b.seq))
+            .map((material) => ({
+              ...pick(material, [
+                "originCode",
+                "productSerial",
+                "productCode",
+                "hsCode",
+                "description",
+                "quantity",
+                "unitCode",
+              ] as const),
+              details: stringRecord(material.details),
+              attachments: rows.attachments
+                .filter((attachment) => attachment.materialId === material.id)
+                .map(attachmentDraft),
+            }))
+        : Array.isArray(line.rawMaterials)
+          ? (
+              line.rawMaterials as Omit<CustomsLineDraft["rawMaterials"][number], "attachments">[]
+            ).map((material, index) => ({
+              ...material,
+              attachments: rows.attachments
+                .filter((row) => row.lineId === line.id && row.materialSeq === index + 1)
+                .map(attachmentDraft),
+            }))
+          : [],
+      entities: rows.lineEntities.some((entity) => entity.lineId === line.id)
+        ? rows.lineEntities
+            .filter((entity) => entity.lineId === line.id)
+            .sort((a, b) => Number(a.seq) - Number(b.seq))
+            .map((entity) => ({
+              ...pick(entity, ["entityTypeCode", "name", "address", "identityNumber"] as const),
+              partnerId: (entity.partnerId as string | null) ?? null,
+              details: stringRecord(entity.details),
+            }))
+        : Array.isArray(line.entities)
+          ? (line.entities as CustomsLineDraft["entities"])
+          : [],
+      duties: rows.lineDuties.some((duty) => duty.lineId === line.id)
+        ? rows.lineDuties
+            .filter((duty) => duty.lineId === line.id)
+            .sort((a, b) => Number(a.seq) - Number(b.seq))
+            .map((duty) => {
+              const fields = pick(duty, [
+                "taxTypeCode",
+                "rateTypeCode",
+                "rate",
+                "exemptAmount",
+                "facilityCode",
+                "paidAmount",
+              ] as const)
+              const validLevyCodes = ["bm", "ppn", "ppnbm", "pph", "cukai", "other"] as const
+              const levyCode = validLevyCodes.find((code) => code === duty.levyCode) ?? "other"
+              return {
+                ...fields,
+                levyCode,
+                bmt: Boolean(duty.bmt),
+                excise: Boolean(duty.excise),
+                details: stringRecord(duty.details),
+              }
+            })
+        : Array.isArray(line.duties)
+          ? (line.duties as CustomsLineDraft["duties"])
+          : [],
     })),
     attachments: lineAttachments(null),
     packages: rows.packages.map((row) => pick(row, CUSTOMS_ROW_KEYS.packages)),
@@ -366,6 +514,19 @@ async function refLabelsFor(spec: CustomsFormSpec, draft: CustomsDocumentDraft) 
       for (const row of line.attachments) {
         add(column.refType, (row as unknown as Record<string, string>)[column.key])
       }
+    }
+    for (const material of line.rawMaterials) {
+      add("hs_code", material.hsCode)
+      add("ceisa_unit", material.unitCode)
+      for (const attachment of material.attachments) {
+        add("document_type", attachment.documentTypeCode)
+        add("facility", attachment.facilityCode)
+      }
+    }
+    for (const entity of line.entities) add("entity_type", entity.entityTypeCode)
+    for (const duty of line.duties) {
+      add("levy_type", duty.taxTypeCode)
+      add("facility", duty.facilityCode)
     }
   }
   if (!pairs.length) return {}

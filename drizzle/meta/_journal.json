@@ -666,6 +666,20 @@
       "when": 1792917635460,
       "tag": "0094_customs_line_children",
       "breakpoints": true
+    },
+    {
+      "idx": 95,
+      "version": "7",
+      "when": 1792920921410,
+      "tag": "0095_customs_raw_material_attachments",
+      "breakpoints": true
+    },
+    {
+      "idx": 96,
+      "version": "7",
+      "when": 1792921073462,
+      "tag": "0096_customs_line_child_tables",
+      "breakpoints": true
     }
   ]
 }

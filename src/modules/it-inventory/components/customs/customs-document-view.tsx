@@ -144,21 +144,51 @@ export function CustomsDocumentView({
                           seq: childIndex + 1,
                         }))}
                         rowKey={(_, childIndex: number) => String(childIndex)}
-                        columns={(
-                          [
-                            "originCode",
-                            "productSerial",
-                            "productCode",
-                            "hsCode",
-                            "description",
-                            "quantity",
-                            "unitCode",
-                          ] as const
-                        ).map((key) => ({
-                          id: key,
-                          label: key,
-                          value: (child: Row) => String(child[key] ?? ""),
-                        }))}
+                        columns={[
+                          ...(
+                            [
+                              "originCode",
+                              "productSerial",
+                              "productCode",
+                              "hsCode",
+                              "description",
+                              "quantity",
+                              "unitCode",
+                            ] as const
+                          ).map((key) => ({
+                            id: key,
+                            label: key,
+                            value: (child: Row) => String(child[key] ?? ""),
+                          })),
+                          {
+                            id: "attachments",
+                            label: "Dokumen",
+                            value: (child: Row) =>
+                              ((child.attachments as CustomsAttachmentDraft[] | undefined) ?? [])
+                                .map((attachment) => attachment.file?.fileName ?? attachment.number)
+                                .filter(Boolean)
+                                .join(", "),
+                            render: (child: Row) => (
+                              <div className="flex flex-col gap-1">
+                                {(
+                                  (child.attachments as CustomsAttachmentDraft[] | undefined) ?? []
+                                ).map((attachment, attachmentIndex) =>
+                                  attachment.file ? (
+                                    <a
+                                      key={attachment.file.fileKey}
+                                      href={`/api/customs-files?key=${encodeURIComponent(attachment.file.fileKey)}`}
+                                      className="text-primary hover:underline"
+                                    >
+                                      {attachment.file.fileName}
+                                    </a>
+                                  ) : (
+                                    <span key={attachmentIndex}>{attachment.number || "—"}</span>
+                                  ),
+                                )}
+                              </div>
+                            ),
+                          },
+                        ]}
                       />
                     </ViewSection>
                   )}
@@ -201,6 +231,8 @@ export function CustomsDocumentView({
                             "exemptAmount",
                             "facilityCode",
                             "paidAmount",
+                            "bmt",
+                            "excise",
                           ] as const
                         ).map((key) => ({
                           id: key,

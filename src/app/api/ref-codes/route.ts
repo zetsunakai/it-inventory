@@ -18,12 +18,18 @@ export async function GET(request: NextRequest) {
   if (!type) return Response.json({ error: "Jenis referensi tidak dikenal." }, { status: 400 })
 
   const { offset, limit } = lookupPage(request.nextUrl.searchParams)
+  const codes = (params.codes ?? "")
+    .split(",")
+    .map((code) => code.trim())
+    .filter(Boolean)
+    .slice(0, 100)
   const items = await searchRefCodes({
     offset,
     limit: limit + 1,
     type,
     search: (params[SEARCH_PARAM] ?? "").trim().slice(0, 100),
     parentCode: params.parent?.trim() || undefined,
+    codes,
   })
   return Response.json(lookupResponse(items, limit))
 }

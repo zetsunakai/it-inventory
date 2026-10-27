@@ -117,7 +117,7 @@ export function AttachmentsEditor({
   )
 }
 
-function AttachmentFile({
+export function AttachmentFile({
   label,
   documentId,
   id,

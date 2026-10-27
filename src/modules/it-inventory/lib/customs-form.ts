@@ -17,6 +17,11 @@ import { HMX_OPTION_LISTS } from "./customs-layouts.generated"
 export const CUSTOMS_OPTION_LISTS = HMX_OPTION_LISTS
 export type CustomsOptionList = keyof typeof CUSTOMS_OPTION_LISTS
 
+export const CUSTOMS_PRODUCT_CATEGORY_DOMAINS = {
+  "25": ["1", "2", "3", "4", "5", "6", "7", "8", "9"],
+} as const
+export const CUSTOMS_FACILITY_DOMAINS = { "40": ["3", "5", "6", "7"] } as const
+
 export function customsOptionLabel(list: CustomsOptionList, code: string) {
   const items: readonly (readonly [string, string])[] = CUSTOMS_OPTION_LISTS[list]
   return items.find(([value]) => value === code)?.[1] ?? code
@@ -82,8 +87,8 @@ export type CustomsFieldKind =
   | { kind: "money" }
   | { kind: "qty" }
   | { kind: "boolean" }
-  | { kind: "ref"; refType: RefCodeType }
-  | { kind: "option"; list: CustomsOptionList }
+  | { kind: "ref"; refType: RefCodeType; codes?: readonly string[] }
+  | { kind: "option"; list: CustomsOptionList; codes?: readonly string[] }
   | { kind: "product" }
   | { kind: "file" }
   | { kind: "transfers" }
@@ -102,6 +107,7 @@ export type CustomsField = CustomsFieldKind & {
   role?: string
   span?: FieldSpan
   required?: boolean
+  readOnly?: boolean
 }
 
 // Beberapa isian sebaris di bawah satu label (grup side_by_side hmx, mis. Jenis Identitas).
@@ -294,6 +300,7 @@ export type CustomsLineDutyDraft = {
   facilityCode: string
   paidAmount: string
   bmt: boolean
+  excise: boolean
   details: Record<string, string>
 }
 
@@ -685,32 +692,63 @@ const rawMaterialSchema = z.object({
   productCode: text("Kode barang bahan baku", 100),
   hsCode: code,
   description: text("Uraian bahan baku", 500),
-  quantity: text("Jumlah bahan baku", 40),
+  quantity: amount("Jumlah bahan baku", 4)
+    .pipe(z.string().min(1, "Jumlah bahan baku wajib diisi."))
+    .refine((value) => Number(value) > 0, "Jumlah bahan baku harus lebih dari nol."),
   unitCode: code,
   attachments: z.array(attachmentSchema).default([]),
   details,
 })
 const lineEntitySchema = z.object({
-  entityTypeCode: code,
+  entityTypeCode: z.string().trim().min(1, "Jenis entitas barang wajib dipilih."),
   partnerId: z.uuid().nullable(),
-  name: text("Nama entitas barang", 200),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Nama entitas barang wajib diisi.")
+    .max(200, "Nama entitas barang maksimal 200 karakter."),
   address: text("Alamat entitas barang", 500),
   identityNumber: text("Nomor identitas entitas barang", 50),
   details,
 })
-const lineDutySchema = z.object({
-  levyCode: z.enum(["bm", "ppn", "ppnbm", "pph", "cukai", "other"]),
-  taxTypeCode: code,
-  rateTypeCode: code,
-  rate: text("Tarif pungutan barang", 40),
-  exemptAmount: text("Nilai dibebaskan", 40),
-  facilityCode: code,
-  paidAmount: text("Nilai sudah dilunasi", 40),
-  bmt: z.boolean().default(false),
-  details,
-})
+const lineDutySchema = z
+  .object({
+    levyCode: z.enum(["bm", "ppn", "ppnbm", "pph", "cukai", "other"]),
+    taxTypeCode: code,
+    rateTypeCode: code,
+    rate: amount("Tarif pungutan barang", 4).refine(
+      (value) => value === null || Number(value) >= 0,
+    ),
+    exemptAmount: amount("Nilai dibebaskan", 2).refine(
+      (value) => value === null || Number(value) >= 0,
+    ),
+    facilityCode: code,
+    paidAmount: amount("Nilai sudah dilunasi", 2).refine(
+      (value) => value === null || Number(value) >= 0,
+    ),
+    bmt: z.boolean().default(false),
+    excise: z.boolean().default(false),
+    details,
+  })
+  .superRefine((duty, ctx) => {
+    const expectedCode: Partial<Record<typeof duty.levyCode, string>> = {
+      bm: "BM",
+      ppn: "PPN",
+      ppnbm: "PPNBM",
+      pph: "PPH",
+      cukai: "CUKAI",
+    }
+    const expected = expectedCode[duty.levyCode]
+    if (duty.taxTypeCode && expected && duty.taxTypeCode !== expected) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["taxTypeCode"],
+        message: `Jenis pungutan harus ${expected} untuk kelompok ${duty.levyCode.toUpperCase()}.`,
+      })
+    }
+  })
 
-const lineSchema = z
+export const customsLineInputSchema = z
   .object({
     productId: z.uuid("Produk barang wajib dipilih."),
     // Hanya untuk tampilan pilihan produk di form.
@@ -723,6 +761,16 @@ const lineSchema = z
     duties: z.array(lineDutySchema).default([]),
   })
   .catchall(z.string())
+  .superRefine((line, ctx) => {
+    const sourceLineId = line.details.sourceDocumentLineId
+    if (sourceLineId && !z.uuid().safeParse(sourceLineId).success) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["details", "sourceDocumentLineId"],
+        message: "Barang asal tidak valid.",
+      })
+    }
+  })
 
 export const customsDocumentInputSchema = z
   .object({
@@ -734,7 +782,7 @@ export const customsDocumentInputSchema = z
       .transform((rows) => [...new Set(rows.map((row) => row.id))]),
     details,
     parties: z.array(partySchema),
-    lines: z.array(lineSchema),
+    lines: z.array(customsLineInputSchema),
     attachments: z.array(attachmentSchema),
     packages: z.array(
       z.object({

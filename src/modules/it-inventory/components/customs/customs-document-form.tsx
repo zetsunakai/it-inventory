@@ -28,6 +28,7 @@ import {
   CUSTOMS_ROW_KEYS,
   OWNER_CODE,
   customsFieldValue,
+  customsLineInputSchema,
   emptyLine,
   formatCustomsValue,
   emptyParty,
@@ -46,12 +47,13 @@ import {
   type CustomsRawMaterialDraft,
   type CustomsLineEntityDraft,
   type CustomsLineDutyDraft,
+  type CustomsRowDraft,
   type CustomsListBlock,
   type CustomsPartyDraft,
-  type CustomsRowDraft,
   type CustomsTransferChoice,
   type CustomsTransferProduct,
 } from "@/modules/it-inventory/lib/customs-form"
+import { CUSTOMS_SOURCE_DOC_CODES } from "@/modules/it-inventory/lib/customs-specs"
 
 import { AttachmentsEditor } from "./attachments-editor"
 import { CustomsLineDialog, CustomsLinesTable } from "./customs-lines-table"
@@ -66,6 +68,85 @@ import {
 
 type ProductChoice = { id: string; sku: string; name: string; hsCode: string; uomCode: string }
 type PartnerChoice = { id: string; name: string; identityNumber: string }
+type SourceLineChoice = {
+  id: string
+  documentId: string
+  docCode: string
+  documentNumber: string
+  internalNumber: string
+  ajuNumber: string | null
+  registrationDate: string | null
+  officeCode: string | null
+  officeName: string | null
+  sourceSequence: number
+  productId: string
+  sku: string
+  name: string
+  hsCode: string
+  itemCode: string
+  description: string
+}
+
+const RAW_MATERIAL_DETAIL_FIELDS: CustomsField[] = [
+  {
+    key: "officeCode",
+    label: "Kode kantor asal",
+    kind: "ref",
+    refType: "customs_office",
+    required: true,
+  },
+  {
+    key: "sourceDocumentCode",
+    label: "Kode dokumen asal",
+    kind: "ref",
+    refType: "document_type",
+    required: true,
+  },
+  {
+    key: "sourceDocumentRegistration",
+    label: "Nomor daftar dokumen asal",
+    kind: "text",
+    required: true,
+  },
+  { key: "registerDate", label: "Tanggal daftar dokumen asal", kind: "date", required: true },
+  { key: "sourceDocumentAju", label: "Nomor aju dokumen asal", kind: "text" },
+  { key: "sourceProductSerial", label: "Seri barang dokumen asal", kind: "qty" },
+  { key: "brand", label: "Merek barang", kind: "text" },
+  { key: "productType", label: "Tipe barang", kind: "text" },
+  { key: "productSize", label: "Ukuran barang", kind: "text" },
+  { key: "extraSpecification", label: "Spesifikasi lain barang", kind: "text", long: true },
+  { key: "cifPrice", label: "Nilai CIF", kind: "money" },
+  { key: "cifRupiah", label: "CIF Rupiah", kind: "money", readOnly: true },
+  { key: "deliveryPrice", label: "Harga penyerahan / harga jual", kind: "money" },
+  { key: "acquisitionPrice", label: "Harga perolehan", kind: "money" },
+  { key: "serviceValue", label: "Nilai jasa", kind: "money" },
+  { key: "freeTax", label: "Dibebaskan", kind: "money" },
+  { key: "taxFacilitiesFee", label: "Fasilitas tarif", kind: "ref", refType: "facility" },
+  { key: "paidTax", label: "Sudah dilunasi", kind: "money" },
+  { key: "taxTypeBM", label: "Jenis pungutan BM", kind: "ref", refType: "levy_type" },
+  { key: "ratesType", label: "Jenis tarif BM", kind: "text" },
+  { key: "freeTaxBM", label: "BM dibebaskan", kind: "money" },
+  { key: "taxFacilitiesFeeBM", label: "Fasilitas tarif BM", kind: "ref", refType: "facility" },
+  { key: "paidTaxBM", label: "BM sudah dilunasi", kind: "money" },
+  { key: "bmt", label: "BMT", kind: "boolean" },
+  { key: "cukai", label: "Cukai", kind: "boolean" },
+  { key: "taxTypePPN", label: "Jenis pungutan PPN", kind: "ref", refType: "levy_type" },
+  { key: "freeTaxPPN", label: "PPN dibebaskan", kind: "money" },
+  { key: "taxFacilitiesFeePPN", label: "Fasilitas tarif PPN", kind: "ref", refType: "facility" },
+  { key: "paidTaxPPN", label: "PPN sudah dilunasi", kind: "money" },
+  { key: "taxTypePPNBM", label: "Jenis pungutan PPnBM", kind: "ref", refType: "levy_type" },
+  { key: "freeTaxPPNBM", label: "PPnBM dibebaskan", kind: "money" },
+  {
+    key: "taxFacilitiesFeePPNBM",
+    label: "Fasilitas tarif PPnBM",
+    kind: "ref",
+    refType: "facility",
+  },
+  { key: "taxTypePPH", label: "Jenis pungutan PPh", kind: "ref", refType: "levy_type" },
+  { key: "freeTaxPPH", label: "PPh dibebaskan", kind: "money" },
+  { key: "taxFacilitiesFeePPH", label: "Fasilitas tarif PPh", kind: "ref", refType: "facility" },
+  { key: "paidTaxPPH", label: "PPh sudah dilunasi", kind: "money" },
+]
 type OnLabel = (label?: { key: string; name: string }) => void
 
 // Form dokumen BC: tab, grup, field, dan label sama dengan form hmx jenisnya (spec dari
@@ -615,15 +696,23 @@ function PartnerField({
   )
 }
 
-type RowsProps = {
+type RowsProps<Row extends object = CustomsRowDraft> = {
   title: string
   idPrefix: string
-  rows: CustomsRowDraft[]
-  onChange: (rows: CustomsRowDraft[]) => void
-  newRow: () => CustomsRowDraft
+  rows: Row[]
+  onChange: (rows: Row[]) => void
+  newRow: () => Row
   columns: CustomsField[]
   refLabels: RefLabels
   onLabel: OnLabel
+  fieldForRow?: (field: CustomsField, row: Row) => CustomsField
+  renderControl?: (
+    field: CustomsField,
+    row: Row,
+    index: number,
+    update: (patch: Partial<Row>) => void,
+  ) => ReactNode
+  formatValue?: (field: CustomsField, row: Row) => string | undefined
 }
 
 // Seluruh daftar sederhana memakai editor tabel yang sama; metadata baris tidak masuk JSON.
@@ -631,7 +720,7 @@ function RowsTable(props: RowsProps) {
   return <RowsEditor {...props} />
 }
 
-function RowsEditor({
+function RowsEditor<Row extends object>({
   title,
   idPrefix,
   rows,
@@ -640,10 +729,23 @@ function RowsEditor({
   columns,
   refLabels,
   onLabel,
-}: RowsProps) {
+  fieldForRow,
+  renderControl,
+  formatValue,
+}: RowsProps<Row>) {
+  const valueOf = (row: Row, key: string) => {
+    const value = (row as Record<string, unknown>)[key]
+    return typeof value === "boolean" ? (value ? "Y" : "") : String(value ?? "")
+  }
+  const update = (row: Row, patch: Partial<Row>) =>
+    onChange(
+      rows.map((entry) =>
+        relationKey(entry) === relationKey(row) ? { ...entry, ...patch } : entry,
+      ),
+    )
   return (
     <FormSection title={title}>
-      <RelationalTable<CustomsRowDraft>
+      <RelationalTable<Row>
         id={`bc-${title}`}
         label={title}
         rows={rows}
@@ -665,31 +767,34 @@ function RowsEditor({
           numeric: column.kind === "qty" || column.kind === "money",
           value: (row) =>
             column.kind === "qty" || column.kind === "money"
-              ? (row[column.key] ?? "")
-              : formatCustomsValue(column, row[column.key], refLabels),
-          render: (row) => formatCustomsValue(column, row[column.key], refLabels),
-          edit: (row, index) => (
-            <CustomsControl
-              field={column}
-              id={`${idPrefix}-${relationKey(row)}-${column.key}`}
-              value={row[column.key] ?? ""}
-              ariaLabel={`${column.label} ${title} seri ${index + 1}`}
-              refLabels={refLabels}
-              onChange={(value, label) => {
-                onLabel(label)
-                onChange(
-                  rows.map((entry) =>
-                    relationKey(entry) === relationKey(row)
-                      ? { ...entry, [column.key]: value }
-                      : entry,
-                  ),
-                )
-              }}
-            />
-          ),
+              ? valueOf(row, column.key)
+              : (formatValue?.(column, row) ??
+                formatCustomsValue(column, valueOf(row, column.key), refLabels)),
+          render: (row) =>
+            formatValue?.(column, row) ??
+            formatCustomsValue(column, valueOf(row, column.key), refLabels),
+          edit: (row, index) =>
+            renderControl?.(column, row, index, (patch) => update(row, patch)) ?? (
+              <CustomsControl
+                field={fieldForRow?.(column, row) ?? column}
+                id={`${idPrefix}-${relationKey(row)}-${column.key}`}
+                value={valueOf(row, column.key)}
+                ariaLabel={`${column.label} ${title} seri ${index + 1}`}
+                refLabels={refLabels}
+                onChange={(value, label) => {
+                  onLabel(label)
+                  update(row, {
+                    [column.key]:
+                      typeof (row as Record<string, unknown>)[column.key] === "boolean"
+                        ? value === "Y"
+                        : value,
+                  } as Partial<Row>)
+                }}
+              />
+            ),
           footer:
             column.kind === "money"
-              ? (items) => formatDecimal(sumDecimals(items.map((row) => row[column.key] ?? "")))
+              ? (items) => formatDecimal(sumDecimals(items.map((row) => valueOf(row, column.key))))
               : undefined,
         }))}
       />
@@ -744,12 +849,97 @@ function LinesEditor({
     const valueOf = lineValue(line)
     const changeOf = lineChange(index, line)
     const prefix = `${idPrefix}-${relationKey(line)}`
+    const vdBlock = spec.line.blocks.find(
+      (block): block is CustomsListBlock => isListBlock(block) && block.list === "vdEntries",
+    )
+    const sourceLineId = line.details.sourceDocumentLineId ?? ""
+    const sourceChoice: SourceLineChoice | null = sourceLineId
+      ? {
+          id: sourceLineId,
+          documentId: "",
+          docCode: line.details.documentTypeCode ?? "",
+          documentNumber: line.details.sourceDocumentNumber ?? "",
+          internalNumber: line.details.sourceDocumentNumber ?? "",
+          ajuNumber: line.details.noAju ?? null,
+          registrationDate: line.details.registerDate ?? null,
+          officeCode: line.details.beacukaiOfficeCode ?? null,
+          officeName: null,
+          sourceSequence: Number(line.details.sourceSequence ?? 0),
+          productId: line.productId,
+          sku: line.product?.sku ?? "",
+          name: line.product?.name ?? line.description,
+          hsCode: line.hsCode,
+          itemCode: line.itemCode,
+          description: line.description,
+        }
+      : null
     return (
       <>
         {lineError && (
           <p role="alert" data-span={12} className="text-sm text-destructive">
             {lineError}
           </p>
+        )}
+        {CUSTOMS_SOURCE_DOC_CODES[spec.code] && (
+          <FormField label="Barang dari dokumen asal" htmlFor={`${prefix}-source-line`} span={12}>
+            <SearchSelect<SourceLineChoice>
+              id={`${prefix}-source-line`}
+              endpoint="/api/customs-source-lines"
+              params={{ target: spec.code }}
+              value={sourceChoice}
+              onValueChange={(source) => {
+                if (!source) {
+                  const details = { ...line.details }
+                  for (const key of [
+                    "sourceDocumentLineId",
+                    "sourceDocumentNumber",
+                    "beacukaiOfficeCode",
+                    "documentTypeCode",
+                    "noAju",
+                    "noRegister",
+                    "registerDate",
+                    "sourceSequence",
+                  ])
+                    delete details[key]
+                  update(index, { details })
+                  return
+                }
+                onLabel({
+                  key: `document_type|${source.docCode}`,
+                  name: SOURCE_DOC_LABELS[source.docCode] ?? source.docCode,
+                })
+                if (source.officeCode) {
+                  onLabel({
+                    key: `customs_office|${source.officeCode}`,
+                    name: source.officeName ?? "",
+                  })
+                }
+                update(index, {
+                  details: {
+                    ...line.details,
+                    sourceDocumentLineId: source.id,
+                    sourceDocumentNumber: source.documentNumber,
+                    beacukaiOfficeCode: source.officeCode ?? "",
+                    documentTypeCode: source.docCode,
+                    noAju: source.ajuNumber ?? "",
+                    noRegister: source.documentNumber,
+                    registerDate: source.registrationDate ?? "",
+                    sourceSequence: String(source.sourceSequence),
+                  },
+                  productId: source.productId,
+                  product: { id: source.productId, sku: source.sku, name: source.name },
+                  itemCode: source.itemCode,
+                  hsCode: source.hsCode,
+                  description: source.description,
+                })
+              }}
+              getKey={(source) => source.id}
+              getLabel={(source) =>
+                `[${source.docCode}] ${source.documentNumber} · seri ${source.sourceSequence} · [${source.sku}] ${source.name}`
+              }
+              placeholder={`Cari dokumen BC ${(CUSTOMS_SOURCE_DOC_CODES[spec.code] ?? []).join(" / ")}, nomor, atau produk`}
+            />
+          </FormField>
         )}
         {spec.line.blocks.map((block, blockIndex) => {
           // Daftar (Voluntary Declaration) tampil setelah isian, lihat di bawah.
@@ -820,49 +1010,97 @@ function LinesEditor({
           onChange={changeOf(STOCK_QTY)}
           refLabels={refLabels}
         />
-        {spec.line.blocks.map((block, blockIndex) =>
-          isListBlock(block) && block.list === "vdEntries" ? (
-            <div key={blockIndex} data-span={12} className="form-field">
-              <RowsEditor
-                title={block.title || "Voluntary Declaration"}
-                idPrefix={`${prefix}-vd`}
-                columns={block.columns}
-                rows={line.vdEntries}
-                onChange={(rows) => update(index, { vdEntries: rows })}
-                newRow={() => emptyRow(CUSTOMS_ROW_KEYS.vdEntries)}
-                refLabels={refLabels}
-                onLabel={onLabel}
-              />
-            </div>
-          ) : null,
+        {vdBlock && (
+          <RowsEditor
+            title={vdBlock.title || "Voluntary Declaration"}
+            idPrefix={`${prefix}-vd`}
+            rows={line.vdEntries}
+            columns={vdBlock.columns}
+            newRow={() => emptyRow(CUSTOMS_ROW_KEYS.vdEntries)}
+            refLabels={refLabels}
+            onLabel={onLabel}
+            onChange={(vdEntries) => update(index, { vdEntries })}
+          />
         )}
         {spec.line.lartas && (
-          <div data-span={12} className="form-field">
-            <AttachmentsEditor
-              title={spec.line.lartas.title}
-              columns={spec.line.lartas.columns}
-              documentId={documentId}
-              idPrefix={`${prefix}-lartas`}
-              rows={line.attachments}
-              onChange={(rows) => update(index, { attachments: rows })}
-              refLabels={refLabels}
-              onLabel={onLabel}
-            />
-          </div>
+          <AttachmentsEditor
+            title={spec.line.lartas.title}
+            columns={spec.line.lartas.columns.map((field) =>
+              field.key === "documentTypeCode" ? { ...field, required: true } : field,
+            )}
+            documentId={documentId}
+            idPrefix={`${prefix}-lartas`}
+            rows={line.attachments}
+            refLabels={refLabels}
+            onLabel={onLabel}
+            onChange={(attachments) => update(index, { attachments })}
+          />
         )}
         {(["25", "27", "41"] as const).includes(spec.code as "25" | "27" | "41") && (
           <LineChildList<CustomsRawMaterialDraft>
             title="Bahan baku impor/lokal"
             rows={line.rawMaterials}
-            fields={[
+            fields={["productSerial", "productCode", "description", "quantity"]}
+            summary={(material) =>
+              [
+                material.originCode === "0" ? "Impor" : "Lokal",
+                material.productSerial,
+                material.hsCode,
+                material.description,
+                material.quantity,
+                material.unitCode,
+              ]
+                .filter(Boolean)
+                .join(" · ")
+            }
+            requiredFields={[
               "originCode",
-              "productSerial",
               "productCode",
               "hsCode",
               "description",
               "quantity",
               "unitCode",
             ]}
+            numericFields={["quantity"]}
+            positiveFields={["quantity"]}
+            createOptions={[
+              {
+                label: "Tambah Bahan Baku Impor",
+                create: () => ({
+                  originCode: "0",
+                  productSerial: "",
+                  productCode: "",
+                  hsCode: "",
+                  description: "",
+                  quantity: "",
+                  unitCode: "",
+                  attachments: [],
+                  details: {},
+                }),
+              },
+              {
+                label: "Tambah Bahan Baku Lokal",
+                create: () => ({
+                  originCode: "1",
+                  productSerial: "",
+                  productCode: "",
+                  hsCode: "",
+                  description: "",
+                  quantity: "",
+                  unitCode: "",
+                  attachments: [],
+                  details: {},
+                }),
+              },
+            ]}
+            validate={(material) => {
+              const missing = RAW_MATERIAL_DETAIL_FIELDS.filter(
+                (field) => field.required && !material.details[field.key],
+              )
+              return missing.length
+                ? `Lengkapi: ${missing.map((field) => field.label).join(", ")}.`
+                : null
+            }}
             create={() => ({
               originCode: "",
               productSerial: "",
@@ -874,15 +1112,116 @@ function LinesEditor({
               attachments: [],
               details: {},
             })}
+            renderAdditional={(material, updateMaterial) => (
+              <div data-span={12}>
+                <div className="form-grid mb-4">
+                  <CustomsFormField
+                    field={{
+                      key: "hsCode",
+                      label: "Kode HS bahan baku",
+                      kind: "ref",
+                      refType: "hs_code",
+                      required: true,
+                    }}
+                    id={`${idPrefix}-${relationKey(line)}-material-hs`}
+                    value={material.hsCode}
+                    onChange={(value, label) => {
+                      onLabel(label)
+                      updateMaterial({ hsCode: value })
+                    }}
+                    refLabels={refLabels}
+                  />
+                  <CustomsFormField
+                    field={{
+                      key: "unitCode",
+                      label: "Satuan CEISA bahan baku",
+                      kind: "ref",
+                      refType: "ceisa_unit",
+                      required: true,
+                    }}
+                    id={`${idPrefix}-${relationKey(line)}-material-unit`}
+                    value={material.unitCode}
+                    onChange={(value, label) => {
+                      onLabel(label)
+                      updateMaterial({ unitCode: value })
+                    }}
+                    refLabels={refLabels}
+                  />
+                </div>
+                <div className="form-grid mb-4">
+                  {RAW_MATERIAL_DETAIL_FIELDS.filter((field) => {
+                    const isBc27 = spec.code === "27"
+                    const origin = material.originCode
+                    const isImportTax = [
+                      "cifPrice",
+                      "cifRupiah",
+                      "taxTypeBM",
+                      "ratesType",
+                      "freeTaxBM",
+                      "taxFacilitiesFeeBM",
+                      "paidTaxBM",
+                      "bmt",
+                      "cukai",
+                    ].includes(field.key)
+                    const isImportPDRI = [
+                      "taxTypePPN",
+                      "freeTaxPPN",
+                      "taxFacilitiesFeePPN",
+                      "paidTaxPPN",
+                      "taxTypePPNBM",
+                      "freeTaxPPNBM",
+                      "taxFacilitiesFeePPNBM",
+                      "taxTypePPH",
+                      "freeTaxPPH",
+                      "taxFacilitiesFeePPH",
+                      "paidTaxPPH",
+                    ].includes(field.key)
+                    const isLocalTax = ["freeTax", "taxFacilitiesFee", "paidTax"].includes(
+                      field.key,
+                    )
+                    if (isImportTax || isImportPDRI) return isBc27 && origin === "0"
+                    if (isLocalTax) return isBc27 && origin === "1"
+                    return true
+                  }).map((field) => (
+                    <CustomsFormField
+                      key={field.key}
+                      field={field}
+                      id={`${idPrefix}-${relationKey(line)}-material-${field.key}`}
+                      value={material.details[field.key] ?? ""}
+                      onChange={(value, label) => {
+                        onLabel(label)
+                        updateMaterial({
+                          details: { ...material.details, [field.key]: value },
+                        })
+                      }}
+                      refLabels={refLabels}
+                    />
+                  ))}
+                </div>
+                {spec.code === "27" && material.originCode === "0" && (
+                  <AttachmentsEditor
+                    title="Dokumen bahan baku"
+                    columns={RAW_MATERIAL_ATTACHMENT_FIELDS}
+                    documentId={documentId}
+                    idPrefix={`${idPrefix}-${relationKey(line)}-raw-material-docs`}
+                    rows={material.attachments}
+                    onChange={(attachments) => updateMaterial({ attachments })}
+                    refLabels={refLabels}
+                    onLabel={onLabel}
+                  />
+                )}
+              </div>
+            )}
             onChange={(rawMaterials) => update(index, { rawMaterials })}
           />
         )}
         {(["33", "331"] as const).includes(spec.code as "33" | "331") && (
-          <LineChildList<CustomsLineEntityDraft>
+          <RowsEditor<CustomsLineEntityDraft>
             title="Entitas barang"
+            idPrefix={`${prefix}-entities`}
             rows={line.entities}
-            fields={["entityTypeCode", "name", "address", "identityNumber"]}
-            create={() => ({
+            columns={LINE_ENTITY_FIELDS}
+            newRow={() => ({
               entityTypeCode: "",
               partnerId: null,
               name: "",
@@ -890,34 +1229,106 @@ function LinesEditor({
               identityNumber: "",
               details: {},
             })}
+            refLabels={refLabels}
+            onLabel={onLabel}
+            renderControl={(field, entity, rowIndex, updateEntity) =>
+              field.key === "partnerId" ? (
+                <SearchSelect<PartnerChoice>
+                  id={`${prefix}-${relationKey(entity)}-partner`}
+                  ariaLabel={`Partner terkait Entitas barang seri ${rowIndex + 1}`}
+                  endpoint="/api/partners"
+                  value={
+                    entity.partnerId
+                      ? {
+                          id: entity.partnerId,
+                          name: entity.name,
+                          identityNumber: entity.identityNumber,
+                        }
+                      : null
+                  }
+                  onValueChange={(partner) =>
+                    updateEntity({
+                      partnerId: partner?.id ?? null,
+                      name: partner?.name ?? entity.name,
+                      identityNumber: partner?.identityNumber ?? entity.identityNumber,
+                    })
+                  }
+                  getKey={(partner) => partner.id}
+                  getLabel={(partner) => partner.name}
+                  placeholder="Cari nama atau NPWP partner"
+                />
+              ) : undefined
+            }
+            formatValue={(field, entity) =>
+              field.key === "partnerId" ? (entity.partnerId ? entity.name : "—") : undefined
+            }
             onChange={(entities) => update(index, { entities })}
           />
         )}
         {(["16", "28"] as const).includes(spec.code as "16" | "28") && (
-          <LineChildList<CustomsLineDutyDraft>
+          <RowsEditor<CustomsLineDutyDraft>
             title="Pungutan barang"
+            idPrefix={`${prefix}-duties`}
             rows={line.duties}
-            fields={[
-              "levyCode",
-              "taxTypeCode",
-              "rateTypeCode",
-              "rate",
-              "exemptAmount",
-              "facilityCode",
-              "paidAmount",
-              "bmt",
-            ]}
-            create={() => ({
-              levyCode: "other",
-              taxTypeCode: "",
+            columns={LINE_DUTY_FIELDS.map((field) => ({
+              ...field,
+              required:
+                spec.code === "16" &&
+                [
+                  "taxTypeCode",
+                  "rateTypeCode",
+                  "exemptAmount",
+                  "facilityCode",
+                  "paidAmount",
+                ].includes(field.key),
+            }))}
+            newRow={() => ({
+              levyCode: spec.code === "16" ? "bm" : "other",
+              taxTypeCode: spec.code === "16" ? "BM" : "",
               rateTypeCode: "",
               rate: "",
               exemptAmount: "",
               facilityCode: "",
               paidAmount: "",
               bmt: false,
+              excise: false,
               details: {},
             })}
+            fieldForRow={(field, duty) =>
+              field.key === "taxTypeCode"
+                ? {
+                    ...field,
+                    kind: "ref",
+                    refType: "levy_type",
+                    codes: DUTY_TYPE_CODES[duty.levyCode],
+                  }
+                : field
+            }
+            renderControl={(field, duty, rowIndex, updateDuty) =>
+              field.key === "levyCode" ? (
+                <select
+                  id={`${prefix}-${relationKey(duty)}-levy`}
+                  aria-label={`Kelompok pungutan Pungutan barang seri ${rowIndex + 1}`}
+                  className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                  value={duty.levyCode}
+                  onChange={(event) => {
+                    const levyCode = event.target.value as CustomsLineDutyDraft["levyCode"]
+                    updateDuty({ levyCode, taxTypeCode: DUTY_TYPE_CODES[levyCode]?.[0] ?? "" })
+                  }}
+                >
+                  {Object.entries(DUTY_GROUP_LABELS).map(([code, label]) => (
+                    <option key={code} value={code}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              ) : undefined
+            }
+            formatValue={(field, duty) =>
+              field.key === "levyCode" ? DUTY_GROUP_LABELS[duty.levyCode] : undefined
+            }
+            refLabels={refLabels}
+            onLabel={onLabel}
             onChange={(duties) => update(index, { duties })}
           />
         )}
@@ -980,6 +1391,14 @@ function LinesEditor({
               )
               return
             }
+            // Validasi payload yang dikirim; Symbol identitas tabel bukan bagian dari input.
+            const parsed = customsLineInputSchema.safeParse(
+              JSON.parse(JSON.stringify(editing.line)),
+            )
+            if (!parsed.success) {
+              setLineError(parsed.error.issues[0].message)
+              return
+            }
             onChange(
               editing.key
                 ? lines.map((line) => (relationKey(line) === editing.key ? editing.line : line))
@@ -1008,90 +1427,194 @@ function LineChildList<T extends object>({
   rows,
   fields,
   create,
+  createOptions,
+  summary,
+  requiredFields = [],
+  numericFields = [],
+  positiveFields = [],
+  validate,
+  renderAdditional,
   onChange,
 }: {
   title: string
   rows: T[]
   fields: (keyof T)[]
   create: () => T
+  createOptions?: { label: string; create: () => T }[]
+  summary?: (row: T) => string
+  requiredFields?: (keyof T)[]
+  numericFields?: (keyof T)[]
+  positiveFields?: (keyof T)[]
+  validate?: (row: T) => string | null
+  renderAdditional?: (row: T, onChange: (patch: Partial<T>) => void) => ReactNode
   onChange: (rows: T[]) => void
 }) {
+  const tableId = useId()
+  const [childDraft, setChildDraft] = useState<{ index: number | null; row: T } | null>(null)
+  const [childError, setChildError] = useState("")
+  const updateChildDraft = (row: T) => {
+    setChildDraft((current) => (current ? { ...current, row } : null))
+    setChildError("")
+  }
   const label = (key: keyof T) =>
+    RAW_MATERIAL_FIELD_LABELS[String(key)] ??
     String(key).replace(/[A-Z]/g, (letter) => ` ${letter.toLowerCase()}`)
+  const applyChildDraft = () => {
+    if (!childDraft) return
+    const values = childDraft.row as Record<string, unknown>
+    const missing = requiredFields.filter((field) => {
+      const value = values[String(field)]
+      return value === null || value === undefined || value === ""
+    })
+    if (missing.length) {
+      setChildError(`Lengkapi: ${missing.map(label).join(", ")}.`)
+      return
+    }
+    const customError = validate?.(childDraft.row)
+    if (customError) {
+      setChildError(customError)
+      return
+    }
+    const invalidNumber = numericFields.find((field) => {
+      const value = values[String(field)]
+      return typeof value === "string" && value !== "" && parseDecimalInput(value, 4) === null
+    })
+    if (invalidNumber) {
+      setChildError(`${label(invalidNumber)} harus berupa angka yang valid.`)
+      return
+    }
+    const nonPositive = positiveFields.find((field) => {
+      const value = values[String(field)]
+      const parsed = typeof value === "string" ? parseDecimalInput(value, 4) : null
+      return parsed === null || Number(parsed) <= 0
+    })
+    if (nonPositive) {
+      setChildError(`${label(nonPositive)} harus lebih dari nol.`)
+      return
+    }
+    onChange(
+      childDraft.index === null
+        ? [...rows, childDraft.row]
+        : rows.map((row, index) => (index === childDraft.index ? childDraft.row : row)),
+    )
+    setChildDraft(null)
+  }
+  const cancelChildDraft = () => {
+    setChildDraft(null)
+    setChildError("")
+  }
+  const draftEditor = childDraft ? (
+    <>
+      {childError && (
+        <p role="alert" data-span={12} className="text-sm text-destructive">
+          {childError}
+        </p>
+      )}
+      {fields.map((field) => {
+        const values = childDraft.row as Record<string, unknown>
+        const id = `${title}-draft-${String(field)}`
+        return (
+          <FormField key={String(field)} label={label(field)} htmlFor={id}>
+            {typeof values[String(field)] === "boolean" ? (
+              <input
+                id={id}
+                type="checkbox"
+                checked={values[String(field)] as boolean}
+                onChange={(event) =>
+                  updateChildDraft({ ...childDraft.row, [field]: event.target.checked })
+                }
+              />
+            ) : (
+              <input
+                id={id}
+                className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+                value={
+                  typeof values[String(field)] === "string" ? (values[String(field)] as string) : ""
+                }
+                onChange={(event) =>
+                  updateChildDraft({ ...childDraft.row, [field]: event.target.value })
+                }
+              />
+            )}
+          </FormField>
+        )
+      })}
+      {renderAdditional?.(childDraft.row, (patch) =>
+        setChildDraft({ ...childDraft, row: { ...childDraft.row, ...patch } }),
+      )}
+      <div data-span={12} className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={cancelChildDraft}>
+          Batal
+        </Button>
+        <Button type="button" onClick={applyChildDraft}>
+          Terapkan baris
+        </Button>
+      </div>
+    </>
+  ) : null
   return (
     <section data-span={12} className="rounded-lg border p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="text-sm font-semibold">{title}</h3>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => onChange([...rows, create()])}
-        >
-          <Plus /> Tambah
-        </Button>
-      </div>
-      {rows.length === 0 ? (
-        <p className="text-control text-muted-foreground">Belum ada data.</p>
-      ) : (
-        <div className="space-y-3">
-          {rows.map((row, rowIndex) => (
-            <div key={rowIndex} className="grid gap-3 rounded-md bg-muted/30 p-3 sm:grid-cols-2">
-              {fields.map((field) => {
-                const values = row as Record<string, unknown>
-                const id = `${title}-${rowIndex}-${String(field)}`
-                return (
-                  <FormField key={String(field)} label={label(field)} htmlFor={id}>
-                    {typeof values[String(field)] === "boolean" ? (
-                      <input
-                        id={id}
-                        type="checkbox"
-                        checked={values[String(field)] as boolean}
-                        onChange={(event) =>
-                          onChange(
-                            rows.map((item, index) =>
-                              index === rowIndex
-                                ? { ...item, [field]: event.target.checked }
-                                : item,
-                            ),
-                          )
-                        }
-                      />
-                    ) : (
-                      <input
-                        id={id}
-                        className="h-9 w-full rounded-md border bg-background px-3 text-sm"
-                        value={
-                          typeof values[String(field)] === "string"
-                            ? (values[String(field)] as string)
-                            : ""
-                        }
-                        onChange={(event) =>
-                          onChange(
-                            rows.map((item, index) =>
-                              index === rowIndex ? { ...item, [field]: event.target.value } : item,
-                            ),
-                          )
-                        }
-                      />
-                    )}
-                  </FormField>
-                )
-              })}
-              <div className="sm:col-span-2">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="text-destructive"
-                  onClick={() => onChange(rows.filter((_, index) => index !== rowIndex))}
-                >
-                  Hapus baris
-                </Button>
-              </div>
-            </div>
+        <div className="flex flex-wrap gap-2">
+          {(createOptions ?? [{ label: "Tambah", create }]).map((option) => (
+            <Button
+              key={option.label}
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                setChildError("")
+                setChildDraft({ index: null, row: newRelation(option.create()) })
+              }}
+            >
+              <Plus /> {option.label}
+            </Button>
           ))}
         </div>
+      </div>
+      <RelationalTable<T>
+        id={`bc-child-${tableId}`}
+        label={title}
+        rows={rows}
+        rowKey={relationKey}
+        readOnly
+        onReorder={onChange}
+        onRemove={(keys) => onChange(rows.filter((row) => !keys.includes(relationKey(row))))}
+        columns={[
+          {
+            id: "details",
+            label: "Bahan baku",
+            value: (row) => summary?.(row) ?? "Rincian bahan baku",
+            render: (row, rowIndex) => (
+              <button
+                type="button"
+                className="block min-h-9 w-full truncate text-left text-primary hover:underline"
+                onClick={() => {
+                  setChildError("")
+                  setChildDraft({ index: rowIndex, row: { ...row } })
+                }}
+              >
+                {summary?.(row) || "Rincian bahan baku"}
+              </button>
+            ),
+          },
+          ...fields.map((field) => ({
+            id: String(field),
+            label: label(field),
+            numeric: numericFields.includes(field),
+            value: (row: T) => String((row as Record<string, unknown>)[String(field)] ?? ""),
+          })),
+        ]}
+      />
+      {childDraft && (
+        <CustomsLineDialog
+          title={`${childDraft.index === null ? "Tambah" : "Edit"} ${title.toLowerCase()}`}
+          onClose={cancelChildDraft}
+          onApply={applyChildDraft}
+        >
+          {draftEditor}
+        </CustomsLineDialog>
       )}
     </section>
   )
@@ -1104,4 +1627,76 @@ const STOCK_QTY: CustomsField = {
   label: "Jumlah dalam Satuan Stok",
   kind: "qty",
   store: "line",
+}
+
+const RAW_MATERIAL_ATTACHMENT_FIELDS: CustomsField[] = [
+  {
+    key: "documentTypeCode",
+    label: "Jenis Dokumen",
+    kind: "ref",
+    refType: "document_type",
+  },
+  { key: "number", label: "Nomor", kind: "text" },
+  { key: "date", label: "Tanggal", kind: "date" },
+  { key: "facilityCode", label: "Fasilitas", kind: "ref", refType: "facility" },
+  { key: "permit", label: "No. urut di izin", kind: "text" },
+  { key: "officeCode", label: "Kode Kantor", kind: "text" },
+  { key: "file", label: "File", kind: "file" },
+]
+
+const LINE_ENTITY_FIELDS: CustomsField[] = [
+  {
+    key: "entityTypeCode",
+    label: "Jenis entitas",
+    kind: "ref",
+    refType: "entity_type",
+    required: true,
+  },
+  { key: "partnerId", label: "Partner terkait", kind: "text" },
+  { key: "name", label: "Nama", kind: "text", required: true },
+  { key: "address", label: "Alamat", kind: "text", long: true },
+  { key: "identityNumber", label: "Nomor identitas", kind: "text" },
+]
+
+const LINE_DUTY_FIELDS: CustomsField[] = [
+  { key: "levyCode", label: "Kelompok pungutan", kind: "text" },
+  { key: "taxTypeCode", label: "Jenis pungutan CEISA", kind: "ref", refType: "levy_type" },
+  { key: "rateTypeCode", label: "Jenis tarif", kind: "text" },
+  { key: "rate", label: "Tarif", kind: "qty" },
+  { key: "exemptAmount", label: "Dibebaskan", kind: "money" },
+  { key: "facilityCode", label: "Fasilitas tarif", kind: "ref", refType: "facility" },
+  { key: "paidAmount", label: "Sudah dilunasi", kind: "money" },
+  { key: "bmt", label: "BMT", kind: "boolean" },
+  { key: "excise", label: "Cukai", kind: "boolean" },
+]
+
+const DUTY_GROUP_LABELS: Record<CustomsLineDutyDraft["levyCode"], string> = {
+  bm: "Bea Masuk",
+  ppn: "PPN",
+  ppnbm: "PPnBM",
+  pph: "PPh",
+  cukai: "Cukai",
+  other: "Lainnya",
+}
+
+const RAW_MATERIAL_FIELD_LABELS: Record<string, string> = {
+  productSerial: "Seri barang",
+  productCode: "Kode barang",
+  description: "Uraian",
+  quantity: "Jumlah",
+}
+
+const DUTY_TYPE_CODES: Partial<Record<CustomsLineDutyDraft["levyCode"], readonly string[]>> = {
+  bm: ["BM"],
+  ppn: ["PPN"],
+  ppnbm: ["PPNBM"],
+  pph: ["PPH"],
+  cukai: ["CUKAI"],
+}
+
+const SOURCE_DOC_LABELS: Record<string, string> = {
+  "16": "BC 1.6",
+  "27": "BC 2.7",
+  "33": "BC 3.3",
+  "40": "BC 4.0",
 }

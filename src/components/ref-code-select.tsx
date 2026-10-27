@@ -11,6 +11,7 @@ export function RefCodeSelect({
   name,
   defaultValue = null,
   parentCode,
+  codes,
   id,
   placeholder = "Cari kode atau nama",
   required,
@@ -20,6 +21,7 @@ export function RefCodeSelect({
   name?: string
   defaultValue?: RefCodeOption | null
   parentCode?: string
+  codes?: readonly string[]
   id?: string
   placeholder?: string
   required?: boolean
@@ -31,7 +33,11 @@ export function RefCodeSelect({
       {name && <input type="hidden" name={name} value={value?.code ?? ""} />}
       <SearchSelect<RefCodeOption>
         endpoint="/api/ref-codes"
-        params={{ type, ...(parentCode ? { parent: parentCode } : {}) }}
+        params={{
+          type,
+          ...(parentCode ? { parent: parentCode } : {}),
+          ...(codes?.length ? { codes: codes.join(",") } : {}),
+        }}
         id={id}
         placeholder={placeholder}
         required={required}

@@ -241,6 +241,96 @@ export const customsDocumentLines = pgTable(
   ],
 )
 
+// Line-level child rows from Equip3. Separate tables keep repeated materials,
+// entity declarations, and duties queryable and give their file rows real FKs.
+export const customsLineRawMaterials = pgTable(
+  "customs_line_raw_materials",
+  {
+    id: id(),
+    lineId: uuid()
+      .notNull()
+      .references(() => customsDocumentLines.id, { onDelete: "cascade" }),
+    seq: seq(),
+    originCode: text(),
+    productSerial: text(),
+    productCode: text(),
+    hsCode: text(),
+    description: text(),
+    quantity: qty(),
+    unitCode: text(),
+    details: details(),
+    ...timestamps,
+  },
+  (table) => [
+    unique("customs_line_raw_materials_seq_unique").on(table.lineId, table.seq),
+    check("customs_line_raw_materials_seq_positive", sql`${table.seq} >= 1`),
+    check("customs_line_raw_materials_quantity_positive", sql`${table.quantity} > 0`),
+    check(
+      "customs_line_raw_materials_details_object",
+      sql`jsonb_typeof(${table.details}) = 'object'`,
+    ),
+  ],
+)
+
+export const customsLineEntities = pgTable(
+  "customs_line_entities",
+  {
+    id: id(),
+    lineId: uuid()
+      .notNull()
+      .references(() => customsDocumentLines.id, { onDelete: "cascade" }),
+    seq: seq(),
+    entityTypeCode: text().notNull(),
+    partnerId: uuid().references(() => partners.id, { onDelete: "restrict" }),
+    name: text().notNull(),
+    address: text(),
+    identityNumber: text(),
+    details: details(),
+    ...timestamps,
+  },
+  (table) => [
+    unique("customs_line_entities_seq_unique").on(table.lineId, table.seq),
+    check("customs_line_entities_seq_positive", sql`${table.seq} >= 1`),
+    check("customs_line_entities_name_not_blank", sql`btrim(${table.name}) <> ''`),
+    check("customs_line_entities_details_object", sql`jsonb_typeof(${table.details}) = 'object'`),
+  ],
+)
+
+export const customsLineDuties = pgTable(
+  "customs_line_duties",
+  {
+    id: id(),
+    lineId: uuid()
+      .notNull()
+      .references(() => customsDocumentLines.id, { onDelete: "cascade" }),
+    seq: seq(),
+    levyCode: text().notNull(),
+    taxTypeCode: text(),
+    rateTypeCode: text(),
+    rate: qty(),
+    exemptAmount: money(),
+    facilityCode: text(),
+    paidAmount: money(),
+    bmt: boolean().notNull().default(false),
+    excise: boolean().notNull().default(false),
+    details: details(),
+    ...timestamps,
+  },
+  (table) => [
+    unique("customs_line_duties_seq_unique").on(table.lineId, table.seq),
+    check("customs_line_duties_seq_positive", sql`${table.seq} >= 1`),
+    check(
+      "customs_line_duties_levy_valid",
+      sql`${table.levyCode} in ('bm', 'ppn', 'ppnbm', 'pph', 'cukai', 'other')`,
+    ),
+    check(
+      "customs_line_duties_values_non_negative",
+      sql`${table.rate} >= 0 and ${table.exemptAmount} >= 0 and ${table.paidAmount} >= 0`,
+    ),
+    check("customs_line_duties_details_object", sql`jsonb_typeof(${table.details}) = 'object'`),
+  ],
+)
+
 // Pungutan per dokumen (tab Pungutan hmx, document_tax): jenis pungutan, tarif (persen), nilai,
 // dan status perhitungan. Menggantikan pungutan per barang (keputusan user 18/10/2026).
 export const customsDocumentTaxes = pgTable(
@@ -329,6 +419,9 @@ export const customsAttachments = pgTable(
       .notNull()
       .references(() => customsDocuments.id, { onDelete: "cascade" }),
     lineId: uuid().references(() => customsDocumentLines.id, { onDelete: "cascade" }),
+    materialId: uuid().references(() => customsLineRawMaterials.id, { onDelete: "cascade" }),
+    // Seri bahan baku pada satu barang; null untuk lampiran dokumen/Lartas biasa.
+    materialSeq: integer(),
     seq: seq(),
     documentTypeCode: text().notNull(),
     number: text(),
@@ -345,7 +438,7 @@ export const customsAttachments = pgTable(
   },
   (table) => [
     unique("customs_attachments_seq_unique")
-      .on(table.documentId, table.lineId, table.seq)
+      .on(table.documentId, table.lineId, table.materialSeq, table.seq)
       .nullsNotDistinct(),
     index("customs_attachments_type_idx").on(table.documentId, table.documentTypeCode),
     // Unduh lampiran lewat kunci file (/api/customs-files).

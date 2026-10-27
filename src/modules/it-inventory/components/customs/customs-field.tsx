@@ -37,13 +37,30 @@ export function CustomsControl({
   refLabels,
   ariaLabel,
 }: {
-  field: CustomsFieldKind & { key?: string; label: string; required?: boolean }
+  field: CustomsFieldKind & {
+    key?: string
+    label: string
+    required?: boolean
+    readOnly?: boolean
+  }
   id: string
   value: string
   onChange: FieldChange
   refLabels: RefLabels
   ariaLabel?: string
 }) {
+  if (field.readOnly) {
+    const label = field.kind === "ref" && value ? refLabels[`${field.refType}|${value}`] : undefined
+    return (
+      <Input
+        id={id}
+        aria-label={ariaLabel}
+        value={label ?? value}
+        readOnly
+        className="bg-muted/50"
+      />
+    )
+  }
   switch (field.kind) {
     case "ref": {
       const labelKey = `${field.refType}|${value}`
@@ -52,6 +69,7 @@ export function CustomsControl({
           key={labelKey}
           id={id}
           type={field.refType}
+          codes={field.codes}
           required={field.required}
           defaultValue={
             value ? { code: value, name: refLabels[labelKey] ?? "", parentCode: null } : null
@@ -67,10 +85,12 @@ export function CustomsControl({
     }
     case "option": {
       const list: readonly (readonly [string, string])[] = CUSTOMS_OPTION_LISTS[field.list]
-      const items = list.map(([code, name]) => ({
-        value: code,
-        label: `[${code}] ${name}`,
-      }))
+      const items = list
+        .filter(([code]) => !field.codes || field.codes.includes(code))
+        .map(([code, name]) => ({
+          value: code,
+          label: `[${code}] ${name}`,
+        }))
       return (
         <Select
           required={field.required}

@@ -1,6 +1,161 @@
 import type { CustomsDocCode } from "./customs"
-import type { CustomsField, CustomsFormSpec, CustomsLayout, CustomsListBlock } from "./customs-form"
+import type {
+  CustomsBlock,
+  CustomsField,
+  CustomsFieldItem,
+  CustomsFormSpec,
+  CustomsLayout,
+  CustomsListBlock,
+} from "./customs-form"
+import { CUSTOMS_FACILITY_DOMAINS, CUSTOMS_PRODUCT_CATEGORY_DOMAINS } from "./customs-form"
 import { CUSTOMS_LAYOUTS } from "./customs-layouts.generated"
+
+export const CUSTOMS_SOURCE_DOC_CODES: Partial<Record<CustomsDocCode, CustomsDocCode[]>> = {
+  "28": ["16", "27"],
+  "33": ["40", "27"],
+  "331": ["16", "33"],
+}
+
+// These HMX fields remain in the stored line contract for compatibility, but are not
+// part of the Equip3 O2M item editor for these BC types.
+const HMX_ONLY_LINE_FIELDS: Partial<Record<CustomsDocCode, ReadonlySet<string>>> = {
+  "16": new Set(["customsValue"]),
+  "20": new Set(["productCategoryCode", "cifRupiah", "valueAdded", "rawMaterialOriginCode"]),
+  "261": new Set(["specification"]),
+  "262": new Set(["specification"]),
+  "27": new Set(["customsValue", "acquisitionPrice"]),
+  "30": new Set([
+    "restrictedGoodsDeclarationCode",
+    "insuranceValue",
+    "specification",
+    "invoiceValue",
+    "freightValue",
+    "customsValue",
+    "productConditionCode",
+  ]),
+  "33": new Set([
+    "restrictedGoodsDeclarationCode",
+    "insuranceValue",
+    "specification",
+    "originLocationCode",
+    "invoiceValue",
+    "freightValue",
+    "customsValue",
+    "productConditionCode",
+    "exportTypeCode",
+  ]),
+}
+
+const EQUIP3_LINE_FIELD_MOVES: Partial<Record<CustomsDocCode, [string, string][]>> = {
+  "16": [["cifValue", "productCategoryCode"]],
+  "20": [
+    ["unitPrice", "packageTypeCode"],
+    ["cifValue", "insuranceValue"],
+  ],
+  "25": [
+    ["productCategoryCode", "productUseCodeCode"],
+    ["unitPrice", "netWeight"],
+  ],
+  "261": [
+    ["product", "itemCode"],
+    ["fobValue", "packageTypeCode"],
+    ["volume", "fobValue"],
+    ["netWeight", "volume"],
+    ["unitPrice", "netWeight"],
+  ],
+  "262": [
+    ["product", "itemCode"],
+    ["fobValue", "packageTypeCode"],
+    ["volume", "fobValue"],
+    ["netWeight", "volume"],
+    ["unitPrice", "netWeight"],
+  ],
+  "27": [
+    ["product", "hsCode"],
+    ["itemCode", "product"],
+    ["specification", "itemSize"],
+    ["productCategoryCode", "netWeight"],
+  ],
+  "28": [
+    ["product", "itemCode"],
+    ["specification", "itemSize"],
+    ["netWeight", "packageTypeCode"],
+    ["originCountryCode", "valueAdded"],
+  ],
+  "30": [
+    ["product", "itemCode"],
+    ["itemSize", "itemType"],
+    ["unitPrice", "packageTypeCode"],
+    ["fobValue", "unitPrice"],
+    ["volume", "fobValue"],
+    ["netWeight", "volume"],
+    ["exportTypeCode", "netWeight"],
+  ],
+  "33": [
+    ["product", "itemCode"],
+    ["itemSize", "itemType"],
+    ["netWeight", "packageTypeCode"],
+    ["productCategoryCode", "netWeight"],
+    ["fobValue", "productCategoryCode"],
+    ["volume", "fobValue"],
+    ["unitPrice", "volume"],
+  ],
+  "331": [
+    ["noAju", "documentTypeCode"],
+    ["product", "itemCode"],
+    ["originCountryCode", "specification"],
+  ],
+  "41": [["product", "itemCode"]],
+}
+
+const EQUIP3_REQUIRED_LINE_FIELDS: Partial<Record<CustomsDocCode, ReadonlySet<string>>> = {
+  "20": new Set([
+    "hsCode",
+    "description",
+    "brand",
+    "productConditionCode",
+    "originCountryCode",
+    "qty",
+    "ceisaUnitCode",
+    "packageTypeCode",
+    "fobValue",
+    "freightValue",
+    "insuranceValue",
+    "cifValue",
+  ]),
+  "27": new Set(["hsCode", "description", "qty", "ceisaUnitCode", "cifValue"]),
+  "41": new Set(["qty", "ceisaUnitCode"]),
+}
+
+function moveLineFieldAfter(line: CustomsFormSpec["line"], fieldKey: string, anchorKey: string) {
+  const blocks = line.blocks.map((block): CustomsBlock =>
+    "fields" in block ? { ...block, fields: [...block.fields] } : block,
+  )
+  let fieldItem: CustomsField | undefined
+  for (const block of blocks) {
+    if (!("fields" in block)) continue
+    const index = block.fields.findIndex((item) => !("group" in item) && item.key === fieldKey)
+    if (index >= 0) {
+      fieldItem = block.fields[index] as CustomsField
+      block.fields.splice(index, 1)
+      break
+    }
+  }
+  if (!fieldItem) return line
+  for (const block of blocks) {
+    if (!("fields" in block)) continue
+    const index = block.fields.findIndex((item) =>
+      "group" in item
+        ? item.fields.some((field) => field.key === anchorKey)
+        : item.key === anchorKey,
+    )
+    if (index >= 0) {
+      block.fields.splice(index + 1, 0, fieldItem)
+      return { ...line, blocks }
+    }
+  }
+  return line
+}
 
 // Form per jenis dokumen BC (backlog M3-05–M3-09, D-01–D-08, D-09): tab, grup, field, dan label
 // dari form hmx core_it_inventory (customs-layouts.generated.ts); di sini hanya judul, deskripsi,
@@ -13,6 +168,54 @@ const spec = (
   path: string,
 ): CustomsFormSpec => {
   const layout = CUSTOMS_LAYOUTS[code] as CustomsLayout
+
+  const sourceFields: Partial<Record<CustomsDocCode, CustomsField[]>> = {
+    "33": [
+      {
+        key: "beacukaiOfficeCode",
+        store: "lineDetails",
+        label: "Kode Kantor Asal",
+        kind: "ref",
+        refType: "customs_office",
+      },
+      {
+        key: "documentTypeCode",
+        store: "lineDetails",
+        label: "Dokumen Asal",
+        kind: "ref",
+        refType: "document_type",
+        readOnly: true,
+      },
+      {
+        key: "noAju",
+        store: "lineDetails",
+        label: "Nomor Pengajuan Asal",
+        kind: "text",
+        readOnly: true,
+      },
+      {
+        key: "noRegister",
+        store: "lineDetails",
+        label: "Nomor Daftar Asal",
+        kind: "text",
+        readOnly: true,
+      },
+      {
+        key: "registerDate",
+        store: "lineDetails",
+        label: "Tanggal Daftar Asal",
+        kind: "date",
+        readOnly: true,
+      },
+      {
+        key: "sourceSequence",
+        store: "lineDetails",
+        label: "Seri Barang Asal",
+        kind: "qty",
+        readOnly: true,
+      },
+    ],
+  }
 
   // Equip3's P3BET line form does not bind product_id, but the IT Inventory line
   // contract requires productId. Make product selection explicit in this BC's
@@ -40,12 +243,23 @@ const spec = (
           ),
         }
       : layout.line
+  const sourcedLine =
+    (sourceFields[code]?.length ?? 0) > 0
+      ? {
+          ...importedLine,
+          blocks: importedLine.blocks.map((block, index) =>
+            index === 0 && "fields" in block
+              ? { ...block, fields: [...(sourceFields[code] ?? []), ...block.fields] }
+              : block,
+          ),
+        }
+      : importedLine
   const line =
     code === "28"
       ? {
-          ...importedLine,
+          ...sourcedLine,
           blocks: [
-            ...importedLine.blocks,
+            ...sourcedLine.blocks,
             {
               title: "Voluntary Declaration",
               list: "vdEntries",
@@ -62,7 +276,38 @@ const spec = (
             } satisfies CustomsListBlock,
           ],
         }
-      : importedLine
+      : sourcedLine
+  const readonlySourceKeys = new Set([
+    "documentTypeCode",
+    "noAju",
+    "noRegister",
+    "registerDate",
+    "sourceSequence",
+  ])
+  const lineWithReadonlySource = CUSTOMS_SOURCE_DOC_CODES[code]
+    ? {
+        ...line,
+        blocks: line.blocks.map((block) =>
+          "fields" in block
+            ? {
+                ...block,
+                fields: block.fields.map((item) =>
+                  "group" in item
+                    ? {
+                        ...item,
+                        fields: item.fields.map((field) =>
+                          readonlySourceKeys.has(field.key) ? { ...field, readOnly: true } : field,
+                        ),
+                      }
+                    : readonlySourceKeys.has(item.key)
+                      ? { ...item, readOnly: true }
+                      : item,
+                ),
+              }
+            : block,
+        ),
+      }
+    : line
 
   // Equip3 O2M catalog gaps (PRD 24 Oct 2026): these values are scalar line
   // bindings in the source forms but were absent from the imported HMX fieldset.
@@ -77,6 +322,11 @@ const spec = (
       },
       { key: "volume", store: "lineDetails", label: "Volume", kind: "qty" },
     ],
+    "25": [{ key: "unitPrice", store: "line", label: "Harga Satuan FOB", kind: "qty" }],
+    "27": [
+      { key: "specification", store: "line", label: "Spesifikasi Lain", kind: "text", long: true },
+    ],
+    "30": [{ key: "volume", store: "lineDetails", label: "Volume", kind: "qty" }],
     "331": [
       {
         key: "originCountryCode",
@@ -86,7 +336,11 @@ const spec = (
         refType: "country",
       },
     ],
-    "20": [{ key: "unitPrice", store: "line", label: "Harga Satuan", kind: "qty" }],
+    "20": [
+      { key: "unitPrice", store: "line", label: "Harga Satuan", kind: "qty" },
+      { key: "cifValue", store: "line", label: "Harga CIF", kind: "money" },
+    ],
+    "16": [{ key: "cifValue", store: "line", label: "Harga CIF", kind: "money" }],
     "261": [
       { key: "fobValue", store: "line", label: "Harga FOB", kind: "money" },
       { key: "volume", store: "lineDetails", label: "Volume", kind: "qty" },
@@ -109,13 +363,16 @@ const spec = (
     ],
   }
   const additions = equip3Fields[code] ?? []
+  const lastFieldBlockIndex = lineWithReadonlySource.blocks.findLastIndex(
+    (block) => "fields" in block,
+  )
   const completedLine =
-    additions.length === 0
-      ? line
+    additions.length === 0 || lastFieldBlockIndex < 0
+      ? lineWithReadonlySource
       : {
-          ...line,
-          blocks: line.blocks.map((block, index) =>
-            index === line.blocks.length - 1 && "fields" in block
+          ...lineWithReadonlySource,
+          blocks: lineWithReadonlySource.blocks.map((block, index) =>
+            index === lastFieldBlockIndex && "fields" in block
               ? { ...block, fields: [...block.fields, ...additions] }
               : block,
           ),
@@ -141,7 +398,76 @@ const spec = (
         }
       : completedLine
 
-  return { code, title, description, path, ...layout, line: normalizedLine }
+  const displayLine = HMX_ONLY_LINE_FIELDS[code]
+    ? {
+        ...normalizedLine,
+        blocks: normalizedLine.blocks.map((block) =>
+          "fields" in block
+            ? {
+                ...block,
+                fields: block.fields.flatMap<CustomsFieldItem>((item): CustomsFieldItem[] => {
+                  if ("group" in item) {
+                    return [
+                      {
+                        ...item,
+                        fields: item.fields.filter(
+                          (field) => !HMX_ONLY_LINE_FIELDS[code]?.has(field.key),
+                        ),
+                      },
+                    ]
+                  }
+                  return HMX_ONLY_LINE_FIELDS[code]?.has(item.key) ? [] : [item]
+                }),
+              }
+            : block,
+        ),
+      }
+    : normalizedLine
+  const optionDomains: Partial<Record<CustomsDocCode, Record<string, readonly string[]>>> = {
+    "25": { productCategoryCode: CUSTOMS_PRODUCT_CATEGORY_DOMAINS["25"] },
+    "40": { taxFacilitiesFeeCode: CUSTOMS_FACILITY_DOMAINS["40"] },
+  }
+  const activeOptionDomains = optionDomains[code]
+  const requiredLineFields = EQUIP3_REQUIRED_LINE_FIELDS[code]
+  const domainLine =
+    activeOptionDomains || requiredLineFields
+      ? {
+          ...displayLine,
+          blocks: displayLine.blocks.map((block) =>
+            "fields" in block
+              ? {
+                  ...block,
+                  fields: block.fields.map((item) =>
+                    "group" in item
+                      ? {
+                          ...item,
+                          fields: item.fields.map((field) => ({
+                            ...field,
+                            ...(activeOptionDomains?.[field.key]
+                              ? { codes: activeOptionDomains[field.key] }
+                              : {}),
+                            ...(requiredLineFields?.has(field.key) ? { required: true } : {}),
+                          })),
+                        }
+                      : {
+                          ...item,
+                          ...(activeOptionDomains?.[item.key]
+                            ? { codes: activeOptionDomains[item.key] }
+                            : {}),
+                          ...(requiredLineFields?.has(item.key) ? { required: true } : {}),
+                        },
+                  ),
+                }
+              : block,
+          ),
+        }
+      : displayLine
+  const orderedLine = (EQUIP3_LINE_FIELD_MOVES[code] ?? []).reduce(
+    (current, [fieldKey, anchorKey]) => moveLineFieldAfter(current, fieldKey, anchorKey),
+    domainLine,
+  )
+
+  return { code, title, description, path, ...layout, line: orderedLine }
 }
 
 export const BC23 = spec(

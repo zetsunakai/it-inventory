@@ -1,6 +1,6 @@
 import "server-only"
 
-import { and, asc, count, desc, eq, ilike, or, sql, type SQL } from "drizzle-orm"
+import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm"
 
 import type { ListParams } from "@/lib/list-params"
 import type { RefCodeOption, RefCodeType } from "@/lib/ref-codes"
@@ -50,17 +50,20 @@ export async function searchRefCodes({
   type,
   search,
   parentCode,
+  codes,
   offset = 0,
   limit = REF_CODE_SEARCH_LIMIT,
 }: {
   type: RefCodeType
   search: string
   parentCode?: string
+  codes?: string[]
   offset?: number
   limit?: number
 }): Promise<RefCodeOption[]> {
   const conditions: SQL[] = [eq(refCodes.type, type), eq(refCodes.active, true)]
   if (parentCode) conditions.push(eq(refCodes.parentCode, parentCode))
+  if (codes?.length) conditions.push(inArray(refCodes.code, codes))
   if (search) {
     const pattern = containsPattern(search)
     conditions.push(or(ilike(refCodes.code, pattern), ilike(refCodes.name, pattern))!)
