@@ -21,7 +21,10 @@ import type {
   ProductCategoryRow,
 } from "@/modules/inventory/server/queries/product-categories"
 
-import { createProductCategory, updateProductCategory } from "./actions"
+import {
+  createProductCategory,
+  updateProductCategory,
+} from "@/modules/inventory/actions/product-categories"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 // Form tambah (tanpa category) dan ubah kategori produk.

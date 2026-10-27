@@ -30,7 +30,7 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
-import { deleteUom } from "./actions"
+import { deleteUom } from "@/modules/inventory/actions/uoms"
 
 export const metadata: Metadata = { title: "Satuan · IT Inventory" }
 

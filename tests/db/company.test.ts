@@ -1,7 +1,7 @@
 import { and, desc, eq, like, sql } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
-import { saveCompanyProfile } from "@/app/(app)/master/perusahaan/actions"
+import { saveCompanyProfile } from "@/modules/it-inventory/actions/company"
 import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"

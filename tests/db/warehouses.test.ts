@@ -6,8 +6,11 @@ import {
   createWarehouse,
   updateLocation,
   updateWarehouse,
-} from "@/app/(app)/master/gudang/actions"
-import { grantWarehouseAccess, revokeWarehouseAccess } from "@/app/(app)/admin/users/actions"
+} from "@/modules/inventory/actions/warehouses"
+import {
+  grantWarehouseAccess,
+  revokeWarehouseAccess,
+} from "@/modules/inventory/actions/warehouse-access"
 import { ALL_WAREHOUSE_ROLES, ROLES, type Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"

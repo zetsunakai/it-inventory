@@ -29,7 +29,7 @@ import {
 } from "@/modules/inventory/lib/partner"
 import type { RefCodeOption } from "@/lib/ref-codes"
 
-import { createPartner, updatePartner } from "./actions"
+import { createPartner, updatePartner } from "@/modules/inventory/actions/partners"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const IDENTITY_ITEMS = IDENTITY_TYPES.map((type) => ({

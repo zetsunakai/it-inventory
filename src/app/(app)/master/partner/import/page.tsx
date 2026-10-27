@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { PARTNER_COLUMNS } from "@/modules/inventory/server/master-io/partners"
 
-import { importPartners } from "../actions"
+import { importPartners } from "@/modules/inventory/actions/partners"
 
 export const metadata: Metadata = { title: "Import partner · IT Inventory" }
 

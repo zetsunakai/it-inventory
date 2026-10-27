@@ -7,10 +7,10 @@ import {
   deleteWarehouse,
   importLocations,
   updateLocation,
-} from "@/app/(app)/master/gudang/actions"
-import { deletePartner } from "@/app/(app)/master/partner/actions"
+} from "@/modules/inventory/actions/warehouses"
+import { deletePartner } from "@/modules/inventory/actions/partners"
 import { deleteProduct } from "@/app/(app)/master/produk/actions"
-import { createUom, deleteUom } from "@/app/(app)/master/satuan/actions"
+import { createUom, deleteUom } from "@/modules/inventory/actions/uoms"
 import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"

@@ -1,6 +1,6 @@
 "use server"
 
-import { and, eq } from "drizzle-orm"
+import { eq } from "drizzle-orm"
 import { z } from "zod"
 
 import { checkbox } from "@/lib/form-fields"
@@ -11,9 +11,9 @@ import {
   productFields,
 } from "@/modules/inventory/lib/product"
 import { AppError, defineAction, defineFormAction } from "@/server/actions/define-action"
-import type { Transaction } from "@/server/db/audit"
 import { deleteUnlessUsed } from "@/server/db/delete-record"
-import { productCategories, products, uomCategories, uoms } from "@/server/db/schema"
+import { products } from "@/server/db/schema"
+import { productCategoryErrors, productUomErrors } from "@/modules/inventory/server/product-checks"
 import { importFileSchema, readImportFile } from "@/server/master-io/common"
 import {
   importProductRows,
@@ -29,35 +29,6 @@ import { customsCodeErrors } from "@/modules/it-inventory/server/product-customs
 // R-01). Kode HS boleh menyusul; selama kosong produk berstatus "belum siap dokumen BC" (kolom
 // customs_ready). Satuan CEISA diisi per baris dokumen BC (RM-01).
 
-// Kategori produk harus ada dan aktif (kecuali sudah tersimpan sebelumnya). Untuk produk baru
-// dengan product code kosong, kategorinya juga harus punya prefix kode.
-async function categoryErrors(
-  tx: Transaction,
-  categoryId: string | null,
-  { saved, needsPrefix = false }: { saved?: string | null; needsPrefix?: boolean } = {},
-) {
-  if (!categoryId) {
-    return needsPrefix ? ["Product code wajib diisi bila kategori produk tidak dipilih."] : []
-  }
-  const [category] = await tx
-    .select({
-      name: productCategories.name,
-      active: productCategories.active,
-      codePrefix: productCategories.codePrefix,
-    })
-    .from(productCategories)
-    .where(eq(productCategories.id, categoryId))
-  if (!category || (!category.active && categoryId !== saved)) {
-    return ["Kategori produk tidak ditemukan atau sudah diarsipkan."]
-  }
-  if (needsPrefix && !category.codePrefix) {
-    return [
-      `Product code wajib diisi karena kategori produk ${category.name} tidak punya prefix kode.`,
-    ]
-  }
-  return []
-}
-
 export const createProduct = defineFormAction({
   name: "createProduct",
   permission: "master:write",
@@ -71,7 +42,7 @@ export const createProduct = defineFormAction({
     .superRefine(autoLotNeedsTracking, ALWAYS),
   successMessage: "Produk ditambahkan.",
   handler: async ({ input, tx }) => {
-    const errors = await categoryErrors(tx, input.categoryId, { needsPrefix: !input.sku })
+    const errors = await productCategoryErrors(tx, input.categoryId, { needsPrefix: !input.sku })
     errors.push(...(await customsCodeErrors(tx, input)))
     if (input.sku) {
       const [existing] = await tx
@@ -80,12 +51,7 @@ export const createProduct = defineFormAction({
         .where(eq(products.sku, input.sku))
       if (existing) errors.unshift(`Product code ${input.sku} sudah dipakai.`)
     }
-    const [uom] = await tx
-      .select({ id: uoms.id })
-      .from(uoms)
-      .innerJoin(uomCategories, eq(uomCategories.id, uoms.categoryId))
-      .where(and(eq(uoms.id, input.uomId), eq(uoms.active, true), eq(uomCategories.active, true)))
-    if (!uom) errors.push("Satuan stok tidak ditemukan atau sudah diarsipkan.")
+    errors.push(...(await productUomErrors(tx, input.uomId)))
     if (errors.length) throw new AppError(errors)
 
     const [row] = await tx
@@ -118,7 +84,7 @@ export const updateProduct = defineFormAction({
       .from(products)
       .where(eq(products.id, id))
     if (!saved) throw new AppError("Produk tidak ditemukan.")
-    const errors = await categoryErrors(tx, values.categoryId, { saved: saved.categoryId })
+    const errors = await productCategoryErrors(tx, values.categoryId, { saved: saved.categoryId })
     errors.push(...(await customsCodeErrors(tx, values, saved)))
     if (errors.length) throw new AppError(errors)
 

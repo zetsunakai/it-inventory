@@ -24,7 +24,7 @@ import {
 } from "@/modules/it-inventory/lib/company"
 import type { RefCodeOption } from "@/lib/ref-codes"
 
-import { saveCompanyProfile } from "./actions"
+import { saveCompanyProfile } from "@/modules/it-inventory/actions/company"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 const FACILITY_ITEMS = FACILITY_TYPES.map((type) => ({

@@ -8,7 +8,7 @@ import { Skeleton } from "@/components/ui/skeleton"
 import { requirePermission } from "@/server/auth/session"
 import { LOCATION_COLUMNS } from "@/modules/inventory/server/master-io/locations"
 
-import { importLocations } from "../../actions"
+import { importLocations } from "@/modules/inventory/actions/warehouses"
 
 export const metadata: Metadata = { title: "Import lokasi · IT Inventory" }
 

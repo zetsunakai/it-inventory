@@ -25,7 +25,7 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
-import { deletePartner } from "./actions"
+import { deletePartner } from "@/modules/inventory/actions/partners"
 
 export const metadata: Metadata = { title: "Partner · IT Inventory" }
 

@@ -1,7 +1,7 @@
 import { and, desc, eq, like } from "drizzle-orm"
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
-import { createPartner, updatePartner } from "@/app/(app)/master/partner/actions"
+import { createPartner, updatePartner } from "@/modules/inventory/actions/partners"
 import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"

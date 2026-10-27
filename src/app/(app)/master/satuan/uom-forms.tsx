@@ -21,7 +21,7 @@ import { fieldValue, type FormState } from "@/lib/action-result"
 import { DEFAULT_DECIMAL_INPUT, toDecimalInput } from "@/lib/decimal"
 import type { ProductChoice } from "@/modules/inventory/server/queries/transfers"
 
-import { createUom, createUomCategory, updateUom } from "./actions"
+import { createUom, createUomCategory, updateUom } from "@/modules/inventory/actions/uoms"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 export type CategoryOption = { id: string; name: string; referenceCode: string | null }

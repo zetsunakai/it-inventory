@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useRef, useState, useTransition } from "react"
 
 import { GROUP_PARAM, PAGE_PARAM, SEARCH_PARAM } from "@/lib/list-params"
-import { useStoredValue } from "@/lib/use-stored-value"
+import { useStoredValue } from "@/hooks/use-stored-value"
 import { cn } from "@/lib/utils"
 
 export type ListFilter = {

@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { fieldValue, type FormState } from "@/lib/action-result"
 
-import { updateSetting } from "./actions"
+import { updateSetting } from "@/server/actions/settings"
 
 // Satu pengaturan: label, kunci teknisnya, nilai, dan Simpan di baris yang sama (selebar kartu).
 export function SettingForm({

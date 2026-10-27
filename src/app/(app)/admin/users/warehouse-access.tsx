@@ -15,7 +15,10 @@ import {
 import { ArchivedBadge } from "@/components/status-badge"
 import type { UserWarehouse } from "@/server/queries/users"
 
-import { grantWarehouseAccess, revokeWarehouseAccess } from "./actions"
+import {
+  grantWarehouseAccess,
+  revokeWarehouseAccess,
+} from "@/modules/inventory/actions/warehouse-access"
 
 // Gudang yang boleh diakses satu user (PRD bagian 3). Hanya untuk user dengan izin user:manage.
 export function WarehouseAccess({

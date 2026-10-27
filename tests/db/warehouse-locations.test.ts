@@ -1,7 +1,7 @@
 import { eq, like } from "drizzle-orm"
 import { afterAll, beforeEach, expect, test, vi } from "vitest"
 
-import { createWarehouse, updateWarehouse } from "@/app/(app)/master/gudang/actions"
+import { createWarehouse, updateWarehouse } from "@/modules/inventory/actions/warehouses"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
 import { locations, warehouses } from "@/server/db/schema"

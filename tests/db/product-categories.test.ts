@@ -5,7 +5,7 @@ import {
   createProductCategory,
   deleteProductCategory,
   updateProductCategory,
-} from "@/app/(app)/master/kategori-produk/actions"
+} from "@/modules/inventory/actions/product-categories"
 import { createProduct, importProducts } from "@/app/(app)/master/produk/actions"
 import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"

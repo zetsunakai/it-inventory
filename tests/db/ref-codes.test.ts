@@ -2,7 +2,7 @@ import { and, desc, eq, like } from "drizzle-orm"
 import { refresh } from "next/cache"
 import { afterAll, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
-import { createRefCode, updateRefCode } from "@/app/(app)/master/referensi/actions"
+import { createRefCode, updateRefCode } from "@/server/actions/ref-codes"
 import type { Role } from "@/lib/permissions"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"

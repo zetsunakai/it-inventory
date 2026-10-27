@@ -11,7 +11,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { useStoredValue } from "@/lib/use-stored-value"
+import { useStoredValue } from "@/hooks/use-stored-value"
 import { cn } from "@/lib/utils"
 
 export type OptionalColumn = { id: string; label: string; hidden: boolean }

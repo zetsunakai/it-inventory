@@ -34,7 +34,7 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
-import { deleteWarehouse } from "./actions"
+import { deleteWarehouse } from "@/modules/inventory/actions/warehouses"
 
 export const metadata: Metadata = { title: "Gudang & lokasi · IT Inventory" }
 

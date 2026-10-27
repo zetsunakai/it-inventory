@@ -1,8 +1,8 @@
 import { and, eq, inArray, like, sql } from "drizzle-orm"
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, test, vi } from "vitest"
 
-import { importLocations } from "@/app/(app)/master/gudang/actions"
-import { importPartners } from "@/app/(app)/master/partner/actions"
+import { importLocations } from "@/modules/inventory/actions/warehouses"
+import { importPartners } from "@/modules/inventory/actions/partners"
 import { importProducts } from "@/app/(app)/master/produk/actions"
 import type { ActionResult, FormState } from "@/lib/action-result"
 import type { ImportResult } from "@/lib/import"

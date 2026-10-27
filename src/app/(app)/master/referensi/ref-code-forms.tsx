@@ -18,7 +18,7 @@ import {
   type RefCodeType,
 } from "@/lib/ref-codes"
 
-import { createRefCode, updateRefCode } from "./actions"
+import { createRefCode, updateRefCode } from "@/server/actions/ref-codes"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 // Jenis mengikuti menu yang dibuka (satu menu per jenis), jadi tidak dipilih di form.

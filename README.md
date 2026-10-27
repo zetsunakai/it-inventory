@@ -8,7 +8,7 @@ Better Auth.
 
 ## Kebutuhan
 
-- Node.js 22 atau lebih baru
+- Node.js 24 LTS (versi utama di `.nvmrc`; jalankan `nvm install && nvm use` bila memakai nvm)
 - Docker dengan plugin Compose
 
 ## Menjalankan di lokal
@@ -43,6 +43,7 @@ dimatikan: user baru dibuat oleh Administrator.
 | ----------------------------------------- | ---------------------------------------------------- |
 | `npm run dev`                             | Server development (nyalakan database, lalu migrasi) |
 | `npm run lint` / `npm run typecheck`      | ESLint dan pengecekan TypeScript                     |
+| `npm run check`                           | Lint, typecheck, dan pemeriksaan format              |
 | `npm run format` / `npm run format:check` | Prettier                                             |
 | `npm run db:up` / `npm run db:down`       | Nyalakan / matikan Postgres di Docker                |
 | `npm run db:generate -- --name=<nama>`    | Buat migrasi dari perubahan schema Drizzle           |
@@ -666,7 +667,7 @@ Satu app dan satu database, dibagi tiga modul (backlog S-01, persiapan memisah a
 | Inventory    | Gudang, lokasi, produk, kategori, satuan, partner, transfer, stok, opname, periode                                                              | `src/modules/inventory` (`components`, `lib`, `actions`, `server/queries`, `server/master-io`) |
 | IT Inventory | Data kepabeanan produk (kategori IT Inventory, kode HS, siap BC), profil perusahaan, referensi kepabeanan, dokumen BC, laporan                  | `src/modules/it-inventory`                                                                     |
 
-Aturan (dipaksakan ESLint `no-restricted-imports` di `eslint.config.mjs`, `npm run lint`):
+Aturan (dipaksakan ESLint `architecture/module-boundaries` di `eslint.config.mjs`, `npm run lint`):
 
 - Base tidak boleh mengimpor modul mana pun atau `src/app`.
 - Inventory tidak boleh mengimpor IT Inventory atau `src/app`, seperti `core_inventory` hmx yang
@@ -676,7 +677,8 @@ Aturan (dipaksakan ESLint `no-restricted-imports` di `eslint.config.mjs`, `npm r
   dan field kepabeanan (`it-inventory/components/product-customs-fields.tsx`), aksi produk
   menggabungkan `productFields` dengan `productCustomsFields`.
 - Skema Drizzle (`src/server/db/schema`) adalah lapisan data bersama karena databasenya satu;
-  boleh membaca konstanta enum dari modul. Kolom kepabeanan tetap di tabel yang sama (seperti
+  boleh membaca konstanta enum dari `lib` modul, bukan action atau kode server modul.
+  Kolom kepabeanan tetap di tabel yang sama (seperti
   `inherit` di hmx), tapi field form dan aturannya milik IT Inventory. Kode inventory boleh membaca
   kolom tabel bersama (mis. filter daftar produk), selama tidak mengimpor kode IT Inventory.
 - Menu per modul (S-02, seperti active-section webx hmx): pemilih modul di atas sidebar
@@ -688,6 +690,26 @@ Aturan (dipaksakan ESLint `no-restricted-imports` di `eslint.config.mjs`, `npm r
 - Fitur baru: taruh di modul pemiliknya (komponen, lib, aksi server, query), halaman di `src/app`
   hanya merakit. Kalau inventory butuh sesuatu dari IT Inventory, balik arahnya: IT Inventory yang
   memasang bagiannya lewat `src/app`.
+
+### Konvensi penempatan kode
+
+- `src/app` berisi route, layout, UI khusus route, dan penggabungan modul. Action yang hanya
+  melayani satu domain berada di `src/modules/<modul>/actions`. Action produk tetap di route
+  karena menggabungkan field Inventory dan IT Inventory; helper domainnya berada di modul pemilik.
+- `components`, `lib`, dan `hooks` di root `src` adalah kode bersama. Komponen yang memahami
+  transfer, stok, atau dokumen BC berada di modulnya. React hook bersama berada di `src/hooks`.
+- `lib` berisi schema, tipe, konstanta, dan logika murni yang aman untuk client/server. Kode yang
+  membaca database, storage, atau rahasia berada di `server` dan memakai `import "server-only"`.
+  Entry point Server Action memakai `"use server"` dan boleh diimpor komponen client.
+  Koneksi CLI (`server/db/client.ts`), schema, dan helper murni yang dipakai seed/script tidak
+  diberi penanda ini agar tetap bisa dijalankan di luar Next.js.
+- Infrastruktur action, pengaturan, dan referensi kode bersama berada di `src/server/actions`.
+  Akses gudang pengguna milik Inventory walaupun ditampilkan di halaman administrasi.
+- Import lintas lapisan memakai alias `@/`; import relatif digunakan di dalam lapisan/modul yang
+  sama. ESLint menjaga batas modul pada import, re-export, dan dynamic import literal.
+- Unit test tetap dekat kode (`*.test.ts`); tes integrasi database dan E2E berada di `tests`.
+- Lokal dan CI memakai Node 24 LTS. Gunakan `npm ci` untuk instalasi persis dari lockfile;
+  gunakan `npm install` ketika sengaja mengubah dependency.
 
 ## Struktur folder
 

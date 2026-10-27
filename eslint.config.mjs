@@ -2,6 +2,7 @@ import { defineConfig, globalIgnores } from "eslint/config"
 import nextVitals from "eslint-config-next/core-web-vitals"
 import nextTs from "eslint-config-next/typescript"
 import prettier from "eslint-config-prettier/flat"
+import { moduleBoundaries } from "./scripts/eslint-boundaries.mjs"
 
 const eslintConfig = defineConfig([
   ...nextVitals,
@@ -11,54 +12,12 @@ const eslintConfig = defineConfig([
   // pada IT Inventory (seperti core_inventory tidak mengenal core_it_inventory di hmx). Skema
   // database adalah lapisan data bersama (satu database) dan boleh membaca konstanta modul.
   {
-    files: ["src/components/**", "src/lib/**", "src/hooks/**", "src/server/**"],
-    ignores: ["src/server/db/schema/**"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["@/modules/*", "@/app/*", "**/modules/*"],
-              message:
-                "Base tidak boleh mengimpor modul domain atau rute (S-01). Pindahkan kodenya ke modul, atau rakit di src/app.",
-            },
-          ],
-        },
-      ],
+    files: ["src/**/*.{ts,tsx}"],
+    plugins: {
+      architecture: { rules: { "module-boundaries": moduleBoundaries } },
     },
-  },
-  {
-    files: ["src/modules/inventory/**"],
     rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["@/modules/it-inventory/*", "@/app/*", "**/it-inventory/*"],
-              message:
-                "Modul inventory tidak boleh mengimpor IT Inventory atau rute (S-01). Rakit di src/app, atau pindahkan kodenya ke IT Inventory.",
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
-    files: ["src/modules/it-inventory/**"],
-    rules: {
-      "no-restricted-imports": [
-        "error",
-        {
-          patterns: [
-            {
-              group: ["@/app/*"],
-              message: "Modul IT Inventory tidak boleh mengimpor rute (S-01).",
-            },
-          ],
-        },
-      ],
+      "architecture/module-boundaries": "error",
     },
   },
   // Matikan aturan format yang bentrok dengan Prettier. Harus paling akhir.

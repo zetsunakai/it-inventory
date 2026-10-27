@@ -22,7 +22,7 @@ import { Section } from "@/components/layout/section"
 import { WarehouseLocationTable } from "./warehouse-location-table"
 import { fieldValue, type FormState } from "@/lib/action-result"
 
-import { createWarehouse, updateWarehouse } from "./actions"
+import { createWarehouse, updateWarehouse } from "@/modules/inventory/actions/warehouses"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 type Warehouse = {

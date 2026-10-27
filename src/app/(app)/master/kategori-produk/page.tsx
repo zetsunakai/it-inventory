@@ -28,7 +28,7 @@ import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
 
-import { deleteProductCategory } from "./actions"
+import { deleteProductCategory } from "@/modules/inventory/actions/product-categories"
 
 export const metadata: Metadata = { title: "Kategori produk · IT Inventory" }
 

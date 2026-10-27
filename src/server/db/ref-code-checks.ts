@@ -1,3 +1,5 @@
+import "server-only"
+
 import { and, eq, inArray, isNull } from "drizzle-orm"
 
 import type { RefCodeType } from "@/lib/ref-codes"

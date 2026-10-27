@@ -1,3 +1,5 @@
+import "server-only"
+
 import { createHash, createHmac } from "node:crypto"
 
 import { assertSafeKey, type Storage } from "./types"

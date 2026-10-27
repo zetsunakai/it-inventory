@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select"
 import { fieldValue, type FormState } from "@/lib/action-result"
 
-import { updateLocation } from "./actions"
+import { updateLocation } from "@/modules/inventory/actions/warehouses"
 import { FORM_CLASS, FormActions } from "@/components/layout/form-layout"
 
 // Nilai khusus untuk "tanpa induk", karena Select tidak bisa memilih nilai kosong.
