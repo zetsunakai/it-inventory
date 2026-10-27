@@ -29,7 +29,12 @@ import {
   type RawSearchParams,
 } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
-import { transferHref, type TransferKind, transferSteps } from "@/modules/inventory/lib/transfer"
+import {
+  transferActions,
+  transferHref,
+  type TransferKind,
+  transferSteps,
+} from "@/modules/inventory/lib/transfer"
 import { requirePermission } from "@/server/auth/session"
 import {
   getTransfer,
@@ -416,6 +421,27 @@ async function TransferDetail({
   ])
   const neighborHref = (target?: { id: string; number: string }) =>
     target && { href: transferHref(transfer.type, target.id), label: target.number }
+  const hasActions =
+    canWrite &&
+    (recording ||
+      canReturn ||
+      transferActions({
+        status: transfer.status,
+        reservable: Boolean(transfer.sourceWarehouseId),
+        instant,
+        fromRequest,
+      }).length > 0)
+  const notice = (
+    <>
+      {transfer.status !== "done" && transfer.status !== "cancelled" && (
+        <FrozenWarehouseBanner
+          warehouseIds={[transfer.sourceWarehouseId, transfer.destinationWarehouseId]}
+          context="transfer"
+        />
+      )}
+      {panel?.({ id: transfer.id })}
+    </>
+  )
 
   return (
     <DocumentLayout
@@ -474,52 +500,6 @@ async function TransferDetail({
           : []),
         { label: transfer.number },
       ]}
-      actions={
-        canWrite && (
-          <>
-            <TransferActions
-              id={transfer.id}
-              number={transfer.number}
-              status={transfer.status}
-              noun={kind.noun}
-              effect={effect}
-              canBackdate={user.roles.includes("manajer")}
-              path={kind.path}
-              needsApproval={Boolean(kind.needsApproval)}
-              canApprove={hasPermission(user.roles, "inventory:approve")}
-              reservable={Boolean(transfer.sourceWarehouseId)}
-              instant={instant}
-              fromRequest={fromRequest}
-              lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
-                id: line.id,
-                sku: line.sku,
-                productName: line.productName,
-                inputQty: line.inputQty,
-                uomCode: line.inputUomCode,
-                detailed:
-                  (transfer.type === "receipt" || transfer.type === "delivery") &&
-                  hasLotDetail(line)
-                    ? {
-                        qty: line.moves.reduce((sum, move) => sum + Number(move.qty), 0).toFixed(4),
-                        requested: line.qty,
-                        uomCode: line.stockUomCode,
-                      }
-                    : undefined,
-              }))}
-            />
-            {recording && (
-              <Link
-                href={`${kind.path}/${transfer.id}/scan`}
-                className={buttonVariants({ variant: "outline", className: "pointer-coarse:h-11" })}
-              >
-                <ScanLine />
-                Scan
-              </Link>
-            )}
-            {canReturn && <CreateReturnButton originId={transfer.id} />}
-          </>
-        )
-      }
       meta={
         (transfer.partner || transfer.returnOfNumber) && (
           <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-1">
@@ -529,32 +509,80 @@ async function TransferDetail({
         )
       }
     >
-      {transfer.status !== "done" && transfer.status !== "cancelled" && (
-        <FrozenWarehouseBanner
-          warehouseIds={[transfer.sourceWarehouseId, transfer.destinationWarehouseId]}
-          context="transfer"
-        />
-      )}
-      {panel?.({ id: transfer.id })}
       {/* Dibuka dalam mode baca seperti dokumen BC; Edit membuka form (Simpan · Buang). */}
       <RecordModes
         canEdit={editable}
         createHref={kind.creatable === false ? undefined : `${kind.path}/baru`}
+        actions={
+          hasActions && (
+            <>
+              <TransferActions
+                id={transfer.id}
+                number={transfer.number}
+                status={transfer.status}
+                noun={kind.noun}
+                effect={effect}
+                canBackdate={user.roles.includes("manajer")}
+                path={kind.path}
+                needsApproval={Boolean(kind.needsApproval)}
+                canApprove={hasPermission(user.roles, "inventory:approve")}
+                reservable={Boolean(transfer.sourceWarehouseId)}
+                instant={instant}
+                fromRequest={fromRequest}
+                lines={(kind.needsApproval ? [] : transfer.lines).map((line) => ({
+                  id: line.id,
+                  sku: line.sku,
+                  productName: line.productName,
+                  inputQty: line.inputQty,
+                  uomCode: line.inputUomCode,
+                  detailed:
+                    (transfer.type === "receipt" || transfer.type === "delivery") &&
+                    hasLotDetail(line)
+                      ? {
+                          qty: line.moves
+                            .reduce((sum, move) => sum + Number(move.qty), 0)
+                            .toFixed(4),
+                          requested: line.qty,
+                          uomCode: line.stockUomCode,
+                        }
+                      : undefined,
+                }))}
+              />
+              {recording && (
+                <Link
+                  href={`${kind.path}/${transfer.id}/scan`}
+                  className={buttonVariants({
+                    variant: "outline",
+                    className: "pointer-coarse:h-11",
+                  })}
+                >
+                  <ScanLine />
+                  Scan
+                </Link>
+              )}
+              {canReturn && <CreateReturnButton originId={transfer.id} />}
+            </>
+          )
+        }
         view={
-          <TransferView
-            kind={kind}
-            transfer={transfer}
-            lotEditor={
-              recording
-                ? (line) => (
-                    <LineLotEditor transferId={transfer.id} line={lotLine(transfer, line)} />
-                  )
-                : undefined
-            }
-          />
+          <div className="space-y-4">
+            {notice}
+            <TransferView
+              kind={kind}
+              transfer={transfer}
+              lotEditor={
+                recording
+                  ? (line) => (
+                      <LineLotEditor transferId={transfer.id} line={lotLine(transfer, line)} />
+                    )
+                  : undefined
+              }
+            />
+          </div>
         }
         form={
           <TransferForm
+            notice={notice}
             kind={kind}
             locations={locations}
             uoms={uoms}

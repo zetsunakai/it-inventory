@@ -3,8 +3,9 @@ import type { ReactNode } from "react"
 import { PageCrumbs, type Crumb } from "./breadcrumb-context"
 import { PageMessageSlot } from "./layout/page-message"
 
-// Judul halaman di area konten. Statis, jadi ikut di-prerender. Aksi (tombol alur dokumen, Buat,
-// Import) di kanan judul; pesan hasil aksi di bawahnya (usePageMessage, UF-03).
+// Judul halaman di area konten. Statis, jadi ikut di-prerender. Aksi halaman seperti Import/Export
+// di kanan judul; Buat di ListToolbar, aksi dokumen di RecordModes/DocumentLayout.
+// Pesan hasil aksi di bawah header (usePageMessage, UF-03).
 // description hanya untuk informasi yang tidak ada di judul (aturan yang berlaku, fakta penting);
 // jangan mengulang judul (skill ui-it-inventory).
 // Judul juga menjadi tingkat terakhir breadcrumb header (UF-02), kecuali halaman memberi crumbs

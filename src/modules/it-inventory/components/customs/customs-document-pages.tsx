@@ -366,7 +366,7 @@ async function CustomsDetail({
           actions={
             // Elemen dari server masuk ke daftar anak di klien; tanpa key React memperingatkan
             // "unique key" karena elemen hasil RSC belum ditandai tervalidasi.
-            <SubmitCustomsButton key="submit" id={doc.id} number={doc.number} />
+            editable && <SubmitCustomsButton key="submit" id={doc.id} number={doc.number} />
           }
           form={
             editable && (
@@ -377,7 +377,6 @@ async function CustomsDetail({
                 companyName={doc.companyName}
                 initial={doc.draft}
                 initialLabels={doc.refLabels}
-                actions={<SubmitCustomsButton key="submit" id={doc.id} number={doc.number} />}
               />
             )
           }

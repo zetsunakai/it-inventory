@@ -37,7 +37,7 @@ import { RejectTransferButton } from "./reject-transfer-button"
 
 // Aksi transfer sesuai statusnya (PRD bagian 6.3, backlog R-06): Draft → Konfirmasi → Menunggu /
 // Sebagian tersedia / Siap → Validasi, Cek stok, Kembali ke Draft, atau Batal.
-// Tombol tampil di kanan header halaman; semua alasan gagal dari server (mis. stok tidak cukup per
+// Tombol mengikuti Edit/Buat di baris aksi mode baca; semua alasan gagal dari server (mis. stok tidak cukup per
 // produk) tampil sekaligus di slot pesan di bawah header (usePageMessage, UF-03).
 export function TransferActions({
   id,

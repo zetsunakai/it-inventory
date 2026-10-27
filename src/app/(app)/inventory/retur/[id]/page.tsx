@@ -155,17 +155,6 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <DocumentLayout
-      actions={
-        canWrite && (
-          <ReturnRequestActions
-            id={request.id}
-            number={request.number}
-            status={request.status}
-            cancellable={cancellable}
-            closable={closable}
-          />
-        )
-      }
       title={`Retur ${request.number}`}
       crumbs={[{ label: request.number }]}
       meta={
@@ -205,6 +194,18 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
       {/* Dibuka dalam mode baca seperti dokumen BC; Edit membuka form (Simpan · Buang). */}
       <RecordModes
         canEdit={editable}
+        actions={
+          canWrite &&
+          (request.status === "draft" || cancellable || closable) && (
+            <ReturnRequestActions
+              id={request.id}
+              number={request.number}
+              status={request.status}
+              cancellable={cancellable}
+              closable={closable}
+            />
+          )
+        }
         view={
           <div className="space-y-8">
             <InfoGrid

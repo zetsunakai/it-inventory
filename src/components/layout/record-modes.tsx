@@ -31,7 +31,8 @@ export function RecordModes({
   canEdit: boolean
   // Tombol Buat ke halaman data baru; kosongkan bila data ini tidak bisa dibuat dari sini.
   createHref?: string
-  // Aksi tambahan mode baca setelah Edit dan Buat (mis. Submit, Duplikat, Hapus dokumen).
+  // Aksi mode baca setelah Edit/Buat, juga saat canEdit=false (mis. Validasi dokumen Siap).
+  // Pemanggil wajib menyaring izin dan status; slot ini tidak ditampilkan saat mengedit draft.
   actions?: ReactNode
   // Data belum ada (mis. profil perusahaan belum diisi): langsung form, tanpa Buang. Tetap pakai
   // RecordModes supaya setelah tersimpan pindah ke mode baca dengan pesannya.
@@ -54,23 +55,27 @@ export function RecordModes({
 
   return (
     <div className="form-page">
-      {canEdit && (
+      {(canEdit || actions) && (
         <div className="form-actions">
-          <Button
-            type="button"
-            onClick={() => {
-              clear()
-              setEditing(true)
-            }}
-          >
-            <Pencil />
-            Edit
-          </Button>
-          {createHref && (
-            <Link href={createHref} className={buttonVariants({ variant: "outline" })}>
-              <Plus />
-              Buat
-            </Link>
+          {canEdit && (
+            <>
+              <Button
+                type="button"
+                onClick={() => {
+                  clear()
+                  setEditing(true)
+                }}
+              >
+                <Pencil />
+                Edit
+              </Button>
+              {createHref && (
+                <Link href={createHref} className={buttonVariants({ variant: "outline" })}>
+                  <Plus />
+                  Buat
+                </Link>
+              )}
+            </>
           )}
           {actions}
           <DocumentStatusSlot />

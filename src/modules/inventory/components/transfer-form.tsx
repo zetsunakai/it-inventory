@@ -3,7 +3,7 @@
 import { lineTableColumns, TRANSFER_LINE_FIELDS } from "./line-table-columns"
 
 import { useRouter } from "next/navigation"
-import { useActionState, useEffect, useId, useRef, useState } from "react"
+import { useActionState, useEffect, useId, useRef, useState, type ReactNode } from "react"
 
 import { saveTransfer } from "@/modules/inventory/actions/transfers"
 import { FormErrors } from "@/components/form-errors"
@@ -90,11 +90,14 @@ export function TransferForm({
   locations,
   uoms,
   transfer,
+  notice,
 }: {
   kind: TransferKind
   locations: LocationOption[]
   uoms: UomChoice[]
   transfer?: TransferFormValues
+  // Peringatan gudang/panel lintas modul tetap di bawah aksi, sebelum field.
+  notice?: ReactNode
 }) {
   const router = useRouter()
   // Id unik per form: router menyimpan halaman sebelumnya tersembunyi di DOM, jadi id tetap
@@ -172,6 +175,7 @@ export function TransferForm({
         </Button>
       </FormActions>
       <FormErrors errors={state?.ok === false ? state.errors : undefined} />
+      {notice}
       {transfer && <input type="hidden" name="id" value={transfer.id} />}
       <input type="hidden" name="type" value={kind.type} />
       <input type="hidden" name="partnerId" value={partner?.id ?? ""} />

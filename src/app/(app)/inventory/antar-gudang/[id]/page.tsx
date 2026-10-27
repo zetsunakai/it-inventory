@@ -174,16 +174,6 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
 
   return (
     <DocumentLayout
-      actions={
-        canWrite && (
-          <InterwarehouseActions
-            id={request.id}
-            number={request.number}
-            status={request.status}
-            canSettle={canSettle}
-          />
-        )
-      }
       title={`Transfer antar gudang ${request.number}`}
       crumbs={[{ label: request.number }]}
 
@@ -210,6 +200,17 @@ async function Detail({ params }: { params: Promise<{ id: string }> }) {
       <RecordModes
         canEdit={editable}
         createHref="/inventory/antar-gudang/baru"
+        actions={
+          canWrite &&
+          (editable || request.status === "confirmed" || canSettle) && (
+            <InterwarehouseActions
+              id={request.id}
+              number={request.number}
+              status={request.status}
+              canSettle={canSettle}
+            />
+          )
+        }
         view={
           <div className="space-y-8">
             <InfoGrid

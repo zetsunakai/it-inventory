@@ -1,6 +1,33 @@
 # Standar halaman daftar dan form
 
 Gunakan komponen bersama berikut untuk halaman baru maupun pembaruan halaman lama.
+Dokumen ini menjadi rujukan utama posisi tombol dan layout; skill UI dan komentar komponen
+mengikuti aturan di sini.
+
+## Posisi dan kepemilikan tombol
+
+| Konteks                                            | Susunan                                                                    |
+| -------------------------------------------------- | -------------------------------------------------------------------------- |
+| Header daftar (`ListLayout` / `PageHeader`)        | Judul di kiri, import/export di kanan                                      |
+| Toolbar daftar (`ListToolbar`)                     | Buat di kiri, pencarian/filter di tengah, pager di kanan                   |
+| Detail mode baca (`RecordModes`)                   | Edit, Buat bila tersedia, lalu aksi alur; status di kanan                  |
+| Form mode edit (`FormActions`)                     | Simpan, Buang, lalu aksi sekunder yang bekerja pada draft; status di kanan |
+| Dokumen tanpa mode edit (`DocumentLayout actions`) | Aksi alur di atas isi, status di kanan                                     |
+
+- Satu halaman detail memiliki satu baris aksi aktif. Bila memakai `RecordModes`, pasang aksi
+  alur di `RecordModes.actions`, bukan sekaligus di `DocumentLayout.actions`.
+- Peringatan gudang dan panel dokumen terkait berada setelah baris aksi, sebelum isi record.
+  Form transfer memakai slot `notice` untuk mempertahankan urutan yang sama saat edit.
+- Slot aksi mode baca tetap boleh tampil ketika record tidak bisa diedit, misalnya
+  Batalkan permintaan antar gudang yang sudah dikonfirmasi, Validasi transfer Siap, dan
+  Tutup tanpa pengganti pada retur Diproses. Pemanggil menyaring izin dan statusnya.
+- Saat edit, Konfirmasi, Submit, Validasi, dan pembatalan dokumen disembunyikan. Aksi tersebut
+  memproses data tersimpan; pengguna harus Simpan atau Buang terlebih dahulu agar draft lokal
+  tidak terlewati. Buang hanya membuang perubahan lokal, berbeda dari pembatalan dokumen.
+- Aksi berbahaya memakai konfirmasi. Pada `FormActions`, slot `danger` terpisah di kanan.
+- Tombol alur mengikuti urutan DOM/Tab yang sama dengan urutan visual. Pada HP, tombol boleh
+  membungkus dan status turun ke baris berikutnya tanpa scroll horizontal. Baris aksi ikut
+  ter-scroll bersama halaman, bukan sticky.
 
 ## Halaman daftar
 

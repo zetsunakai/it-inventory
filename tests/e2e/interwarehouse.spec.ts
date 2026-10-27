@@ -2,6 +2,7 @@ import { expect, test } from "@playwright/test"
 
 import { ADMIN_STATE_FILE } from "./accounts"
 import { createInventoryFixture, receiveStock, stockAt } from "./fixtures"
+import { expectActionBar } from "./action-bar"
 import {
   expectDocumentStatus,
   fillInteractive,
@@ -12,7 +13,7 @@ import {
 // Transfer antar gudang lewat lokasi transit (backlog R-10).
 test.use({ storageState: ADMIN_STATE_FILE })
 
-test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) => {
+test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }, testInfo) => {
   const origin = await createInventoryFixture("IWA")
   const target = await createInventoryFixture("IWB")
   await receiveStock(origin, "10")
@@ -30,11 +31,30 @@ test("barang keluar ke transit lalu masuk ke gudang tujuan", async ({ page }) =>
   await page.getByRole("button", { name: "Simpan", exact: true }).click()
   await expect(page.getByRole("heading", { name: /^Transfer antar gudang ITW\// })).toBeVisible()
 
+  for (const width of [1366, 390]) {
+    await page.setViewportSize({ width, height: 900 })
+    await expectActionBar(page, ["Edit", "Buat", "Konfirmasi", "Batalkan permintaan"])
+    await page.screenshot({
+      path: testInfo.outputPath(`interwarehouse-view-${width}.png`),
+      fullPage: true,
+    })
+    await page.getByRole("button", { name: "Edit", exact: true }).click()
+    await expectActionBar(page, ["Simpan", "Buang"])
+    await page.screenshot({
+      path: testInfo.outputPath(`interwarehouse-edit-${width}.png`),
+      fullPage: true,
+    })
+    await page.getByRole("button", { name: "Buang", exact: true }).click()
+  }
+  await page.setViewportSize({ width: 1366, height: 900 })
+
   await page.getByRole("button", { name: "Konfirmasi" }).click()
   await expect(
     page.getByRole("status").filter({ hasText: "Permintaan dikonfirmasi." }),
   ).toBeVisible()
   const requestUrl = page.url()
+  await expectActionBar(page, ["Batalkan permintaan"])
+  await expect(page.getByRole("button", { name: "Edit", exact: true })).toHaveCount(0)
 
   // Setelah konfirmasi tab Barang tetap aktif; tautan transfer ada di tab Transfer.
   await page.getByRole("tab", { name: "Transfer", exact: true }).click()
