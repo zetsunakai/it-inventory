@@ -577,10 +577,11 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   panel) hanya membaca dokumen yang memilih transfer itu (disisipkan halaman `src/app` lewat prop
   `panel` `TransferDetailPage`, jadi modul inventory tidak mengimpor modul IT Inventory). Mode baca
   detail dokumen punya bagian Transfer (status dan tanggal selesai tiap transfer).
-- Flow Dokumen (H-06, `/dokumen-bc/flow`, menu Alur dokumen): diagram pasangan dokumen masuk →
-  keluar dari `DOCUMENT_FLOW_MAP` hmx (`CUSTOMS_FLOW_IN`, `CUSTOMS_FLOW_OUT`, `CUSTOMS_FLOW_MAP` di
-  `customs.ts`); setiap kotak membuka daftar jenisnya, arahkan kursor/fokus untuk menyorot
-  pasangannya. Seri Barang Asal (`source_sequence` hmx) tetap isian manual di form Barang
+- Rantai Dokumen (H-06, `/dokumen-bc/flow`, menu Keterkaitan dokumen › Rantai dokumen): tiap baris
+  adalah jalur pemasukan → penimbunan di kawasan → pengeluaran, memakai pasangan `DOCUMENT_FLOW_MAP`
+  hmx (`CUSTOMS_FLOW_IN`, `CUSTOMS_FLOW_OUT`, `CUSTOMS_FLOW_MAP` di `customs.ts`). Satu dokumen
+  keluar bisa muncul di beberapa jalur; kartu membuka daftar jenisnya dan hover/fokus menyorot
+  seluruh jalur. Seri Barang Asal (`source_sequence` hmx) tetap isian manual di form Barang
   (`details.sourceSequence`).
 - Data demo (M4-07, H-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat
   produk `DEMO-KAIN`, penerimaan Selesai, BC 2.3 Submitted yang memilih penerimaan itu, pengiriman

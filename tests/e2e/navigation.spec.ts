@@ -36,7 +36,9 @@ async function moduleOptions(page: Page) {
   await sidebar(page)
     .getByRole("button", { name: /^Ganti modul/ })
     .click()
-  const options = await page.getByRole("menuitemradio").allTextContents()
+  const items = page.getByRole("menuitemradio")
+  await expect(items.first()).toBeVisible()
+  const options = await items.allTextContents()
   await page.keyboard.press("Escape")
   return options.map((option) => option.trim())
 }

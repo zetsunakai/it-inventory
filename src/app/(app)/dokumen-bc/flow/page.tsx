@@ -3,27 +3,27 @@ import { Suspense } from "react"
 
 import { PageHeader } from "@/components/page-header"
 import { Skeleton } from "@/components/ui/skeleton"
-import { DocumentFlow } from "@/modules/it-inventory/components/customs/document-flow"
+import { DocumentChain } from "@/modules/it-inventory/components/customs/document-chain"
 import { requirePermission } from "@/server/auth/session"
 
-export const metadata: Metadata = { title: "Flow dokumen · IT Inventory" }
+export const metadata: Metadata = { title: "Rantai dokumen · IT Inventory" }
 
-// Menu Flow Dokumen seperti hmx (action_it_inventory_document_flow, backlog H-06).
-export default function DocumentFlowPage() {
+// Rantai dokumen (H-06): jalur pemasukan → penimbunan → pengeluaran per dokumen masuk.
+export default function DocumentChainPage() {
   return (
     <>
       <PageHeader
-        title="Flow dokumen"
-        description="Pasangan dokumen masuk dan dokumen keluar kawasan. Pilih kotak untuk membuka daftar dokumen jenis itu."
+        title="Rantai dokumen"
+        description="Jalur pemasukan → penimbunan → pengeluaran barang kawasan beserta dokumen BC di setiap tahap. Sorot satu jalur untuk melihat pasangannya; satu dokumen keluar bisa muncul di beberapa jalur."
       />
       <Suspense fallback={<Skeleton className="h-[28rem] w-full" />}>
-        <Flow />
+        <Chain />
       </Suspense>
     </>
   )
 }
 
-async function Flow() {
+async function Chain() {
   await requirePermission("bc:read")
-  return <DocumentFlow />
+  return <DocumentChain />
 }
