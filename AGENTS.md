@@ -7,3 +7,9 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
+
+## Preferensi pengujian
+
+- Keputusan user 29/10/2026: jangan menjalankan tes E2E/browser (termasuk untuk screenshot)
+  sebelum akan commit dan push, kecuali user secara eksplisit memintanya.
+- Selama implementasi biasa, gunakan lint, TypeScript, serta tes unit/database yang relevan.

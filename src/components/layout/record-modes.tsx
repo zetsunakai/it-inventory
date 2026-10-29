@@ -14,7 +14,10 @@ import type { ActionResult } from "@/lib/action-result"
 // berhasil kembali ke mode baca (pesannya di slot pesan halaman), Buang membuang perubahan.
 // Peran tanpa hak ubah hanya melihat mode baca.
 
-type FormMode = { cancel?: () => void; saved: (result: ActionResult<unknown>) => void }
+type FormMode = {
+  cancel?: () => void
+  saved: (result: ActionResult<unknown>, silent?: boolean) => void
+}
 
 const FormModeContext = createContext<FormMode | null>(null)
 
@@ -43,8 +46,8 @@ export function RecordModes({
   const mode = useMemo<FormMode>(
     () => ({
       cancel: initialEditing ? undefined : () => setEditing(false),
-      saved: (result) => {
-        show(result)
+      saved: (result, silent) => {
+        if (!silent) show(result)
         setEditing(false)
       },
     }),
@@ -100,12 +103,15 @@ export function DiscardButton() {
 // Dipanggil form dengan hasil action terakhirnya. Dibuka dari mode baca (RecordModes): kembali ke
 // mode baca dan pesannya di slot pesan halaman. Di luar itu (form yang tetap tampil setelah
 // disimpan, mis. profil perusahaan pertama kali): pesannya saja di slot pesan halaman.
-export function useSaveFeedback(result: ActionResult<unknown> | null | undefined) {
+export function useSaveFeedback(
+  result: ActionResult<unknown> | null | undefined,
+  { silent = false }: { silent?: boolean } = {},
+) {
   const mode = useContext(FormModeContext)
   const { show } = usePageMessage()
   useEffect(() => {
     if (!result?.ok) return
-    if (mode) mode.saved(result)
-    else show(result)
-  }, [result, mode, show])
+    if (mode) mode.saved(result, silent)
+    else if (!silent) show(result)
+  }, [result, mode, show, silent])
 }

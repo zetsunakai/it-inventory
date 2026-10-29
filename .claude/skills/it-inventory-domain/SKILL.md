@@ -86,8 +86,15 @@ PRD bagian 15.4.
    laporan lama tidak berubah. Kolom opname/selisih seperti keterangan opname hmx-002.
 10. **CEISA (fase 2)**: satu client di server seperti Equip3 (login, refresh token, retry), kirim
     dan cek status sebagai background job, `Idempotency-Key` dan cek status nomor aju sebelum kirim
-    ulang (pelajaran dari hmx-002). Kredensial hanya di environment/secret manager, tidak pernah di
-    tabel seperti kedua sistem lama. Selain production selalu host development.
+    ulang (pelajaran dari hmx-002). Keputusan user 29/10/2026: username/password CEISA diisi lewat
+    field Pengaturan, bukan environment. Password disimpan terenkripsi AES-256-GCM di database,
+    tidak dimuat pada payload awal halaman dan dikecualikan dari audit log bersama token.
+    Tombol mata boleh mengambil password tersimpan secara eksplisit, dengan izin `settings:write`.
+    Kunci enkripsi
+    tetap di environment/secret manager. Lingkungan CEISA juga disimpan di database
+    (`system_settings.ceisa.environment`), bukan `CEISA_ENV`. Production mengikuti URL Postman
+    pengguna; Development tetap tersedia melalui pilihan di Pengaturan. Jangan mengubah `.env.local`
+    atau `.env.example` untuk konfigurasi akun/lingkungan CEISA.
 
 ## Rujukan cepat CEISA dari Equip3
 

@@ -680,6 +680,41 @@
       "when": 1792921073462,
       "tag": "0096_customs_line_child_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 97,
+      "version": "7",
+      "when": 1793277726459,
+      "tag": "0097_ceisa_connections",
+      "breakpoints": true
+    },
+    {
+      "idx": 98,
+      "version": "7",
+      "when": 1793277731911,
+      "tag": "0098_ceisa_connection_triggers",
+      "breakpoints": true
+    },
+    {
+      "idx": 99,
+      "version": "7",
+      "when": 1793278522321,
+      "tag": "0099_ceisa_credentials",
+      "breakpoints": true
+    },
+    {
+      "idx": 100,
+      "version": "7",
+      "when": 1793279135109,
+      "tag": "0100_ceisa_api_key",
+      "breakpoints": true
+    },
+    {
+      "idx": 101,
+      "version": "7",
+      "when": 1793280814474,
+      "tag": "0101_ceisa_environment_settings",
+      "breakpoints": true
     }
   ]
 }

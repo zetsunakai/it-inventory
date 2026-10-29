@@ -37,6 +37,33 @@ dimatikan: user baru dibuat oleh Administrator.
   `src/server/db/schema/auth.ts`. Kalau menambah plugin Better Auth, generate ulang dengan
   `npx auth@latest generate` lalu sesuaikan dengan konvensi repo.
 
+## Integrasi CEISA
+
+- Buka **Pengaturan › Integrasi CEISA**, lalu pilih **Hubungkan** untuk autentikasi akun
+  perusahaan. Fitur ini belum mengirim dokumen BC atau memperbarui status pendaftarannya.
+- Login CEISA terpisah dari login IT Inventory. Di Pengaturan pilih **Edit**, isi **Username CEISA**
+  dan **Password CEISA**, lalu **Simpan** sebelum **Hubungkan**. Satu tombol Simpan di atas form
+  menyimpan pengaturan sistem dan CEISA sekaligus; **Buang** membatalkan draft. Password kosong mempertahankan password
+  tersimpan untuk username yang sama; mengganti username wajib mengisi password baru.
+- **Bea Cukai API key** opsional, disimpan terenkripsi dan tidak dimuat kembali ke browser.
+  Kosongkan untuk mempertahankan key tersimpan. Key ini belum digunakan oleh autentikasi CEISA.
+- Pilihan **Lingkungan CEISA** disimpan di database (`system_settings`, key `ceisa.environment`),
+  bukan env server. Production memakai `https://apis-gw.beacukai.go.id`; Development memakai
+  `https://apisdev-gw.beacukai.go.id`. Instalasi ini memakai Production sesuai URL Postman.
+  Endpoint login adalah `/nle-oauth/v1/user/login`,
+  mengikuti konfigurasi login perusahaan Equip3-moduleboard. Verifikasi endpoint dan kontrak
+  respons terhadap dokumentasi CEISA terbaru sebelum dipakai di produksi.
+- Password, token akses, dan refresh disimpan di `ceisa_connections` dengan enkripsi AES-256-GCM.
+  Sebaiknya isi `CEISA_TOKEN_KEY` dengan kunci base64 32 byte (`openssl rand -base64 32`).
+  Jika kosong, kunci diturunkan dari `BETTER_AUTH_SECRET`. Perubahan kunci membuat token lama
+  tidak terbaca; isi ulang password dan hubungkan ulang setelah rotasi kunci.
+- Hanya pengguna dengan izin `settings:write` yang dapat menghubungkan akun. Hasil percobaan
+  dicatat di audit log; kolom password dan token dikecualikan dan respons mentah tidak disimpan
+  di log. Token tidak pernah dimuat ke browser. Password tersimpan tidak dimuat saat membuka halaman;
+  Administrator dapat memintanya secara eksplisit lewat tombol mata pada field password di mode edit.
+- Unit test memakai fetch tiruan. Tes Playwright memakai database kosong dan tidak menghubungkan
+  akun setelah kredensial diisi, sehingga tidak menghubungi layanan CEISA sungguhan.
+
 ## Script
 
 | Script                                    | Fungsi                                               |
