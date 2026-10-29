@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest"
 
-import { hasPermission, PERMISSIONS, requiresMfa } from "./permissions"
+import { hasPermission, PERMISSIONS } from "./permissions"
 
 const WRITE_PERMISSIONS = PERMISSIONS.filter((permission) => !permission.endsWith(":read"))
 
@@ -39,17 +39,5 @@ describe("hasPermission", () => {
     for (const permission of PERMISSIONS) {
       expect(hasPermission([], permission)).toBe(false)
     }
-  })
-})
-
-describe("requiresMfa", () => {
-  test("wajib untuk Manajer dan Administrator", () => {
-    expect(requiresMfa(["administrator"])).toBe(true)
-    expect(requiresMfa(["manajer"])).toBe(true)
-    expect(requiresMfa(["admin_gudang", "manajer"])).toBe(true)
-  })
-
-  test("tidak wajib untuk peran lain", () => {
-    expect(requiresMfa(["staf_exim", "admin_gudang", "auditor"])).toBe(false)
   })
 })

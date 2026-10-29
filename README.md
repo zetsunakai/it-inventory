@@ -646,8 +646,9 @@ npx playwright install chromium   # sekali saja sebelum test:e2e pertama
   terhadap Postgres sungguhan. Tes SQL membungkus perubahannya dengan `inRollback()` supaya tidak
   meninggalkan data.
 - **End-to-end** (`tests/e2e/`): alur di browser. Akun tes dibuat oleh `tests/e2e/global-setup.ts`
-  lewat script seed. `tests/e2e/admin.setup.ts` mengaktifkan MFA Administrator lewat UI (kode TOTP
-  dihitung oleh `tests/e2e/totp.ts`) dan menyimpan sesinya; tes yang butuh Administrator memakai
+  lewat script seed. `tests/e2e/admin.setup.ts` login sebagai Administrator lalu mengaktifkan MFA
+  secara sukarela (opsional untuk semua peran; kode TOTP dihitung oleh `tests/e2e/totp.ts`) supaya
+  alur verifikasi TOTP ikut teruji, lalu menyimpan sesinya; tes yang butuh Administrator memakai
   `test.use({ storageState: ADMIN_STATE_FILE })`.
 
 Semua tes memakai database terpisah `it_inventory_test` di container yang sama, yang dikosongkan lalu

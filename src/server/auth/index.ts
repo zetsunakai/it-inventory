@@ -33,8 +33,8 @@ export const auth = betterAuth({
   // nextCookies harus paling akhir: dibutuhkan supaya sign-in dari
   // server action bisa menulis cookie sesi.
   plugins: [
-    // MFA TOTP. Wajib untuk Manajer dan Administrator (PRD bagian 11),
-    // dipaksakan di requireUser(). Issuer tampil di aplikasi authenticator.
+    // MFA TOTP bersifat opsional untuk semua peran (tidak dipaksakan di requireUser()).
+    // Issuer tampil di aplikasi authenticator.
     twoFactor({ issuer: "IT Inventory" }),
     nextCookies(),
   ],

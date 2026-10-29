@@ -15,7 +15,7 @@ import { AppError } from "./app-error"
 export { AppError }
 
 // Pola standar untuk SEMUA perubahan data (backlog M0-08):
-//   1. user wajib login (dan MFA bila perannya mengharuskan)
+//   1. user wajib login
 //   2. cek izin peran
 //   3. validasi input dengan Zod, semua kesalahan dikembalikan sekaligus
 //   4. jalankan handler di dalam satu transaksi database

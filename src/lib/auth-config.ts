@@ -5,7 +5,7 @@ export const AUTH_COOKIE_PREFIX = "it-inventory"
 export const LOGIN_PATH = "/login"
 // Langkah kedua login untuk user yang sudah mengaktifkan MFA.
 export const MFA_VERIFY_PATH = "/login/verifikasi"
-// Halaman wajib aktivasi MFA untuk peran yang mengharuskannya.
+// Halaman aktivasi/penonaktifan MFA (opsional untuk semua peran).
 export const MFA_SETUP_PATH = "/akun/mfa"
 
 // Cegah open redirect: hanya path internal yang diizinkan. "//host" dan "/\host"

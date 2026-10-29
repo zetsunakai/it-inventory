@@ -8,7 +8,7 @@ import { ListLayout } from "@/components/layout/list-layout"
 import { NameCell, StatusBadge } from "@/components/status-badge"
 import { formatDate } from "@/lib/format"
 import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
-import { requiresMfa, ROLE_LABELS, ROLES } from "@/lib/permissions"
+import { ROLE_LABELS, ROLES } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { listUsers, type UserListRow } from "@/server/queries/users"
 import { ListToolbar } from "@/components/layout/list-toolbar"
@@ -38,10 +38,8 @@ const COLUMNS: DataTableColumn<UserListRow>[] = [
     cell: (user) =>
       user.twoFactorEnabled ? (
         <StatusBadge tone="success">Aktif</StatusBadge>
-      ) : requiresMfa(user.roles) ? (
-        <StatusBadge tone="warning">Wajib, belum aktif</StatusBadge>
       ) : (
-        <span className="text-muted-foreground">Tidak wajib</span>
+        <span className="text-muted-foreground">Tidak aktif</span>
       ),
   },
   { header: "Dibuat", cell: (user) => formatDate(user.createdAt), align: "right" },

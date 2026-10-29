@@ -6,13 +6,16 @@ import { ACCOUNTS, ADMIN_STATE_FILE, ADMIN_TOTP_FILE } from "./accounts"
 import { login } from "./login"
 import { totp } from "./totp"
 
-// Dijalankan sekali sebelum tes lain: Administrator mengaktifkan MFA lewat UI (alur M0-05),
-// lalu sesinya disimpan untuk tes yang butuh akses Administrator.
-setup("Administrator mengaktifkan MFA", async ({ page }) => {
+// Dijalankan sekali sebelum tes lain: Administrator login (MFA tidak lagi wajib), lalu
+// mengaktifkan MFA secara sukarela supaya alur kode TOTP saat login tetap punya user ber-MFA.
+// Sesinya disimpan untuk tes yang butuh akses Administrator.
+setup("Administrator login dan mengaktifkan MFA (opsional)", async ({ page }) => {
   await page.goto("/login")
   await login(page, ACCOUNTS.admin)
-  await expect(page).toHaveURL(/\/akun\/mfa$/)
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole("button", { name: `Menu akun ${ACCOUNTS.admin.name}` })).toBeVisible()
 
+  await page.goto("/akun/mfa")
   await page.getByLabel("Password akun Anda").fill(ACCOUNTS.admin.password)
   await page.getByRole("button", { name: "Lanjut" }).click()
   const secret = (await page.getByTestId("mfa-manual-key").textContent())?.trim()

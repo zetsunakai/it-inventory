@@ -10,7 +10,7 @@ import { Section } from "@/components/layout/section"
 import { StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
 import { formatDate } from "@/lib/format"
-import { hasAllWarehouseAccess, requiresMfa, ROLE_LABELS, type Role } from "@/lib/permissions"
+import { hasAllWarehouseAccess, ROLE_LABELS, type Role } from "@/lib/permissions"
 import { requirePermission } from "@/server/auth/session"
 import { db } from "@/server/db"
 import { warehouses } from "@/server/db/schema"
@@ -64,10 +64,8 @@ async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
             label: "MFA",
             value: user.twoFactorEnabled ? (
               <StatusBadge tone="success">Aktif</StatusBadge>
-            ) : requiresMfa(user.roles) ? (
-              <StatusBadge tone="warning">Wajib, belum aktif</StatusBadge>
             ) : (
-              "Tidak wajib"
+              "Tidak aktif"
             ),
           },
           { label: "Dibuat", value: formatDate(user.createdAt) },

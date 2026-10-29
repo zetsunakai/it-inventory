@@ -5,8 +5,8 @@ import { cookies, headers } from "next/headers"
 import { forbidden, redirect } from "next/navigation"
 import { cache } from "react"
 
-import { LOGIN_PATH, MFA_SETUP_PATH } from "@/lib/auth-config"
-import { hasPermission, requiresMfa, type Permission, type Role } from "@/lib/permissions"
+import { LOGIN_PATH } from "@/lib/auth-config"
+import { hasPermission, type Permission, type Role } from "@/lib/permissions"
 import { db } from "@/server/db"
 import { userRoles } from "@/server/db/schema"
 
@@ -18,7 +18,7 @@ import { auth } from "."
 
 export async function getSession() {
   // Header Cookie dibangun dari cookies(), bukan dari request asli: di server action yang baru
-  // mengganti token sesi (aktivasi MFA, login), render lanjutan di request yang sama harus
+  // mengganti token sesi (login), render lanjutan di request yang sama harus
   // membaca token baru, bukan token lama yang sudah dihapus Better Auth.
   const requestHeaders = new Headers(await headers())
   const cookie = (await cookies())
@@ -55,23 +55,17 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   }
 })
 
-// User yang perannya wajib MFA tapi belum mengaktifkannya diarahkan ke
-// halaman aktivasi. Hanya halaman aktivasi itu yang boleh melewati aturan ini.
-export async function requireUser({ allowMissingMfa = false } = {}) {
+// MFA bersifat opsional untuk semua peran, jadi tidak ada pengalihan ke halaman aktivasi.
+export async function requireUser() {
   const user = await getCurrentUser()
   if (!user) redirect(LOGIN_PATH)
-  if (!allowMissingMfa && requiresMfa(user.roles) && !user.twoFactorEnabled) {
-    redirect(MFA_SETUP_PATH)
-  }
   return user
 }
 
 // Untuk route handler yang dipanggil dari browser: tanpa redirect, pemanggil membalas 401.
-// null = belum login, atau perannya wajib MFA tapi MFA belum aktif.
+// null = belum login atau sesinya tidak valid.
 export async function getApiUser() {
-  const user = await getCurrentUser()
-  if (!user || (requiresMfa(user.roles) && !user.twoFactorEnabled)) return null
-  return user
+  return getCurrentUser()
 }
 
 // Dipakai di halaman, server action, dan route handler.

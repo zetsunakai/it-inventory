@@ -96,7 +96,7 @@ export async function startMfaSetup(
   _prev: MfaSetupState,
   formData: FormData,
 ): Promise<MfaSetupState> {
-  await requireUser({ allowMissingMfa: true })
+  await requireUser()
   const password = String(formData.get("password") ?? "")
   if (!password) return { errors: ["Password wajib diisi."] }
 
@@ -133,5 +133,25 @@ export async function confirmMfaSetup(_prev: CodeState, formData: FormData): Pro
   // Tanpa redirect("/"): dengan cacheComponents, router menyimpan tree beranda dari kunjungan
   // sebelum MFA aktif (berisi redirect ke halaman ini) dan menampilkannya lagi. Halaman ini
   // dirender ulang menampilkan "MFA sudah aktif" dengan link muat ulang penuh ke beranda.
+  return {}
+}
+
+// ---------- Menonaktifkan MFA ----------
+
+export async function disableMfa(_prev: CodeState, formData: FormData): Promise<CodeState> {
+  await requireUser()
+  const password = String(formData.get("password") ?? "")
+  if (!password) return { errors: ["Password wajib diisi."] }
+
+  try {
+    // MFA opsional: user yang sudah mengaktifkannya bisa mematikannya lagi dengan password.
+    await auth.api.disableTwoFactor({
+      body: { password },
+      headers: await headers(),
+    })
+  } catch (error) {
+    if (error instanceof APIError) return { errors: ["Password salah."] }
+    throw error
+  }
   return {}
 }

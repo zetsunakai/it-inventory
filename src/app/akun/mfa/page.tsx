@@ -1,14 +1,15 @@
 import type { Metadata } from "next"
+import { redirect } from "next/navigation"
 import { Suspense } from "react"
 
 import { buttonVariants } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { requiresMfa } from "@/lib/permissions"
-import { requireUser } from "@/server/auth/session"
+import { LOGIN_PATH } from "@/lib/auth-config"
+import { getSession } from "@/server/auth/session"
 
-import { MfaSetup } from "./mfa-setup"
+import { MfaDisable, MfaSetup } from "./mfa-setup"
 
-export const metadata: Metadata = { title: "Aktivasi MFA · IT Inventory" }
+export const metadata: Metadata = { title: "Keamanan akun · IT Inventory" }
 
 export default function MfaPage() {
   return (
@@ -31,9 +32,12 @@ export default function MfaPage() {
 }
 
 async function MfaStatus() {
-  const user = await requireUser({ allowMissingMfa: true })
+  // Sengaja getSession() langsung, bukan requireUser(): status MFA dibaca ulang setelah aktivasi
+  // atau penonaktifan di request yang sama, sedangkan requireUser() di-cache per request.
+  const session = await getSession()
+  if (!session) redirect(LOGIN_PATH)
 
-  if (user.twoFactorEnabled) {
+  if (session.user.twoFactorEnabled) {
     return (
       <div className="space-y-4">
         <p className="text-sm">MFA sudah aktif untuk akun Anda.</p>
@@ -43,18 +47,10 @@ async function MfaStatus() {
         <a href="/" className={buttonVariants({ variant: "outline" })}>
           Kembali ke beranda
         </a>
+        <MfaDisable />
       </div>
     )
   }
 
-  return (
-    <div className="space-y-4">
-      {requiresMfa(user.roles) && (
-        <p className="rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-100">
-          Peran Anda wajib memakai MFA. Aktifkan dulu sebelum bisa membuka halaman lain.
-        </p>
-      )}
-      <MfaSetup />
-    </div>
-  )
+  return <MfaSetup />
 }

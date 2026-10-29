@@ -53,16 +53,16 @@ test("auditor tidak bisa membuka halaman pengguna", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Akses ditolak" })).toBeVisible()
 })
 
-test("Manajer tanpa MFA diarahkan ke halaman aktivasi MFA", async ({ page }) => {
+test("Manajer tanpa MFA langsung masuk beranda", async ({ page }) => {
   await page.goto("/login")
   await login(page, ACCOUNTS.manajer)
 
-  await expect(page).toHaveURL(/\/akun\/mfa$/)
-  await expect(page.getByText("Verifikasi dua langkah (MFA)")).toBeVisible()
+  await expect(page).toHaveURL(/\/$/)
+  await expect(page.getByRole("heading", { name: "Perlu perhatian" })).toBeVisible()
 
-  // Halaman lain tetap tertutup sampai MFA aktif.
-  await page.goto("/admin/users")
-  await expect(page).toHaveURL(/\/akun\/mfa$/)
+  // MFA opsional: halaman lain tidak dialihkan ke /akun/mfa.
+  await page.goto("/inventory/stok")
+  await expect(page).toHaveURL(/\/inventory\/stok$/)
 })
 
 test("user dengan MFA aktif wajib memasukkan kode TOTP saat login", async ({ page }) => {

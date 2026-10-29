@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
   confirmMfaSetup,
+  disableMfa,
   startMfaSetup,
   type CodeState,
   type MfaSetupState,
@@ -99,5 +100,35 @@ export function MfaSetup() {
         </Button>
       </form>
     </div>
+  )
+}
+
+// MFA opsional: user yang sudah mengaktifkannya bisa mematikannya lagi dengan password.
+export function MfaDisable() {
+  const [state, formAction, pending] = useActionState<CodeState, FormData>(disableMfa, {})
+
+  return (
+    <form action={formAction} className="space-y-4 border-t pt-4">
+      <div className="space-y-1">
+        <p className="text-sm font-medium">Nonaktifkan MFA</p>
+        <p className="text-sm text-muted-foreground">
+          Setelah dinonaktifkan, login hanya meminta password.
+        </p>
+      </div>
+      <div className="space-y-2">
+        <Label htmlFor="disable-password">Password akun Anda</Label>
+        <Input
+          id="disable-password"
+          name="password"
+          type="password"
+          autoComplete="current-password"
+          required
+        />
+      </div>
+      <FormErrors errors={state.errors} />
+      <Button type="submit" variant="outline" disabled={pending}>
+        {pending ? "Menonaktifkan…" : "Nonaktifkan MFA"}
+      </Button>
+    </form>
   )
 }

@@ -79,15 +79,8 @@ const ROLE_PERMISSIONS: Record<Role, readonly Permission[]> = {
 // lewat user_warehouses. Sama dengan fungsi database can_access_warehouse() (migrasi 0013).
 export const ALL_WAREHOUSE_ROLES: readonly Role[] = ["administrator", "manajer", "auditor"]
 
-// Peran yang wajib memakai MFA (PRD bagian 11).
-export const MFA_REQUIRED_ROLES: readonly Role[] = ["administrator", "manajer"]
-
 export function hasPermission(roles: readonly Role[], permission: Permission) {
   return roles.some((role) => ROLE_PERMISSIONS[role].includes(permission))
-}
-
-export function requiresMfa(roles: readonly Role[]) {
-  return roles.some((role) => MFA_REQUIRED_ROLES.includes(role))
 }
 
 export function hasAllWarehouseAccess(roles: readonly Role[]) {
