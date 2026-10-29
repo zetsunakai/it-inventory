@@ -16,7 +16,7 @@ export function VerifyForm() {
   const [state, formAction, pending] = useActionState<CodeState, FormData>(verifyLoginCode, {})
 
   return (
-    <form action={formAction} className="space-y-4">
+    <form action={formAction} className="space-y-4" aria-busy={pending}>
       <input type="hidden" name="next" value={next} />
       <div className="space-y-2">
         <Label htmlFor="code">Kode autentikasi</Label>
@@ -27,6 +27,7 @@ export function VerifyForm() {
           autoComplete="one-time-code"
           pattern="\d{6}"
           maxLength={6}
+          className="h-12 text-center font-mono text-xl tracking-[0.35em]"
           autoFocus
           required
         />

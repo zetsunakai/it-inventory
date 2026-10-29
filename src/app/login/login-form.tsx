@@ -1,6 +1,6 @@
 "use client"
 
-import { Eye, EyeOff } from "lucide-react"
+import { Eye, EyeOff, Lock, Mail } from "lucide-react"
 import { useSearchParams } from "next/navigation"
 import { useActionState, useState } from "react"
 
@@ -16,34 +16,46 @@ export function LoginForm() {
   const [state, formAction, pending] = useActionState<SignInState, FormData>(signIn, {})
 
   return (
-    <form action={formAction} className="space-y-6" aria-busy={pending}>
+    <form action={formAction} className="space-y-5" aria-busy={pending}>
       <input type="hidden" name="next" value={next} />
       {/* Ringkasan kesalahan di atas field (skill UI). */}
       <FormErrors errors={state.errors} />
       <div className="space-y-2">
         <Label htmlFor="email">Email</Label>
-        <Input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="username"
-          placeholder="nama@perusahaan.com"
-          autoCapitalize="none"
-          spellCheck={false}
-          defaultValue={state.email}
-          required
-        />
+        <div className="relative">
+          <Mail
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
+          <Input
+            id="email"
+            name="email"
+            type="email"
+            autoComplete="username"
+            placeholder="nama@perusahaan.com"
+            autoCapitalize="none"
+            spellCheck={false}
+            className="pl-9"
+            defaultValue={state.email}
+            autoFocus
+            required
+          />
+        </div>
       </div>
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
         <div className="relative">
+          <Lock
+            aria-hidden="true"
+            className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+          />
           <Input
             id="password"
             name="password"
             type={showPassword ? "text" : "password"}
             autoComplete="current-password"
             placeholder="Masukkan password"
-            className="pr-12"
+            className="pr-12 pl-9"
             required
           />
           <Button

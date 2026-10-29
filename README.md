@@ -392,8 +392,11 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   lewat nomor lot.
 - Tampilan lintas menu (I-08): daftar (`DataTable` dengan `listEmptyState`) di-scroll di dalam
   kotaknya dengan judul kolom dan kolom pengenal menempel; kolom opsional disembunyikan di layar
-  kecil; halaman masuk dan verifikasi memakai `AuthLayout` dengan panel brand; Pengaturan memakai
-  kartu form seperti halaman lain.
+  kecil; halaman masuk dan verifikasi memakai `AuthLayout` (`src/app/login/auth-layout.tsx`) dengan
+  panel brand navy berisi logo Veltics, ilustrasi SVG sebaris (alur pemasukan → penimbunan →
+  pengeluaran, atau perisai untuk verifikasi), dan form berikon tanpa kartu di kanan; di HP panel
+  brand menjadi strip ringkas. Password bisa ditampilkan/diisembunyikan, kode MFA diisi lewat
+  `inputMode="numeric"`. Pengaturan memakai kartu form seperti halaman lain.
 - Dashboard inventory (`/inventory/dashboard`, menu Ringkasan › Dashboard, izin `inventory:read`)
   meniru Inventory Dashboard hmx-002 (`core_inventory/data/inventory_dashboard_data.xml`, tampilan
   tile/kartu `webx_dashboard`): tile Qty on hand dan Qty tersedia (jumlah qty lintas produk dan

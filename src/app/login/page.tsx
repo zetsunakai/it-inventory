@@ -8,7 +8,7 @@ export const metadata: Metadata = { title: "Masuk · IT Inventory" }
 
 export default function LoginPage() {
   return (
-    <AuthLayout title="Masuk" description="Gunakan email kantor dan password Anda.">
+    <AuthLayout title="Masuk ke IT Inventory" description="Gunakan email kantor dan password Anda.">
       {/* LoginForm membaca ?next= dari URL, jadi perlu Suspense. */}
       <Suspense>
         <LoginForm />

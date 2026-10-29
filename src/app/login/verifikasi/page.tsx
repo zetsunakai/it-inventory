@@ -11,6 +11,7 @@ export default function VerifyPage() {
     <AuthLayout
       title="Verifikasi dua langkah"
       description="Masukkan kode 6 digit dari aplikasi authenticator di ponsel Anda."
+      visual="mfa"
     >
       <Suspense>
         <VerifyForm />

@@ -10,7 +10,27 @@ test("halaman tanpa sesi diarahkan ke login dan menyimpan tujuan awal", async ({
   await page.goto("/admin/users")
 
   await expect(page).toHaveURL(/\/login\?next=%2Fadmin%2Fusers$/)
-  await expect(page.getByRole("heading", { name: "Masuk", exact: true })).toBeVisible()
+  await expect(page.getByRole("heading", { name: "Masuk ke IT Inventory" })).toBeVisible()
+})
+
+test("halaman login menampilkan brand dan bisa menampilkan password", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await page.goto("/login")
+
+  await expect(page.getByRole("heading", { name: "Masuk ke IT Inventory" })).toBeVisible()
+  await expect(page.getByLabel("Email")).toBeVisible()
+
+  const password = page.getByLabel("Password", { exact: true })
+  await expect(password).toHaveAttribute("type", "password")
+  await page.getByRole("button", { name: "Tampilkan password" }).click()
+  await expect(password).toHaveAttribute("type", "text")
+  await expect(page.getByRole("button", { name: "Sembunyikan password" })).toBeVisible()
+
+  // Panel brand tidak mendorong halaman melebar di HP.
+  const overflows = await page.evaluate(
+    () => document.documentElement.scrollWidth > window.innerWidth,
+  )
+  expect(overflows).toBe(false)
 })
 
 test("password salah ditolak tanpa membedakan email terdaftar atau tidak", async ({ page }) => {

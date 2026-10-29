@@ -1,45 +1,60 @@
+/* Panel brand halaman masuk: navy dengan pola grid halus, bukan dekorasi warna acak. */
 .auth-brand-panel {
   background:
     radial-gradient(
-      ellipse at 5% 5%,
-      color-mix(in srgb, var(--sidebar-primary) 24%, transparent),
-      transparent 48%
+      ellipse at 12% 0%,
+      color-mix(in srgb, var(--sidebar-primary) 18%, transparent),
+      transparent 55%
     ),
     radial-gradient(
-      ellipse at 85% 88%,
-      color-mix(in srgb, var(--primary) 35%, transparent),
-      transparent 42%
+      ellipse at 92% 96%,
+      color-mix(in srgb, var(--primary) 26%, transparent),
+      transparent 52%
     ),
     var(--sidebar);
 }
 
-.auth-orbit {
+.auth-brand-panel::before {
   position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 70%;
-  aspect-ratio: 1;
-  transform: translate(-50%, -50%);
-  border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 12%, transparent);
-  border-radius: 50%;
-}
-
-.auth-orbit::before,
-.auth-orbit::after {
-  position: absolute;
-  inset: -24%;
+  inset: 0;
   content: "";
-  border: 1px solid color-mix(in srgb, var(--sidebar-foreground) 8%, transparent);
-  border-radius: inherit;
+  background-image:
+    linear-gradient(
+      to right,
+      color-mix(in srgb, var(--sidebar-foreground) 8%, transparent) 1px,
+      transparent 1px
+    ),
+    linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--sidebar-foreground) 8%, transparent) 1px,
+      transparent 1px
+    );
+  background-size: 40px 40px;
+  mask-image: radial-gradient(ellipse at 50% 45%, black, transparent 78%);
+  pointer-events: none;
 }
 
-.auth-orbit::after {
-  inset: -48%;
-  border-color: color-mix(in srgb, var(--sidebar-foreground) 5%, transparent);
+.auth-visual {
+  width: 100%;
+  max-width: 27rem;
+  height: auto;
 }
 
 .auth-wordmark {
-  background: linear-gradient(110deg, var(--sidebar-primary), var(--primary));
+  background: linear-gradient(110deg, #ffffff 0%, #7fe3ff 45%, var(--sidebar-primary) 100%);
   background-clip: text;
   color: transparent;
+}
+
+/* Alur barang bergerak pelan; pembaca yang meminta gerak dikurangi tetap melihat garis diam. */
+@media (prefers-reduced-motion: no-preference) {
+  .auth-flow {
+    animation: auth-flow 5s linear infinite;
+  }
+}
+
+@keyframes auth-flow {
+  to {
+    stroke-dashoffset: -22;
+  }
 }
