@@ -56,7 +56,8 @@ test("popup modul terbuka ke kanan dan bisa dipilih dengan keyboard", async ({ p
   await loginAs(page, ACCOUNTS.auditor)
   const trigger = sidebar(page).getByRole("button", { name: /^Ganti modul/ })
   await trigger.click()
-  const menu = page.getByRole("menu", { name: "Modul aplikasi" })
+  // Nama aksesibel popup mengikuti trigger (aria-labelledby), bukan aria-label isinya.
+  const menu = page.getByRole("menu", { name: /^Ganti modul, sekarang / })
   await expect(menu).toBeVisible()
   await expect(menu.getByRole("menuitemradio", { checked: true })).toHaveCount(1)
   const triggerBounds = await trigger.boundingBox()

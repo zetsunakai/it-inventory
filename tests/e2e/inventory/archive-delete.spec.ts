@@ -32,7 +32,10 @@ test("produk yang belum dipakai dihapus setelah konfirmasi", async ({ page }) =>
 
   await page.getByRole("button", { name: "Hapus", exact: true }).click()
   await page.getByRole("alertdialog").getByRole("button", { name: "Hapus", exact: true }).click()
-  await expect(page.getByRole("status")).toHaveText("1 produk dihapus.")
+  // Tabel kosong juga memakai role status, jadi cari pesan halamannya saja.
+  await expect(page.getByRole("status").filter({ hasText: "produk dihapus." })).toHaveText(
+    "1 produk dihapus.",
+  )
   await expect(page.getByText("Tidak ada produk yang cocok")).toBeVisible()
 })
 

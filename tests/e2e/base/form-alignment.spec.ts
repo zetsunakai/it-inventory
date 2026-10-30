@@ -43,6 +43,9 @@ async function expectAlignedPairs(page: Page, pairs: [string, string][], mobile:
 test("kolom form satuan dan master sejajar antarbaris di desktop, tablet, dan mobile", async ({
   page,
 }, testInfo) => {
+  // 6 form × 4 lebar = 24 kunjungan + tangkapan layar penuh; 30 detik bawaan terlalu ketat saat
+  // seluruh suite berjalan paralel.
+  test.setTimeout(120_000)
   const forms: { name: string; path: string; pairs: [string, string][] }[] = [
     {
       name: "satuan",
