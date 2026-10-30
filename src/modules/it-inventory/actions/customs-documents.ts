@@ -119,6 +119,15 @@ export const duplicateCustomsDocument = defineAction({
     const result = await tx.execute<{ id: string }>(
       sql`select duplicate_customs_document(${input.id}) as id`,
     )
+    // Fungsi SQL lama menyalin kolom pungutan dasar; lengkapi field BC 2.0 pada salinan Draft.
+    await tx.execute(sql`update customs_document_taxes target set
+      tax_value = source.tax_value, paid_amount = source.paid_amount,
+      government_borne_amount = source.government_borne_amount, deferred_amount = source.deferred_amount,
+      not_collected_amount = source.not_collected_amount, exempted_amount = source.exempted_amount,
+      settled_amount = source.settled_amount
+      from customs_document_taxes source
+      where target.document_id = ${result.rows[0].id} and source.document_id = ${input.id}
+        and target.seq = source.seq`)
     return { id: result.rows[0].id }
   },
 })

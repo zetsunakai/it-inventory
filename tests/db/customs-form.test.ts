@@ -2,7 +2,10 @@ import { eq, like, sql } from "drizzle-orm"
 import { afterAll, beforeAll, describe, expect, test, vi } from "vitest"
 
 import type { Role } from "@/lib/permissions"
-import { saveCustomsDocument } from "@/modules/it-inventory/actions/customs-documents"
+import {
+  saveCustomsDocument,
+  duplicateCustomsDocument,
+} from "@/modules/it-inventory/actions/customs-documents"
 import {
   customsDocumentFields,
   customsLineFields,
@@ -10,6 +13,10 @@ import {
   emptyAttachment,
   emptyDraft,
   emptyParty,
+  emptyRow,
+  CUSTOMS_ROW_KEYS,
+  customsFieldValue,
+  setCustomsFieldValue,
   type CustomsDocumentDraft,
 } from "@/modules/it-inventory/lib/customs-form"
 import { BC20, BC23, BC261, BC30 } from "@/modules/it-inventory/lib/customs-specs"
@@ -21,7 +28,15 @@ import {
 import type { CurrentUser } from "@/server/auth/session"
 import { statusDates } from "@/server/queries/activity"
 import { db } from "@/server/db"
-import { company, customsDocumentLines, products, uomCategories, uoms } from "@/server/db/schema"
+import {
+  company,
+  customsDocumentLines,
+  customsDocumentTaxes,
+  products,
+  uomCategories,
+  uoms,
+} from "@/server/db/schema"
+import { customsExportSections } from "@/modules/it-inventory/server/customs-export"
 
 import {
   CUSTOMS_TEST_OFFICE,
@@ -117,6 +132,152 @@ describe("newCustomsDraft", () => {
 })
 
 describe("saveCustomsDocument", () => {
+  test("pungutan BC 2.0 memakai teks Nilai Pungutan tanpa jenis/tarif/status tersembunyi yang wajib", async () => {
+    loginAs(["staf_exim"])
+    const draft = emptyDraft()
+    draft.lines = []
+    draft.taxes = [
+      { ...emptyRow(CUSTOMS_ROW_KEYS.taxes), taxValue: "BM", paidAmount: "125,50" },
+      { ...emptyRow(CUSTOMS_ROW_KEYS.taxes), taxValue: "PPN", governmentBorneAmount: "25" },
+    ]
+    const created = await saveCustomsDocument(null, form("20", draft))
+    if (!created.ok) throw new Error(created.errors.join("\n"))
+    const saved = await getCustomsDocument(BC20, created.data.id)
+    expect(saved!.draft.taxes).toMatchObject([
+      { taxValue: "BM", levyTypeCode: "", paidAmount: "125.5", rate: "", amount: "", status: "" },
+      { taxValue: "PPN", levyTypeCode: "", governmentBorneAmount: "25" },
+    ])
+    const copied = await duplicateCustomsDocument({ id: created.data.id })
+    if (!copied.ok) throw new Error(copied.errors.join("\n"))
+    const duplicate = await getCustomsDocument(BC20, copied.data.id)
+    expect(duplicate!.draft.taxes).toEqual(saved!.draft.taxes)
+    saved!.draft.taxes[0].taxValue = ""
+    expect(
+      await saveCustomsDocument(null, form("20", saved!.draft, created.data.id)),
+    ).toMatchObject({ ok: true })
+    expect((await getCustomsDocument(BC20, created.data.id))!.draft.taxes[0].taxValue).toBe("")
+    expect(await saveCustomsDocument(null, form("25", draft))).toMatchObject({
+      ok: false,
+      errors: ["Jenis pungutan wajib dipilih."],
+    })
+  })
+
+  test("field tambahan BC 2.0 tersimpan, terbaca readonly/export, dan bisa diubah tanpa perhitungan otomatis", async () => {
+    loginAs(["staf_exim"])
+    let { draft } = await newCustomsDraft(BC20, "Budi")
+    draft.lines = []
+    for (const [role, value] of [
+      ["1", "SG"],
+      ["7", "ID"],
+      ["11", "ID"],
+    ]) {
+      const field = customsDocumentFields(BC20).find(
+        (field) => field.role === role && field.key === "countryCode",
+      )!
+      draft = setCustomsFieldValue(draft, field, value)
+    }
+    draft = setCustomsFieldValue(
+      draft,
+      customsDocumentFields(BC20).find((field) => field.role === "1" && field.key === "nib")!,
+      "1234567890123",
+    )
+    draft.parties.push({
+      ...emptyParty("4"),
+      name: "PPJK uji BC20",
+      address: "Jakarta",
+      countryCode: "ID",
+      identityTypeCode: "6",
+      identityNumber: "0012345678901000",
+    })
+    draft.details = {
+      disclaimer: "0",
+      voluntaryDeclarationFlag: "T",
+      voluntaryDeclarationValue: "0",
+    }
+    draft.bankAccounts = [{ code: "", bankCode: "000" }]
+    draft.taxes = [
+      {
+        ...emptyRow(CUSTOMS_ROW_KEYS.taxes),
+        levyTypeCode: "BM",
+        amount: "999",
+        paidAmount: "100,25",
+        governmentBorneAmount: "50",
+        deferredAmount: "0",
+        notCollectedAmount: "10.50",
+        exemptedAmount: "",
+        settledAmount: "25",
+      },
+    ]
+    const created = await saveCustomsDocument(null, form("20", draft))
+    expect(created.ok).toBe(true)
+    if (!created.ok) throw new Error(created.errors.join("\n"))
+    const saved = await getCustomsDocument(BC20, created.data.id)
+    expect(saved!.draft.details).toEqual(draft.details)
+    expect(saved!.draft.parties.find((party) => party.entityTypeCode === "4")).toMatchObject({
+      name: "PPJK uji BC20",
+      address: "Jakarta",
+      countryCode: "ID",
+      identityTypeCode: "6",
+      identityNumber: "0012345678901000",
+    })
+    expect(saved!.draft.bankAccounts).toEqual([{ code: "", bankCode: "000" }])
+    expect(saved!.draft.taxes[0]).toMatchObject({
+      amount: "999",
+      paidAmount: "100.25",
+      governmentBorneAmount: "50",
+      deferredAmount: "0.0",
+      notCollectedAmount: "10.5",
+      exemptedAmount: "",
+      settledAmount: "25",
+    })
+    const nib = customsDocumentFields(BC20).find(
+      (field) => field.role === "1" && field.key === "nib",
+    )!
+    expect(customsFieldValue(saved!.draft, nib)).toBe("1234567890123")
+    const sections = customsExportSections(BC20, { ...saved!, companyName: "PT Uji Berikat" })
+    const output = JSON.stringify(sections)
+    for (const text of [
+      "PPJK uji BC20",
+      "1234567890123",
+      "Bank devisa",
+      "INDONESIA EXIMBANK",
+      "Ditanggung Pemerintah",
+      "100,25",
+    ])
+      expect(output).toContain(text)
+
+    saved!.draft.details.disclaimer = "1"
+    saved!.draft.details.voluntaryDeclarationFlag = "Y"
+    saved!.draft.taxes[0].paidAmount = "200"
+    const updated = await saveCustomsDocument(null, form("20", saved!.draft, saved!.id))
+    expect(updated.ok).toBe(true)
+    const reread = await getCustomsDocument(BC20, saved!.id)
+    expect(reread!.draft.details).toMatchObject({ disclaimer: "1", voluntaryDeclarationFlag: "Y" })
+    expect(reread!.draft.taxes[0]).toMatchObject({ amount: "999", paidAmount: "200" })
+    const stored = await db
+      .select()
+      .from(customsDocumentTaxes)
+      .where(eq(customsDocumentTaxes.documentId, saved!.id))
+    expect(stored).toHaveLength(1)
+    expect(stored[0]).toMatchObject({ paidAmount: "200.00", governmentBorneAmount: "50.00" })
+  })
+
+  test("tambahan BC 2.0 boleh kosong dan kode pilihan baru tidak boleh sembarang", async () => {
+    loginAs(["staf_exim"])
+    const draft = emptyDraft()
+    draft.lines = []
+    const saved = await saveCustomsDocument(null, form("20", draft))
+    expect(saved.ok).toBe(true)
+    const invalidDetails: Record<string, string>[] = [
+      { disclaimer: "Y" },
+      { voluntaryDeclarationFlag: "1" },
+    ]
+    for (const details of invalidDetails) {
+      expect(await saveCustomsDocument(null, form("20", { ...draft, details }))).toMatchObject({
+        ok: false,
+      })
+    }
+  })
   test("dokumen baru tersimpan sebagai Draft dengan semua bagiannya, lalu bisa diubah", async () => {
     loginAs(["staf_exim"])
     const { draft } = await newCustomsDraft(SPEC_IN, "Budi")
@@ -136,8 +297,20 @@ describe("saveCustomsDocument", () => {
       },
     ]
     draft.taxes = [
-      { levyTypeCode: "BM", rate: "10", amount: "100000", status: "computed" },
-      { levyTypeCode: "PPN", rate: "11", amount: "", status: "" },
+      {
+        ...emptyRow(CUSTOMS_ROW_KEYS.taxes),
+        levyTypeCode: "BM",
+        rate: "10",
+        amount: "100000",
+        status: "computed",
+      },
+      {
+        ...emptyRow(CUSTOMS_ROW_KEYS.taxes),
+        levyTypeCode: "PPN",
+        rate: "11",
+        amount: "",
+        status: "",
+      },
     ]
     draft.packages = [{ qty: "10", packageTypeCode: "RO", marks: "" }]
     draft.containers = [{ number: "msku1234567", sizeCode: "40", typeCode: "", loadTypeCode: "8" }]
@@ -165,8 +338,20 @@ describe("saveCustomsDocument", () => {
       { ...emptyAttachment("911"), number: "LARTAS-1" },
     ])
     expect(saved?.draft.taxes).toEqual([
-      { levyTypeCode: "BM", rate: "10", amount: "100000", status: "computed" },
-      { levyTypeCode: "PPN", rate: "11", amount: "", status: "" },
+      {
+        ...emptyRow(CUSTOMS_ROW_KEYS.taxes),
+        levyTypeCode: "BM",
+        rate: "10",
+        amount: "100000",
+        status: "computed",
+      },
+      {
+        ...emptyRow(CUSTOMS_ROW_KEYS.taxes),
+        levyTypeCode: "PPN",
+        rate: "11",
+        amount: "",
+        status: "",
+      },
     ])
     expect(saved?.draft.containers[0].number).toBe("MSKU1234567")
     expect(saved?.draft.attachments).toEqual([emptyAttachment("380")])

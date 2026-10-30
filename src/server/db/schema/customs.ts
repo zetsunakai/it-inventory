@@ -341,12 +341,21 @@ export const customsDocumentTaxes = pgTable(
       .notNull()
       .references(() => customsDocuments.id, { onDelete: "cascade" }),
     seq: seq(),
-    // Kode ref_codes jenis levy_type.
-    levyTypeCode: text().notNull(),
+    // Kode ref_codes jenis levy_type; boleh kosong hanya pada BC 2.0 (trigger 0103).
+    levyTypeCode: text(),
+    // Nilai Pungutan BC 2.0 mengikuti tax_value Equip3 (teks bebas).
+    taxValue: text(),
     rate: qty(),
     amount: money(),
     // uncomputed = belum dihitung, computed = sudah dihitung, paid = sudah dilunasi.
     status: text(),
+    // Rincian nominal pungutan BC 2.0 (Equip3). Opsional; tidak dihitung otomatis.
+    paidAmount: money(),
+    governmentBorneAmount: money(),
+    deferredAmount: money(),
+    notCollectedAmount: money(),
+    exemptedAmount: money(),
+    settledAmount: money(),
     ...timestamps,
   },
   (table) => [
@@ -354,6 +363,13 @@ export const customsDocumentTaxes = pgTable(
     unique("customs_document_taxes_levy_unique").on(table.documentId, table.levyTypeCode),
     check("customs_document_taxes_seq_positive", sql`${table.seq} >= 1`),
     check("customs_document_taxes_not_negative", sql`${table.rate} >= 0 and ${table.amount} >= 0`),
+    check(
+      "customs_document_taxes_payments_not_negative",
+      sql`
+      coalesce(${table.paidAmount}, 0) >= 0 and coalesce(${table.governmentBorneAmount}, 0) >= 0
+      and coalesce(${table.deferredAmount}, 0) >= 0 and coalesce(${table.notCollectedAmount}, 0) >= 0
+      and coalesce(${table.exemptedAmount}, 0) >= 0 and coalesce(${table.settledAmount}, 0) >= 0`,
+    ),
     check(
       "customs_document_taxes_status_valid",
       sql`${table.status} in ('uncomputed', 'computed', 'paid')`,
@@ -388,7 +404,7 @@ export const customsGuarantees = pgTable(
   ],
 )
 
-// Bank devisa (BC 3.0 dan 3.3, document_bank_devisa): kode bank CEISA dan kode isian hmx.
+// Bank devisa (BC 2.0, 3.0 dan 3.3): kode bank CEISA dan kode isian hmx.
 export const customsBankAccounts = pgTable(
   "customs_bank_accounts",
   {

@@ -352,7 +352,7 @@ export function CustomsDocumentView({
         ))}
       </ViewSection>
       <Tabs defaultValue={spec.tabs[0]?.key}>
-        <TabsList>
+        <TabsList equalWidth>
           {spec.tabs.map((tab) => (
             <TabsTrigger key={tab.key} value={tab.key}>
               {tab.label}

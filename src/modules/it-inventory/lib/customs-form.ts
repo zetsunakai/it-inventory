@@ -14,7 +14,19 @@ import { HMX_OPTION_LISTS } from "./customs-layouts.generated"
 
 // Daftar pilihan kode CEISA yang pendek (dari CHOICES model dan data hmx). Kode yang panjang
 // (kantor, pelabuhan, HS, dst.) ada di referensi kepabeanan.
-export const CUSTOMS_OPTION_LISTS = HMX_OPTION_LISTS
+export const CUSTOMS_OPTION_LISTS = {
+  ...HMX_OPTION_LISTS,
+  // Satu kode bank satu pilihan; data sumber memuat beberapa nama untuk kode yang sama.
+  bankDevisa: [...new Map(HMX_OPTION_LISTS.bankDevisa.map((item) => [item[0], item])).values()],
+  submissionConsent: [
+    ["1", "Ya"],
+    ["0", "Tidak"],
+  ],
+  voluntaryDeclaration: [
+    ["Y", "Ya"],
+    ["T", "Tidak"],
+  ],
+} as const
 export type CustomsOptionList = keyof typeof CUSTOMS_OPTION_LISTS
 
 export const CUSTOMS_PRODUCT_CATEGORY_DOMAINS = {
@@ -304,7 +316,21 @@ export type CustomsLineDutyDraft = {
   details: Record<string, string>
 }
 
-export type CustomsTaxDraft = { levyTypeCode: string; rate: string; amount: string; status: string }
+export const CUSTOMS_TAX_PAYMENT_FIELDS = [
+  { key: "paidAmount", label: "Dibayar" },
+  { key: "governmentBorneAmount", label: "Ditanggung Pemerintah" },
+  { key: "deferredAmount", label: "Ditunda" },
+  { key: "notCollectedAmount", label: "Tidak Dipungut" },
+  { key: "exemptedAmount", label: "Dibebaskan" },
+  { key: "settledAmount", label: "Sudah Dilunasi" },
+] as const
+export type CustomsTaxDraft = {
+  taxValue: string
+  levyTypeCode: string
+  rate: string
+  amount: string
+  status: string
+} & Record<(typeof CUSTOMS_TAX_PAYMENT_FIELDS)[number]["key"], string>
 
 // Transfer yang dipilih (Inventory Transfer Documents hmx, H-04). Selain id hanya untuk tampilan
 // chip; yang disimpan hanya id-nya.
@@ -336,7 +362,14 @@ export const CUSTOMS_ROW_KEYS = {
   packages: ["qty", "packageTypeCode", "marks"],
   containers: ["number", "sizeCode", "typeCode", "loadTypeCode"],
   transports: ["transportModeCode", "name", "voyageNumber", "flagCountryCode"],
-  taxes: ["levyTypeCode", "rate", "amount", "status"],
+  taxes: [
+    "taxValue",
+    "levyTypeCode",
+    "rate",
+    "amount",
+    "status",
+    ...CUSTOMS_TAX_PAYMENT_FIELDS.map((field) => field.key),
+  ],
   guarantees: [
     "typeCode",
     "number",
@@ -351,8 +384,10 @@ export const CUSTOMS_ROW_KEYS = {
   vdEntries: ["valuationTypeCode", "dueDate", "amount"],
 } as const
 
-export const emptyRow = (keys: readonly string[]): CustomsRowDraft =>
-  Object.fromEntries(keys.map((key) => [key, ""]))
+export const emptyRow = <Keys extends readonly string[]>(
+  keys: Keys,
+): Record<Keys[number], string> =>
+  Object.fromEntries(keys.map((key) => [key, ""])) as Record<Keys[number], string>
 
 export function emptyParty(entityTypeCode: string): CustomsPartyDraft {
   return {
@@ -809,10 +844,17 @@ export const customsDocumentInputSchema = z
     ),
     taxes: z.array(
       z.object({
-        levyTypeCode: z.string().trim().min(1, "Jenis pungutan wajib dipilih."),
+        taxValue: text("Nilai pungutan", 200).prefault(""),
+        levyTypeCode: text("Jenis pungutan", 30),
         rate: amount("Tarif pungutan", 4),
         amount: amount("Nilai pungutan", 2),
         status: z.enum(["", "uncomputed", "computed", "paid"]).transform((value) => value || null),
+        paidAmount: amount("Pungutan dibayar", 2).prefault(""),
+        governmentBorneAmount: amount("Pungutan ditanggung pemerintah", 2).prefault(""),
+        deferredAmount: amount("Pungutan ditunda", 2).prefault(""),
+        notCollectedAmount: amount("Pungutan tidak dipungut", 2).prefault(""),
+        exemptedAmount: amount("Pungutan dibebaskan", 2).prefault(""),
+        settledAmount: amount("Pungutan sudah dilunasi", 2).prefault(""),
       }),
     ),
     guarantees: z.array(
@@ -853,7 +895,7 @@ export const customsDocumentInputSchema = z
       })
     const packages = input.packages.filter((row) => row.qty !== null)
     const transports = input.transports.filter((row) => Object.values(row).some(Boolean))
-    const levies = input.taxes.map((tax) => tax.levyTypeCode)
+    const levies = input.taxes.map((tax) => tax.levyTypeCode).filter(Boolean)
     if (new Set(levies).size !== levies.length) {
       ctx.addIssue({ code: "custom", message: "Jenis pungutan tidak boleh sama." })
     }

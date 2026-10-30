@@ -474,7 +474,16 @@ export function buildDraft(spec: CustomsFormSpec, rows: DocumentRows): CustomsDo
     packages: rows.packages.map((row) => pick(row, CUSTOMS_ROW_KEYS.packages)),
     containers: rows.containers.map((row) => pick(row, CUSTOMS_ROW_KEYS.containers)),
     transports: rows.transports.map((row) => pick(row, CUSTOMS_ROW_KEYS.transports)),
-    taxes: rows.taxes.map((row) => pick(row, CUSTOMS_ROW_KEYS.taxes)),
+    taxes: rows.taxes.map((row) => ({
+      ...pick(row, CUSTOMS_ROW_KEYS.taxes),
+      // Dokumen BC 2.0 lama masih menyimpan Nilai di amount; baca tanpa mengubah data terkunci.
+      taxValue:
+        row.taxValue !== null && row.taxValue !== undefined
+          ? String(row.taxValue)
+          : spec.code === "20"
+            ? text(row.amount as Value)
+            : "",
+    })),
     guarantees: rows.guarantees.map((row) => pick(row, CUSTOMS_ROW_KEYS.guarantees)),
     bankAccounts: rows.bankAccounts.map((row) => pick(row, CUSTOMS_ROW_KEYS.bankAccounts)),
   }

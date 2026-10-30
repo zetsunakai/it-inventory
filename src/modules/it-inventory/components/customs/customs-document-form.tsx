@@ -14,9 +14,8 @@ import {
   newRelation,
   relationKey,
   RELATION_KEY,
-  sumDecimals,
 } from "@/components/relational/relational-utils"
-import { DEFAULT_DECIMAL_INPUT, formatDecimal, parseDecimalInput } from "@/lib/decimal"
+import { DEFAULT_DECIMAL_INPUT, parseDecimalInput } from "@/lib/decimal"
 import { SearchSelect } from "@/components/search-select"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -500,7 +499,7 @@ export function CustomsDocumentForm({
       <FormSection>{spec.top.map(topField)}</FormSection>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList>
+        <TabsList equalWidth>
           {spec.tabs.map((tab) => (
             <TabsTrigger key={tab.key} value={tab.key}>
               {tab.label}
@@ -830,10 +829,6 @@ function RowsEditor<Row extends object>({
                 }}
               />
             ),
-          footer:
-            column.kind === "money"
-              ? (items) => formatDecimal(sumDecimals(items.map((row) => valueOf(row, column.key))))
-              : undefined,
         }))}
       />
     </FormSection>

@@ -494,6 +494,19 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   `src/modules/it-inventory/lib/customs-layouts.generated.ts`. Jangan ubah file itu manual; ubah
   pemetaan field di script, jalankan ulang, lalu `npx prettier --write` file hasilnya. Label pesan
   aturan validasi harus sama dengan label field di form (dicek `tests/db/customs-specs.test.ts`).
+- Kelengkapan field BC 2.0 mengikuti perbandingan Equip3 `ceisa.import.documents` (30/10/2026):
+  NIB importir, negara importir/pemilik/pemusatan, PPJK dari partner, persetujuan pengiriman,
+  flag Voluntary Declaration, bank devisa, dan enam rincian nominal pungutan. Tambahan ini
+  berada di adaptor `completeBc20Layout()` pada `customs-specs.ts`, bukan file layout hasil
+  generator. Semua tambahan opsional; tidak mengubah aturan wajib, perhitungan, atau alur CEISA.
+  Nominal pungutan disimpan sebagai numeric(18,2) lewat migrasi `0102_bc20_tax_payments.sql`;
+  jalankan `npm run db:migrate` sebelum menjalankan/deploy kode yang membaca kolom baru.
+- List Pungutan BC 2.0 mengikuti tujuh kolom Equip3: Nilai Pungutan (teks), Dibayar,
+  Ditanggung Pemerintah, Ditunda, Tidak Dipungut, Dibebaskan, Sudah Dilunasi. Jenis, Tarif,
+  dan Status tetap disimpan untuk kompatibilitas tetapi tidak ditampilkan pada BC 2.0.
+  Migrasi `0103_bc20_tax_value.sql` menambah teks Nilai Pungutan dan mengizinkan jenis kosong;
+  jenis tetap diwajibkan server pada dokumen selain BC 2.0. Daftar isian BC tidak membuat
+  penjumlahan Total otomatis di footer.
 - `doc_code` sama dengan kodeDokumen CEISA (`23`, `40`, `25`, `30`, `41`, `20`, `261`, `262`,
   `27`, `16`, `28`, `33`, dan `331` untuk P3BET); label, arah, dan status ada di
   `src/modules/it-inventory/lib/customs.ts`. Arah di database: `customs_doc_direction()`; nama

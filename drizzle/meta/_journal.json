@@ -715,6 +715,20 @@
       "when": 1793280814474,
       "tag": "0101_ceisa_environment_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 102,
+      "version": "7",
+      "when": 1793365914031,
+      "tag": "0102_bc20_tax_payments",
+      "breakpoints": true
+    },
+    {
+      "idx": 103,
+      "version": "7",
+      "when": 1793368432441,
+      "tag": "0103_bc20_tax_value",
+      "breakpoints": true
     }
   ]
 }

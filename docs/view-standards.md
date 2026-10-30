@@ -61,6 +61,13 @@ mengikuti aturan di sini.
 
 ## Halaman detail dan form
 
+- Tab dokumen BC memakai `TabsList equalWidth` pada mode baca dan edit: semua kolom selebar
+  sama, dua kolom di HP, tiga di tablet, dan seluruh tab satu baris mulai desktop. Tinggi minimal
+  48px dengan padding normal. Label boleh membungkus tanpa dipotong atau diberi ellipsis;
+  tidak ada scroll horizontal.
+  Tab aktif memakai atribut Base UI `data-active` (bukan
+  `data-selected`), berlatar biru lembut, teks biru semibold, dan garis bawah biru.
+
 - `DocumentLayout` menjadi kerangka halaman detail, termasuk detail yang hanya dapat dibaca dan halaman impor.
 - `NewRecordLayout` menjadi kerangka form record baru; komponen ini menggunakan `DocumentLayout` dan aktivitas record yang belum disimpan.
 - `RecordModes` mengatur mode baca/edit pada record yang dapat diubah.

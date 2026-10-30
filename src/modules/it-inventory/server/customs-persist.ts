@@ -43,6 +43,24 @@ export async function persistCustomsDocument(
   docCode: CustomsDocCode,
   document: CustomsDocumentInput,
 ) {
+  if (docCode !== "20" && document.taxes.some((tax) => !tax.levyTypeCode)) {
+    throw new AppError("Jenis pungutan wajib dipilih.")
+  }
+  if (docCode === "20") {
+    for (const [key, allowed] of [
+      ["disclaimer", ["1", "0"]],
+      ["voluntaryDeclarationFlag", ["Y", "T"]],
+    ] as const) {
+      const value = document.details[key]
+      if (value !== undefined && !(allowed as readonly string[]).includes(value)) {
+        throw new AppError(
+          key === "disclaimer"
+            ? "Persetujuan pengiriman tidak valid."
+            : "Pilihan Voluntary Declaration tidak valid.",
+        )
+      }
+    }
+  }
   if (docCode === "16") {
     for (const [lineIndex, line] of document.lines.entries()) {
       if (!line.duties.length) {
@@ -132,7 +150,15 @@ export async function persistCustomsDocument(
     await tx.insert(customsTransports).values(numbered(document.transports))
   }
   if (document.taxes.length) {
-    await tx.insert(customsDocumentTaxes).values(numbered(document.taxes))
+    await tx.insert(customsDocumentTaxes).values(
+      numbered(
+        document.taxes.map((tax) => ({
+          ...tax,
+          // Kosong eksplisit dibedakan dari NULL pada data lama untuk fallback tampilan BC 2.0.
+          taxValue: tax.taxValue ?? (docCode === "20" ? "" : null),
+        })),
+      ),
+    )
   }
   if (document.guarantees.length) {
     await tx.insert(customsGuarantees).values(numbered(document.guarantees))

@@ -7,7 +7,11 @@ import type {
   CustomsLayout,
   CustomsListBlock,
 } from "./customs-form"
-import { CUSTOMS_FACILITY_DOMAINS, CUSTOMS_PRODUCT_CATEGORY_DOMAINS } from "./customs-form"
+import {
+  CUSTOMS_FACILITY_DOMAINS,
+  CUSTOMS_PRODUCT_CATEGORY_DOMAINS,
+  CUSTOMS_TAX_PAYMENT_FIELDS,
+} from "./customs-form"
 import { CUSTOMS_LAYOUTS } from "./customs-layouts.generated"
 
 export const CUSTOMS_SOURCE_DOC_CODES: Partial<Record<CustomsDocCode, CustomsDocCode[]>> = {
@@ -157,6 +161,153 @@ function moveLineFieldAfter(line: CustomsFormSpec["line"], fieldKey: string, anc
   return line
 }
 
+// Kelengkapan field BC 2.0 dibandingkan ceisa.import.documents Equip3. Tidak menambah
+// field wajib, rumus pungutan, atau alur kirim CEISA; hanya memperluas kontrak form yang sama.
+function completeBc20Layout(layout: CustomsLayout): CustomsLayout {
+  return {
+    ...layout,
+    parties: [...layout.parties, { code: "4", label: "PPJK", source: "partner" }],
+    tabs: layout.tabs.map((tab) => {
+      if (tab.key === "entitas")
+        return {
+          ...tab,
+          blocks: [
+            ...tab.blocks.map((block): CustomsBlock => {
+              if (!("fields" in block) || !block.role || !["1", "7", "11"].includes(block.role))
+                return block
+              const additions: CustomsField[] = [
+                ...(block.role === "1"
+                  ? [
+                      {
+                        key: "nib",
+                        label: "NIB importir",
+                        store: "party" as const,
+                        role: block.role,
+                        kind: "text" as const,
+                      },
+                    ]
+                  : []),
+                {
+                  key: "countryCode",
+                  label: `Negara ${block.role === "1" ? "importir" : block.role === "7" ? "pemilik" : "pemusatan"}`,
+                  store: "party",
+                  role: block.role,
+                  kind: "ref",
+                  refType: "country",
+                },
+              ]
+              return { ...block, fields: [...block.fields, ...additions] }
+            }),
+            {
+              title: "PPJK",
+              role: "4",
+              fields: [
+                {
+                  key: "identityTypeCode",
+                  label: "Jenis identitas PPJK",
+                  store: "party",
+                  role: "4",
+                  kind: "option",
+                  list: "identityType",
+                },
+                {
+                  key: "identityNumber",
+                  label: "Nomor identitas PPJK",
+                  store: "party",
+                  role: "4",
+                  kind: "text",
+                },
+                { key: "name", label: "Nama PPJK", store: "party", role: "4", kind: "text" },
+                { key: "address", label: "Alamat PPJK", store: "party", role: "4", kind: "text" },
+                {
+                  key: "countryCode",
+                  label: "Negara PPJK",
+                  store: "party",
+                  role: "4",
+                  kind: "ref",
+                  refType: "country",
+                },
+              ],
+            },
+          ],
+        }
+      if (tab.key === "transaksi")
+        return {
+          ...tab,
+          blocks: [
+            ...tab.blocks.map((block): CustomsBlock =>
+              "fields" in block
+                ? {
+                    ...block,
+                    fields: block.fields.flatMap<CustomsFieldItem>((field) =>
+                      !("group" in field) && field.key === "voluntaryDeclarationValue"
+                        ? [
+                            {
+                              key: "voluntaryDeclarationFlag",
+                              label: "Menggunakan Voluntary Declaration",
+                              store: "details",
+                              kind: "option",
+                              list: "voluntaryDeclaration",
+                            },
+                            field,
+                          ]
+                        : [field],
+                    ),
+                  }
+                : block,
+            ),
+            {
+              title: "Bank devisa",
+              list: "bankAccounts",
+              columns: [
+                { key: "bankCode", label: "Bank devisa", kind: "option", list: "bankDevisa" },
+              ],
+            },
+          ],
+        }
+      if (tab.key === "pungutan")
+        return {
+          ...tab,
+          blocks: tab.blocks.map((block): CustomsBlock =>
+            "list" in block && block.list === "taxes"
+              ? {
+                  ...block,
+                  columns: [
+                    // tax_value Equip3 adalah teks bebas, bukan pilihan jenis atau nominal total.
+                    { key: "taxValue", label: "Nilai Pungutan", kind: "text" },
+                    ...CUSTOMS_TAX_PAYMENT_FIELDS.map((field): CustomsField => ({
+                      ...field,
+                      kind: "money",
+                    })),
+                  ],
+                }
+              : block,
+          ),
+        }
+      if (tab.key === "pernyataan")
+        return {
+          ...tab,
+          blocks: [
+            ...tab.blocks,
+            {
+              title: "Persetujuan pengiriman",
+              fields: [
+                {
+                  key: "disclaimer",
+                  label: "Setuju pengiriman dokumen",
+                  store: "details",
+                  kind: "option",
+                  list: "submissionConsent",
+                },
+              ],
+            },
+          ],
+        }
+      return tab
+    }),
+  }
+}
+
 // Form per jenis dokumen BC (backlog M3-05–M3-09, D-01–D-08, D-09): tab, grup, field, dan label
 // dari form hmx core_it_inventory (customs-layouts.generated.ts); di sini hanya judul, deskripsi,
 // dan path menunya.
@@ -167,7 +318,9 @@ const spec = (
   description: string,
   path: string,
 ): CustomsFormSpec => {
-  const layout = CUSTOMS_LAYOUTS[code] as CustomsLayout
+  // Tambahan BC 2.0 dari Equip3 berada di lapisan adaptasi, bukan mengedit hasil generator HMX.
+  const imported = CUSTOMS_LAYOUTS[code] as CustomsLayout
+  const layout = code === "20" ? completeBc20Layout(imported) : imported
 
   const sourceFields: Partial<Record<CustomsDocCode, CustomsField[]>> = {
     "33": [
