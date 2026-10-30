@@ -1,0 +1,91 @@
+import { expect, test } from "@playwright/test"
+
+import { ACCOUNTS, ADMIN_STATE_FILE } from "../../shared/e2e/accounts"
+import { login } from "../../shared/e2e/login"
+
+// Gudang dan lokasi (backlog M1-03): Administrator mengelola gudang dan lokasi, lalu memberi
+// akses gudang dari halaman Pengguna (RM-02); Admin gudang hanya melihat gudang yang diberikan. Berurutan karena saling bergantung data.
+test.describe.configure({ mode: "serial" })
+
+// Kode unik per run, karena di CI tes bisa diulang tanpa reset database.
+const run = Date.now().toString(36).slice(-4).toUpperCase()
+const GRANTED = `GA${run}`
+const OTHER = `GB${run}`
+let otherWarehouseUrl = ""
+
+test.describe("Administrator", () => {
+  test.use({ storageState: ADMIN_STATE_FILE })
+
+  test("membuat gudang, lokasi bertingkat, dan memberi akses lewat halaman Pengguna", async ({
+    page,
+  }) => {
+    await page.goto("/master/gudang/baru")
+    await page.getByLabel("Kode gudang").fill(GRANTED)
+    await page.getByLabel("Nama gudang").fill("Gudang Bahan Baku E2E")
+    await page.getByLabel("Alamat").fill("Kawasan Industri, Bekasi")
+    await page.getByRole("button", { name: "Simpan" }).click()
+
+    // Lanjut ke halaman detail gudang yang baru.
+    await expect(
+      page.getByRole("heading", { name: `${GRANTED} · Gudang Bahan Baku E2E` }),
+    ).toBeVisible()
+
+    // Mode baca hanya menampilkan daftar lokasi; membuat/menghapus lokasi perlu Edit.
+    await expect(page.getByLabel("Kode lokasi", { exact: true })).toHaveCount(0)
+    await expect(page.getByRole("button", { name: "Tambah lokasi", exact: true })).toHaveCount(0)
+    await page.getByRole("button", { name: "Edit", exact: true }).click()
+
+    const table = page.locator('[data-relational-table="warehouse-locations"]')
+    await table.getByRole("button", { name: "Tambah lokasi", exact: true }).click()
+    await table.getByLabel("Kode lokasi baris 1", { exact: true }).fill(`${GRANTED}-RAK`)
+    await table.getByLabel("Nama lokasi baris 1", { exact: true }).fill("Rak A")
+
+    await table.getByRole("button", { name: "Tambah lokasi", exact: true }).click()
+    await table.getByLabel("Kode lokasi baris 2", { exact: true }).fill(`${GRANTED}-BIN`)
+    await table.getByLabel("Nama lokasi baris 2", { exact: true }).fill("Bin 1")
+    await table.getByLabel("Lokasi induk baris 2", { exact: true }).click()
+    await page.getByRole("option", { name: `${GRANTED}-RAK · Rak A`, exact: true }).click()
+    await page.getByRole("button", { name: "Simpan", exact: true }).click()
+    await expect(page.getByRole("cell", { name: `${GRANTED}-RAK/${GRANTED}-BIN` })).toBeVisible()
+    await expect(page.getByRole("button", { name: "Tambah lokasi", exact: true })).toHaveCount(0)
+
+    await page.goto("/admin/users")
+    await page.getByRole("link", { name: "Demo Admin Gudang" }).click()
+    await page.getByLabel("Beri akses ke gudang").click()
+    await page.getByRole("option", { name: `[${GRANTED}] Gudang Bahan Baku E2E` }).click()
+    await page.getByRole("button", { name: "Beri akses" }).click()
+    await expect(page.getByRole("button", { name: `Cabut akses ${GRANTED}` })).toBeVisible()
+
+    // Gudang kedua tanpa akses untuk Admin gudang.
+    await page.goto("/master/gudang/baru")
+    await page.getByLabel("Kode gudang").fill(OTHER)
+    await page.getByLabel("Nama gudang").fill("Gudang Lain E2E")
+    await page.getByLabel("Alamat").fill("Cikarang")
+    await page.getByRole("button", { name: "Simpan" }).click()
+    await expect(page.getByRole("heading", { name: `${OTHER} · Gudang Lain E2E` })).toBeVisible()
+    otherWarehouseUrl = page.url()
+  })
+})
+
+test("Admin gudang hanya melihat gudang yang diberikan aksesnya", async ({ page }) => {
+  await page.goto("/login")
+  await login(page, ACCOUNTS.gudang)
+  await expect(page).toHaveURL(/\/$/)
+
+  await page.goto("/master/gudang")
+  await expect(page.getByRole("link", { name: GRANTED })).toBeVisible()
+  await expect(page.getByRole("link", { name: OTHER })).toHaveCount(0)
+  // Lokasi virtual hasil seed tampil untuk semua; lokasi penyesuaian disembunyikan (RM-02).
+  await expect(page.getByRole("cell", { name: "SCRAP", exact: true })).toBeVisible()
+  await expect(page.getByRole("cell", { name: "PENYESUAIAN", exact: true })).toHaveCount(0)
+
+  // Tanpa tombol ubah untuk peran selain Administrator.
+  await page.getByRole("link", { name: GRANTED }).click()
+  await expect(page.getByRole("cell", { name: `${GRANTED}-RAK/${GRANTED}-BIN` })).toBeVisible()
+  await expect(page.getByRole("button", { name: "Simpan" })).toHaveCount(0)
+  await expect(page.getByRole("button", { name: "Edit" })).toHaveCount(0)
+
+  // Gudang tanpa akses diperlakukan seperti tidak ada.
+  await page.goto(otherWarehouseUrl)
+  await expect(page.getByRole("heading", { name: "Halaman tidak ditemukan" })).toBeVisible()
+})

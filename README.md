@@ -329,7 +329,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   Koreksi selalu lewat transaksi baru (retur atau penyesuaian). Membatalkan transfer ikut
   membatalkan barisnya.
 - Tes yang butuh data Selesai memakai `enableLedgerWrite()`, dan membersihkannya dengan
-  `purgeInventory()` (`tests/db/helpers.ts`).
+  `purgeInventory()` (`tests/shared/db/helpers.ts`).
 
 - Tutup periode bulanan (`/inventory/periode`, Manajer): `close_period(tahun, bulan)` menyimpan
   `period_balances` (saldo awal, masuk, keluar, penyesuaian, saldo akhir per produk × gudang ×
@@ -350,7 +350,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   `movement_direction()` (`MOVEMENT_CODE_DIRECTIONS`). Penelusuran lot/nomor seri
   (`/inventory/lot`, `src/modules/inventory/server/queries/lots.ts`): saldo per lokasi (dipesan, tersedia) dan riwayat
   masuk-keluar di semua gudang yang boleh diakses, dengan partner dan tautan transfer.
-  `tests/db/stock-card.test.ts` memastikan saldo kartu stok sama dengan saldo per tanggal untuk
+  `tests/db/inventory/stock-card.test.ts` memastikan saldo kartu stok sama dengan saldo per tanggal untuk
   setiap kode pergerakan.
 
 ## Layar transaksi inventory
@@ -472,8 +472,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   memilih lokasi, setiap pindaian product code (dan lot/nomor seri) menambah qty hitung 1 dan langsung
   tersimpan (`scanCountItem`). Detail transfer dan gudang menampilkan banner bila gudangnya sedang
   dibekukan opname.
-- Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/fixtures.ts`. Isi pemilih
-  berpencarian dengan `fillInteractive()` (`tests/e2e/interactive.ts`), yang menunggu hidrasi React
+- Tes e2e transaksi menyiapkan data master sendiri lewat `tests/e2e/inventory/fixtures.ts`. Isi pemilih
+  berpencarian dengan `fillInteractive()` (`tests/shared/e2e/interactive.ts`), yang menunggu hidrasi React
   dulu; label dicari dengan `exact: true` supaya tidak cocok dengan placeholder lain.
 
 ## Dokumen BC
@@ -493,7 +493,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   `core_it_inventory` oleh `scripts/import-customs-forms-from-hmx.py` ke
   `src/modules/it-inventory/lib/customs-layouts.generated.ts`. Jangan ubah file itu manual; ubah
   pemetaan field di script, jalankan ulang, lalu `npx prettier --write` file hasilnya. Label pesan
-  aturan validasi harus sama dengan label field di form (dicek `tests/db/customs-specs.test.ts`).
+  aturan validasi harus sama dengan label field di form (dicek `tests/db/it-inventory/customs-specs.test.ts`).
 - Kelengkapan field BC 2.0 mengikuti perbandingan Equip3 `ceisa.import.documents` (30/10/2026):
   NIB importir, negara importir/pemilik/pemusatan, PPJK dari partner, persetujuan pengiriman,
   flag Voluntary Declaration, bank devisa, dan enam rincian nominal pungutan. Tambahan ini
@@ -534,7 +534,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   `information_schema` saat aturan disimpan. `customs_document_errors(dokumen)` mengembalikan semua
   kekurangan sekaligus (kosong = lengkap). Seed awal di migrasi `doc_validation_rules_seed` (jenis
   di luar MVP: `customs_doc_codes_all`); data uji
-  dokumen lengkap per jenis ada di `tests/db/customs-fixtures.ts`.
+  dokumen lengkap per jenis ada di `tests/db/it-inventory/customs-fixtures.ts`.
 - Baris barang hanya untuk produk aktif yang siap dokumen BC (punya kode HS). Kategori IT Inventory
   selalu disalin dari produk; product code, kode HS, dan uraian diisi dari produk bila kosong.
   `qty` dalam satuan CEISA, `stock_qty` dalam satuan stok produk; keduanya terisi dari transfer
@@ -550,7 +550,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   `src/app/(app)/dokumen-bc/<jenis>/` hanya meneruskan spec-nya.
 - Spec per jenis ada di `src/modules/it-inventory/lib/customs-specs.ts` (M3-05–M3-09), menu
   Kepabeanan › BC 2.3, BC 4.0, BC 2.5, BC 3.0, BC 4.1 (`/dokumen-bc/bc23`, dst.). Field mengikuti
-  `models/document_XX.py` hmx. `tests/db/customs-specs.test.ts` memastikan setiap field yang
+  `models/document_XX.py` hmx. `tests/db/it-inventory/customs-specs.test.ts` memastikan setiap field yang
   diwajibkan `doc_validation_rules` bisa diisi di form jenisnya.
 - Seluruh isi form dikirim sebagai satu JSON (`document`) ke `saveCustomsDocument`: header
   diperbarui lalu semua bagian diganti dalam satu transaksi; hanya Draft yang bisa diubah. Draft
@@ -590,7 +590,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   form (nomor urut, transfer yang dipilih, No. Aju, No. Daftar, Tgl. Daftar, Perusahaan) dan status.
 - Tes yang perlu menghapus dokumen Submitted memakai `purgeCustomsDocuments()` atau
   `forceCustomsStatus()`; `submitDocument()` memilih transfer sumber lalu Submit
-  (`tests/db/customs-fixtures.ts`).
+  (`tests/db/it-inventory/customs-fixtures.ts`).
 
 ## Dokumen BC ↔ transfer (H-01, mengikuti hmx)
 
@@ -675,7 +675,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   `src/server/spreadsheet.ts`, UI di `src/components/import/`.
   `defineFormAction` meneruskan file dari form ke schema (`importFileSchema`).
 - Import 5.000 produk baru sekitar 1,5 detik, 5.000 perubahan sekitar 2,5 detik (tes
-  `tests/db/master-import.test.ts`).
+  `tests/db/inventory/master-import.test.ts`).
 
 ## Testing
 
@@ -689,13 +689,43 @@ npx playwright install chromium   # sekali saja sebelum test:e2e pertama
 - **Database** (`tests/db/`): fungsi dan trigger SQL serta kode server yang menulis data, dijalankan
   terhadap Postgres sungguhan. Tes SQL membungkus perubahannya dengan `inRollback()` supaya tidak
   meninggalkan data.
-- **End-to-end** (`tests/e2e/`): alur di browser. Akun tes dibuat oleh `tests/e2e/global-setup.ts`
-  lewat script seed. `tests/e2e/admin.setup.ts` login sebagai Administrator lalu mengaktifkan MFA
-  secara sukarela (opsional untuk semua peran; kode TOTP dihitung oleh `tests/e2e/totp.ts`) supaya
+- **End-to-end** (`tests/e2e/`): alur di browser. Akun tes dibuat oleh `tests/shared/e2e/global-setup.ts`
+  lewat script seed. `tests/shared/e2e/admin.setup.ts` login sebagai Administrator lalu mengaktifkan MFA
+  secara sukarela (opsional untuk semua peran; kode TOTP dihitung oleh `tests/shared/e2e/totp.ts`) supaya
   alur verifikasi TOTP ikut teruji, lalu menyimpan sesinya; tes yang butuh Administrator memakai
   `test.use({ storageState: ADMIN_STATE_FILE })`.
 
-Semua tes memakai database terpisah `it_inventory_test` di container yang sama, yang dikosongkan lalu
+Tes database dan E2E dipisah menurut modul pemiliknya; pengujian UI/infrastruktur lintas modul
+berada di `base`. Fixture khusus modul tetap bersama tes modul tersebut, sedangkan setup dan
+helper lintas modul berada di `shared`. Unit test tetap di sebelah source masing-masing.
+
+```text
+tests/
+├── db/
+│   ├── base/
+│   ├── inventory/
+│   └── it-inventory/
+├── e2e/
+│   ├── base/
+│   ├── inventory/
+│   └── it-inventory/
+└── shared/
+    ├── db/
+    ├── e2e/
+    ├── test-database.ts
+    └── test-env.ts
+```
+
+Contoh menjalankan tes per modul (ganti nama folder untuk modul lain):
+
+```bash
+npm test -- --project db tests/db/inventory/
+npm test -- --project unit src/modules/inventory/
+npm run test:e2e -- tests/e2e/inventory/
+npx playwright test --list   # hanya discovery, tanpa menjalankan browser
+```
+
+Tes database dan E2E memakai database terpisah `it_inventory_test` di container yang sama, yang dikosongkan lalu
 dimigrasi ulang setiap kali tes jalan. Database development tidak tersentuh. Ganti lewat env
 `TEST_DATABASE_URL` bila perlu; namanya wajib berakhiran `_test`.
 

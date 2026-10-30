@@ -28,8 +28,8 @@ export default defineConfig({
           name: "db",
           environment: "node",
           include: ["tests/db/**/*.test.ts"],
-          globalSetup: ["tests/db/global-setup.ts"],
-          setupFiles: ["tests/db/setup-env.ts"],
+          globalSetup: ["tests/shared/db/global-setup.ts"],
+          setupFiles: ["tests/shared/db/setup-env.ts"],
           // Semua file memakai satu database, jadi dijalankan bergantian.
           fileParallelism: false,
         },

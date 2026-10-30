@@ -1,6 +1,6 @@
 import { defineConfig, devices } from "@playwright/test"
 
-import { TEST_DATABASE_URL } from "./tests/test-env"
+import { TEST_DATABASE_URL } from "./tests/shared/test-env"
 
 // Port terpisah dari `npm run dev` (3000), jadi e2e bisa jalan walaupun server
 // development sedang menyala.
@@ -9,7 +9,7 @@ const BASE_URL = `http://localhost:${PORT}`
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  globalSetup: "./tests/e2e/global-setup.ts",
+  globalSetup: "./tests/shared/e2e/global-setup.ts",
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
@@ -18,8 +18,13 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [
-    // Aktivasi MFA Administrator, sekali sebelum tes lain (tests/e2e/admin.setup.ts).
-    { name: "setup", testMatch: /.*\.setup\.ts/, use: { ...devices["Desktop Chrome"] } },
+    // Aktivasi MFA Administrator, sekali sebelum tes lain.
+    {
+      name: "setup",
+      testDir: "./tests/shared/e2e",
+      testMatch: /.*\.setup\.ts/,
+      use: { ...devices["Desktop Chrome"] },
+    },
     { name: "chromium", use: { ...devices["Desktop Chrome"] }, dependencies: ["setup"] },
   ],
   webServer: {
