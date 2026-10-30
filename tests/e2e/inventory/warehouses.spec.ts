@@ -52,9 +52,16 @@ test.describe("Administrator", () => {
     await page.goto("/admin/users")
     await page.getByRole("link", { name: "Demo Admin Gudang" }).click()
     await page.getByLabel("Beri akses ke gudang").click()
-    await page.getByRole("option", { name: `[${GRANTED}] Gudang Bahan Baku E2E` }).click()
+    await page.getByRole("option", { name: `${GRANTED} · Gudang Bahan Baku E2E` }).click()
     await page.getByRole("button", { name: "Beri akses" }).click()
-    await expect(page.getByRole("button", { name: `Cabut akses ${GRANTED}` })).toBeVisible()
+    const revoke = page.getByRole("button", { name: `Cabut akses ${GRANTED}` })
+    await expect(revoke).toBeVisible()
+
+    // Cabut akses langsung tersimpan: konfirmasi dulu, batal tidak mengubah apa pun.
+    await revoke.click()
+    await expect(page.getByRole("heading", { name: `Cabut akses ${GRANTED}?` })).toBeVisible()
+    await page.getByRole("button", { name: "Kembali" }).click()
+    await expect(revoke).toBeVisible()
 
     // Gudang kedua tanpa akses untuk Admin gudang.
     await page.goto("/master/gudang/baru")

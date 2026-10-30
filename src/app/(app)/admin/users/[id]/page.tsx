@@ -5,7 +5,7 @@ import { z } from "zod"
 
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
-import { InfoGrid } from "@/components/layout/info-grid"
+import { StaticField, ViewSection } from "@/components/form-field"
 import { Section } from "@/components/layout/section"
 import { StatusBadge } from "@/components/status-badge"
 import { Skeleton } from "@/components/ui/skeleton"
@@ -47,40 +47,39 @@ async function UserDetail({ params }: { params: Promise<{ id: string }> }) {
     <DocumentLayout
       title={user.name}
       crumbs={[{ label: user.name }]}
-      meta={user.email}
       activity={<ActivityLog entries={activity} noun="pengguna" />}
     >
-      <InfoGrid
-        items={[
-          {
-            label: "Peran",
-            value: user.roles.length ? (
+      <ViewSection title="Data akun">
+        <StaticField label="Nama" value={user.name} />
+        <StaticField label="Email" value={user.email} />
+        <StaticField
+          label="Peran"
+          value={
+            user.roles.length ? (
               user.roles.map((role) => ROLE_LABELS[role]).join(", ")
             ) : (
               <StatusBadge tone="warning">Belum punya peran</StatusBadge>
-            ),
-          },
-          {
-            label: "MFA",
-            value: user.twoFactorEnabled ? (
-              <StatusBadge tone="success">Aktif</StatusBadge>
-            ) : (
-              "Tidak aktif"
-            ),
-          },
-          { label: "Dibuat", value: formatDate(user.createdAt) },
-        ]}
-      />
-      <Section title="Akses gudang">
-        {allWarehouses ? (
+            )
+          }
+        />
+        <StaticField
+          label="MFA"
+          value={
+            user.twoFactorEnabled ? <StatusBadge tone="success">Aktif</StatusBadge> : "Tidak aktif"
+          }
+        />
+        <StaticField label="Dibuat" value={formatDate(user.createdAt)} />
+      </ViewSection>
+      {allWarehouses ? (
+        <Section title="Akses gudang">
           <p className="text-control text-muted-foreground">
             Peran {user.roles.map((role) => ROLE_LABELS[role]).join(", ")} otomatis bisa melihat
             semua gudang.
           </p>
-        ) : (
-          <WarehouseAccess userId={user.id} granted={granted} candidates={candidates} />
-        )}
-      </Section>
+        </Section>
+      ) : (
+        <WarehouseAccess userId={user.id} granted={granted} candidates={candidates} />
+      )}
     </DocumentLayout>
   )
 }

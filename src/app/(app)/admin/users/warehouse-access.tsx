@@ -2,9 +2,21 @@
 
 import { useState, useTransition } from "react"
 
+import { DataTable, type DataTableColumn } from "@/components/data-table/data-table"
 import { FormErrors } from "@/components/form-errors"
+import { Section } from "@/components/layout/section"
+import { ArchivedBadge } from "@/components/status-badge"
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { Label } from "@/components/ui/label"
 import {
   Select,
   SelectContent,
@@ -12,7 +24,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { ArchivedBadge } from "@/components/status-badge"
 import type { UserWarehouse } from "@/server/queries/users"
 
 import {
@@ -21,6 +32,8 @@ import {
 } from "@/modules/inventory/actions/warehouse-access"
 
 // Gudang yang boleh diakses satu user (PRD bagian 3). Hanya untuk user dengan izin user:manage.
+// Tabel mengikuti standar daftar; aksi tambah dan cabut memakai konfirmasi karena langsung
+// mengubah akses tersimpan, bukan draft.
 export function WarehouseAccess({
   userId,
   granted,
@@ -44,41 +57,47 @@ export function WarehouseAccess({
 
   const items = candidates.map((warehouse) => ({
     value: warehouse.id,
-    label: `[${warehouse.code}] ${warehouse.name}`,
+    label: `${warehouse.code} · ${warehouse.name}`,
   }))
 
+  const columns: DataTableColumn<UserWarehouse>[] = [
+    {
+      header: "Kode",
+      cell: (warehouse) => <span className="font-mono">{warehouse.code}</span>,
+    },
+    { header: "Gudang", cell: (warehouse) => warehouse.name, className: "w-full" },
+    {
+      header: "Status",
+      cell: (warehouse) => (warehouse.active ? "Aktif" : <ArchivedBadge />),
+    },
+    {
+      header: "Aksi",
+      align: "right",
+      cell: (warehouse) => (
+        <RevokeButton
+          warehouse={warehouse}
+          pending={pending}
+          onRevoke={() => run(revokeWarehouseAccess, warehouse.id)}
+        />
+      ),
+    },
+  ]
+
   return (
-    <div className="space-y-4">
-      {granted.length === 0 ? (
-        <p className="text-control text-muted-foreground">Belum ada gudang yang diberikan.</p>
-      ) : (
-        <ul className="divide-y rounded-lg border bg-card">
-          {granted.map((warehouse) => (
-            <li key={warehouse.id} className="flex items-center justify-between gap-4 px-4 py-2">
-              <p className="flex min-w-0 items-center gap-2 text-control">
-                <span className="font-mono">{warehouse.code}</span>
-                <span className="truncate">{warehouse.name}</span>
-                {!warehouse.active && <ArchivedBadge />}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={pending}
-                onClick={() => run(revokeWarehouseAccess, warehouse.id)}
-                aria-label={`Cabut akses ${warehouse.code}`}
+    <Section
+      title="Akses gudang"
+      actions={
+        candidates.length > 0 ? (
+          <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:items-center">
+            <Select
+              items={items}
+              value={selected}
+              onValueChange={(value) => setSelected(value as string | null)}
+            >
+              <SelectTrigger
+                aria-label="Beri akses ke gudang"
+                className="w-full sm:w-72 pointer-coarse:h-11"
               >
-                Cabut
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {candidates.length > 0 && (
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-          <div className="space-y-2">
-            <Label htmlFor="grant-warehouse">Beri akses ke gudang</Label>
-            <Select items={items} value={selected} onValueChange={(value) => setSelected(value)}>
-              <SelectTrigger id="grant-warehouse" className="w-full sm:w-80">
                 <SelectValue placeholder="Pilih gudang" />
               </SelectTrigger>
               <SelectContent>
@@ -89,16 +108,77 @@ export function WarehouseAccess({
                 ))}
               </SelectContent>
             </Select>
+            <Button
+              className="pointer-coarse:h-11"
+              disabled={pending || !selected}
+              onClick={() => selected && run(grantWarehouseAccess, selected)}
+            >
+              Beri akses
+            </Button>
           </div>
-          <Button
-            disabled={pending || !selected}
-            onClick={() => selected && run(grantWarehouseAccess, selected)}
-          >
-            Beri akses
-          </Button>
-        </div>
-      )}
+        ) : undefined
+      }
+    >
       <FormErrors errors={errors} />
-    </div>
+      <DataTable
+        columns={columns}
+        rows={granted}
+        rowKey={(warehouse) => warehouse.id}
+        rowMuted={(warehouse) => !warehouse.active}
+        empty={{ title: "Belum ada gudang yang diberikan." }}
+      />
+    </Section>
+  )
+}
+
+// Cabut akses langsung tersimpan, jadi dikonfirmasi lebih dulu (standar aksi berbahaya).
+function RevokeButton({
+  warehouse,
+  pending,
+  onRevoke,
+}: {
+  warehouse: UserWarehouse
+  pending: boolean
+  onRevoke: () => void
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <AlertDialog open={open} onOpenChange={setOpen}>
+      <AlertDialogTrigger
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className="pointer-coarse:h-11"
+            disabled={pending}
+            aria-label={`Cabut akses ${warehouse.code}`}
+          />
+        }
+      >
+        Cabut
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Cabut akses {warehouse.code}?</AlertDialogTitle>
+          <AlertDialogDescription>
+            {warehouse.name} tidak lagi bisa dibuka pengguna ini. Akses bisa diberikan lagi kapan
+            saja.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={pending}>Kembali</AlertDialogCancel>
+          <Button
+            disabled={pending}
+            onClick={() => {
+              setOpen(false)
+              onRevoke()
+            }}
+          >
+            {pending ? "Memproses…" : "Cabut akses"}
+          </Button>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
