@@ -3,7 +3,6 @@ import {
   ArrowLeftRight,
   ArrowUpFromLine,
   Boxes,
-  ClipboardList,
   FileCheck2,
   ChartColumn,
   Database,
@@ -291,7 +290,7 @@ export function navigationTrail(pathname: string): { group: NavGroup; item: NavI
 // Ikon modul sengaja berbeda dari ikon area kerja, supaya pemilih tidak tertukar dengan menu saat
 // sidebar diciutkan.
 export const MODULE_MENUS: Record<AppModule, { label: string; icon: LucideIcon }> = {
-  inventory: { label: "Inventory", icon: ClipboardList },
+  inventory: { label: "Inventory", icon: Boxes },
   "it-inventory": { label: "IT Inventory", icon: FileCheck2 },
   base: { label: "Pengaturan", icon: SlidersHorizontal },
 }

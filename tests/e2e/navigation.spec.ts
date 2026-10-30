@@ -52,6 +52,33 @@ async function switchModule(page: Page, label: string) {
   await expect(page.getByRole("menuitemradio")).toHaveCount(0)
 }
 
+test("popup modul terbuka ke kanan dan bisa dipilih dengan keyboard", async ({ page }) => {
+  await loginAs(page, ACCOUNTS.auditor)
+  const trigger = sidebar(page).getByRole("button", { name: /^Ganti modul/ })
+  await trigger.click()
+  const menu = page.getByRole("menu", { name: "Modul aplikasi" })
+  await expect(menu).toBeVisible()
+  await expect(menu.getByRole("menuitemradio", { checked: true })).toHaveCount(1)
+  const triggerBounds = await trigger.boundingBox()
+  const menuBounds = await menu.boundingBox()
+  expect(triggerBounds).not.toBeNull()
+  expect(menuBounds).not.toBeNull()
+  expect(Math.abs(menuBounds!.width - triggerBounds!.width)).toBeLessThan(2)
+  expect(menuBounds!.x).toBeGreaterThanOrEqual(triggerBounds!.x + triggerBounds!.width)
+
+  const lastOption = (await menu.getByRole("menuitemradio").last().innerText()).trim()
+  const url = page.url()
+  await page.keyboard.press("End")
+  await page.keyboard.press("Enter")
+  await expect(menu).toHaveCount(0)
+  await expect(trigger).toHaveAccessibleName(`Ganti modul, sekarang ${lastOption}`)
+  await expect(page).toHaveURL(url)
+  await trigger.click()
+  await expect(menu.getByRole("menuitemradio", { name: lastOption, checked: true })).toBeVisible()
+  await page.keyboard.press("Escape")
+  await expect(trigger).toBeFocused()
+})
+
 // Semua menu yang boleh dilihat, dari semua modul di pemilih.
 async function menuLinks(page: Page) {
   const all: string[] = []

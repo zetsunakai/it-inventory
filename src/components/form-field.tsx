@@ -51,7 +51,7 @@ export function FormField({
 }
 
 // Nilai yang tidak bisa diubah (kode, SKU, satuan stok): tampil sebagai teks beserta alasannya,
-// bukan input abu-abu yang di-disable. Tingginya sama dengan kontrol supaya sejajar.
+// bukan input abu-abu yang di-disable. Mode baca rapat mengikuti tinggi teks.
 export function StaticField({
   label,
   value,
@@ -68,10 +68,14 @@ export function StaticField({
   span?: FieldSpan
 }) {
   return (
-    <div className="form-field" data-span={span}>
-      <p className="form-field-label">{label}</p>
+    <div className="form-field gap-1" data-span={span}>
+      <p className="form-field-label font-semibold">{label}</p>
       <p
-        className={cn("form-field-static", mono && "font-mono", multiline && "whitespace-pre-wrap")}
+        className={cn(
+          "form-field-static min-h-5 items-start leading-5",
+          mono && "font-mono",
+          multiline && "whitespace-pre-wrap",
+        )}
       >
         {value}
       </p>

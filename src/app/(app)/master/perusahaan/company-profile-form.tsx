@@ -56,7 +56,7 @@ export function CompanyProfileForm({
       </FormActions>
       {state?.ok === false && <FormErrors errors={state.errors} />}
       <FormSection title="Identitas perusahaan">
-        <FormField label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name} span={12}>
+        <FormField label="Nama perusahaan" htmlFor="name" errors={fieldErrors?.name} span={6}>
           <Input
             id="name"
             name="name"
@@ -73,13 +73,7 @@ export function CompanyProfileForm({
             maxLength={500}
           />
         </FormField>
-        <FormField
-          label="NPWP"
-          htmlFor="npwp"
-          errors={fieldErrors?.npwp}
-          span={6}
-          hint="15 atau 16 digit, boleh dengan titik dan strip."
-        >
+        <FormField label="NPWP" htmlFor="npwp" errors={fieldErrors?.npwp} span={6}>
           <Input
             id="npwp"
             name="npwp"
@@ -87,7 +81,7 @@ export function CompanyProfileForm({
             inputMode="numeric"
           />
         </FormField>
-        <FormField label="NIB" htmlFor="nib" errors={fieldErrors?.nib} hint="13 digit." span={6}>
+        <FormField label="NIB" htmlFor="nib" errors={fieldErrors?.nib} span={6}>
           <Input
             id="nib"
             name="nib"
@@ -95,13 +89,7 @@ export function CompanyProfileForm({
             inputMode="numeric"
           />
         </FormField>
-        <FormField
-          label="NITKU"
-          htmlFor="nitku"
-          errors={fieldErrors?.nitku}
-          span={6}
-          hint="22 digit. Kosongkan untuk kantor pusat: otomatis NPWP 16 digit + 000000."
-        >
+        <FormField label="NITKU" htmlFor="nitku" errors={fieldErrors?.nitku} span={6}>
           <Input
             id="nitku"
             name="nitku"

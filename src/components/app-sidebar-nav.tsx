@@ -437,15 +437,20 @@ function ModuleSwitcher({
               )}
             </DropdownMenuTrigger>
             <DropdownMenuContent
-              side={collapsed ? "right" : "bottom"}
+              side="right"
               align="start"
               sideOffset={6}
-              className="w-56"
+              aria-label="Modul aplikasi"
+              className={cn(
+                "rounded-xl bg-sidebar p-1.5 text-sidebar-foreground shadow-lg ring-sidebar-border",
+                collapsed && "w-56",
+              )}
             >
               <DropdownMenuGroup>
                 <DropdownMenuRadioGroup
                   value={value}
                   onValueChange={(next) => onChange(next as AppModule)}
+                  className="grid gap-0.5"
                 >
                   {modules.map((module) => {
                     const ModuleIcon = MODULE_MENUS[module].icon
@@ -454,10 +459,16 @@ function ModuleSwitcher({
                         key={module}
                         value={module}
                         closeOnClick
-                        className="h-10"
+                        className="h-11 cursor-pointer gap-3 rounded-lg pl-3 text-sidebar-foreground hover:bg-sidebar-accent/60 focus:bg-sidebar-accent focus:text-sidebar-accent-foreground focus:**:text-sidebar-accent-foreground data-checked:bg-sidebar-accent data-checked:font-semibold data-checked:text-sidebar-accent-foreground"
                       >
-                        <ModuleIcon className="size-4 text-muted-foreground" aria-hidden />
-                        {MODULE_MENUS[module].label}
+                        <ModuleIcon
+                          className={cn(
+                            "size-[18px]",
+                            module === value ? "text-sidebar-primary" : "text-sidebar-muted",
+                          )}
+                          aria-hidden
+                        />
+                        <span className="truncate">{MODULE_MENUS[module].label}</span>
                       </DropdownMenuRadioItem>
                     )
                   })}

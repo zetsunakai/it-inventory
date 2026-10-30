@@ -70,7 +70,7 @@ async function CompanyProfile({ canEdit }: { canEdit: boolean }) {
       view={
         <>
           <ViewSection title="Identitas perusahaan">
-            <StaticField label="Nama perusahaan" value={profile.name} span={12} />
+            <StaticField label="Nama perusahaan" value={profile.name} span={6} />
             <StaticField multiline label="Alamat" value={profile.address} span={6} />
             <StaticField label="NPWP" value={profile.npwp} mono span={6} />
             <StaticField label="NIB" value={profile.nib} mono span={6} />

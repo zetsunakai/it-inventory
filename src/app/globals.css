@@ -214,6 +214,7 @@
  *   field    .form-grid     12 kolom, jarak 24px × 16px; anak lebar penuh kecuali punya data-span
  *                           (3, 4, 6, 8, 9) yang berlaku mulai 768px;
  *            .form-field    label 20px, jarak 6px, kontrol 40px selebar kolom;
+ *            readonly       jarak label 4px, nilai mengikuti tinggi teks (minimal 20px).
  *   notebook .form-notebook tab 48px dalam kartu, isi berpadding 24/24/32; kartu di dalamnya
  *                           kehilangan bingkainya.
  */
@@ -271,9 +272,9 @@
   .form-field-label {
     @apply min-h-5 text-control leading-5 font-medium;
   }
-  /* Nilai tetap (StaticField) setinggi kontrol supaya sejajar dengan field di sebelahnya. */
+  /* Mode baca mengikuti tinggi teks, bukan ruang kontrol input yang membuat nilai terlalu jauh. */
   .form-field-static {
-    @apply flex min-h-10 items-center text-control break-words;
+    @apply flex min-h-5 items-start text-control leading-5 break-words;
   }
 
   .form-notebook {
