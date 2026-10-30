@@ -1,6 +1,19 @@
 import "server-only"
 
-import { and, asc, count, desc, eq, ilike, inArray, or, sql, type SQL } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  getTableColumns,
+  ilike,
+  inArray,
+  or,
+  sql,
+  type SQL,
+} from "drizzle-orm"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
 
 import type { ListParams } from "@/lib/list-params"
 import type { RefCodeOption, RefCodeType } from "@/lib/ref-codes"
@@ -9,6 +22,22 @@ import { refCodes } from "@/server/db/schema"
 import { containsPattern, prefixPattern } from "@/server/db/sql-helpers"
 
 export type RefCodeRow = typeof refCodes.$inferSelect
+const LIST_BINDINGS: ListBindings = {
+  code: { label: "Kode", type: "text", expression: refCodes.code },
+  name: { label: "Nama", type: "text", expression: refCodes.name },
+  parent: { label: "Kode induk", type: "text", expression: refCodes.parentCode, groupable: true },
+  active: {
+    label: "Aktif",
+    type: "boolean",
+    expression: refCodes.active,
+    groupable: true,
+    options: [
+      { value: "true", label: "Aktif" },
+      { value: "false", label: "Diarsipkan" },
+    ],
+  },
+}
+export const REF_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Halaman Referensi kepabeanan: cari kode/nama, filter jenis, pagination.
 export async function listRefCodes({
@@ -17,6 +46,8 @@ export async function listRefCodes({
   active,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { active?: boolean; type?: RefCodeType }) {
   const conditions: SQL[] = []
   if (active !== undefined) conditions.push(eq(refCodes.active, active))
@@ -25,15 +56,22 @@ export async function listRefCodes({
     const pattern = containsPattern(search)
     conditions.push(or(ilike(refCodes.code, pattern), ilike(refCodes.name, pattern))!)
   }
-  const where = and(...conditions)
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  const where = and(...conditions, controls.where)
 
   const [rows, [{ total }]] = await Promise.all([
     db
-      .select()
+      .select({ ...getTableColumns(refCodes), ...controls.selection })
       .from(refCodes)
       .where(where)
       // Urutan jenis mengikuti urutan enum (sama dengan REF_CODE_TYPES).
-      .orderBy(asc(refCodes.type), asc(refCodes.parentCode), asc(refCodes.code))
+      .orderBy(
+        ...controls.order,
+        asc(refCodes.type),
+        asc(refCodes.parentCode),
+        asc(refCodes.code),
+        asc(refCodes.id),
+      )
       .limit(pageSize)
       .offset(offset),
     db.select({ total: count() }).from(refCodes).where(where),

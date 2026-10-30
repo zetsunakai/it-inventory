@@ -54,6 +54,12 @@ import {
   uoms,
 } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { groupMetadata } from "@/lib/list-controls"
+import {
+  CUSTOMS_DOCUMENT_STATUSES,
+  CUSTOMS_DOCUMENT_STATUS_LABELS,
+} from "@/modules/it-inventory/lib/customs"
 
 // Data dokumen BC untuk form dan daftar per jenis (backlog M3-04, M3-05–M3-09).
 
@@ -577,6 +583,41 @@ const COUNTERPARTY = sql`(
   select p.name from customs_document_parties p
   where p.document_id = d.id and p.entity_type_code not in ('2', '3', '7')
   order by p.partner_id is null, p.entity_type_code limit 1)`
+const LIST_BINDINGS: ListBindings = {
+  number: { label: "Nomor", type: "text", expression: sql`d.number` },
+  aju: { label: "No. Aju", type: "text", expression: sql`d.aju_number` },
+  registration: { label: "No. Daftar", type: "text", expression: sql`d.registration_number` },
+  registrationDate: {
+    label: "Tanggal daftar",
+    type: "date",
+    expression: sql`d.registration_date`,
+    groupable: true,
+  },
+  created: {
+    label: "Tanggal dibuat",
+    type: "date",
+    expression: sql`(d.created_at at time zone 'Asia/Jakarta')::date`,
+    groupable: true,
+  },
+  status: {
+    label: "Status",
+    type: "selection",
+    expression: sql`d.status`,
+    groupable: true,
+    options: CUSTOMS_DOCUMENT_STATUSES.map((value) => ({
+      value,
+      label: CUSTOMS_DOCUMENT_STATUS_LABELS[value],
+    })),
+  },
+  office: {
+    label: "Kode kantor pabean",
+    type: "text",
+    expression: sql`d.customs_office_code`,
+    groupable: true,
+  },
+  partner: { label: "Partner", type: "text", expression: COUNTERPARTY, groupable: true },
+}
+export const CUSTOMS_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Rentang tanggal dibuat per pilihan periode, dalam tanggal WIB.
 const PERIOD_RANGES: Record<CustomsPeriod, SQL> = {
@@ -595,6 +636,8 @@ export async function listCustomsDocuments({
   search,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & {
   docCode: CustomsDocCode
   status?: CustomsDocumentStatus
@@ -616,6 +659,8 @@ export async function listCustomsDocuments({
         or d.registration_number ilike ${pattern} or ${COUNTERPARTY} ilike ${pattern})`,
     )
   }
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  if (controls.where) conditions.push(controls.where)
   const where = sql.join(conditions, sql` and `)
   const [rows, totals] = await Promise.all([
     db.execute<{
@@ -628,13 +673,13 @@ export async function listCustomsDocuments({
       office_code: string | null
       office_name: string | null
     }>(sql`
-      select d.id, d.number, d.aju_number, d.status, d.registration_number,
+      select ${controls.columns}, d.id, d.number, d.aju_number, d.status, d.registration_number,
         d.registration_date::text, d.customs_office_code as office_code, r.name as office_name
       from customs_documents d
       left join ref_codes r on r.type = 'customs_office' and r.code = d.customs_office_code
         and r.parent_code is null
       where ${where}
-      order by d.number
+      order by ${controls.orderPrefix}d.number, d.id
       limit ${pageSize} offset ${offset}`),
     db.execute<{ total: number }>(
       sql`select count(*)::int as total from customs_documents d where ${where}`,
@@ -642,6 +687,7 @@ export async function listCustomsDocuments({
   ])
   return {
     rows: rows.rows.map((row): CustomsDocumentRow => ({
+      ...groupMetadata(row),
       id: row.id,
       number: row.number,
       ajuNumber: row.aju_number,

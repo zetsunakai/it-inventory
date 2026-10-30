@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { cn } from "@/lib/utils"
+import { groupMetadata } from "@/lib/list-controls"
 
 import { ColumnMenu, GroupToggle } from "./data-table-client"
 import {
@@ -32,6 +33,7 @@ export type DataTableColumn<Row> = {
 export type DataTableGroup<Row> = {
   key: (row: Row) => string
   label: (row: Row) => ReactNode
+  count?: (row: Row) => number
 }
 
 const columnId = (header: string) =>
@@ -71,7 +73,7 @@ export function DataTable<Row>({
   rowKey,
   rowHref,
   rowMuted,
-  group,
+  group: configuredGroup,
   selection,
   empty = { title: "Tidak ada data." },
 }: {
@@ -89,6 +91,15 @@ export function DataTable<Row>({
   selection?: DataTableSelection<Row>
   empty?: DataTableEmpty
 }) {
+  const group =
+    configuredGroup ??
+    (groupMetadata(rows[0])._groupKey !== undefined
+      ? {
+          key: (row: Row) => groupMetadata(row)._groupKey ?? "",
+          label: (row: Row) => groupMetadata(row)._groupLabel ?? "Tidak diisi",
+          count: (row: Row) => groupMetadata(row)._groupCount ?? 0,
+        }
+      : undefined)
   const optional = id ? columns.filter((column) => column.optional) : []
   const span = columns.length + (optional.length ? 1 : 0) + (selection ? 1 : 0)
   const groups = group ? [...Map.groupBy(rows, (row) => group.key(row)).values()] : [rows]
@@ -269,7 +280,10 @@ export function DataTable<Row>({
               {group && (
                 <TableRow className="bg-muted/40 hover:bg-muted/60">
                   <TableCell colSpan={span} className="px-4 py-2.5">
-                    <GroupToggle label={group.label(groupRows[0])} count={groupRows.length} />
+                    <GroupToggle
+                      label={group.label(groupRows[0])}
+                      count={group.count?.(groupRows[0]) ?? groupRows.length}
+                    />
                   </TableCell>
                 </TableRow>
               )}

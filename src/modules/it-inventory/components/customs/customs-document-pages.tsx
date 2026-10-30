@@ -9,6 +9,7 @@ import { DataTableSkeleton } from "@/components/data-table/data-table-skeleton"
 import { listEmptyState } from "@/components/data-table/empty-state"
 import { ListPager } from "@/components/data-table/list-pager"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { CUSTOMS_LIST_FIELDS } from "@/modules/it-inventory/server/queries/customs-documents"
 import { ActivityLog } from "@/components/document/activity-log"
 import { DocumentLayout } from "@/components/document/document-layout"
 import { NewRecordLayout } from "@/components/document/new-record-layout"
@@ -125,7 +126,7 @@ async function CustomsListDownloads({
   await requirePermission("bc:read")
   const raw = await searchParams
   const query = new URLSearchParams({ docCode: spec.code })
-  for (const key of ["q", "status", "periode", "kantor"]) {
+  for (const key of ["q", "status", "periode", "kantor", "filter"]) {
     const value = raw[key]
     const single = Array.isArray(value) ? value[0] : value
     if (single) query.set(key, single)
@@ -193,6 +194,7 @@ async function CustomsTable({
         }
       >
         <ListSearchBar
+          fields={CUSTOMS_LIST_FIELDS}
           placeholder="Cari nomor, No. Aju, No. Daftar, atau partner"
           filters={[
             {

@@ -39,9 +39,30 @@ import {
   warehouses,
 } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { TRANSFER_STATUSES, TRANSFER_STATUS_LABELS } from "@/modules/inventory/lib/inventory"
 
 const source = aliasedTable(locations, "source")
 const destination = aliasedTable(locations, "destination")
+const LIST_BINDINGS: ListBindings = {
+  number: { label: "Nomor", type: "text", expression: transfers.number },
+  reference: { label: "Referensi", type: "text", expression: transfers.reference },
+  status: {
+    label: "Status",
+    type: "selection",
+    expression: transfers.status,
+    groupable: true,
+    options: TRANSFER_STATUSES.map((value) => ({ value, label: TRANSFER_STATUS_LABELS[value] })),
+  },
+  partner: { label: "Partner", type: "text", expression: partners.name, groupable: true },
+  scheduled: {
+    label: "Tanggal rencana",
+    type: "date",
+    expression: transfers.scheduledDate,
+    groupable: true,
+  },
+}
+export const TRANSFER_LIST_FIELDS = listFields(LIST_BINDINGS)
 // Jalur lengkap lokasi (mis. GB1/RAK-A). View tidak bisa di-alias Drizzle, jadi lewat subquery.
 const pathOf = (location: typeof source) =>
   sql<string>`(select lp.path from location_paths lp where lp.id = ${location.id})`
@@ -88,6 +109,8 @@ export async function listTransfers({
   search,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & {
   userId: string
   type: TransferType
@@ -112,7 +135,8 @@ export async function listTransfers({
       )!,
     )
   }
-  const where = and(...conditions)
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  const where = and(...conditions, controls.where)
   const lineCounts = db
     .select({ transferId: transferLines.transferId, total: count().as("line_total") })
     .from(transferLines)
@@ -123,6 +147,7 @@ export async function listTransfers({
     db
       .select({
         id: transfers.id,
+        ...controls.selection,
         number: transfers.number,
         type: transfers.type,
         status: transfers.status,
@@ -150,8 +175,10 @@ export async function listTransfers({
       .where(where)
       // Yang masih dikerjakan di atas, lalu yang terbaru.
       .orderBy(
+        ...controls.order,
         sql`case when ${transfers.status} in ('done', 'cancelled') then 1 else 0 end`,
         desc(transfers.createdAt),
+        asc(transfers.id),
       )
       .limit(pageSize)
       .offset(offset),

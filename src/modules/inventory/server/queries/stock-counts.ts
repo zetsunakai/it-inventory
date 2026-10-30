@@ -18,6 +18,29 @@ import {
   warehouses,
 } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { STOCK_COUNT_STATUSES, STOCK_COUNT_STATUS_LABELS } from "@/modules/inventory/lib/inventory"
+const LIST_BINDINGS: ListBindings = {
+  number: { label: "Nomor", type: "text", expression: stockCounts.number },
+  warehouse: { label: "Gudang", type: "text", expression: warehouses.name, groupable: true },
+  status: {
+    label: "Status",
+    type: "selection",
+    expression: stockCounts.status,
+    groupable: true,
+    options: STOCK_COUNT_STATUSES.map((value) => ({
+      value,
+      label: STOCK_COUNT_STATUS_LABELS[value],
+    })),
+  },
+  cutoff: {
+    label: "Tanggal cut-off",
+    type: "date",
+    expression: sql`(${stockCounts.cutOffAt} at time zone 'Asia/Jakarta')::date`,
+    groupable: true,
+  },
+}
+export const STOCK_COUNT_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Stock opname (backlog M2-09): daftar dan detail sesi untuk gudang yang boleh diakses user.
 
@@ -46,6 +69,8 @@ export async function listStockCounts({
   search,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { userId: string; status?: StockCountStatus }) {
   const conditions: SQL[] = [accessibleBy(userId)]
   if (status) conditions.push(eq(stockCounts.status, status))
@@ -59,7 +84,8 @@ export async function listStockCounts({
       )!,
     )
   }
-  const where = and(...conditions)
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  const where = and(...conditions, controls.where)
   const totals = db
     .select({
       countId: stockCountLines.stockCountId,
@@ -74,6 +100,7 @@ export async function listStockCounts({
     db
       .select({
         id: stockCounts.id,
+        ...controls.selection,
         number: stockCounts.number,
         status: stockCounts.status,
         warehouseCode: warehouses.code,
@@ -88,8 +115,10 @@ export async function listStockCounts({
       .leftJoin(totals, eq(totals.countId, stockCounts.id))
       .where(where)
       .orderBy(
+        ...controls.order,
         sql`case ${stockCounts.status} when 'approved' then 1 when 'cancelled' then 1 else 0 end`,
         desc(stockCounts.createdAt),
+        asc(stockCounts.id),
       )
       .limit(pageSize)
       .offset(offset),

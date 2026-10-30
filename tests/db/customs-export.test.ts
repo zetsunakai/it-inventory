@@ -15,6 +15,7 @@ import {
 } from "@/modules/it-inventory/server/queries/customs-documents"
 import type { CurrentUser } from "@/server/auth/session"
 import { db } from "@/server/db"
+import { groupMetadata } from "@/lib/list-controls"
 import {
   company,
   customsAttachments,
@@ -97,6 +98,23 @@ const list = (filters: Partial<Parameters<typeof listCustomsDocuments>[0]> = {})
   }).then(({ rows }) => rows.map((row) => row.id).sort())
 
 describe("daftar per jenis", () => {
+  test("filter kustom dan grouping diterapkan ke SQL daftar dokumen", async () => {
+    const result = await listCustomsDocuments({
+      search: "",
+      page: 1,
+      pageSize: 1,
+      offset: 0,
+      docCode: "23",
+      groupBy: "status",
+      customFilter: JSON.stringify({
+        match: "all",
+        conditions: [{ field: "created", operator: "lt", value: "2021-01-01" }],
+      }),
+    })
+    expect(result.rows.map((row) => row.id)).toEqual([ids.other])
+    expect(result.total).toBe(1)
+    expect(groupMetadata(result.rows[0])).toMatchObject({ _groupLabel: "Draft", _groupCount: 1 })
+  })
   test("filter status, kantor, dan periode tanggal dibuat", async () => {
     expect(await list()).toEqual([ids.complete, ids.other].sort())
     expect(await list({ status: "submitted" })).toEqual([ids.complete])
@@ -186,6 +204,24 @@ describe("export draft", () => {
 })
 
 describe("export daftar BC", () => {
+  test("export mengikuti filter kustom yang sama dengan daftar", async () => {
+    loginAs(["auditor"])
+    const doc = await getCustomsDocument(BC23, ids.other)
+    const filter = JSON.stringify({
+      match: "all",
+      conditions: [{ field: "number", operator: "eq", value: doc!.number }],
+    })
+    const response = await exportList(
+      new NextRequest(
+        `http://localhost/api/customs-documents/export?docCode=23&format=xlsx&filter=${encodeURIComponent(filter)}`,
+      ),
+    )
+    expect(response.status).toBe(200)
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(await response.arrayBuffer())
+    expect(workbook.worksheets[0].rowCount).toBe(2)
+    expect(workbook.worksheets[0].getCell("A2").value).toBe(doc!.number)
+  })
   test("mengikuti filter kantor, mengabaikan halaman, dan membuat PDF/Excel", async () => {
     loginAs(["auditor"])
     const doc = await getCustomsDocument(BC23, ids.other)

@@ -10,6 +10,35 @@ import type {
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { groupMetadata } from "@/lib/list-controls"
+import {
+  INTERWAREHOUSE_STATUSES,
+  INTERWAREHOUSE_STATUS_LABELS,
+} from "@/modules/inventory/lib/inventory"
+const LIST_BINDINGS: ListBindings = {
+  number: { label: "Nomor", type: "text", expression: sql`i.number` },
+  reference: { label: "Referensi", type: "text", expression: sql`i.reference` },
+  status: {
+    label: "Status",
+    type: "selection",
+    expression: sql`i.status`,
+    groupable: true,
+    options: INTERWAREHOUSE_STATUSES.map((value) => ({
+      value,
+      label: INTERWAREHOUSE_STATUS_LABELS[value],
+    })),
+  },
+  source: { label: "Gudang asal", type: "text", expression: sql`sw.code`, groupable: true },
+  destination: { label: "Gudang tujuan", type: "text", expression: sql`dw.code`, groupable: true },
+  scheduled: {
+    label: "Tanggal rencana",
+    type: "date",
+    expression: sql`i.scheduled_date`,
+    groupable: true,
+  },
+}
+export const INTERWAREHOUSE_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Permintaan transfer antar gudang (backlog R-10). Hanya yang kedua gudangnya boleh diakses user.
 
@@ -71,6 +100,8 @@ export async function listInterwarehouse({
   search,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { userId: string; status?: InterwarehouseStatus; inTransit?: boolean }) {
   const conditions: SQL[] = []
   if (status) conditions.push(sql`i.status = ${status}`)
@@ -79,6 +110,8 @@ export async function listInterwarehouse({
     const pattern = containsPattern(search)
     conditions.push(sql`(i.number ilike ${pattern} or i.reference ilike ${pattern})`)
   }
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  if (controls.where) conditions.push(controls.where)
   const where = conditions.length ? sql.join(conditions, sql` and `) : undefined
   const [rows, totals] = await Promise.all([
     db.execute<
@@ -89,7 +122,7 @@ export async function listInterwarehouse({
         transit_products: number
       }
     >(sql`
-      select ${header},
+      select ${controls.columns}, ${header},
         (select count(*)::int from interwarehouse_transfer_lines l where l.interwarehouse_id = i.id)
           as line_count,
         (select case when count(distinct u.code) = 1 then sum(it.qty)::numeric(18,4)::text end
@@ -101,12 +134,13 @@ export async function listInterwarehouse({
         (select count(distinct it.product_id)::int from interwarehouse_in_transit(i.id) it)
           as transit_products
       ${from(userId, where)}
-      order by case when i.status in ('done', 'cancelled') then 1 else 0 end, i.created_at desc
+      order by ${controls.orderPrefix}case when i.status in ('done', 'cancelled') then 1 else 0 end, i.created_at desc, i.id
       limit ${pageSize} offset ${offset}`),
     db.execute<{ total: number }>(sql`select count(*)::int as total ${from(userId, where)}`),
   ])
   return {
     rows: rows.rows.map((row): InterwarehouseRow => ({
+      ...groupMetadata(row),
       id: row.id,
       number: row.number,
       status: row.status,

@@ -9,8 +9,6 @@ export const SEARCH_PARAM = "q"
 export const PAGE_PARAM = "page"
 // Kelompokkan baris (RU-22), mis. ?kelompok=status.
 export const GROUP_PARAM = "kelompok"
-// Batas baris saat dikelompokkan: semua baris dimuat sekaligus supaya jumlah per kelompok benar.
-export const GROUPED_PAGE_SIZE = 500
 export const DEFAULT_PAGE_SIZE = 20
 
 const listSchema = z.object({
@@ -23,6 +21,8 @@ export type ListParams = {
   page: number
   pageSize: number
   offset: number
+  customFilter?: string
+  groupBy?: string
 }
 
 // Nilai yang tidak valid diabaikan (kembali ke default), tidak menjadi error.
@@ -35,7 +35,14 @@ export function parseListParams(
     [PAGE_PARAM]: first(raw[PAGE_PARAM]) ?? 1,
   })
   const page = parsed[PAGE_PARAM]
-  return { search: parsed[SEARCH_PARAM], page, pageSize, offset: (page - 1) * pageSize }
+  return {
+    search: parsed[SEARCH_PARAM],
+    page,
+    pageSize,
+    offset: (page - 1) * pageSize,
+    ...(first(raw.filter) ? { customFilter: first(raw.filter) } : {}),
+    ...(first(raw[GROUP_PARAM]) ? { groupBy: first(raw[GROUP_PARAM]) } : {}),
+  }
 }
 
 // Filter berupa pilihan tertutup: nilai di luar daftar diabaikan.

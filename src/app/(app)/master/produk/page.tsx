@@ -26,6 +26,7 @@ import { listProducts, type ProductRow } from "@/modules/inventory/server/querie
 import { CustomsReadiness } from "@/modules/it-inventory/components/customs-readiness"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { PRODUCT_LIST_FIELDS } from "@/modules/inventory/server/queries/products"
 import { ListPager } from "@/components/data-table/list-pager"
 
 import { deleteProduct } from "./actions"
@@ -112,6 +113,7 @@ async function ProductTable({ searchParams }: { searchParams: Promise<RawSearchP
         }
       >
         <ListSearchBar
+          fields={PRODUCT_LIST_FIELDS}
           placeholder="Cari product code, nama, atau kode HS"
           filters={[
             {

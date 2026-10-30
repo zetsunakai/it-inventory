@@ -24,6 +24,7 @@ import { listPartners, type PartnerRow } from "@/modules/inventory/server/querie
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
 import { ListPager } from "@/components/data-table/list-pager"
+import { PARTNER_LIST_FIELDS } from "@/modules/inventory/server/queries/partners"
 
 import { deletePartner } from "@/modules/inventory/actions/partners"
 
@@ -94,6 +95,7 @@ async function PartnerTable({ searchParams }: { searchParams: Promise<RawSearchP
         }
       >
         <ListSearchBar
+          fields={PARTNER_LIST_FIELDS}
           placeholder="Cari nama, NPWP, atau NITKU"
           filters={[{ name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS }]}
         />

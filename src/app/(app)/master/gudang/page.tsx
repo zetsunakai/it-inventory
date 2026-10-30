@@ -32,6 +32,7 @@ import {
 } from "@/modules/inventory/server/queries/warehouses"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { WAREHOUSE_LIST_FIELDS } from "@/modules/inventory/server/queries/warehouses"
 import { ListPager } from "@/components/data-table/list-pager"
 
 import { deleteWarehouse } from "@/modules/inventory/actions/warehouses"
@@ -127,6 +128,7 @@ async function WarehouseTable({ searchParams }: { searchParams: Promise<RawSearc
         }
       >
         <ListSearchBar
+          fields={WAREHOUSE_LIST_FIELDS}
           placeholder="Cari kode atau nama gudang"
           filters={[{ name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS }]}
         />

@@ -19,6 +19,7 @@ import {
 } from "@/modules/inventory/server/queries/stock"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { STOCK_LIST_FIELDS } from "@/modules/inventory/server/queries/stock"
 import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Stok · IT Inventory" }
@@ -140,6 +141,7 @@ async function StockTable({ searchParams }: { searchParams: Promise<RawSearchPar
         }
       >
         <ListSearchBar
+          fields={STOCK_LIST_FIELDS}
           placeholder="Cari product code, nama produk, atau lot"
           filters={[
             {

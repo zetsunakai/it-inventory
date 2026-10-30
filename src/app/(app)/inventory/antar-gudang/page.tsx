@@ -25,6 +25,7 @@ import {
 } from "@/modules/inventory/server/queries/interwarehouse"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { INTERWAREHOUSE_LIST_FIELDS } from "@/modules/inventory/server/queries/interwarehouse"
 import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Transfer antar gudang · IT Inventory" }
@@ -121,6 +122,7 @@ async function InterwarehouseTable({ searchParams }: { searchParams: Promise<Raw
         }
       >
         <ListSearchBar
+          fields={INTERWAREHOUSE_LIST_FIELDS}
           placeholder="Cari nomor atau referensi"
           filters={[
             {

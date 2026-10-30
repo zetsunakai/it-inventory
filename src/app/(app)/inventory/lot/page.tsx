@@ -13,6 +13,7 @@ import { requirePermission } from "@/server/auth/session"
 import { listLots, type LotRow } from "@/modules/inventory/server/queries/lots"
 import { ListPager } from "@/components/data-table/list-pager"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { LOT_LIST_FIELDS } from "@/modules/inventory/server/queries/lots"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 
 export const metadata: Metadata = { title: "Lot & nomor seri · IT Inventory" }
@@ -78,7 +79,10 @@ async function LotTable({ searchParams }: { searchParams: Promise<RawSearchParam
           />
         }
       >
-        <ListSearchBar placeholder="Cari nomor lot/seri, product code, atau nama produk" />
+        <ListSearchBar
+          fields={LOT_LIST_FIELDS}
+          placeholder="Cari nomor lot/seri, product code, atau nama produk"
+        />
       </ListToolbar>
       <DataTable
         columns={COLUMNS}

@@ -21,13 +21,7 @@ import {
   USAGE_TYPE_LABELS,
   USAGE_TYPES,
 } from "@/modules/inventory/lib/inventory"
-import {
-  GROUP_PARAM,
-  GROUPED_PAGE_SIZE,
-  parseListParams,
-  pickFilter,
-  type RawSearchParams,
-} from "@/lib/list-params"
+import { parseListParams, pickFilter, type RawSearchParams } from "@/lib/list-params"
 import { hasPermission } from "@/lib/permissions"
 import {
   transferActions,
@@ -40,6 +34,7 @@ import {
   getTransfer,
   listInternalLocations,
   listTransfers,
+  TRANSFER_LIST_FIELDS,
   listUomChoices,
   type TransferDetail,
   type TransferLine,
@@ -75,8 +70,6 @@ const QUEUE_FILTER = "antrean"
 const QUEUE_OPTIONS = [{ value: "persetujuan", label: "Menunggu persetujuan" }] as const
 const USAGE_OPTIONS = USAGE_TYPES.map((value) => ({ value, label: USAGE_TYPE_LABELS[value] }))
 const STATUS_FILTER = "status"
-const GROUPS = ["status"] as const
-const GROUPS_WITH_PARTNER = ["status", "partner"] as const
 const STATUS_OPTIONS = TRANSFER_STATUSES.map((value) => ({
   value,
   label: TRANSFER_STATUS_LABELS[value],
@@ -118,9 +111,7 @@ async function TransferTable({
   const canWrite = hasPermission(user.roles, "inventory:write")
   const canApprove = Boolean(kind.needsApproval) && hasPermission(user.roles, "inventory:approve")
   const raw = await searchParams
-  // Dikelompokkan (RU-22): semua baris dimuat sekaligus supaya jumlah per kelompok benar.
-  const groupBy = pickFilter(raw, GROUP_PARAM, kind.partnerLabel ? GROUPS_WITH_PARTNER : GROUPS)
-  const params = parseListParams(raw, groupBy ? { pageSize: GROUPED_PAGE_SIZE } : undefined)
+  const params = parseListParams(raw)
   const status = pickFilter(raw, STATUS_FILTER, TRANSFER_STATUSES)
   const usageType = kind.usageTypes ? pickFilter(raw, USAGE_FILTER, USAGE_TYPES) : undefined
   const queue = kind.needsApproval
@@ -268,14 +259,12 @@ async function TransferTable({
           )
         }
         pager={
-          !groupBy && (
-            <ListPager
-              searchParams={raw}
-              page={params.page}
-              pageSize={params.pageSize}
-              total={total}
-            />
-          )
+          <ListPager
+            searchParams={raw}
+            page={params.page}
+            pageSize={params.pageSize}
+            total={total}
+          />
         }
       >
         <ListSearchBar
@@ -284,10 +273,9 @@ async function TransferTable({
               ? `Cari nomor, referensi, atau ${kind.partnerLabel.toLowerCase()}`
               : "Cari nomor atau referensi"
           }
-          groupBy={[
-            { value: "status", label: "Status" },
-            ...(kind.partnerLabel ? [{ value: "partner", label: kind.partnerLabel }] : []),
-          ]}
+          fields={TRANSFER_LIST_FIELDS.filter(
+            (field) => kind.partnerLabel || field.key !== "partner",
+          )}
           filters={[
             ...(kind.needsApproval
               ? [{ name: QUEUE_FILTER, label: "Antrean", options: [...QUEUE_OPTIONS] }]
@@ -301,16 +289,6 @@ async function TransferTable({
       </ListToolbar>
       <DataTable
         id={`daftar-${kind.type}`}
-        group={
-          groupBy === "status"
-            ? { key: (row) => row.status, label: (row) => TRANSFER_STATUS_LABELS[row.status] }
-            : groupBy === "partner"
-              ? {
-                  key: (row) => row.partnerName ?? "",
-                  label: (row) => row.partnerName ?? `Tanpa ${kind.partnerLabel?.toLowerCase()}`,
-                }
-              : undefined
-        }
         columns={columns}
         rows={rows}
         rowKey={(row) => row.id}

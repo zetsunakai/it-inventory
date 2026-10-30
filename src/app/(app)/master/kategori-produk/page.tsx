@@ -26,6 +26,7 @@ import {
 } from "@/modules/inventory/server/queries/product-categories"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { CATEGORY_LIST_FIELDS } from "@/modules/inventory/server/queries/product-categories"
 import { ListPager } from "@/components/data-table/list-pager"
 
 import { deleteProductCategory } from "@/modules/inventory/actions/product-categories"
@@ -98,6 +99,7 @@ async function CategoryTable({ searchParams }: { searchParams: Promise<RawSearch
         }
       >
         <ListSearchBar
+          fields={CATEGORY_LIST_FIELDS}
           placeholder="Cari nama atau prefix kode"
           filters={[{ name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS }]}
         />

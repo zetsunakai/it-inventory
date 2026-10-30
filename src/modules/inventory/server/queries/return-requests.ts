@@ -13,6 +13,46 @@ import type {
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { groupMetadata } from "@/lib/list-controls"
+import {
+  RETURN_REQUEST_STATUSES,
+  RETURN_REQUEST_STATUS_LABELS,
+  RETURN_REQUEST_TYPES,
+  RETURN_REQUEST_TYPE_LABELS,
+} from "@/modules/inventory/lib/inventory"
+const LIST_BINDINGS: ListBindings = {
+  number: { label: "Nomor", type: "text", expression: sql`r.number` },
+  partner: { label: "Partner", type: "text", expression: sql`p.name`, groupable: true },
+  warehouse: { label: "Gudang", type: "text", expression: sql`w.code`, groupable: true },
+  status: {
+    label: "Status",
+    type: "selection",
+    expression: sql`r.status`,
+    groupable: true,
+    options: RETURN_REQUEST_STATUSES.map((value) => ({
+      value,
+      label: RETURN_REQUEST_STATUS_LABELS[value],
+    })),
+  },
+  type: {
+    label: "Jenis",
+    type: "selection",
+    expression: sql`r.type`,
+    groupable: true,
+    options: RETURN_REQUEST_TYPES.map((value) => ({
+      value,
+      label: RETURN_REQUEST_TYPE_LABELS[value],
+    })),
+  },
+  scheduled: {
+    label: "Tanggal rencana",
+    type: "date",
+    expression: sql`r.scheduled_date`,
+    groupable: true,
+  },
+}
+export const RETURN_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Permintaan retur (backlog R-11). Hanya yang gudangnya boleh diakses user.
 
@@ -72,6 +112,8 @@ export async function listReturnRequests({
   search,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { userId: string; status?: ReturnRequestStatus; type?: ReturnRequestType }) {
   const conditions: SQL[] = []
   if (status) conditions.push(sql`r.status = ${status}`)
@@ -82,19 +124,22 @@ export async function listReturnRequests({
       sql`(r.number ilike ${pattern} or o.number ilike ${pattern} or p.name ilike ${pattern})`,
     )
   }
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  if (controls.where) conditions.push(controls.where)
   const where = conditions.length ? sql.join(conditions, sql` and `) : undefined
   const [rows, totals] = await Promise.all([
     db.execute<RawHeader & { line_count: number }>(sql`
-      select ${header},
+      select ${controls.columns}, ${header},
         (select count(*)::int from return_request_lines x where x.return_request_id = r.id)
           as line_count
       ${from(userId, where)}
-      order by case when r.status in ('done', 'cancelled') then 1 else 0 end, r.created_at desc
+      order by ${controls.orderPrefix}case when r.status in ('done', 'cancelled') then 1 else 0 end, r.created_at desc, r.id
       limit ${pageSize} offset ${offset}`),
     db.execute<{ total: number }>(sql`select count(*)::int as total ${from(userId, where)}`),
   ])
   return {
     rows: rows.rows.map((row): ReturnRequestRow => ({
+      ...groupMetadata(row),
       id: row.id,
       number: row.number,
       type: row.type,

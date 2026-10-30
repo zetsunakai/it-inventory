@@ -2,7 +2,7 @@
 
 import { useCallback, useSyncExternalStore } from "react"
 
-// Nilai JSON per browser di localStorage (pilihan kolom, favorit pencarian; RU-22). Di server dan
+// Nilai JSON per browser di localStorage (misalnya pilihan kolom; RU-22). Di server dan
 // saat penyimpanan tidak tersedia, nilainya fallback. Perubahan diberitahukan ke komponen lain di
 // tab yang sama lewat event "stored-value".
 const EVENT = "stored-value"

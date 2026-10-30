@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { useStoredValue } from "@/hooks/use-stored-value"
 import { cn } from "@/lib/utils"
+import { Button } from "@/components/ui/button"
 
 export type OptionalColumn = { id: string; label: string; hidden: boolean }
 
@@ -67,15 +68,16 @@ export function ColumnMenu({ tableId, columns }: { tableId: string; columns: Opt
 export function GroupToggle({ label, count }: { label: React.ReactNode; count: number }) {
   const [collapsed, setCollapsed] = useState(false)
   return (
-    <button
+    <Button
       type="button"
+      variant="ghost"
       aria-expanded={!collapsed}
       onClick={(event) => {
         const body = event.currentTarget.closest("tbody")
         body?.toggleAttribute("data-collapsed", !collapsed)
         setCollapsed(!collapsed)
       }}
-      className="flex w-full items-center gap-2 text-left font-semibold outline-none focus-visible:underline"
+      className="h-auto min-h-10 w-full justify-start gap-2 text-left font-semibold whitespace-normal"
     >
       <ChevronDown
         className={cn(
@@ -86,6 +88,6 @@ export function GroupToggle({ label, count }: { label: React.ReactNode; count: n
       />
       <span>{label}</span>
       <span className="font-normal text-muted-foreground">({count})</span>
-    </button>
+    </Button>
   )
 }

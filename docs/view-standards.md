@@ -38,6 +38,27 @@ mengikuti aturan di sini.
 - Gunakan `Section` untuk tabel tambahan, seperti kategori satuan dan lokasi virtual.
 - Izin, filter, pagination, dan urutan data tetap ditentukan oleh halaman/query masing-masing.
 
+## Filter dan pengelompokan daftar
+
+- Semua daftar memakai `ListSearchBar`: panel **Filter** dan **Kelompokkan**, tanpa Favorit.
+- Registry field ada di query pemilik (`*_LIST_FIELDS`), diturunkan dari binding SQL server melalui
+  `listFields()`. Halaman hanya meneruskan registry lewat prop `fields`; jangan membuat editor
+  filter atau penerjemah SQL khusus per menu.
+- Filter kustom memakai field/operator/nilai, maksimal 12 kondisi dengan AND atau OR. Operator
+  mengikuti tipe teks, angka, tanggal, boolean, atau pilihan. State disimpan di parameter URL
+  `filter`; `kelompok` menyimpan satu field grouping. Mengubah kondisi mengulang pagination ke awal.
+- `listControls()` memvalidasi field/operator/nilai dan menyusun SQL berparameter. Kondisi kustom
+  selalu di-AND dengan scope data, izin akses gudang, jenis dokumen, pencarian, dan filter cepat.
+  Filter rusak menampilkan error dan hasil kosong, bukan diam-diam membuka seluruh data.
+- Pengelompokan diurutkan di database dengan jumlah dari seluruh hasil filter (window count
+  sebelum LIMIT/OFFSET). Baris tetap dipaginasi; kelompok yang berlanjut di halaman berikutnya
+  tetap menampilkan jumlah total. Tidak ada pemuatan semua data atau batas khusus 500 baris.
+- `DataTable` membaca metadata kelompok dari hasil query dan memakai `GroupToggle` untuk
+  membuka/menutup kelompok. Tabel kosong dan batas akses tetap mengikuti pola daftar biasa.
+- Popup berada di bawah tombol Filter, tepi kiri sejajar tombol (bergeser otomatis bila mendekati
+  tepi layar); desktop dua kolom, HP bertumpuk. Editor
+  kondisi terbuka di popup yang sama, dengan tombol Tambah kondisi, Batal, dan Terapkan.
+
 ## Halaman detail dan form
 
 - `DocumentLayout` menjadi kerangka halaman detail, termasuk detail yang hanya dapat dibaca dan halaman impor.

@@ -5,6 +5,20 @@ import { sql, type SQL } from "drizzle-orm"
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { groupMetadata } from "@/lib/list-controls"
+const LIST_BINDINGS: ListBindings = {
+  name: { label: "Nama kategori", type: "text", expression: sql`c.name` },
+  path: { label: "Jalur kategori", type: "text", expression: sql`p.path` },
+  prefix: {
+    label: "Awalan product code",
+    type: "text",
+    expression: sql`c.code_prefix`,
+    groupable: true,
+  },
+  active: { label: "Aktif", type: "boolean", expression: sql`c.active`, groupable: true },
+}
+export const CATEGORY_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Kategori produk bertingkat (backlog R-01). Jalur lengkap ("Bahan baku / Logam") dari view
 // product_category_paths; daftar diurutkan per jalur supaya sub-kategori tampil di bawah induknya.
@@ -42,6 +56,7 @@ type RawRow = {
 
 function toRow(row: RawRow): ProductCategoryRow {
   return {
+    ...groupMetadata(row),
     id: row.id,
     name: row.name,
     path: row.path,
@@ -60,6 +75,8 @@ export async function listProductCategories({
   active,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { active?: boolean }) {
   const conditions: SQL[] = [sql`true`]
   if (active !== undefined) conditions.push(sql`c.active = ${active}`)
@@ -67,6 +84,8 @@ export async function listProductCategories({
     const pattern = containsPattern(search)
     conditions.push(sql`(p.path ilike ${pattern} or c.code_prefix ilike ${pattern})`)
   }
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  if (controls.where) conditions.push(controls.where)
   const from = sql`
     from product_categories c
     join product_category_paths p on p.id = c.id
@@ -74,7 +93,7 @@ export async function listProductCategories({
 
   const [rows, totals] = await Promise.all([
     db.execute<RawRow>(
-      sql`select ${columns} ${from} order by p.path limit ${pageSize} offset ${offset}`,
+      sql`select ${controls.columns}, ${columns} ${from} order by ${controls.orderPrefix}p.path, c.id limit ${pageSize} offset ${offset}`,
     ),
     db.execute<{ total: number }>(sql`select count(*)::int as total ${from}`),
   ])

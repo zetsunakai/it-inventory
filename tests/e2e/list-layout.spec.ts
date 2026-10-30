@@ -52,9 +52,7 @@ test("filter aktif tetap dapat digunakan tanpa halaman melebar di mobile dan des
     await expect(search).toBeVisible()
     const remove = page.getByRole("button", { name: "Hapus Kategori: Bahan baku", exact: true })
     await expect(remove).toBeVisible()
-    await expect(
-      page.getByRole("button", { name: "Filter, kelompokkan, dan favorit" }),
-    ).toBeInViewport()
+    await expect(page.getByRole("button", { name: "Filter dan kelompokkan" })).toBeInViewport()
     await expect
       .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
       .toBe(true)

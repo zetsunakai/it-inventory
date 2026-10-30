@@ -11,6 +11,22 @@ import type {
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { groupMetadata } from "@/lib/list-controls"
+import { PRODUCT_TRACKINGS, PRODUCT_TRACKING_LABELS } from "@/modules/inventory/lib/inventory"
+const LIST_BINDINGS: ListBindings = {
+  name: { label: "Lot / nomor seri", type: "text", expression: sql`lot.name` },
+  sku: { label: "Product code", type: "text", expression: sql`p.sku`, groupable: true },
+  product: { label: "Produk", type: "text", expression: sql`p.name`, groupable: true },
+  tracking: {
+    label: "Tracking",
+    type: "selection",
+    expression: sql`p.tracking`,
+    groupable: true,
+    options: PRODUCT_TRACKINGS.map((value) => ({ value, label: PRODUCT_TRACKING_LABELS[value] })),
+  },
+}
+export const LOT_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Penelusuran lot dan nomor seri (backlog R-14): saldo per lokasi dan riwayat masuk-keluar satu
 // lot di semua gudang yang boleh dilihat user. Pergerakan dihitung dari ledger (stock_moves Selesai)
@@ -39,6 +55,8 @@ export async function listLots({
   search,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { userId: string }) {
   const conditions: SQL[] = [
     sql`exists (
@@ -52,6 +70,8 @@ export async function listLots({
       sql`(lot.name ilike ${pattern} or p.sku ilike ${pattern} or p.name ilike ${pattern})`,
     )
   }
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  if (controls.where) conditions.push(controls.where)
   const from = sql`
     from lots lot
     join products p on p.id = lot.product_id
@@ -69,7 +89,7 @@ export async function listLots({
       qty: string
       last_moved_at: string | null
     }>(sql`
-      select lot.id, lot.name, p.id as product_id, p.sku, p.name as product_name, p.tracking,
+      select ${controls.columns}, lot.id, lot.name, p.id as product_id, p.sku, p.name as product_name, p.tracking,
         u.code as uom_code,
         coalesce((
           select sum(b.qty) from stock_balances b
@@ -79,12 +99,13 @@ export async function listLots({
         (select max(m.done_at) from stock_moves m
           where m.lot_id = lot.id and m.status = 'done') as last_moved_at
       ${from}
-      order by last_moved_at desc nulls last, p.sku, lot.name
+      order by ${controls.orderPrefix}last_moved_at desc nulls last, p.sku, lot.name, lot.id
       limit ${pageSize} offset ${offset}`),
     db.execute<{ total: number }>(sql`select count(*)::int as total ${from}`),
   ])
   return {
     rows: rows.rows.map((row): LotRow => ({
+      ...groupMetadata(row),
       id: row.id,
       name: row.name,
       productId: row.product_id,

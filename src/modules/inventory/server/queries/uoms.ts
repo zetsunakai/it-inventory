@@ -6,8 +6,17 @@ import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { products, uomCategories, uoms } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
 
 const reference = aliasedTable(uoms, "reference_uom")
+const LIST_BINDINGS: ListBindings = {
+  code: { label: "Kode", type: "text", expression: uoms.code },
+  name: { label: "Nama satuan", type: "text", expression: uoms.name },
+  factor: { label: "Faktor konversi", type: "number", expression: uoms.factor },
+  category: { label: "Kategori", type: "text", expression: uomCategories.name, groupable: true },
+  active: { label: "Aktif", type: "boolean", expression: uoms.active, groupable: true },
+}
+export const UOM_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Kolom satuan beserta kategori dan satuan acuannya, untuk menampilkan "1 TON = 1.000 KG".
 const uomWithCategory = {
@@ -43,9 +52,9 @@ export type UomRow = {
   productSku: string | null
 }
 
-function withCategory() {
+function withCategory(selection = {}) {
   return db
-    .select(uomWithCategory)
+    .select({ ...uomWithCategory, ...selection })
     .from(uoms)
     .innerJoin(uomCategories, eq(uomCategories.id, uoms.categoryId))
     .leftJoin(
@@ -62,6 +71,8 @@ export async function listUoms({
   active,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { active?: boolean; categoryId?: string }) {
   const conditions: SQL[] = []
   if (active !== undefined) conditions.push(eq(uoms.active, active))
@@ -72,24 +83,28 @@ export async function listUoms({
       or(ilike(uoms.code, pattern), ilike(uoms.name, pattern), ilike(products.sku, pattern))!,
     )
   }
-  const where = and(...conditions)
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  const where = and(...conditions, controls.where)
 
   const [rows, [{ total }]] = await Promise.all([
-    withCategory()
+    withCategory(controls.selection)
       .where(where)
       // Per kategori: acuan dulu, satuan umum dari yang terkecil, lalu satuan khusus produk.
       .orderBy(
+        ...controls.order,
         asc(uomCategories.name),
         desc(uoms.isReference),
         sql`${uoms.productId} is not null`,
         asc(uoms.factor),
         asc(uoms.code),
+        asc(uoms.id),
       )
       .limit(pageSize)
       .offset(offset),
     db
       .select({ total: count() })
       .from(uoms)
+      .innerJoin(uomCategories, eq(uomCategories.id, uoms.categoryId))
       .leftJoin(products, eq(products.id, uoms.productId))
       .where(where),
   ])

@@ -28,6 +28,7 @@ import { listUomCategories, listUoms, type UomRow } from "@/modules/inventory/se
 import { UomCategoryForm } from "./uom-forms"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { UOM_LIST_FIELDS } from "@/modules/inventory/server/queries/uoms"
 import { ListPager } from "@/components/data-table/list-pager"
 
 import { deleteUom } from "@/modules/inventory/actions/uoms"
@@ -121,6 +122,7 @@ async function UomTable({ searchParams }: { searchParams: Promise<RawSearchParam
         }
       >
         <ListSearchBar
+          fields={UOM_LIST_FIELDS}
           placeholder="Cari kode, nama satuan, atau product code"
           filters={[
             {

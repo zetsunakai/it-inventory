@@ -11,6 +11,17 @@ import type {
 import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { groupMetadata } from "@/lib/list-controls"
+const LIST_BINDINGS: ListBindings = {
+  sku: { label: "Product code", type: "text", expression: sql`p.sku` },
+  product: { label: "Produk", type: "text", expression: sql`p.name`, groupable: true },
+  warehouse: { label: "Gudang", type: "text", expression: sql`w.code`, groupable: true },
+  location: { label: "Lokasi", type: "text", expression: sql`lp.path`, groupable: true },
+  lot: { label: "Lot", type: "text", expression: sql`lot.name`, groupable: true },
+  qty: { label: "Saldo", type: "number", expression: sql`s.qty` },
+}
+export const STOCK_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Tampilan stok (backlog M2-11). Saldo sekarang dibaca dari stock_balances; saldo per tanggal
 // dihitung dari ledger lewat stock_on_hand(). Hanya lokasi gudang (internal) yang boleh dilihat
@@ -40,6 +51,8 @@ export async function listStock({
   date,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & {
   userId: string
   warehouseId?: string
@@ -67,6 +80,8 @@ export async function listStock({
       sql`(p.sku ilike ${pattern} or p.name ilike ${pattern} or lot.name ilike ${pattern})`,
     )
   }
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  if (controls.where) conditions.push(controls.where)
   const where = sql.join(conditions, sql` and `)
   const from = sql`
     from ${source} s
@@ -93,17 +108,18 @@ export async function listStock({
       qty: string
       reserved_qty: string | null
     }>(sql`
-      select p.id as product_id, p.sku, p.name as product_name, p.category, u.code as uom_code,
+      select ${controls.columns}, p.id as product_id, p.sku, p.name as product_name, p.category, u.code as uom_code,
         w.id as warehouse_id, w.code as warehouse_code, lp.path as location_path,
         lot.id as lot_id, lot.name as lot_name, s.qty::numeric(18,4)::text as qty,
         s.reserved_qty::numeric(18,4)::text as reserved_qty
       ${from}
-      order by p.sku, lp.path, lot.name nulls first
+      order by ${controls.orderPrefix}p.sku, lp.path, lot.name nulls first, s.product_id, s.location_id, s.lot_id
       limit ${pageSize} offset ${offset}`),
     db.execute<{ total: number }>(sql`select count(*)::int as total ${from}`),
   ])
   return {
     rows: rows.rows.map((row): StockRow => ({
+      ...groupMetadata(row),
       productId: row.product_id,
       sku: row.sku,
       productName: row.product_name,

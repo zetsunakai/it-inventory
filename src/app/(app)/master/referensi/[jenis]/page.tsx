@@ -25,6 +25,7 @@ import { requirePermission } from "@/server/auth/session"
 import { listRefCodes, type RefCodeRow } from "@/server/queries/ref-codes"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { REF_LIST_FIELDS } from "@/server/queries/ref-codes"
 import { ListPager } from "@/components/data-table/list-pager"
 
 // Satu daftar per jenis referensi kepabeanan, masing-masing dengan menu sendiri di Master data
@@ -107,6 +108,7 @@ async function RefCodeTable({
         }
       >
         <ListSearchBar
+          fields={REF_LIST_FIELDS}
           placeholder="Cari kode atau nama"
           filters={[{ name: STATUS_FILTER, label: "Status", options: STATUS_OPTIONS }]}
         />

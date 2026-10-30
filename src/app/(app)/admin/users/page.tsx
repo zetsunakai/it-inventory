@@ -13,6 +13,7 @@ import { requirePermission } from "@/server/auth/session"
 import { listUsers, type UserListRow } from "@/server/queries/users"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { USER_LIST_FIELDS } from "@/server/queries/users"
 import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Pengguna · IT Inventory" }
@@ -75,6 +76,7 @@ async function UserTable({ searchParams }: { searchParams: Promise<RawSearchPara
         }
       >
         <ListSearchBar
+          fields={USER_LIST_FIELDS}
           placeholder="Cari nama atau email"
           filters={[{ name: ROLE_FILTER, label: "Peran", options: ROLE_OPTIONS }]}
         />

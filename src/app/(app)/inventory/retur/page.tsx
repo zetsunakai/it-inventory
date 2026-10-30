@@ -22,6 +22,7 @@ import {
 } from "@/modules/inventory/server/queries/return-requests"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { RETURN_LIST_FIELDS } from "@/modules/inventory/server/queries/return-requests"
 import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Retur · IT Inventory" }
@@ -96,6 +97,7 @@ async function ReturnRequestTable({ searchParams }: { searchParams: Promise<RawS
         }
       >
         <ListSearchBar
+          fields={RETURN_LIST_FIELDS}
           placeholder="Cari nomor, transfer asal, atau partner"
           filters={[
             {

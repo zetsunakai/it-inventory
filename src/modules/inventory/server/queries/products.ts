@@ -3,13 +3,47 @@ import "server-only"
 import { aliasedTable, and, asc, count, eq, ilike, isNull, or, sql, type SQL } from "drizzle-orm"
 
 import type { InventoryCategory } from "@/modules/inventory/lib/inventory"
+import { INVENTORY_CATEGORIES, INVENTORY_CATEGORY_LABELS } from "@/modules/inventory/lib/inventory"
 import type { ListParams } from "@/lib/list-params"
 import type { RefCodeOption } from "@/lib/ref-codes"
 import { db } from "@/server/db"
 import { products, refCodes, uomCategories, uoms } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
 
 export type ProductRow = typeof products.$inferSelect & { uomCode: string }
+const LIST_BINDINGS: ListBindings = {
+  sku: { label: "Product code", type: "text", expression: products.sku },
+  name: { label: "Nama produk", type: "text", expression: products.name, groupable: true },
+  hsCode: { label: "Kode HS", type: "text", expression: products.hsCode, groupable: true },
+  category: {
+    label: "Kategori inventory",
+    type: "selection",
+    expression: products.category,
+    groupable: true,
+    options: INVENTORY_CATEGORIES.map((value) => ({
+      value,
+      label: INVENTORY_CATEGORY_LABELS[value],
+    })),
+  },
+  active: {
+    label: "Aktif",
+    type: "boolean",
+    expression: products.active,
+    groupable: true,
+    options: [
+      { value: "true", label: "Aktif" },
+      { value: "false", label: "Diarsipkan" },
+    ],
+  },
+  customsReady: {
+    label: "Siap dokumen BC",
+    type: "boolean",
+    expression: products.customsReady,
+    groupable: true,
+  },
+}
+export const PRODUCT_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Halaman Produk: cari SKU/nama/kode HS, filter kategori dan kesiapan dokumen BC.
 export async function listProducts({
@@ -19,6 +53,8 @@ export async function listProducts({
   active,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { active?: boolean; category?: InventoryCategory; customsReady?: boolean }) {
   const conditions: SQL[] = []
   if (active !== undefined) conditions.push(eq(products.active, active))
@@ -34,20 +70,21 @@ export async function listProducts({
       )!,
     )
   }
-  const where = and(...conditions)
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  const where = and(...conditions, controls.where)
 
   const [rows, [{ total }]] = await Promise.all([
     db
-      .select({ product: products, uomCode: uoms.code })
+      .select({ product: products, uomCode: uoms.code, ...controls.selection })
       .from(products)
       .innerJoin(uoms, eq(uoms.id, products.uomId))
       .where(where)
-      .orderBy(asc(products.sku))
+      .orderBy(...controls.order, asc(products.sku), asc(products.id))
       .limit(pageSize)
       .offset(offset),
     db.select({ total: count() }).from(products).where(where),
   ])
-  return { rows: rows.map((row) => ({ ...row.product, uomCode: row.uomCode })), total }
+  return { rows: rows.map(({ product, ...row }) => ({ ...product, ...row })), total }
 }
 
 const hs = aliasedTable(refCodes, "hs")

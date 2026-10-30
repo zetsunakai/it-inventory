@@ -20,6 +20,7 @@ import {
 } from "@/modules/inventory/server/queries/stock-counts"
 import { ListToolbar } from "@/components/layout/list-toolbar"
 import { ListSearchBar } from "@/components/data-table/list-search-bar"
+import { STOCK_COUNT_LIST_FIELDS } from "@/modules/inventory/server/queries/stock-counts"
 import { ListPager } from "@/components/data-table/list-pager"
 
 export const metadata: Metadata = { title: "Stock opname · IT Inventory" }
@@ -99,6 +100,7 @@ async function StockCountTable({ searchParams }: { searchParams: Promise<RawSear
         }
       >
         <ListSearchBar
+          fields={STOCK_COUNT_LIST_FIELDS}
           placeholder="Cari nomor atau gudang"
           filters={[
             {

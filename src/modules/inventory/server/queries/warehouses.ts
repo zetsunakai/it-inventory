@@ -6,6 +6,8 @@ import type { ListParams } from "@/lib/list-params"
 import { db } from "@/server/db"
 import { locationPaths, locations, warehouses } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+import { groupMetadata } from "@/lib/list-controls"
 
 // Akses gudang selalu lewat fungsi database can_access_warehouse() (migrasi 0013),
 // supaya aturannya hanya ada di satu tempat.
@@ -14,6 +16,22 @@ function accessibleBy(userId: string) {
 }
 
 export type WarehouseRow = typeof warehouses.$inferSelect
+const LIST_BINDINGS: ListBindings = {
+  code: { label: "Kode", type: "text", expression: warehouses.code },
+  name: { label: "Nama gudang", type: "text", expression: warehouses.name, groupable: true },
+  address: { label: "Alamat", type: "text", expression: warehouses.address },
+  active: {
+    label: "Aktif",
+    type: "boolean",
+    expression: warehouses.active,
+    groupable: true,
+    options: [
+      { value: "true", label: "Aktif" },
+      { value: "false", label: "Diarsipkan" },
+    ],
+  },
+}
+export const WAREHOUSE_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 // Halaman Gudang: hanya gudang yang boleh dilihat user, dengan jumlah lokasinya.
 export async function listWarehouses({
@@ -22,6 +40,8 @@ export async function listWarehouses({
   active,
   pageSize,
   offset,
+  customFilter,
+  groupBy,
 }: ListParams & { active?: boolean; userId: string }) {
   const conditions: SQL[] = [accessibleBy(userId)]
   if (active !== undefined) conditions.push(eq(warehouses.active, active))
@@ -29,7 +49,8 @@ export async function listWarehouses({
     const pattern = containsPattern(search)
     conditions.push(or(ilike(warehouses.code, pattern), ilike(warehouses.name, pattern))!)
   }
-  const where = and(...conditions)
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  const where = and(...conditions, controls.where)
 
   // Jumlah lokasi per gudang sebagai subquery yang di-join, bukan subquery berkorelasi di
   // select: di sana kolom dirender tanpa nama tabel sehingga membandingkan kolom yang salah.
@@ -43,6 +64,7 @@ export async function listWarehouses({
     db
       .select({
         warehouse: warehouses,
+        ...controls.selection,
         locationCount: sql<number>`coalesce(${locationCounts.total}, 0)::int`,
         // Opname yang sedang membekukan gudang ini (I-07).
         freezingCount: sql<string | null>`(
@@ -54,7 +76,7 @@ export async function listWarehouses({
       .from(warehouses)
       .leftJoin(locationCounts, eq(locationCounts.warehouseId, warehouses.id))
       .where(where)
-      .orderBy(asc(warehouses.code))
+      .orderBy(...controls.order, asc(warehouses.code), asc(warehouses.id))
       .limit(pageSize)
       .offset(offset),
     db.select({ total: count() }).from(warehouses).where(where),
@@ -62,6 +84,7 @@ export async function listWarehouses({
   return {
     rows: rows.map((row) => ({
       ...row.warehouse,
+      ...groupMetadata(row),
       locationCount: row.locationCount,
       freezingCount: row.freezingCount,
     })),

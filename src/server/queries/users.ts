@@ -7,6 +7,28 @@ import type { Role } from "@/lib/permissions"
 import { db } from "@/server/db"
 import { userRoles, users, userWarehouses, warehouses } from "@/server/db/schema"
 import { containsPattern } from "@/server/db/sql-helpers"
+import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
+const LIST_BINDINGS: ListBindings = {
+  name: { label: "Nama", type: "text", expression: users.name, groupable: true },
+  email: { label: "Email", type: "text", expression: users.email },
+  mfa: {
+    label: "MFA aktif",
+    type: "boolean",
+    expression: users.twoFactorEnabled,
+    groupable: true,
+    options: [
+      { value: "true", label: "Aktif" },
+      { value: "false", label: "Tidak aktif" },
+    ],
+  },
+  created: {
+    label: "Tanggal dibuat",
+    type: "date",
+    expression: sql`(${users.createdAt} at time zone 'Asia/Jakarta')::date`,
+    groupable: true,
+  },
+}
+export const USER_LIST_FIELDS = listFields(LIST_BINDINGS)
 
 export type UserListFilters = ListParams & { role?: Role }
 
@@ -20,7 +42,14 @@ export type UserListRow = {
 }
 
 // Daftar user untuk halaman Pengguna: cari nama/email, filter peran, pagination.
-export async function listUsers({ search, role, pageSize, offset }: UserListFilters) {
+export async function listUsers({
+  search,
+  role,
+  pageSize,
+  offset,
+  customFilter,
+  groupBy,
+}: UserListFilters) {
   const conditions: SQL[] = []
   if (search) {
     const pattern = containsPattern(search)
@@ -36,12 +65,14 @@ export async function listUsers({ search, role, pageSize, offset }: UserListFilt
       ),
     )
   }
-  const where = and(...conditions)
+  const controls = listControls({ customFilter, groupBy }, LIST_BINDINGS)
+  const where = and(...conditions, controls.where)
 
   const [rows, [{ total }]] = await Promise.all([
     db
       .select({
         id: users.id,
+        ...controls.selection,
         name: users.name,
         email: users.email,
         // json_agg, bukan array_agg: driver pg tidak mengurai array dari tipe enum.
@@ -56,7 +87,7 @@ export async function listUsers({ search, role, pageSize, offset }: UserListFilt
       .leftJoin(userRoles, eq(userRoles.userId, users.id))
       .where(where)
       .groupBy(users.id)
-      .orderBy(asc(users.name), asc(users.id))
+      .orderBy(...controls.order, asc(users.name), asc(users.id))
       .limit(pageSize)
       .offset(offset),
     db.select({ total: count() }).from(users).where(where),
