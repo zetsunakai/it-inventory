@@ -2,7 +2,7 @@ import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
-// Status bersama (skill ui-it-inventory), mengikuti brand kit Veltics: pill berlatar pucat dengan
+// Status bersama (skill ui-it-inventory), mengikuti brand kit Veltinc: pill berlatar pucat dengan
 // titik dan teks berwarna sesuai arti. Warna hanya untuk arti, teks selalu ada. Keadaan normal
 // (mis. "Aktif") tidak perlu ditandai sama sekali.
 export type StatusTone = "success" | "warning" | "danger" | "info" | "bonded" | "neutral"

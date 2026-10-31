@@ -56,11 +56,11 @@ Untuk posisi tombol dan layout, baca `docs/view-standards.md` sebagai rujukan ut
 | Hapus data master                            | `DataTable bulkDelete` di halaman daftar: centang baris → baris aksi "N dipilih · Hapus · Batal pilih" di atas tabel, konfirmasi `AlertDialog`, pesan tolak per data ke slot pesan halaman; filter `Status` di daftar                                                                                                                                                        | Tombol Hapus di form/halaman detail, hapus tanpa konfirmasi                                                                        |
 | Detail data master                           | `RecordModes` (view + form): dibuka dalam mode baca (`ViewSection` + `StaticField` dengan `span` sama seperti form) dengan tombol Edit dan Buat; Edit → form dengan Simpan dan Buang; form memanggil `useSaveFeedback(state)`                                                                                                                                                | Form langsung terbuka di halaman detail, tampilan baca yang beda tata letaknya                                                     |
 | Ikon menu                                    | Hanya untuk menu induk (area kerja) di `NAVIGATION`, masing-masing berbeda; menu anak tanpa ikon dan menjorok                                                                                                                                                                                                                                                                | Ikon di setiap menu anak                                                                                                           |
-| Logo                                         | `public/brand/veltics-logo.png` di header sidebar (ganti logo dengan file bernama baru supaya cache gambar lama tidak terpakai); `public/brand` dikecualikan dari proxy login                                                                                                                                                                                                | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)                                                                   |
+| Logo                                         | `public/brand/veltinc-logo.png` (logo penuh) di header sidebar dan `public/brand/veltinc-mark.png` (mark V tanpa wordmark) di panel auth; ikon aplikasi/favicon `src/app/favicon.ico` (ganti logo dengan file bernama baru supaya cache gambar lama tidak terpakai); `public/brand` dikecualikan dari proxy login                                                            | Aset gambar di luar `public/brand` (dicegat proxy, gambar rusak)                                                                   |
 
 Sejak I-08: halaman masuk dan verifikasi memakai `AuthLayout` (`src/app/login/auth-layout.tsx`,
-panel brand navy dengan logo Veltics di tengah dan lingkaran konsentris di kiri, form tanpa kartu
-di kanan, footer Veltics; HP memakai header brand ringkas). Style auth di `auth-layout.css`
+panel brand navy dengan mark Veltinc di tengah dan lingkaran konsentris di kiri, form tanpa kartu
+di kanan, footer Veltinc; HP memakai header brand ringkas). Style auth di `auth-layout.css`
 memakai token brand yang sudah ada; login menyediakan tombol tampil/sembunyikan password.
 Google, reset password mandiri, dan pilihan bahasa belum tersedia. Daftar (`listEmptyState`) di-scroll di dalam
 kotak tabelnya dengan judul kolom dan kolom pengenal yang menempel; kolom `optional` disembunyikan di
@@ -78,7 +78,7 @@ Masih tersisa: pemilih tema gelap (token gelap sudah ada).
   - `--success`, `--warning`, `--destructive`: selesai/terdaftar, perlu perhatian (belum siap,
     menunggu persetujuan, selisih), ditolak/gagal.
   - `--info`: status proses (diajukan, menunggu respon).
-  - Warna dasar dari brand kit Veltics (keputusan user 20/10/2026): aksen biru (`--primary`
+  - Warna dasar dari brand kit Veltinc (keputusan user 20/10/2026): aksen biru (`--primary`
     #0061fc, tombol utama rata tanpa gradasi, hover `--primary-dark` #004fd1) hanya untuk aksi utama, link, dan
     fokus; jangan pakai warna untuk dekorasi. Sidebar navy (`--sidebar` #081734, item aktif
     `--sidebar-accent` #12306a, ikon aktif cyan `--sidebar-primary`); di dalam sidebar pakai token
@@ -97,7 +97,7 @@ Masih tersisa: pemilih tema gelap (token gelap sudah ada).
   `css/buttons.css`, sidebar di `css/layout/sidebar/`, action bar dan pencarian di
   `css/layout/action-manager/` dan `css/views/search/`, form di `vue/views/form/`. Ambil susunan,
   ukuran, dan perilakunya; tetap pakai komponen shadcn base-ui repo ini.
-- **Tipografi** (brand kit Veltics): Figtree untuk UI, Montserrat 700 hanya untuk judul halaman
+- **Tipografi** (brand kit Veltinc): Figtree untuk UI, Montserrat 700 hanya untuk judul halaman
   (`font-display text-page-title` = 28px di `h1` PageHeader dan dokumen; judul kartu, dialog, dan sheet tetap Figtree), dan
   JetBrains Mono untuk kode (diatur di `src/app/layout.tsx`); teks kontrol dan tabel 14px (`text-control`), teks kecil 12px
   (`text-caption`), kontrol 40px, header tabel 48px, baris 44px; angka dengan

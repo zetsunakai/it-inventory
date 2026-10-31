@@ -22,12 +22,12 @@ export function AppSidebar() {
           href="/"
           className="flex items-center gap-3 rounded-md p-1 outline-none group-data-[collapsible=icon]:hidden focus-visible:ring-2 focus-visible:ring-sidebar-ring"
         >
-          {/* Logo di public/brand/veltics-logo.png (ganti filenya untuk mengganti logo). */}
+          {/* Logo di public/brand/veltinc-logo.png (ganti filenya untuk mengganti logo). */}
           <Image
-            src="/brand/veltics-logo.png"
-            alt="Veltics"
+            src="/brand/veltinc-logo.png"
+            alt="Veltinc"
             width={256}
-            height={237}
+            height={210}
             preload
             className="h-10 w-auto shrink-0"
           />

@@ -427,7 +427,7 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
 - Tampilan lintas menu (I-08): daftar (`DataTable` dengan `listEmptyState`) di-scroll di dalam
   kotaknya dengan judul kolom dan kolom pengenal menempel; kolom opsional disembunyikan di layar
   kecil; halaman masuk dan verifikasi memakai `AuthLayout` (`src/app/login/auth-layout.tsx`) dengan
-  panel brand navy berisi logo Veltics, ilustrasi SVG sebaris (alur pemasukan → penimbunan →
+  panel brand navy berisi logo Veltinc, ilustrasi SVG sebaris (alur pemasukan → penimbunan →
   pengeluaran, atau perisai untuk verifikasi), dan form berikon tanpa kartu di kanan; di HP panel
   brand menjadi strip ringkas. Password bisa ditampilkan/diisembunyikan, kode MFA diisi lewat
   `inputMode="numeric"`. Pengaturan memakai kartu form seperti halaman lain.
