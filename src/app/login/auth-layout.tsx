@@ -9,18 +9,16 @@ import { AuthVisualLogin, AuthVisualMfa } from "./auth-visuals"
 function AuthBrand({ compact = false }: { compact?: boolean }) {
   return (
     <div className="relative flex items-center gap-4">
-      {/* Logo dipotong tepat di bawah tanda V supaya tulisan VELTICS di dalam gambar tidak
-          dobel dengan wordmark yang mengikuti token brand. */}
-      <div className={compact ? "h-[43px] w-16 overflow-hidden" : "h-16 w-24 overflow-hidden"}>
-        <Image
-          src="/brand/veltics-logo.png"
-          alt=""
-          width={256}
-          height={237}
-          className="h-auto w-full"
-          preload
-        />
-      </div>
+      {/* Hanya mark V (tanpa wordmark) supaya tidak dobel dengan wordmark yang mengikuti token
+          brand. */}
+      <Image
+        src="/brand/veltinc-mark.png"
+        alt=""
+        width={560}
+        height={585}
+        className={compact ? "h-9 w-auto shrink-0" : "h-14 w-auto shrink-0"}
+        preload
+      />
       <span className="flex flex-col">
         <span
           className={cn(
@@ -28,7 +26,7 @@ function AuthBrand({ compact = false }: { compact?: boolean }) {
             compact ? "text-2xl" : "text-3xl",
           )}
         >
-          VELTICS
+          VELTINC
         </span>
         <span
           className={cn(
@@ -72,7 +70,7 @@ export function AuthLayout({
   return (
     <main className="grid min-h-svh lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)]">
       <section
-        aria-label="Veltics IT Inventory"
+        aria-label="Veltinc IT Inventory"
         className="auth-brand-panel relative hidden flex-col justify-between overflow-hidden p-10 lg:flex xl:p-14"
       >
         <AuthBrand />
@@ -113,7 +111,7 @@ export function AuthLayout({
           </div>
         </div>
         <footer className="pb-8 text-center text-caption text-muted-foreground">
-          © 2026 Veltics
+          © 2026 Veltinc
         </footer>
       </section>
     </main>

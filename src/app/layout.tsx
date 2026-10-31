@@ -4,7 +4,7 @@ import "./globals.css"
 
 import { TooltipProvider } from "@/components/ui/tooltip"
 
-// Font brand kit Veltics (keputusan user 20/10/2026): Figtree untuk seluruh antarmuka, Montserrat
+// Font brand kit Veltinc (keputusan user 20/10/2026): Figtree untuk seluruh antarmuka, Montserrat
 // hanya untuk judul halaman (utilitas font-display), JetBrains Mono untuk kode resmi yang dicocokkan
 // karakter per karakter (nomor aju, NPWP, kode HS, SKU). shadcn/ui membaca --font-sans.
 const figtree = Figtree({
