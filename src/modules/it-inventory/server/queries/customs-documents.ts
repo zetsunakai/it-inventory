@@ -57,6 +57,8 @@ import { containsPattern } from "@/server/db/sql-helpers"
 import { listControls, listFields, type ListBindings } from "@/server/db/list-controls"
 import { groupMetadata } from "@/lib/list-controls"
 import {
+  CUSTOMS_DOC_CODES,
+  CUSTOMS_DOC_CODE_LABELS,
   CUSTOMS_DOCUMENT_STATUSES,
   CUSTOMS_DOCUMENT_STATUS_LABELS,
 } from "@/modules/it-inventory/lib/customs"
@@ -559,6 +561,7 @@ async function refLabelsFor(spec: CustomsFormSpec, draft: CustomsDocumentDraft) 
 // Tgl. Daftar, kantor pengawas, status.
 export type CustomsDocumentRow = {
   id: string
+  docCode: CustomsDocCode
   number: string
   ajuNumber: string | null
   status: CustomsDocumentStatus
@@ -571,13 +574,13 @@ export type CustomsDocumentRow = {
 const TODAY = sql`(now() at time zone 'Asia/Jakarta')::date`
 
 // Kantor pabean yang dipakai dokumen satu jenis, untuk pilihan filter daftar.
-export async function customsOfficeOptions(docCode: CustomsDocCode) {
+export async function customsOfficeOptions(docCode?: CustomsDocCode) {
   const rows = await db.execute<{ code: string; name: string | null }>(sql`
     select distinct d.customs_office_code as code, r.name
     from customs_documents d
     left join ref_codes r on r.type = 'customs_office' and r.code = d.customs_office_code
       and r.parent_code is null
-    where d.doc_code = ${docCode} and d.customs_office_code is not null
+    where ${docCode ? sql`d.doc_code = ${docCode} and` : sql``} d.customs_office_code is not null
     order by 1`)
   return rows.rows.map((row) => ({
     value: row.code,
@@ -593,6 +596,13 @@ const COUNTERPARTY = sql`(
   where p.document_id = d.id and p.entity_type_code not in ('2', '3', '7')
   order by p.partner_id is null, p.entity_type_code limit 1)`
 const LIST_BINDINGS: ListBindings = {
+  docCode: {
+    label: "Jenis dokumen",
+    type: "selection",
+    expression: sql`d.doc_code`,
+    groupable: true,
+    options: CUSTOMS_DOC_CODES.map((value) => ({ value, label: CUSTOMS_DOC_CODE_LABELS[value] })),
+  },
   number: { label: "Nomor", type: "text", expression: sql`d.number` },
   aju: { label: "No. Aju", type: "text", expression: sql`d.aju_number` },
   registration: { label: "No. Daftar", type: "text", expression: sql`d.registration_number` },
@@ -648,12 +658,12 @@ export async function listCustomsDocuments({
   customFilter,
   groupBy,
 }: ListParams & {
-  docCode: CustomsDocCode
+  docCode?: CustomsDocCode
   status?: CustomsDocumentStatus
   officeCode?: string
   period?: CustomsPeriod
 }) {
-  const conditions: SQL[] = [sql`d.doc_code = ${docCode}`]
+  const conditions: SQL[] = docCode ? [sql`d.doc_code = ${docCode}`] : [sql`true`]
   if (status) conditions.push(sql`d.status = ${status}`)
   if (officeCode) conditions.push(sql`d.customs_office_code = ${officeCode}`)
   if (period) {
@@ -674,6 +684,7 @@ export async function listCustomsDocuments({
   const [rows, totals] = await Promise.all([
     db.execute<{
       id: string
+      doc_code: CustomsDocCode
       number: string
       aju_number: string | null
       status: CustomsDocumentStatus
@@ -682,7 +693,7 @@ export async function listCustomsDocuments({
       office_code: string | null
       office_name: string | null
     }>(sql`
-      select ${controls.columns}, d.id, d.number, d.aju_number, d.status, d.registration_number,
+      select ${controls.columns}, d.id, d.doc_code, d.number, d.aju_number, d.status, d.registration_number,
         d.registration_date::text, d.customs_office_code as office_code, r.name as office_name
       from customs_documents d
       left join ref_codes r on r.type = 'customs_office' and r.code = d.customs_office_code
@@ -698,6 +709,7 @@ export async function listCustomsDocuments({
     rows: rows.rows.map((row): CustomsDocumentRow => ({
       ...groupMetadata(row),
       id: row.id,
+      docCode: row.doc_code,
       number: row.number,
       ajuNumber: row.aju_number,
       status: row.status,

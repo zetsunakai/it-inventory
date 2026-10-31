@@ -582,11 +582,15 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   (`customs_parts_guard`) dan tidak bisa dihapus; detailnya tanpa tombol Edit dan Submit. Draft
   boleh dihapus (pilih baris di daftar, Hapus).
   Tidak ada status Siap ajukan, Terdaftar, Ditolak, Batal, maupun revisi bernomor versi.
-- Daftar per jenis (M3-13, kolom list hmx): Nomor, No. Aju, No. Daftar, Tgl. Daftar, Kantor Pabean
+- Daftar dokumen terpadu (`/dokumen-bc`) menampilkan seluruh jenis BC dengan kolom Jenis dokumen,
+  Nomor, No. Aju, No. Daftar, Tgl. Daftar, Kantor Pabean
   Pengawasan, Status. Cari nomor, nomor aju, nomor daftar, atau nama partner; filter status, tanggal
-  dibuat (bulan ini, bulan lalu, 3 bulan terakhir, tahun ini; WIB), dan kantor pabean (pilihannya
-  dari kantor yang dipakai dokumen jenis itu). Unduh PDF/Excel rekap daftar di kanan judul daftar;
-  Hapus dan Duplikat lewat pilih baris.
+  dibuat (bulan ini, bulan lalu, 3 bulan terakhir, tahun ini; WIB), jenis dokumen, dan kantor
+  pabean (pilihannya dari kantor yang dipakai dokumen). Unduh PDF/Excel rekap daftar di kanan
+  judul daftar; Hapus dan Duplikat lewat pilih baris. Menu hanya menampilkan Daftar dokumen;
+  daftar per jenis tetap bisa dibuka lewat tautan lama. Buat membuka dialog Entitas → Jenis
+  dokumen (pilihan jenis dibatasi menurut entitas); setelah Lanjut, form per jenis tetap dipakai.
+  Entitas pada dialog hanya untuk memilih jenis, bukan data baru yang disimpan di dokumen.
 - Duplikat: `duplicate_customs_document()` membuat Draft baru (nomor baru, tanpa No. Aju, nomor
   daftar, dan tautan transfer) dengan salinan header, entitas, barang beserta pungutan, kemasan,
   peti kemas, pengangkutan, dan baris lampiran tanpa file.
@@ -627,11 +631,8 @@ qty selesai})` dipanggil setiap validasi: qty diminta di baris asal tetap, sisan
   panel) hanya membaca dokumen yang memilih transfer itu (disisipkan halaman `src/app` lewat prop
   `panel` `TransferDetailPage`, jadi modul inventory tidak mengimpor modul IT Inventory). Mode baca
   detail dokumen punya bagian Transfer (status dan tanggal selesai tiap transfer).
-- Rantai Dokumen (H-06, `/dokumen-bc/flow`, menu Keterkaitan dokumen › Rantai dokumen): tiap baris
-  adalah jalur pemasukan → penimbunan di kawasan → pengeluaran, memakai pasangan `DOCUMENT_FLOW_MAP`
-  hmx (`CUSTOMS_FLOW_IN`, `CUSTOMS_FLOW_OUT`, `CUSTOMS_FLOW_MAP` di `customs.ts`). Satu dokumen
-  keluar bisa muncul di beberapa jalur; kartu membuka daftar jenisnya dan hover/fokus menyorot
-  seluruh jalur. Seri Barang Asal (`source_sequence` hmx) tetap isian manual di form Barang
+- Rantai Dokumen (`/dokumen-bc/flow`) tidak ditampilkan lagi; URL lama mengarah ke
+  `/dokumen-bc`. Seri Barang Asal (`source_sequence` hmx) tetap isian manual di form Barang
   (`details.sourceSequence`).
 - Data demo (M4-07, H-07): `SEED_DEMO_DATA=true npm run db:seed` (butuh profil perusahaan) membuat
   produk `DEMO-KAIN`, penerimaan Selesai, BC 2.3 Submitted yang memilih penerimaan itu, pengiriman

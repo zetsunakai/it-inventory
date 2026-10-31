@@ -51,7 +51,7 @@ export type DataTableSelection<Row> = {
   remove?: BulkAction
   removeNote?: string
   duplicate?: BulkAction
-  duplicatePath?: string
+  duplicatePath?: string | Record<string, string>
 }
 
 export type DataTableEmpty = {

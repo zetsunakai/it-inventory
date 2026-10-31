@@ -4,6 +4,7 @@ import ExcelJS from "exceljs"
 import { PDFDocument, StandardFonts, rgb, type PDFFont, type PDFPage } from "pdf-lib"
 
 import {
+  CUSTOMS_DOC_CODE_LABELS,
   CUSTOMS_DOCUMENT_STATUS_LABELS,
   type CustomsDocumentStatus,
 } from "@/modules/it-inventory/lib/customs"
@@ -225,12 +226,13 @@ export async function customsExportExcel(spec: CustomsFormSpec, doc: ExportDocum
 
 // Rekap daftar BC menggunakan kolom dan urutan yang sama dengan list view.
 export async function customsListExport(
-  spec: CustomsFormSpec,
+  spec: CustomsFormSpec | null,
   rows: CustomsDocumentRow[],
   format: "pdf" | "xlsx",
 ) {
   const columns = [
     "Nomor",
+    ...(!spec ? ["Jenis dokumen"] : []),
     "No. Aju",
     "No. Daftar",
     "Tgl. Daftar",
@@ -239,6 +241,7 @@ export async function customsListExport(
   ]
   const values = rows.map((row) => [
     row.number,
+    ...(!spec ? [CUSTOMS_DOC_CODE_LABELS[row.docCode]] : []),
     row.ajuNumber ?? "—",
     row.registrationNumber ?? "—",
     date(row.registrationDate),
@@ -248,7 +251,7 @@ export async function customsListExport(
   if (format === "xlsx") {
     const workbook = new ExcelJS.Workbook()
     workbook.creator = "IT Inventory"
-    const sheet = workbook.addWorksheet(spec.title)
+    const sheet = workbook.addWorksheet(spec?.title ?? "Daftar dokumen")
     sheet.addRow(columns).font = { bold: true }
     values.forEach((row) => sheet.addRow(row))
     sheet.columns.forEach((column) => {
@@ -262,12 +265,12 @@ export async function customsListExport(
     return Buffer.from(await workbook.xlsx.writeBuffer())
   }
   const pdf = await PDFDocument.create()
-  pdf.setTitle(`Daftar ${spec.title}`)
+  pdf.setTitle(spec ? `Daftar ${spec.title}` : "Daftar dokumen")
   pdf.setCreator("IT Inventory")
   const regular = await pdf.embedFont(StandardFonts.Helvetica)
   const bold = await pdf.embedFont(StandardFonts.HelveticaBold)
   const writer = new PdfWriter(pdf, regular, bold)
-  writer.text(`Daftar ${spec.title}`, { font: bold, size: 14 })
+  writer.text(spec ? `Daftar ${spec.title}` : "Daftar dokumen", { font: bold, size: 14 })
   writer.text(`${rows.length} dokumen`, { size: 9 })
   if (!rows.length) writer.text("Tidak ada dokumen.")
   for (const row of values) {

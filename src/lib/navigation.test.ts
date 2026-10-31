@@ -22,6 +22,13 @@ describe("navigationFor", () => {
     expect(hrefs(navigationFor(["administrator"]))).toEqual(hrefs(NAVIGATION))
   })
 
+  test("dokumen BC hanya punya satu menu daftar dan route jenis tetap memakai modul IT Inventory", () => {
+    const items = hrefs(navigationFor(["administrator"]))
+    expect(items.filter((href) => href.startsWith("/dokumen-bc"))).toEqual(["/dokumen-bc"])
+    expect(navigationTrail("/dokumen-bc/bc23/123")?.item.title).toBe("Daftar dokumen")
+    expect(moduleForPath("/dokumen-bc/bc23/123")).toBe("it-inventory")
+  })
+
   test("Auditor tidak melihat menu Pengguna, Pengaturan, maupun Tutup periode", () => {
     const groups = navigationFor(["auditor"])
     expect(hrefs(groups)).not.toContain("/admin/users")

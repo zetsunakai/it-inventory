@@ -67,7 +67,7 @@ const wibDate = (value: string) => formatDate(new Date(`${value}T00:00:00+07:00`
 
 // Kolom daftar seperti list view hmx (backlog H-01): IT Inventory document sequence, No. Aju,
 // No. Daftar, Tgl. Daftar, kantor pengawas, status.
-const COLUMNS: DataTableColumn<CustomsDocumentRow>[] = [
+export const CUSTOMS_COLUMNS: DataTableColumn<CustomsDocumentRow>[] = [
   {
     header: "Nomor",
     cell: (row) => <span className="font-mono text-foreground">{row.number}</span>,
@@ -220,7 +220,7 @@ async function CustomsTable({
         />
       </ListToolbar>
       <DataTable
-        columns={COLUMNS}
+        columns={CUSTOMS_COLUMNS}
         rows={rows}
         rowKey={(row) => row.id}
         rowHref={(row) => `${spec.path}/${row.id}`}
