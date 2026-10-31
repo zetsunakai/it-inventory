@@ -12,7 +12,7 @@
   --text-control--line-height: 1.25rem;
   --text-caption: 0.75rem;
   --text-caption--line-height: 1rem;
-  /* Judul halaman (h1): Heading 1 brand kit Veltics, 28px Montserrat 700. */
+  /* Judul halaman (h1): Heading 1 brand kit Veltinc, 28px Montserrat 700. */
   --text-page-title: 1.75rem;
   --text-page-title--line-height: 2.25rem;
 }
@@ -67,7 +67,7 @@
   --color-popover: var(--popover);
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
-  /* Skala radius brand kit Veltics: 8, 10, 12, 16, 20. */
+  /* Skala radius brand kit Veltinc: 8, 10, 12, 16, 20. */
   --radius-sm: 8px;
   --radius-md: 8px;
   --radius-lg: 10px;
@@ -78,7 +78,7 @@
 }
 
 /*
- * Token warna (skill ui-it-inventory): brand kit Veltics (keputusan user 20/10/2026), dasar netral
+ * Token warna (skill ui-it-inventory): brand kit Veltinc (keputusan user 20/10/2026), dasar netral
  * kebiruan, satu aksen biru untuk aksi utama, menu aktif, dan fokus, sidebar navy, dan warna
  * semantik yang hanya dipakai untuk artinya:
  *   bonded  = gudang/lokasi berikat (violet brand)
