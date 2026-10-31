@@ -1,0 +1,21 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  // Pagar keamanan agent (termasuk agent yang dikendalikan lewat Telegram).
+  // Aturan terakhir yang cocok yang menang, jadi pengecualian ditulis setelah aturan umum.
+  "permissions": [
+    { "action": "*", "resource": "*", "effect": "allow" },
+    // Push selalu minta persetujuan user; force push diblokir total.
+    { "action": "shell", "resource": "git push *", "effect": "ask" },
+    { "action": "shell", "resource": "git push --force*", "effect": "deny" },
+    { "action": "shell", "resource": "git push -f*", "effect": "deny" },
+    // PR dibuat agent, tapi merge tetap keputusan user.
+    { "action": "shell", "resource": "gh pr merge *", "effect": "deny" },
+    // Perintah berisiko di mesin yang menjalankan agent.
+    { "action": "shell", "resource": "sudo *", "effect": "deny" },
+    { "action": "shell", "resource": "rm -rf *", "effect": "ask" },
+    { "action": "shell", "resource": "git reset --hard *", "effect": "ask" },
+    { "action": "shell", "resource": "git clean *", "effect": "ask" },
+    // Jangan menyentuh folder di luar repo tanpa izin.
+    { "action": "external_directory", "resource": "*", "effect": "ask" },
+  ],
+}
