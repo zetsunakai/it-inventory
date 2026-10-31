@@ -26,6 +26,13 @@ npm run dev          # http://localhost:3000, menyalakan database dan menerapkan
 Login dengan `SEED_ADMIN_EMAIL` dan `SEED_ADMIN_PASSWORD` dari `.env.local`. Sign-up publik
 dimatikan: user baru dibuat oleh Administrator.
 
+## Agent Telegram
+
+Agent OpenCode bisa dikendalikan lewat Telegram untuk mengerjakan perubahan kode dari HP. Agent
+selalu bekerja di branch `agent/<slug>` dan membuka PR ke `main`; merge tetap dilakukan user.
+Push ke `main` diblokir hook `scripts/git-hooks/pre-push`, dan `opencode.jsonc` meminta persetujuan
+sebelum push. Panduan lengkap ada di `docs/telegram-agent.md`.
+
 ## Auth
 
 - Better Auth, endpoint di `/api/auth/*`. Konfigurasi di `src/server/auth/index.ts`.

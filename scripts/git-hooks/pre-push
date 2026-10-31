@@ -1,0 +1,19 @@
+#!/bin/sh
+# Tolak push langsung ke main/master dari clone ini, termasuk dari agent.
+# Pasang sekali dengan: git config core.hooksPath scripts/git-hooks
+#
+# Agent wajib bekerja di branch sendiri (agent/<slug>) lalu membuka PR ke main.
+
+status=0
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  case "$remote_ref" in
+    refs/heads/main | refs/heads/master)
+      echo "Push ke ${remote_ref#refs/heads/} diblokir." >&2
+      echo "Buat branch (agent/<slug>) lalu buka PR ke main." >&2
+      status=1
+      ;;
+  esac
+done
+
+exit "$status"
