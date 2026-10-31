@@ -23,12 +23,14 @@ Berlaku untuk semua agent, termasuk yang dikendalikan lewat Telegram
   `git pull --ff-only`) lalu buat branch baru: `git switch -c agent/<slug-singkat>`.
   Slug huruf kecil dan tanda hubung, mis. `agent/perbaikan-validasi-npwp`.
 - Satu tugas satu branch. Jangan menumpuk tugas yang tidak berhubungan di satu branch.
+- Jangan commit, push, atau membuat/memperbarui PR kecuali user sudah secara eksplisit
+  menyuruhnya. Setelah implementasi selesai, laporkan hasilnya dan tunggu instruksi user.
 - Jangan pernah commit atau push langsung ke `main`/`master`. Hook
   `scripts/git-hooks/pre-push` menolak push ke branch itu; aktifkan dengan
   `git config core.hooksPath scripts/git-hooks`.
-- Sebelum commit jalankan `npm run check` (lint, typecheck, format). Jalankan tes unit/database
-  yang relevan. Tes E2E hanya sebelum commit dan push, sesuai bagian di atas.
-- Push branch lalu buka PR ke `main`:
+- Saat user menyuruh commit, jalankan dulu `npm run check` (lint, typecheck, format). Jalankan
+  tes unit/database yang relevan. Tes E2E hanya sebelum commit dan push, sesuai bagian di atas.
+- Saat user menyuruh push/PR, push branch lalu buka PR ke `main`:
   `git push -u origin agent/<slug>` dan
   `gh pr create --base main --head agent/<slug> --title "<ringkas>" --body "<ringkasan + cara tes>"`.
   Kalau `gh` belum login, laporkan ke user, jangan mencoba kredensial lain.
