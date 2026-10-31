@@ -52,7 +52,7 @@ function loginAs(roles: Role[]) {
   }
 }
 
-const ids = { complete: "", other: "" }
+const ids = { complete: "", other: "", anotherType: "" }
 
 beforeAll(async () => {
   await insertTestCompany(db)
@@ -75,6 +75,11 @@ beforeAll(async () => {
       .set({ createdAt: new Date("2020-01-15T03:00:00Z") })
       .where(eq(customsDocuments.id, other.id))
     ids.other = other.id
+    const [anotherType] = await tx
+      .insert(customsDocuments)
+      .values({ docCode: "20", customsOfficeCode: "040300" })
+      .returning({ id: customsDocuments.id })
+    ids.anotherType = anotherType.id
   })
 })
 
@@ -98,6 +103,23 @@ const list = (filters: Partial<Parameters<typeof listCustomsDocuments>[0]> = {})
   }).then(({ rows }) => rows.map((row) => row.id).sort())
 
 describe("daftar per jenis", () => {
+  test("daftar gabungan menampilkan semua jenis dan filter jenis tetap berfungsi", async () => {
+    const result = await listCustomsDocuments({
+      search: "",
+      page: 1,
+      pageSize: 20,
+      offset: 0,
+    })
+    expect(result.rows.map((row) => [row.id, row.docCode])).toEqual(
+      expect.arrayContaining([
+        [ids.complete, "23"],
+        [ids.other, "23"],
+        [ids.anotherType, "20"],
+      ]),
+    )
+    expect(result.total).toBe(3)
+    expect(await list({ docCode: "20" })).toEqual([ids.anotherType])
+  })
   test("filter kustom dan grouping diterapkan ke SQL daftar dokumen", async () => {
     const result = await listCustomsDocuments({
       search: "",
@@ -204,6 +226,30 @@ describe("export draft", () => {
 })
 
 describe("export daftar BC", () => {
+  test("export daftar gabungan mencantumkan jenis dokumen setiap baris", async () => {
+    loginAs(["auditor"])
+    const response = await exportList(
+      new NextRequest("http://localhost/api/customs-documents/export?format=xlsx"),
+    )
+    expect(response.status).toBe(200)
+    const workbook = new ExcelJS.Workbook()
+    await workbook.xlsx.load(await response.arrayBuffer())
+    const sheet = workbook.worksheets[0]
+    expect(sheet.getCell("B1").value).toBe("Jenis dokumen")
+    const types = Array.from(
+      { length: sheet.rowCount - 1 },
+      (_, index) => sheet.getCell(index + 2, 2).value,
+    )
+    expect(types).toContain("BC 2.0")
+    expect(types).toContain("BC 2.3")
+    const filtered = await exportList(
+      new NextRequest("http://localhost/api/customs-documents/export?format=xlsx&docCode=20"),
+    )
+    expect(filtered.status).toBe(200)
+    const filteredBook = new ExcelJS.Workbook()
+    await filteredBook.xlsx.load(await filtered.arrayBuffer())
+    expect(filteredBook.worksheets[0].rowCount).toBe(2)
+  })
   test("export mengikuti filter kustom yang sama dengan daftar", async () => {
     loginAs(["auditor"])
     const doc = await getCustomsDocument(BC23, ids.other)

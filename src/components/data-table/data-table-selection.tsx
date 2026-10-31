@@ -51,8 +51,8 @@ export function RowSelection({
   removeNote?: string
   // Action duplikat yang mengembalikan { id } data baru.
   duplicate?: BulkAction
-  // Duplikat satu data: buka data barunya di `${duplicatePath}/${id}`.
-  duplicatePath?: string
+  // Duplikat satu data: buka data baru di path jenis sumbernya (bila ada).
+  duplicatePath?: string | Record<string, string>
   children: ReactNode
 }) {
   const [selected, setSelected] = useState<Set<string>>(new Set())
@@ -103,7 +103,8 @@ export function RowSelection({
       show({ ok: true, data: undefined, message: `${done.length} ${noun} diduplikat.` })
       const created = done[0] as { id?: string } | undefined
       if (done.length === 1 && duplicatePath && created?.id) {
-        router.push(`${duplicatePath}/${created.id}`)
+        const base = typeof duplicatePath === "string" ? duplicatePath : duplicatePath[chosen[0].id]
+        if (base) router.push(`${base}/${created.id}`)
       }
     })
   }

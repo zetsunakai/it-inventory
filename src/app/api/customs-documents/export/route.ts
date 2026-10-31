@@ -25,13 +25,13 @@ export async function GET(request: NextRequest) {
   const code = pickFilter(raw, "docCode", CUSTOMS_DOC_CODES)
   const spec = code ? CUSTOMS_SPECS[code] : undefined
   const format = raw.format
-  if (!spec || (format !== "pdf" && format !== "xlsx")) {
+  if ((raw.docCode && !spec) || (format !== "pdf" && format !== "xlsx")) {
     return Response.json({ error: "Permintaan tidak valid." }, { status: 400 })
   }
-  const offices = await customsOfficeOptions(spec.code)
+  const offices = await customsOfficeOptions(spec?.code)
   const params = {
     ...parseListParams(raw, { pageSize: 1000 }),
-    docCode: spec.code,
+    docCode: spec?.code,
     status: pickFilter(raw, "status", CUSTOMS_DOCUMENT_STATUSES),
     period: pickFilter(raw, "periode", CUSTOMS_PERIODS),
     officeCode: pickFilter(
@@ -47,8 +47,8 @@ export async function GET(request: NextRequest) {
     const next = await listCustomsDocuments({ ...params, offset })
     rows.push(...next.rows)
   }
-  const body = await customsListExport(spec, rows, format)
-  const name = `Daftar-${spec.title.replace(/\W/g, "")}.${format}`
+  const body = await customsListExport(spec ?? null, rows, format)
+  const name = `Daftar-${spec?.title.replace(/\W/g, "") ?? "Dokumen"}.${format}`
   return new Response(Buffer.from(body), {
     headers: {
       "content-type":

@@ -1,18 +1,14 @@
 import {
-  ArrowDownToLine,
   ArrowLeftRight,
-  ArrowUpFromLine,
   Boxes,
   FileCheck2,
   ChartColumn,
   Database,
   House,
-  Landmark,
   LayoutDashboard,
   Library,
   Settings,
   SlidersHorizontal,
-  Workflow,
   type LucideIcon,
 } from "lucide-react"
 
@@ -96,46 +92,12 @@ export const NAVIGATION: NavGroup[] = [
       { title: "Tutup periode", href: "/inventory/periode", permission: "inventory:approve" },
     ],
   },
-  // Keterkaitan dokumen di atas menu dokumen seperti hmx (menu_it_inventory_document_flow, H-06).
+  // Semua jenis BC ada di satu daftar; pemilihan entitas/jenis dilakukan saat membuat dokumen.
   {
-    label: "Keterkaitan dokumen",
+    label: "Dokumen",
     module: "it-inventory",
-    icon: Workflow,
-    items: [{ title: "Rantai dokumen", href: "/dokumen-bc/flow", permission: "bc:read" }],
-  },
-  // Dokumen BC dikelompokkan seperti menu hmx (Dokumen Impor, Ekspor, TPB), satu menu per jenis
-  // (keputusan 17/10/2026). Semua jenis sudah punya form (backlog D-01–D-08).
-  {
-    label: "Dokumen impor",
-    module: "it-inventory",
-    icon: ArrowDownToLine,
-    items: [{ title: "BC 2.0", href: "/dokumen-bc/bc20", permission: "bc:read" }],
-  },
-  {
-    label: "Dokumen ekspor",
-    module: "it-inventory",
-    icon: ArrowUpFromLine,
-    items: [
-      { title: "BC 3.0", href: "/dokumen-bc/bc30", permission: "bc:read" },
-      { title: "BC 3.3", href: "/dokumen-bc/bc33", permission: "bc:read" },
-      { title: "P3BET", href: "/dokumen-bc/p3bet", permission: "bc:read" },
-    ],
-  },
-  {
-    label: "Dokumen TPB",
-    module: "it-inventory",
-    icon: Landmark,
-    items: [
-      { title: "BC 1.6", href: "/dokumen-bc/bc16", permission: "bc:read" },
-      { title: "BC 2.3", href: "/dokumen-bc/bc23", permission: "bc:read" },
-      { title: "BC 2.5", href: "/dokumen-bc/bc25", permission: "bc:read" },
-      { title: "BC 2.6.1", href: "/dokumen-bc/bc261", permission: "bc:read" },
-      { title: "BC 2.6.2", href: "/dokumen-bc/bc262", permission: "bc:read" },
-      { title: "BC 2.7", href: "/dokumen-bc/bc27", permission: "bc:read" },
-      { title: "BC 2.8", href: "/dokumen-bc/bc28", permission: "bc:read" },
-      { title: "BC 4.0", href: "/dokumen-bc/bc40", permission: "bc:read" },
-      { title: "BC 4.1", href: "/dokumen-bc/bc41", permission: "bc:read" },
-    ],
+    icon: FileCheck2,
+    items: [{ title: "Daftar dokumen", href: "/dokumen-bc", permission: "bc:read" }],
   },
   {
     // Referensi kepabeanan satu menu per jenis, dikelompokkan dalam sub menu seperti Master Data
